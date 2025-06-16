@@ -186,6 +186,13 @@
   background-color: var(--primary-dark);
 }
 
+.modalActions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  justify-content: flex-end;
+}
+
 @media (max-width: 768px) {
   .nodeList {
     grid-template-columns: 1fr;

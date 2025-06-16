@@ -6,6 +6,10 @@ class HistoryAnalyzer {
 
   // Query historical records
   queryHistory(query) {
+    if (!this.world || !this.world.history) {
+      return [];
+    }
+
     const {
       entityType,
       timeRange,

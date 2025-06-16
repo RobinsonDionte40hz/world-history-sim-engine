@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import WorldHistoryEngine from '../../../WorldHistoryEngine.js';
 import TemplateManager from '../template-system/TemplateManager.jsx';
-import styles from '../WorldHistorySimulator.module.css';
-import { Settings, History, Globe, BarChart2, Plus, Info } from 'lucide-react';
+import styles from './HistoricalSimulator.module.css';
+import { 
+  Settings, 
+  History, 
+  Globe, 
+  BarChart2, 
+  Plus, 
+  Info, 
+  Play, 
+  Pause, 
+  Save, 
+  Upload, 
+  RefreshCw,
+  Clock,
+  Users,
+  Map,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
 
 const SystemInfo = () => (
   <div className={styles.systemInfo}>
@@ -68,9 +89,19 @@ const WorldHistorySimulator = () => {
   const [simulationProgress, setSimulationProgress] = useState(0);
   const [worldState, setWorldState] = useState(null);
   const [selectedEntity, setSelectedEntity] = useState(null);
-  const [viewMode, setViewMode] = useState('world'); // 'world', 'history', 'analysis', 'templates'
+  const [viewMode, setViewMode] = useState('world');
+  const [simulationSettings, setSimulationSettings] = useState({
+    years: 100,
+    timeStep: 1,
+    eventFrequency: 5,
+    maxConcurrentEvents: 10,
+    enableLogging: true
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isSimulating, setIsSimulating] = useState(false);
 
-  // Initialize engine without world
+  // Initialize engine
   useEffect(() => {
     const initEngine = async () => {
       try {
@@ -85,19 +116,32 @@ const WorldHistorySimulator = () => {
           }
         });
         setEngine(newEngine);
+        addNotification('System initialized successfully', 'success');
       } catch (error) {
         console.error('Failed to initialize engine:', error);
+        addNotification('Failed to initialize system', 'error');
       }
     };
 
     initEngine();
   }, []);
 
+  // Add notification
+  const addNotification = (message, type = 'info') => {
+    const id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
+  };
+
   // Generate new world
   const generateWorld = async () => {
     if (!engine) return;
 
     setIsLoading(true);
+    addNotification('Generating new world...', 'info');
+    
     try {
       await engine.generateWorld({
         width: 1000,
@@ -105,8 +149,10 @@ const WorldHistorySimulator = () => {
         seed: Date.now()
       });
       setWorldState(engine.world);
+      addNotification('World generated successfully', 'success');
     } catch (error) {
       console.error('Failed to generate world:', error);
+      addNotification('Failed to generate world', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -117,44 +163,54 @@ const WorldHistorySimulator = () => {
     if (!engine || !worldState) return;
 
     setIsLoading(true);
+    setIsSimulating(true);
     setSimulationProgress(0);
+    addNotification('Starting simulation...', 'info');
 
     try {
       await engine.simulate({
-        years: 100,
-        timeStep: 1,
-        eventFrequency: 5,
-        maxConcurrentEvents: 10,
-        enableLogging: true,
+        ...simulationSettings,
         onProgress: (progress) => {
           setSimulationProgress(progress);
         }
       });
 
       setWorldState(engine.world);
+      addNotification('Simulation completed successfully', 'success');
     } catch (error) {
       console.error('Simulation failed:', error);
+      addNotification('Simulation failed', 'error');
     } finally {
       setIsLoading(false);
+      setIsSimulating(false);
     }
+  };
+
+  // Handle simulation settings change
+  const handleSettingChange = (e) => {
+    const { name, value } = e.target;
+    setSimulationSettings(prev => ({
+      ...prev,
+      [name]: parseFloat(value)
+    }));
   };
 
   // Query history
   const queryHistory = (query) => {
-    if (!engine) return [];
-    return engine.queryHistory(query);
+    if (!engine || !engine.historyAnalyzer) return [];
+    return engine.historyAnalyzer.queryHistory(query);
   };
 
   // Generate family tree
   const generateFamilyTree = (rootId, options) => {
-    if (!engine) return null;
-    return engine.generateFamilyTree(rootId, options);
+    if (!engine || !engine.historyAnalyzer) return null;
+    return engine.historyAnalyzer.generateFamilyTree(rootId, options);
   };
 
   // Analyze decisions
   const analyzeDecisions = (npcId, options) => {
-    if (!engine) return null;
-    return engine.analyzeDecisions(npcId, options);
+    if (!engine || !engine.historyAnalyzer) return null;
+    return engine.historyAnalyzer.analyzeDecisions(npcId, options);
   };
 
   // Save world
@@ -174,50 +230,183 @@ const WorldHistorySimulator = () => {
   const renderWorldView = () => {
     return (
       <div className={styles.worldView}>
-        <h2>World State</h2>
-        {!worldState ? (
-          <div className={styles.noWorld}>
-            <p>No world has been generated yet.</p>
-            <SystemInfo />
+        <div className={styles.worldHeader}>
+          <h2><Globe size={20} /> World State</h2>
+          <div className={styles.worldControls}>
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className={styles.settingsButton}
+            >
+              <Settings size={18} />
+              Settings
+            </button>
             <button 
               onClick={generateWorld} 
               disabled={isLoading}
               className={styles.generateButton}
             >
-              <Plus size={18} />
+              <RefreshCw size={18} />
               Generate New World
             </button>
           </div>
-        ) : (
-          <>
-            <div className={styles.stats}>
-              <div>Nodes: {worldState.nodes.size}</div>
-              <div>Characters: {worldState.characters.size}</div>
-              <div>Groups: {worldState.groups.size}</div>
-              <div>Historical Events: {worldState.history.length}</div>
+        </div>
+
+        {showSettings && (
+          <div className={styles.settingsPanel}>
+            <h3>Simulation Settings</h3>
+            <div className={styles.settingsGrid}>
+              <div className={styles.settingGroup}>
+                <label>Years to Simulate</label>
+                <input
+                  type="number"
+                  name="years"
+                  value={simulationSettings.years}
+                  onChange={handleSettingChange}
+                  min="1"
+                  max="1000"
+                />
+              </div>
+              <div className={styles.settingGroup}>
+                <label>Time Step</label>
+                <input
+                  type="number"
+                  name="timeStep"
+                  value={simulationSettings.timeStep}
+                  onChange={handleSettingChange}
+                  min="0.1"
+                  max="10"
+                  step="0.1"
+                />
+              </div>
+              <div className={styles.settingGroup}>
+                <label>Event Frequency</label>
+                <input
+                  type="number"
+                  name="eventFrequency"
+                  value={simulationSettings.eventFrequency}
+                  onChange={handleSettingChange}
+                  min="1"
+                  max="20"
+                />
+              </div>
+              <div className={styles.settingGroup}>
+                <label>Max Concurrent Events</label>
+                <input
+                  type="number"
+                  name="maxConcurrentEvents"
+                  value={simulationSettings.maxConcurrentEvents}
+                  onChange={handleSettingChange}
+                  min="1"
+                  max="50"
+                />
+              </div>
             </div>
-            <div className={styles.controls}>
-              <button onClick={runSimulation} disabled={isLoading}>
-                {isLoading ? 'Simulating...' : 'Run Simulation'}
-              </button>
-              <button onClick={saveWorld}>Save World</button>
-              <button onClick={loadWorld}>Load World</button>
-              <button onClick={generateWorld} disabled={isLoading}>
+          </div>
+        )}
+
+        {!worldState ? (
+          <div className={styles.noWorld}>
+            <div className={styles.noWorldContent}>
+              <Globe size={48} />
+              <h3>No World Generated</h3>
+              <p>Generate a new world to begin simulation</p>
+              <button 
+                onClick={generateWorld} 
+                disabled={isLoading}
+                className={styles.generateButton}
+              >
+                <Plus size={18} />
                 Generate New World
               </button>
             </div>
+            <SystemInfo />
+          </div>
+        ) : (
+          <div className={styles.worldContent}>
+            <div className={styles.worldStats}>
+              <div className={styles.statCard}>
+                <Map size={24} />
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>{worldState.nodes.size}</span>
+                  <span className={styles.statLabel}>Nodes</span>
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <Users size={24} />
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>{worldState.characters.size}</span>
+                  <span className={styles.statLabel}>Characters</span>
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <BookOpen size={24} />
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>{worldState.history.length}</span>
+                  <span className={styles.statLabel}>Events</span>
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <Clock size={24} />
+                <div className={styles.statInfo}>
+                  <span className={styles.statValue}>{worldState.currentYear}</span>
+                  <span className={styles.statLabel}>Current Year</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.simulationControls}>
+              <button 
+                onClick={runSimulation} 
+                disabled={isLoading || isSimulating}
+                className={styles.simulateButton}
+              >
+                {isSimulating ? (
+                  <>
+                    <Pause size={18} />
+                    Pause Simulation
+                  </>
+                ) : (
+                  <>
+                    <Play size={18} />
+                    Run Simulation
+                  </>
+                )}
+              </button>
+              <button 
+                onClick={saveWorld}
+                className={styles.saveButton}
+              >
+                <Save size={18} />
+                Save World
+              </button>
+              <button 
+                onClick={loadWorld}
+                className={styles.loadButton}
+              >
+                <Upload size={18} />
+                Load World
+              </button>
+            </div>
+
             {isLoading && (
-              <div className={styles.progress}>
+              <div className={styles.progressContainer}>
+                <div className={styles.progressBar}>
                 <div 
-                  className={styles.progressBar}
+                    className={styles.progressFill}
                   style={{ width: `${simulationProgress}%` }}
                 />
-                <div className={styles.progressText}>
+                </div>
+                <div className={styles.progressInfo}>
+                  <span className={styles.progressText}>
                   {Math.round(simulationProgress)}%
+                  </span>
+                  <span className={styles.progressStatus}>
+                    {isSimulating ? 'Simulating...' : 'Loading...'}
+                  </span>
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     );
@@ -225,7 +414,16 @@ const WorldHistorySimulator = () => {
 
   // Render history view
   const renderHistoryView = () => {
-    if (!engine) return null;
+    if (!engine || !engine.historyAnalyzer) {
+      return (
+        <div className={styles.noWorld}>
+          <div className={styles.noWorldContent}>
+            <h3>No History Available</h3>
+            <p>Please initialize the system and generate a world to view history.</p>
+          </div>
+        </div>
+      );
+    }
 
     const events = queryHistory({
       timeRange: { start: 0, end: 100 },
@@ -235,29 +433,49 @@ const WorldHistorySimulator = () => {
 
     return (
       <div className={styles.historyView}>
-        <h2>Historical Events</h2>
-        <div className={styles.events}>
+        <div className={styles.historyHeader}>
+          <h2>
+            <History size={20} />
+            World History
+          </h2>
+          <div className={styles.historyFilters}>
+            <select className={styles.filterSelect}>
+              <option value="all">All Events</option>
+              <option value="births">Births</option>
+              <option value="deaths">Deaths</option>
+              <option value="marriages">Marriages</option>
+              <option value="wars">Wars</option>
+              <option value="discoveries">Discoveries</option>
+            </select>
+          </div>
+        </div>
+
+        <div className={styles.eventsTimeline}>
           {events.map(event => (
-            <div key={event.id} className={styles.event}>
+            <div key={event.id} className={styles.eventCard}>
               <div className={styles.eventHeader}>
-                <span className={styles.eventType}>{event.eventType}</span>
+                <span className={styles.eventType}>{event.type}</span>
                 <span className={styles.eventTime}>
                   Year {Math.floor(event.timestamp)}
                 </span>
               </div>
-              <div className={styles.eventDescription}>
-                {event.description}
+              <div className={styles.eventContent}>
+                <p className={styles.eventDescription}>{event.description}</p>
+                {event.participants && event.participants.length > 0 && (
+                  <div className={styles.eventParticipants}>
+                    <h4>Participants</h4>
+                    <ul>
+                      {event.participants.map(participant => (
+                        <li key={participant.id}>{participant.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              {event.attributes && (
-                <div className={styles.eventAttributes}>
-                  <h4>Attribute Changes</h4>
-                  {event.attributes.map(attr => (
-                    <div key={attr.attribute}>
-                      {attr.entity}: {attr.attribute} {attr.change > 0 ? '+' : ''}{attr.change}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className={styles.eventFooter}>
+                <span>Location: {event.location}</span>
+                <span>Impact: {event.impact}</span>
+              </div>
             </div>
           ))}
         </div>
@@ -267,48 +485,138 @@ const WorldHistorySimulator = () => {
 
   // Render analysis view
   const renderAnalysisView = () => {
-    if (!engine || !selectedEntity) return null;
+    if (!engine || !engine.historyAnalyzer) {
+      return (
+        <div className={styles.noWorld}>
+          <div className={styles.noWorldContent}>
+            <h3>No Analysis Available</h3>
+            <p>Please initialize the system and generate a world to view analysis.</p>
+          </div>
+        </div>
+      );
+    }
 
-    const analysis = analyzeDecisions(selectedEntity, {
-      period: { start: 0, end: 100 },
-      includeAttributeInfluence: true,
-      includePersonalityFactors: true,
-      includeConsciousnessStates: true,
-      includeQuestMotivations: true
-    });
+    // Get world statistics
+    const stats = {
+      totalEvents: engine.historyAnalyzer.queryHistory({}).length,
+      totalCharacters: engine.world.characters.size,
+      totalLocations: engine.world.locations.size,
+      totalGroups: engine.world.groups.size
+    };
+
+    // Get attribute distribution
+    const attributes = Array.from(engine.world.characters.values()).reduce((acc, char) => {
+      Object.entries(char.attributes).forEach(([attr, value]) => {
+        if (!acc[attr]) acc[attr] = [];
+        acc[attr].push(value);
+      });
+      return acc;
+    }, {});
+
+    // Calculate averages
+    const attributeAverages = Object.entries(attributes).reduce((acc, [attr, values]) => {
+      acc[attr] = values.reduce((sum, val) => sum + val, 0) / values.length;
+      return acc;
+    }, {});
 
     return (
       <div className={styles.analysisView}>
-        <h2>Decision Analysis</h2>
-        <div className={styles.analysis}>
-          <div className={styles.summary}>
-            <h3>Summary</h3>
-            <div>Total Decisions: {analysis.summary.totalDecisions}</div>
-          </div>
-          <div className={styles.attributeInfluence}>
-            <h3>Attribute Influence</h3>
-            {Object.entries(analysis.summary.attributeInfluence).map(([attr, influence]) => (
-              <div key={attr}>
-                {attr}: {Math.round(influence * 100)}%
+        <h2>
+          <BarChart2 size={20} />
+          World Analysis
+        </h2>
+
+        <div className={styles.analysisContent}>
+          <div className={styles.analysisSummary}>
+            <h3>World Overview</h3>
+            <div className={styles.summaryStats}>
+              <div className={styles.summaryStat}>
+                <span className={styles.statValue}>{stats.totalEvents}</span>
+                <span className={styles.statLabel}>Total Events</span>
               </div>
-            ))}
-          </div>
-          <div className={styles.personalityPatterns}>
-            <h3>Personality Patterns</h3>
-            {Object.entries(analysis.summary.personalityPatterns).map(([trait, pattern]) => (
-              <div key={trait}>
-                {trait}: {Math.round(pattern * 100)}%
+              <div className={styles.summaryStat}>
+                <span className={styles.statValue}>{stats.totalCharacters}</span>
+                <span className={styles.statLabel}>Characters</span>
               </div>
-            ))}
+              <div className={styles.summaryStat}>
+                <span className={styles.statValue}>{stats.totalLocations}</span>
+                <span className={styles.statLabel}>Locations</span>
+              </div>
+              <div className={styles.summaryStat}>
+                <span className={styles.statValue}>{stats.totalGroups}</span>
+                <span className={styles.statLabel}>Groups</span>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.analysisDetails}>
+            <div className={styles.analysisSection}>
+              <h3>Attribute Distribution</h3>
+              {Object.entries(attributeAverages).map(([attr, value]) => (
+                <div key={attr} className={styles.attributeChart}>
+                  <div className={styles.attributeName}>{attr}</div>
+                  <div className={styles.barContainer}>
+                    <div 
+                      className={styles.barFill}
+                      style={{ width: `${(value / 20) * 100}%` }}
+                    />
+                  </div>
+                  <div className={styles.attributeValue}>
+                    {value.toFixed(1)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.analysisSection}>
+              <h3>Event Distribution</h3>
+              {Object.entries(
+                engine.historyAnalyzer.queryHistory({})
+                  .reduce((acc, event) => {
+                    acc[event.type] = (acc[event.type] || 0) + 1;
+                    return acc;
+                  }, {})
+              ).map(([type, count]) => (
+                <div key={type} className={styles.attributeChart}>
+                  <div className={styles.attributeName}>{type}</div>
+                  <div className={styles.barContainer}>
+                    <div 
+                      className={styles.barFill}
+                      style={{ width: `${(count / stats.totalEvents) * 100}%` }}
+                    />
+                  </div>
+                  <div className={styles.attributeValue}>
+                    {count}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.analysisSection}>
+              <h3>System Information</h3>
+              <div className={styles.infoSection}>
+                <h4>World Generation</h4>
+                <p>World was generated with the following parameters:</p>
+                <ul>
+                  <li>Width: {engine.world.width}</li>
+                  <li>Height: {engine.world.height}</li>
+                  <li>Seed: {engine.world.seed}</li>
+                </ul>
+              </div>
+              <div className={styles.infoSection}>
+                <h4>Simulation Settings</h4>
+                <ul>
+                  <li>Years: <strong>{simulationSettings.years}</strong></li>
+                  <li>Time Step: <strong>{simulationSettings.timeStep}</strong></li>
+                  <li>Event Frequency: <strong>{simulationSettings.eventFrequency}</strong></li>
+                  <li>Max Concurrent Events: <strong>{simulationSettings.maxConcurrentEvents}</strong></li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
-  };
-
-  // Render template management view
-  const renderTemplateView = () => {
-    return <TemplateManager engine={engine} />;
   };
 
   return (
@@ -317,28 +625,28 @@ const WorldHistorySimulator = () => {
         <h1>World History Simulator</h1>
         <div className={styles.viewControls}>
           <button
-            className={viewMode === 'world' ? styles.active : ''}
+            className={`${styles.viewButton} ${viewMode === 'world' ? styles.active : ''}`}
             onClick={() => setViewMode('world')}
           >
             <Globe size={18} />
             World
           </button>
           <button
-            className={viewMode === 'history' ? styles.active : ''}
+            className={`${styles.viewButton} ${viewMode === 'history' ? styles.active : ''}`}
             onClick={() => setViewMode('history')}
           >
             <History size={18} />
             History
           </button>
           <button
-            className={viewMode === 'analysis' ? styles.active : ''}
+            className={`${styles.viewButton} ${viewMode === 'analysis' ? styles.active : ''}`}
             onClick={() => setViewMode('analysis')}
           >
             <BarChart2 size={18} />
             Analysis
           </button>
           <button
-            className={viewMode === 'templates' ? styles.active : ''}
+            className={`${styles.viewButton} ${viewMode === 'templates' ? styles.active : ''}`}
             onClick={() => setViewMode('templates')}
           >
             <Settings size={18} />
@@ -351,7 +659,21 @@ const WorldHistorySimulator = () => {
         {viewMode === 'world' && renderWorldView()}
         {viewMode === 'history' && renderHistoryView()}
         {viewMode === 'analysis' && renderAnalysisView()}
-        {viewMode === 'templates' && renderTemplateView()}
+        {viewMode === 'templates' && <TemplateManager engine={engine} />}
+      </div>
+
+      <div className={styles.notifications}>
+        {notifications.map(notification => (
+          <div 
+            key={notification.id} 
+            className={`${styles.notification} ${styles[notification.type]}`}
+          >
+            {notification.type === 'success' && <CheckCircle size={18} />}
+            {notification.type === 'error' && <XCircle size={18} />}
+            {notification.type === 'info' && <Info size={18} />}
+            <span>{notification.message}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

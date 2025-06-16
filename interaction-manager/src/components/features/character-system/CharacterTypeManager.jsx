@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, Plus, Info, ChevronDown, ChevronUp, Tag, Users, Star, Heart, Brain, Search, Grid, List } from 'lucide-react';
+import { Edit, Trash2, Plus, Info, ChevronDown, ChevronUp, Tag, Users, Star, Heart, Brain, Search, Grid, List, Eye } from 'lucide-react';
 import { RaceSystem } from '../../../systems/character/RaceSystem';
+import styles from './CharacterTypeManager.module.css';
 
 const CharacterTypeManager = () => {
   const [characterTypes, setCharacterTypes] = useState([]);
@@ -40,7 +41,6 @@ const CharacterTypeManager = () => {
       skills: [],
       tags: []
     };
-    setCharacterTypes([...characterTypes, newType]);
     setEditingType(newType);
     setIsEditing(true);
   };
@@ -57,9 +57,15 @@ const CharacterTypeManager = () => {
   };
 
   const handleSave = (updatedType) => {
-    setCharacterTypes(characterTypes.map(type => 
-      type.id === updatedType.id ? updatedType : type
-    ));
+    if (characterTypes.some(type => type.id === updatedType.id)) {
+      // Update existing type
+      setCharacterTypes(characterTypes.map(type => 
+        type.id === updatedType.id ? updatedType : type
+      ));
+    } else {
+      // Add new type
+      setCharacterTypes([...characterTypes, updatedType]);
+    }
     setIsEditing(false);
     setEditingType(null);
   };
@@ -113,75 +119,61 @@ const CharacterTypeManager = () => {
     const isExpanded = expandedType === type.id;
 
     return (
-      <div key={type.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-        <div 
-          className="p-4 cursor-pointer"
-          onClick={() => toggleExpand(type.id)}
-        >
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{type.name}</h3>
-                <span 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: type.color }}
-                />
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{type.description}</p>
-              
-              {/* Tags */}
-              {type.tags?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {type.tags.map(tag => (
-                    <span key={tag} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  editCharacterType(type);
-                }}
-                className="text-amber-600 hover:text-amber-700"
-                title="Edit"
-              >
-                <Edit size={16} />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteCharacterType(type.id);
-                }}
-                className="text-red-600 hover:text-red-700"
-                title="Delete"
-              >
-                <Trash2 size={16} />
-              </button>
-              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </div>
+      <div key={type.id} className={styles.characterCard}>
+        <div className={styles.cardHeader}>
+          <h3 className={styles.cardTitle}>{type.name}</h3>
+          <div className={styles.cardActions}>
+            <button 
+              className={`${styles.actionButton} ${styles.view}`}
+              onClick={() => toggleExpand(type.id)}
+            >
+              <Eye size={16} />
+            </button>
+            <button 
+              className={`${styles.actionButton} ${styles.edit}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                editCharacterType(type);
+              }}
+            >
+              <Edit size={16} />
+            </button>
+            <button 
+              className={`${styles.actionButton} ${styles.delete}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteCharacterType(type.id);
+              }}
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
+        </div>
+        <p className={styles.cardDescription}>{type.description}</p>
+        <div className={styles.cardMeta}>
+          {type.race && (
+            <span className={styles.tag}>
+              {type.race.name}
+            </span>
+          )}
         </div>
 
         {/* Expanded Content */}
         {isExpanded && (
-          <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700">
+          <div className={styles.expandedContent}>
             {/* Race Information */}
             {type.race && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className={styles.raceInfo}>
+                <div className={styles.raceInfoItem}>
                   <Users size={16} />
                   <span>Race: {type.race.name}</span>
                   {type.race.subrace && (
-                    <span className="text-gray-500">({type.race.subrace.name})</span>
+                    <span className={styles.raceInfoSubrace}>({type.race.subrace.name})</span>
                   )}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className={styles.raceTraits}>
                   {type.race.traits?.map(trait => (
-                    <span key={trait.name} className="px-2 py-1 text-xs bg-indigo-50 text-indigo-700 rounded-full">
+                    <span key={trait.name} className={styles.raceTrait}>
                       {trait.name}
                     </span>
                   ))}
@@ -191,14 +183,14 @@ const CharacterTypeManager = () => {
 
             {/* Personality Traits */}
             {type.personalityTraits?.length > 0 && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className={styles.personalityTraits}>
+                <div className={styles.personalityTraitsItem}>
                   <Heart size={16} />
                   <span>Personality Traits</span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className={styles.personalityTraitsList}>
                   {type.personalityTraits.map(trait => (
-                    <span key={trait.id} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                    <span key={trait.id} className={styles.personalityTrait}>
                       {trait.name}
                     </span>
                   ))}
@@ -208,14 +200,14 @@ const CharacterTypeManager = () => {
 
             {/* Cognitive Traits */}
             {type.cognitiveTraits?.length > 0 && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className={styles.cognitiveTraits}>
+                <div className={styles.cognitiveTraitsItem}>
                   <Brain size={16} />
                   <span>Cognitive Traits</span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className={styles.cognitiveTraitsList}>
                   {type.cognitiveTraits.map(trait => (
-                    <span key={trait.id} className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                    <span key={trait.id} className={styles.cognitiveTrait}>
                       {trait.name}
                     </span>
                   ))}
@@ -225,14 +217,14 @@ const CharacterTypeManager = () => {
 
             {/* Emotional Tendencies */}
             {type.emotionalTendencies?.length > 0 && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className={styles.emotionalTendencies}>
+                <div className={styles.emotionalTendenciesItem}>
                   <Star size={16} />
                   <span>Emotional Tendencies</span>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className={styles.emotionalTendenciesList}>
                   {type.emotionalTendencies.map(tendency => (
-                    <span key={tendency.id} className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
+                    <span key={tendency.id} className={styles.emotionalTendency}>
                       {tendency.name}
                     </span>
                   ))}
@@ -242,13 +234,13 @@ const CharacterTypeManager = () => {
 
             {/* Attributes */}
             {Object.keys(type.attributes || {}).length > 0 && (
-              <div className="mt-3">
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Attributes</div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className={styles.attributes}>
+                <div className={styles.attributesTitle}>Attributes</div>
+                <div className={styles.attributesList}>
                   {Object.entries(type.attributes).map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">{key}</span>
-                      <span className="font-medium">{value}</span>
+                    <div key={key} className={styles.attributeItem}>
+                      <span className={styles.attributeKey}>{key}</span>
+                      <span className={styles.attributeValue}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -257,11 +249,11 @@ const CharacterTypeManager = () => {
 
             {/* Skills */}
             {type.skills?.length > 0 && (
-              <div className="mt-3">
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Skills</div>
-                <div className="mt-2 flex flex-wrap gap-1">
+              <div className={styles.skills}>
+                <div className={styles.skillsTitle}>Skills</div>
+                <div className={styles.skillsList}>
                   {type.skills.map(skill => (
-                    <span key={skill} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                    <span key={skill} className={styles.skill}>
                       {skill}
                     </span>
                   ))}
@@ -277,59 +269,69 @@ const CharacterTypeManager = () => {
   const renderEditForm = () => {
     if (!editingType) return null;
 
+    const handleFormSubmit = (e) => {
+      e.preventDefault();
+      handleSave(editingType);
+    };
+
+    const handleCancel = () => {
+      setIsEditing(false);
+      setEditingType(null);
+    };
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Edit Character Type</h2>
+      <div className={styles.modal}>
+        <div className={styles.modalContent}>
+          <h2 className={styles.modalTitle}>Edit Character Type</h2>
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+          <form className={styles.form} onSubmit={handleFormSubmit}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Name</label>
               <input
                 type="text"
+                className={styles.formInput}
                 value={editingType.name}
-                onChange={e => setEditingType({ ...editingType, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Description</label>
               <textarea
+                className={styles.formInput}
                 value={editingType.description}
-                onChange={e => setEditingType({ ...editingType, description: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                onChange={(e) => setEditingType({ ...editingType, description: e.target.value })}
                 rows={3}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Color</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Color</label>
               <input
                 type="color"
+                className={styles.formInput}
                 value={editingType.color}
-                onChange={e => setEditingType({ ...editingType, color: e.target.value })}
-                className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                onChange={(e) => setEditingType({ ...editingType, color: e.target.value })}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Category</label>
               <input
                 type="text"
+                className={styles.formInput}
                 value={editingType.category}
-                onChange={e => setEditingType({ ...editingType, category: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                onChange={(e) => setEditingType({ ...editingType, category: e.target.value })}
               />
             </div>
 
             {/* Race Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Race</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Race</label>
               <select
+                className={styles.formInput}
                 value={editingType.race?.id || ''}
-                onChange={e => handleRaceSelect(editingType.id, e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                onChange={(e) => handleRaceSelect(editingType.id, e.target.value)}
               >
                 <option value="">Select a race</option>
                 {raceSystem.getAllRaces().map(race => (
@@ -340,12 +342,12 @@ const CharacterTypeManager = () => {
 
             {/* Subrace Selection */}
             {editingType.race && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subrace</label>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Subrace</label>
                 <select
+                  className={styles.formInput}
                   value={editingType.race.subrace?.name || ''}
-                  onChange={e => handleRaceSelect(editingType.id, editingType.race.id, e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  onChange={(e) => handleRaceSelect(editingType.id, editingType.race.id, e.target.value)}
                 >
                   <option value="">Select a subrace</option>
                   {raceSystem.getRace(editingType.race.id).subraces.map(subrace => (
@@ -356,106 +358,57 @@ const CharacterTypeManager = () => {
             )}
 
             {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Tags</label>
               <input
                 type="text"
+                className={styles.formInput}
                 value={editingType.tags?.join(', ') || ''}
-                onChange={e => setEditingType({ 
+                onChange={(e) => setEditingType({ 
                   ...editingType, 
                   tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
                 })}
                 placeholder="Enter tags separated by commas"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
 
-            <div className="flex justify-end space-x-2 mt-4">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleSave(editingType)}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+            <div className={styles.cardActions}>
+              <button 
+                type="submit" 
+                className={`${styles.button} ${styles.buttonPrimary}`}
               >
                 Save
               </button>
+              <button 
+                type="button" 
+                className={styles.button}
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Character Types</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Manage character types and their attributes
-          </p>
-        </div>
-        <button
-          onClick={addCharacterType}
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md flex items-center gap-2"
-        >
-          <Plus size={16} />
-          Add Character Type
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1>Character Types</h1>
+        <button className={styles.button} onClick={addCharacterType}>
+          <Plus size={18} />
+          New Character Type
         </button>
       </div>
 
-      {/* Filters and Controls */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 w-64">
-            <Search size={16} className="text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search character types..."
-              value={filter}
-              onChange={e => setFilter(e.target.value)}
-              className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
-          </div>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            className="block w-40 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          >
-            <option value="name">Sort by Name</option>
-            <option value="race">Sort by Race</option>
-            <option value="category">Sort by Category</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-md ${viewMode === 'grid' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400'}`}
-            title="Grid View"
-          >
-            <Grid size={16} />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400'}`}
-            title="List View"
-          >
-            <List size={16} />
-          </button>
+      <div className={styles.content}>
+        <div className={styles.characterList}>
+          {filteredTypes.map(type => renderCharacterTypeCard(type))}
         </div>
       </div>
 
-      {/* Character Type List/Grid */}
-      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
-        {filteredTypes.map(type => renderCharacterTypeCard(type))}
-      </div>
-
-      {/* Edit Form Modal */}
       {isEditing && renderEditForm()}
     </div>
   );

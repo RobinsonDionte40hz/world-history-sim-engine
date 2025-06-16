@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Eye, Crown, Scale, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Crown, Scale, X, List, Star } from 'lucide-react';
 import { validatePrerequisites } from '../../../systems/interaction/PrerequisiteSystem';
 import { InfluenceManager, InfluenceDomainManager } from '../../../systems/interaction/InfluenceSystem';
 import { PrestigeManager, PrestigeTrackManager } from '../../../systems/interaction/PrestigeSystem';
 import { AlignmentManager, AlignmentAxisManager } from '../../../systems/interaction/AlignmentSystem';
 import Tooltip from '../../../components/common/Tooltip';
 import { Info } from 'lucide-react';
+import styles from './InteractionManager.module.css';
 
 const InteractionManagerWithSystems = ({ initialTab = 'interactions' }) => {
   // Main data states
@@ -485,332 +486,171 @@ const InteractionManagerWithSystems = ({ initialTab = 'interactions' }) => {
     reader.readAsText(file);
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    saveInteraction();
+  };
+
+  const updateInteraction = (field, value) => {
+    setCurrentInteraction(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'interactions':
+        return (
+          <div className={styles.content}>
+            <div className={styles.interactionList}>
+              {getFilteredInteractions().map(interaction => (
+                <div key={interaction.id} className={styles.interactionCard}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>{interaction.title}</h3>
+                    <div className={styles.cardActions}>
+                      <button 
+                        className={`${styles.actionButton} ${styles.view}`}
+                        onClick={() => viewInteraction(interaction)}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button 
+                        className={`${styles.actionButton} ${styles.edit}`}
+                        onClick={() => editInteraction(interaction)}
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button 
+                        className={`${styles.actionButton} ${styles.delete}`}
+                        onClick={() => deleteInteraction(interaction.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className={styles.cardDescription}>{interaction.description}</p>
+                  <div className={styles.cardMeta}>
+                    {interaction.categoryId && (
+                      <span className={styles.tag}>
+                        {getCategoryForInteraction(interaction)?.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 'influence':
+        return (
+          <InfluenceDomainManager 
+            influenceDomains={influenceDomains}
+            setInfluenceDomains={setInfluenceDomains}
+          />
+        );
+      case 'prestige':
+        return (
+          <PrestigeTrackManager 
+            prestigeTracks={prestigeTracks}
+            setPrestigeTracks={setPrestigeTracks}
+          />
+        );
+      case 'alignment':
+        return (
+          <AlignmentAxisManager 
+            alignmentAxes={alignmentAxes}
+            setAlignmentAxes={setAlignmentAxes}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="interaction-manager bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="tab-container flex space-x-1 p-4 bg-white dark:bg-gray-800 shadow-sm">
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1>Interaction Manager</h1>
+        <button className={styles.button} onClick={createNewInteraction}>
+          <Plus size={18} />
+          New Interaction
+        </button>
+      </div>
+
+      <div className={styles.tabContainer}>
         <button 
-          className={`tab flex items-center px-4 py-2 rounded-lg transition-all duration-200 ${
-            activeTab === 'interactions' 
-              ? 'bg-blue-500 text-white shadow-md' 
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
+          className={`${styles.tab} ${activeTab === 'interactions' ? styles.active : ''}`}
           onClick={() => setActiveTab('interactions')}
         >
-          <span className="tab-icon mr-2"><Edit size={18} /></span>
+          <List size={18} />
           Interactions
         </button>
         <button 
-          className={`tab flex items-center px-4 py-2 rounded-lg transition-all duration-200 ${
-            activeTab === 'influence' 
-              ? 'bg-blue-500 text-white shadow-md' 
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
+          className={`${styles.tab} ${activeTab === 'influence' ? styles.active : ''}`}
           onClick={() => setActiveTab('influence')}
         >
-          <span className="tab-icon mr-2"><Scale size={18} /></span>
+          <Crown size={18} />
           Influence
         </button>
         <button 
-          className={`tab flex items-center px-4 py-2 rounded-lg transition-all duration-200 ${
-            activeTab === 'prestige' 
-              ? 'bg-blue-500 text-white shadow-md' 
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
+          className={`${styles.tab} ${activeTab === 'prestige' ? styles.active : ''}`}
           onClick={() => setActiveTab('prestige')}
         >
-          <span className="tab-icon mr-2"><Crown size={18} /></span>
+          <Star size={18} />
           Prestige
         </button>
         <button 
-          className={`tab flex items-center px-4 py-2 rounded-lg transition-all duration-200 ${
-            activeTab === 'alignment' 
-              ? 'bg-blue-500 text-white shadow-md' 
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-          }`}
+          className={`${styles.tab} ${activeTab === 'alignment' ? styles.active : ''}`}
           onClick={() => setActiveTab('alignment')}
         >
-          <span className="tab-icon mr-2"><Scale size={18} /></span>
+          <Scale size={18} />
           Alignment
         </button>
       </div>
 
-      <div className="content-container p-4">
-        {activeTab === 'interactions' && (
-          <div className="interactions-content">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Interactions</h2>
-              <button
-                onClick={createNewInteraction}
-                className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 shadow-sm"
-              >
-                <Plus size={18} className="mr-2" />
-                New Interaction
-              </button>
-            </div>
+      <div className={styles.content}>
+        {renderContent()}
+      </div>
 
-            <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filter by Category</label>
-                  <select 
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">All Categories</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="interaction-list space-y-4">
-              {getFilteredInteractions().map(interaction => {
-                const category = getCategoryForInteraction(interaction);
-                
-                return (
-                  <div 
-                    key={interaction.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
-                  >
-                    <div className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {interaction.title}
-                        </h3>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => viewInteraction(interaction)}
-                            className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200"
-                            title="View"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={() => editInteraction(interaction)}
-                            className="p-1 text-blue-500 hover:text-blue-600 transition-colors duration-200"
-                            title="Edit"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => deleteInteraction(interaction.id)}
-                            className="p-1 text-red-500 hover:text-red-600 transition-colors duration-200"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                        {interaction.description}
-                      </p>
-                      
-                      <div className="flex flex-wrap gap-2">
-                        {category && (
-                          <span 
-                            className="px-2 py-1 text-sm rounded-full"
-                            style={{
-                              backgroundColor: `${category.color}20`,
-                              color: category.color
-                            }}
-                          >
-                            {category.name}
-                          </span>
-                        )}
-                        
-                        {interaction.prerequisites?.groups?.length > 0 && (
-                          <span className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                            {interaction.prerequisites.groups.length} Prerequisites
-                          </span>
-                        )}
-                        
-                        {interaction.effects?.influenceChanges?.length > 0 && (
-                          <span className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                            {interaction.effects.influenceChanges.length} Influence
-                          </span>
-                        )}
-                        
-                        {interaction.effects?.prestigeChanges?.length > 0 && (
-                          <span className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                            <Crown size={14} className="inline mr-1" />
-                            {interaction.effects.prestigeChanges.length} Prestige
-                          </span>
-                        )}
-                        
-                        {interaction.effects?.alignmentChanges?.length > 0 && (
-                          <span className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
-                            <Scale size={14} className="inline mr-1" />
-                            {interaction.effects.alignmentChanges.length} Alignment
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {getFilteredInteractions().length === 0 && (
-                <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                  <div className="text-gray-500 dark:text-gray-400 mb-2">
-                    {filterCategory ? 'No interactions found for this filter.' : 'No interactions yet.'}
-                  </div>
-                  {!filterCategory && (
-                    <button
-                      onClick={createNewInteraction}
-                      className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
-                    >
-                      <Plus size={18} className="mr-2" />
-                      Create your first interaction
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'influence' && (
-          <div className="influence-content p-4">
-            <h2 className="text-lg font-semibold mb-4">Influence System</h2>
-            <InfluenceDomainManager 
-              influenceDomains={influenceDomains} 
-              setInfluenceDomains={(domains) => {
-                setInfluenceDomains(domains);
-                influenceManager.domains = domains;
-                localStorage.setItem('influenceDomains', JSON.stringify(domains));
-              }} 
-            />
-          </div>
-        )}
-
-        {activeTab === 'prestige' && (
-          <div className="prestige-content p-4">
-            <h2 className="text-lg font-semibold mb-4">Prestige System</h2>
-            <PrestigeTrackManager 
-              prestigeTracks={prestigeTracks} 
-              setPrestigeTracks={(tracks) => {
-                setPrestigeTracks(tracks);
-                prestigeManager.tracks = tracks;
-                localStorage.setItem('prestigeTracks', JSON.stringify(tracks));
-              }} 
-            />
-          </div>
-        )}
-
-        {activeTab === 'alignment' && (
-          <div className="alignment-content p-4">
-            <h2 className="text-lg font-semibold mb-4">Alignment System</h2>
-            <AlignmentAxisManager 
-              alignmentAxes={alignmentAxes} 
-              setAlignmentAxes={(axes) => {
-                setAlignmentAxes(axes);
-                alignmentManager.axes = axes;
-                localStorage.setItem('alignmentAxes', JSON.stringify(axes));
-              }} 
-            />
-          </div>
-        )}
-
-        {(editMode || viewMode) && currentInteraction && (
-          <div className="interaction-editor bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {viewMode ? "View Interaction" : editMode ? "Edit Interaction" : ""}
-              </h2>
-              <button
-                onClick={() => {
-                  if (hasUnsavedChanges()) {
-                    if (window.confirm('You have unsaved changes. Are you sure you want to discard them?')) {
-                      setEditMode(false);
-                      setViewMode(false);
-                      setCurrentInteraction(null);
-                    }
-                  } else {
-                    setEditMode(false);
-                    setViewMode(false);
-                    setCurrentInteraction(null);
-                  }
-                }}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+      {editMode && currentInteraction && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Title</label>
                 <input
                   type="text"
+                  className={styles.formInput}
                   value={currentInteraction.title}
-                  onChange={(e) => setCurrentInteraction({
-                    ...currentInteraction,
-                    title: e.target.value
-                  })}
-                  disabled={viewMode}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                  placeholder="Enter interaction title"
+                  onChange={(e) => updateInteraction('title', e.target.value)}
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Description</label>
                 <textarea
+                  className={styles.formInput}
                   value={currentInteraction.description}
-                  onChange={(e) => setCurrentInteraction({
-                    ...currentInteraction,
-                    description: e.target.value
-                  })}
-                  disabled={viewMode}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 min-h-[100px]"
-                  placeholder="Enter interaction description"
+                  onChange={(e) => updateInteraction('description', e.target.value)}
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                <select
-                  value={currentInteraction.categoryId}
-                  onChange={(e) => setCurrentInteraction({
-                    ...currentInteraction,
-                    categoryId: e.target.value
-                  })}
-                  disabled={viewMode}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              {/* Add more form fields as needed */}
+              <div className={styles.cardActions}>
+                <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`}>
+                  Save
+                </button>
+                <button 
+                  type="button" 
+                  className={styles.button}
+                  onClick={cancelEdit}
                 >
-                  <option value="">Select Category</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
+                  Cancel
+                </button>
               </div>
-
-              {!viewMode && (
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={cancelEdit}
-                    className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveInteraction}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              )}
-            </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

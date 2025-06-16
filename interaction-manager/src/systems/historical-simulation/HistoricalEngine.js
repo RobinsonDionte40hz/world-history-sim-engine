@@ -8,7 +8,7 @@ class WorldHistoryEngine {
     this.templateManager = new TemplateManager();
     this.world = null;
     this.simulationEngine = null;
-    this.historyAnalyzer = null;
+    this.historyAnalyzer = new HistoryAnalyzer(null);
   }
 
   // Initialize the engine
@@ -22,7 +22,7 @@ class WorldHistoryEngine {
     // Initialize simulation engine
     this.simulationEngine = new SimulationEngine(this.world, this.templateManager);
 
-    // Initialize history analyzer
+    // Update history analyzer with the new world
     this.historyAnalyzer = new HistoryAnalyzer(this.world);
 
     return this;

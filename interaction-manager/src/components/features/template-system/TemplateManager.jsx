@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './TemplateManager.module.css';
-import { Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Globe, Settings } from 'lucide-react';
 
 const TemplateManager = ({ engine }) => {
   const [templates, setTemplates] = useState({
@@ -17,6 +17,15 @@ const TemplateManager = ({ engine }) => {
   const [formData, setFormData] = useState({});
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [worldGenSettings, setWorldGenSettings] = useState({
+    width: 100,
+    height: 100,
+    seed: Math.floor(Math.random() * 1000000),
+    biomeDensity: 0.5,
+    terrainComplexity: 0.5,
+    civilizationLevel: 0.5
+  });
+  const [isGeneratingWorld, setIsGeneratingWorld] = useState(false);
 
   // Load templates when component mounts
   useEffect(() => {
@@ -113,6 +122,40 @@ const TemplateManager = ({ engine }) => {
   const cancelDelete = () => {
     setShowConfirmDialog(false);
     setTemplateToDelete(null);
+  };
+
+  // Handle world generation settings change
+  const handleWorldGenSettingChange = (e) => {
+    const { name, value } = e.target;
+    setWorldGenSettings(prev => ({
+      ...prev,
+      [name]: parseFloat(value)
+    }));
+  };
+
+  // Handle world generation
+  const handleGenerateWorld = async () => {
+    if (!engine || !engine.worldGenerator) return;
+    
+    setIsGeneratingWorld(true);
+    try {
+      const world = await engine.worldGenerator.generateWorld(
+        worldGenSettings.width,
+        worldGenSettings.height,
+        worldGenSettings.seed
+      );
+      
+      // Update the engine's world
+      engine.world = world;
+      
+      // Notify success
+      alert('World generated successfully!');
+    } catch (error) {
+      console.error('Failed to generate world:', error);
+      alert('Failed to generate world. Please check the console for details.');
+    } finally {
+      setIsGeneratingWorld(false);
+    }
   };
 
   // Render template form based on type
@@ -239,61 +282,160 @@ const TemplateManager = ({ engine }) => {
     );
   };
 
+  // Render world generation settings
+  const renderWorldGenSettings = () => {
+    return (
+      <div className={styles.worldGenSection}>
+        <h2><Globe size={18} /> World Generation</h2>
+        <div className={styles.worldGenSettings}>
+          <div className={styles.formGroup}>
+            <label htmlFor="width">World Width</label>
+            <input
+              type="number"
+              id="width"
+              name="width"
+              value={worldGenSettings.width}
+              onChange={handleWorldGenSettingChange}
+              min="10"
+              max="1000"
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="height">World Height</label>
+            <input
+              type="number"
+              id="height"
+              name="height"
+              value={worldGenSettings.height}
+              onChange={handleWorldGenSettingChange}
+              min="10"
+              max="1000"
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="seed">Seed</label>
+            <input
+              type="number"
+              id="seed"
+              name="seed"
+              value={worldGenSettings.seed}
+              onChange={handleWorldGenSettingChange}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="biomeDensity">Biome Density</label>
+            <input
+              type="range"
+              id="biomeDensity"
+              name="biomeDensity"
+              value={worldGenSettings.biomeDensity}
+              onChange={handleWorldGenSettingChange}
+              min="0"
+              max="1"
+              step="0.1"
+            />
+            <span>{Math.round(worldGenSettings.biomeDensity * 100)}%</span>
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="terrainComplexity">Terrain Complexity</label>
+            <input
+              type="range"
+              id="terrainComplexity"
+              name="terrainComplexity"
+              value={worldGenSettings.terrainComplexity}
+              onChange={handleWorldGenSettingChange}
+              min="0"
+              max="1"
+              step="0.1"
+            />
+            <span>{Math.round(worldGenSettings.terrainComplexity * 100)}%</span>
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="civilizationLevel">Civilization Level</label>
+            <input
+              type="range"
+              id="civilizationLevel"
+              name="civilizationLevel"
+              value={worldGenSettings.civilizationLevel}
+              onChange={handleWorldGenSettingChange}
+              min="0"
+              max="1"
+              step="0.1"
+            />
+            <span>{Math.round(worldGenSettings.civilizationLevel * 100)}%</span>
+          </div>
+          <button
+            onClick={handleGenerateWorld}
+            disabled={isGeneratingWorld}
+            className={styles.generateButton}
+          >
+            {isGeneratingWorld ? 'Generating...' : 'Generate World'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>Template Manager</h1>
-        <button
-          onClick={() => {
-            setSelectedTemplate(null);
-            setFormData({});
-            setIsEditing(true);
-          }}
-          className={styles.addButton}
-        >
-          <Plus size={16} />
-          New Template
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            onClick={() => {
+              setSelectedTemplate(null);
+              setFormData({});
+              setIsEditing(true);
+            }}
+            className={styles.addButton}
+          >
+            <Plus size={16} />
+            Add Template
+          </button>
+        </div>
       </div>
 
       <div className={styles.content}>
         <div className={styles.sidebar}>
-          {Object.keys(templates).map(type => (
-            <button
-              key={type}
-              className={`${styles.typeButton} ${selectedType === type ? styles.active : ''}`}
-              onClick={() => handleTypeSelect(type)}
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
+          <div className={styles.templateTypes}>
+            {Object.keys(templates).map(type => (
+              <button
+                key={type}
+                className={`${styles.typeButton} ${selectedType === type ? styles.active : ''}`}
+                onClick={() => handleTypeSelect(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+          {renderWorldGenSettings()}
         </div>
 
-        <div className={styles.main}>
+        <div className={styles.mainContent}>
           {isEditing ? (
             renderTemplateForm()
           ) : (
             <div className={styles.templateList}>
               {templates[selectedType].map(template => (
                 <div key={template.id} className={styles.templateCard}>
-                  <div className={styles.templateHeader}>
+                  <div className={styles.templateInfo}>
                     <h3>{template.name}</h3>
-                    <div className={styles.templateActions}>
-                      <button
-                        onClick={() => handleTemplateSelect(template)}
-                        className={styles.editButton}
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(template.id)}
-                        className={styles.deleteButton}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    <p>{template.description}</p>
                   </div>
-                  <p>{template.description}</p>
+                  <div className={styles.templateActions}>
+                    <button
+                      onClick={() => handleTemplateSelect(template)}
+                      className={styles.editButton}
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(template.id)}
+                      className={styles.deleteButton}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -301,13 +443,12 @@ const TemplateManager = ({ engine }) => {
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div className={styles.confirmDialog}>
-          <div className={styles.confirmDialogContent}>
+          <div className={styles.dialogContent}>
             <h3>Confirm Delete</h3>
             <p>Are you sure you want to delete this template?</p>
-            <div className={styles.confirmDialogButtons}>
+            <div className={styles.dialogActions}>
               <button onClick={confirmDelete} className={styles.confirmButton}>
                 Delete
               </button>

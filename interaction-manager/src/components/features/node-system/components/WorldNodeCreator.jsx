@@ -348,7 +348,7 @@ const WorldNodeCreator = ({ worldNodeSystem, nodeTypeSystem, connectionSystem })
     };
 
     return (
-        <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-full rounded-lg shadow-inner">
+        <div className="p-6 bg-gray-100 dark:bg-gray-900 min-h-full rounded-lg shadow-inner">
             <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6">World Node Management</h1>
 
             <div className="flex space-x-4 mb-6">
@@ -398,10 +398,8 @@ const WorldNodeCreator = ({ worldNodeSystem, nodeTypeSystem, connectionSystem })
             </div>
 
             {activeTab === 'create' && (
-                <div className="space-y-6">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-                        {editMode ? 'Edit World' : 'Create New World'}
-                    </h2>
+                <div className="bg-gray-200 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Create New World</h2>
                     {renderWorldForm()}
                 </div>
             )}
