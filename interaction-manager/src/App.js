@@ -26,6 +26,9 @@ import { PrestigeManager } from './systems/interaction/PrestigeSystem';
 import { AlignmentManager } from './systems/interaction/AlignmentSystem';
 import WorldHistorySimulator from './components/features/historical-simulation/HistoricalSimulator.jsx';
 import WorldHistoryEngine from './WorldHistoryEngine.js';
+import CharacterTypeManager from './components/features/character-system/CharacterTypeManager';
+import { TemplateManager as TemplateSystem } from './systems/template';
+import TemplateManager from './components/features/template-system/TemplateManager';
 
 export const sidebarTabs = [
   {
@@ -33,6 +36,7 @@ export const sidebarTabs = [
     key: 'worldNodes',
     items: [
       { key: 'worldNodes', label: 'World Nodes', icon: <Globe size={18} /> },
+      { key: 'nodeTypes', label: 'Node Types', icon: <Tag size={18} /> },
     ],
   },
   {
@@ -40,6 +44,7 @@ export const sidebarTabs = [
     key: 'characters',
     items: [
       { key: 'characters', label: 'Character Types', icon: <Users size={18} /> },
+      { key: 'personalities', label: 'Personality Types', icon: <Smile size={18} /> },
     ],
   },
   {
@@ -288,32 +293,62 @@ function App() {
   };
 
   // Initialize systems
-  const engine = new WorldHistoryEngine();
+  const [templateSystem] = useState(() => new TemplateSystem());
+  const [engine] = useState(() => new WorldHistoryEngine());
+
+  // Initialize engine with template system
+  useEffect(() => {
+    engine.templateManager = templateSystem;
+  }, [engine, templateSystem]);
+
+  const [characterTypes, setCharacterTypes] = useState([]);
+
+  // Load character types from localStorage on mount
+  useEffect(() => {
+    const savedCharacterTypes = localStorage.getItem('characterTypes');
+    if (savedCharacterTypes) {
+      setCharacterTypes(JSON.parse(savedCharacterTypes));
+    }
+  }, []);
+
+  // Save character types to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('characterTypes', JSON.stringify(characterTypes));
+  }, [characterTypes]);
+
+  const sidebarConfig = [
+    ...sidebarTabs,
+    {
+      title: 'Characters',
+      items: [
+        { id: 'personality-traits', label: 'Personality Traits', icon: 'users' },
+        { id: 'cognitive-traits', label: 'Cognitive Traits', icon: 'brain' },
+        { id: 'character-types', label: 'Character Types', icon: 'user' }
+      ]
+    },
+  ];
 
   return (
-    <div className={styles.app}>
+    <div className={styles.appContainer}>
       <Header
+        theme={theme}
+        setTheme={setTheme}
         onExport={handleExport}
         onImport={handleImport}
         onClearData={handleClearData}
-        theme={theme}
-        setTheme={setTheme}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
-      
       <div className={styles.appContent}>
         <Sidebar
+          config={sidebarTabs}
           activeTab={activeTab}
           setActiveTab={handleSidebarTabClick}
           openSections={openSections}
           toggleSection={toggleSection}
-          theme={theme}
-          setTheme={setTheme}
           isMobileMenuOpen={isMobileMenuOpen}
           setIsMobileMenuOpen={setIsMobileMenuOpen}
+          theme={theme}
+          setTheme={setTheme}
         />
-        
         <MainContent
           activeTab={activeTab}
           nodeTypeSystem={nodeTypeSystem}
@@ -334,9 +369,9 @@ function App() {
           setAlignmentAxes={setAlignmentAxes}
           mainContentRef={mainContentRef}
           engine={engine}
-        >
-          {activeTab === 'worldHistory' ? <WorldHistorySimulator /> : null}
-        </MainContent>
+          characterTypes={characterTypes}
+          setCharacterTypes={setCharacterTypes}
+        />
       </div>
     </div>
   );

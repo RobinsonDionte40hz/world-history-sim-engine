@@ -7,6 +7,8 @@ import {
   GroupTemplate,
   ItemTemplate
 } from './TemplateTypes';
+import TemplateValidator from './TemplateValidator';
+import TemplateGenerator from './TemplateGenerator';
 
 class TemplateManager {
   constructor() {
@@ -21,94 +23,176 @@ class TemplateManager {
   }
 
   // Template registration
-  registerTemplate(type, template) {
-    if (!this.validateTemplate(type, template)) {
+  addTemplate(type, template) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
+
+    if (!TemplateValidator.validateTemplate(type, template)) {
       throw new Error(`Invalid template for type: ${type}`);
     }
+
     this.templates[type].set(template.id, template);
-  }
-
-  // Template validation
-  validateTemplate(type, template) {
-    const templateType = this.getTemplateType(type);
-    if (!templateType) return false;
-
-    // Check required fields
-    for (const [key, value] of Object.entries(templateType)) {
-      if (value === String && typeof template[key] !== 'string') return false;
-      if (value === Number && typeof template[key] !== 'number') return false;
-      if (Array.isArray(value) && !Array.isArray(template[key])) return false;
-      if (value === Object && typeof template[key] !== 'object') return false;
-    }
-
-    return true;
-  }
-
-  // Get template type definition
-  getTemplateType(type) {
-    const types = {
-      characters: CharacterTemplate,
-      nodes: NodeTemplate,
-      interactions: InteractionTemplate,
-      events: EventTemplate,
-      groups: GroupTemplate,
-      items: ItemTemplate
-    };
-    return types[type];
+    return template;
   }
 
   // Template retrieval
   getTemplate(type, id) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
+
     return this.templates[type].get(id);
   }
 
   // Template listing
-  listTemplates(type) {
-    return Array.from(this.templates[type].values());
-  }
+  getAllTemplates(type) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
 
-  // Get all templates across all types
-  getAllTemplates() {
-    return {
-      characters: this.listTemplates('characters'),
-      nodes: this.listTemplates('nodes'),
-      interactions: this.listTemplates('interactions'),
-      events: this.listTemplates('events'),
-      groups: this.listTemplates('groups'),
-      items: this.listTemplates('items')
-    };
+    return Array.from(this.templates[type].values());
   }
 
   // Template modification
   updateTemplate(type, id, updates) {
-    const template = this.getTemplate(type, id);
-    if (!template) return false;
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
 
-    const updatedTemplate = { ...template, ...updates };
-    if (!this.validateTemplate(type, updatedTemplate)) return false;
+    const template = this.templates[type].get(id);
+    if (!template) {
+      throw new Error(`Template not found: ${id}`);
+    }
+
+    const updatedTemplate = {
+      ...template,
+      ...updates,
+      metadata: {
+        ...template.metadata,
+        lastModified: new Date().toISOString()
+      }
+    };
+
+    if (!TemplateValidator.validateTemplate(type, updatedTemplate)) {
+      throw new Error(`Invalid template updates for type: ${type}`);
+    }
 
     this.templates[type].set(id, updatedTemplate);
-    return true;
+    return updatedTemplate;
   }
 
   // Template deletion
   deleteTemplate(type, id) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
+
     return this.templates[type].delete(id);
   }
 
   // Template search
-  searchTemplates(type, criteria) {
-    return this.listTemplates(type).filter(template => {
-      return Object.entries(criteria).every(([key, value]) => {
-        if (Array.isArray(template[key])) {
-          return template[key].includes(value);
-        }
-        return template[key] === value;
-      });
+  searchTemplates(type, query) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
+
+    const templates = this.getAllTemplates(type);
+    const searchTerms = query.toLowerCase().split(' ');
+
+    return templates.filter(template => {
+      const searchableText = [
+        template.name,
+        template.description,
+        ...template.tags
+      ].join(' ').toLowerCase();
+
+      return searchTerms.every(term => searchableText.includes(term));
     });
   }
 
   // Template inheritance
+  createTemplate(type, name, description, additionalParams = {}) {
+    const template = TemplateGenerator.generateTemplate(type, name, description, additionalParams);
+    return this.addTemplate(type, template);
+  }
+
+  // Template combination
+  combineTemplates(type, templateIds, combinationRules) {
+    const templates = templateIds.map(id => this.getTemplate(type, id));
+    if (templates.some(t => !t)) return null;
+
+    const combinedTemplate = {
+      ...templates[0],
+      id: `combined_${Date.now()}`,
+      combinedFrom: templateIds
+    };
+
+    // Apply combination rules
+    for (const rule of combinationRules) {
+      const { field, operation, source } = rule;
+      switch (operation) {
+        case 'merge':
+          combinedTemplate[field] = [
+            ...new Set(templates.flatMap(t => t[field]))
+          ];
+          break;
+        case 'average':
+          combinedTemplate[field] = templates.reduce(
+            (sum, t) => sum + t[field], 0
+          ) / templates.length;
+          break;
+        case 'select':
+          combinedTemplate[field] = templates[source][field];
+          break;
+        // Add more combination operations as needed
+      }
+    }
+
+    if (!this.validateTemplate(type, combinedTemplate)) return null;
+
+    this.addTemplate(type, combinedTemplate);
+    return combinedTemplate;
+  }
+
+  // Template export
+  exportTemplates(type) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
+
+    return this.getAllTemplates(type);
+  }
+
+  // Template import
+  importTemplates(type, templates) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
+    }
+
+    const importedTemplates = [];
+    const errors = [];
+
+    templates.forEach(template => {
+      try {
+        if (TemplateValidator.validateTemplate(type, template)) {
+          this.templates[type].set(template.id, template);
+          importedTemplates.push(template);
+        } else {
+          errors.push(`Invalid template: ${template.id}`);
+        }
+      } catch (error) {
+        errors.push(`Error importing template ${template.id}: ${error.message}`);
+      }
+    });
+
+    return {
+      imported: importedTemplates,
+      errors
+    };
+  }
+
+  // Template combination
   createTemplateVariant(type, baseId, variantData) {
     const baseTemplate = this.getTemplate(type, baseId);
     if (!baseTemplate) return null;
@@ -122,7 +206,7 @@ class TemplateManager {
 
     if (!this.validateTemplate(type, variantTemplate)) return null;
 
-    this.registerTemplate(type, variantTemplate);
+    this.addTemplate(type, variantTemplate);
     return variantTemplate;
   }
 
@@ -160,29 +244,18 @@ class TemplateManager {
 
     if (!this.validateTemplate(type, combinedTemplate)) return null;
 
-    this.registerTemplate(type, combinedTemplate);
+    this.addTemplate(type, combinedTemplate);
     return combinedTemplate;
   }
 
-  // Template export
-  exportTemplates(type) {
-    return Array.from(this.templates[type].values()).map(template => ({
-      ...template,
-      version: '1.0',
-      exportDate: new Date().toISOString()
-    }));
-  }
-
-  // Template import
-  importTemplates(type, templates) {
-    let successCount = 0;
-    for (const template of templates) {
-      if (this.validateTemplate(type, template)) {
-        this.registerTemplate(type, template);
-        successCount++;
-      }
+  // Template combination
+  getTemplatesByTag(type, tag) {
+    if (!this.templates[type]) {
+      throw new Error(`Invalid template type: ${type}`);
     }
-    return successCount;
+
+    const templates = this.getAllTemplates(type);
+    return templates.filter(template => template.tags.includes(tag));
   }
 }
 

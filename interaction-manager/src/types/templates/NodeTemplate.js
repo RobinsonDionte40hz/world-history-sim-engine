@@ -59,5 +59,66 @@ export const NodeTemplate = {
     }],
     growthFactors: Object,
     decayFactors: Object
+  },
+  // New historical simulation fields
+  historicalSimulation: {
+    // Time period compatibility
+    timePeriods: [{
+      name: String,
+      startYear: Number,
+      endYear: Number,
+      features: [String],
+      modifiers: Object
+    }],
+    // Historical events that can occur at this node
+    possibleEvents: [{
+      type: String,
+      triggerConditions: Object,
+      probability: Number,
+      effects: Object,
+      historicalSignificance: Number // 0-1 scale
+    }],
+    // Cultural development
+    culturalEvolution: {
+      stages: [{
+        name: String,
+        requirements: Object,
+        features: [String],
+        influenceRadius: Number
+      }],
+      interactionModifiers: Object
+    },
+    // Population demographics
+    demographics: {
+      baseComposition: Object, // Initial population makeup
+      migrationFactors: Object,
+      culturalInfluence: Number,
+      assimilationRate: Number
+    },
+    // Historical significance
+    significance: {
+      baseValue: Number,
+      modifiers: [{
+        type: String,
+        value: Number,
+        conditions: Object
+      }],
+      decayRate: Number
+    },
+    // Archaeological potential
+    archaeology: {
+      layers: [{
+        period: String,
+        artifacts: [String],
+        discoveryChance: Number
+      }],
+      preservationFactors: Object
+    },
+    // Historical records
+    recordKeeping: {
+      types: [String], // Types of records that can be generated
+      preservationChance: Number,
+      detailLevel: Number // 0-1 scale
+    }
   }
 }; 

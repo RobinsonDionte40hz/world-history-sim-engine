@@ -1,15 +1,17 @@
-import TemplateManager from './TemplateManager';
-import { NodeTemplate, CharacterTemplate, GroupTemplate } from './TemplateTypes';
+import { World } from '../types/simulation/World';
+import { SimulationCharacter } from '../types/simulation/SimulationCharacter';
+import { Settlement } from '../types/simulation/Settlement';
+import { CharacterTemplate } from '../types/templates/CharacterTemplate';
+import { NodeTemplate } from '../types/templates/NodeTemplate';
+import { GroupTemplate } from '../types/templates/GroupTemplate';
+import TemplateManager from '../template/TemplateManager';
 
 class WorldGenerator {
-  constructor(templateManager) {
-    this.templateManager = templateManager;
-    this.world = {
-      nodes: new Map(),
+  constructor() {
+    this.templates = {
       characters: new Map(),
-      groups: new Map(),
-      history: [],
-      currentTime: 0
+      nodes: new Map(),
+      groups: new Map()
     };
   }
 

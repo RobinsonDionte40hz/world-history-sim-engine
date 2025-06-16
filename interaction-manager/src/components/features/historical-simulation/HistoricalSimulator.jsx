@@ -2,7 +2,65 @@ import React, { useState, useEffect } from 'react';
 import WorldHistoryEngine from '../../../WorldHistoryEngine.js';
 import TemplateManager from '../template-system/TemplateManager.jsx';
 import styles from '../WorldHistorySimulator.module.css';
-import { Settings, History, Globe, BarChart2 } from 'lucide-react';
+import { Settings, History, Globe, BarChart2, Plus, Info } from 'lucide-react';
+
+const SystemInfo = () => (
+  <div className={styles.systemInfo}>
+    <h3><Info size={18} /> System Information</h3>
+    
+    <div className={styles.infoSection}>
+      <h4>Core Systems</h4>
+      <ul>
+        <li><strong>World Generation:</strong> Creates the initial world state with settlements, factions, and resources</li>
+        <li><strong>Simulation Engine:</strong> Manages time progression and basic entity interactions</li>
+        <li><strong>Complex Events:</strong> Handles wars, trade, politics, and diplomatic relations</li>
+        <li><strong>Historical Recording:</strong> Tracks and documents significant events and changes</li>
+      </ul>
+    </div>
+
+    <div className={styles.infoSection}>
+      <h4>Required Templates</h4>
+      <p>Before generating a world, you need to provide templates for:</p>
+      <ul>
+        <li><strong>Characters:</strong> Individual entities with attributes and behaviors</li>
+        <li><strong>Nodes:</strong> Locations and points of interest</li>
+        <li><strong>Interactions:</strong> Rules for entity interactions</li>
+        <li><strong>Groups:</strong> Collections of entities (factions, organizations)</li>
+        <li><strong>Historical Records:</strong> Templates for historical events</li>
+      </ul>
+    </div>
+
+    <div className={styles.infoSection}>
+      <h4>World Generation Requirements</h4>
+      <ul>
+        <li>World dimensions (width and height)</li>
+        <li>Seed value for reproducible generation</li>
+        <li>Valid templates for all required entity types</li>
+        <li>Sufficient system resources for complex calculations</li>
+      </ul>
+    </div>
+
+    <div className={styles.infoSection}>
+      <h4>Complex Event Systems</h4>
+      <ul>
+        <li><strong>Trade System:</strong> Manages economic interactions and resource distribution</li>
+        <li><strong>Political System:</strong> Handles governance, power structures, and political events</li>
+        <li><strong>Diplomatic System:</strong> Manages relations between factions and diplomatic events</li>
+        <li><strong>War System:</strong> Handles conflicts, military actions, and war-related events</li>
+      </ul>
+    </div>
+
+    <div className={styles.infoSection}>
+      <h4>Simulation Parameters</h4>
+      <ul>
+        <li><strong>Time Step:</strong> Controls how frequently the world updates</li>
+        <li><strong>Event Frequency:</strong> Determines how often complex events occur</li>
+        <li><strong>Max Concurrent Events:</strong> Limits simultaneous complex events</li>
+        <li><strong>Logging:</strong> Tracks simulation progress and events</li>
+      </ul>
+    </div>
+  </div>
+);
 
 const WorldHistorySimulator = () => {
   const [engine, setEngine] = useState(null);
@@ -12,13 +70,21 @@ const WorldHistorySimulator = () => {
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [viewMode, setViewMode] = useState('world'); // 'world', 'history', 'analysis', 'templates'
 
-  // Initialize engine
+  // Initialize engine without world
   useEffect(() => {
     const initEngine = async () => {
       try {
-        const newEngine = await WorldHistoryEngine.createExampleWorld();
+        const newEngine = new WorldHistoryEngine();
+        await newEngine.initialize({
+          templates: {
+            characters: [],
+            nodes: [],
+            interactions: [],
+            groups: [],
+            historicalRecords: []
+          }
+        });
         setEngine(newEngine);
-        setWorldState(newEngine.world);
       } catch (error) {
         console.error('Failed to initialize engine:', error);
       }
@@ -27,9 +93,28 @@ const WorldHistorySimulator = () => {
     initEngine();
   }, []);
 
+  // Generate new world
+  const generateWorld = async () => {
+    if (!engine) return;
+
+    setIsLoading(true);
+    try {
+      await engine.generateWorld({
+        width: 1000,
+        height: 1000,
+        seed: Date.now()
+      });
+      setWorldState(engine.world);
+    } catch (error) {
+      console.error('Failed to generate world:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Run simulation
   const runSimulation = async () => {
-    if (!engine) return;
+    if (!engine || !worldState) return;
 
     setIsLoading(true);
     setSimulationProgress(0);
@@ -87,34 +172,52 @@ const WorldHistorySimulator = () => {
 
   // Render world view
   const renderWorldView = () => {
-    if (!worldState) return null;
-
     return (
       <div className={styles.worldView}>
         <h2>World State</h2>
-        <div className={styles.stats}>
-          <div>Nodes: {worldState.nodes.size}</div>
-          <div>Characters: {worldState.characters.size}</div>
-          <div>Groups: {worldState.groups.size}</div>
-          <div>Historical Events: {worldState.history.length}</div>
-        </div>
-        <div className={styles.controls}>
-          <button onClick={runSimulation} disabled={isLoading}>
-            {isLoading ? 'Simulating...' : 'Run Simulation'}
-          </button>
-          <button onClick={saveWorld}>Save World</button>
-          <button onClick={loadWorld}>Load World</button>
-        </div>
-        {isLoading && (
-          <div className={styles.progress}>
-            <div 
-              className={styles.progressBar}
-              style={{ width: `${simulationProgress}%` }}
-            />
-            <div className={styles.progressText}>
-              {Math.round(simulationProgress)}%
-            </div>
+        {!worldState ? (
+          <div className={styles.noWorld}>
+            <p>No world has been generated yet.</p>
+            <SystemInfo />
+            <button 
+              onClick={generateWorld} 
+              disabled={isLoading}
+              className={styles.generateButton}
+            >
+              <Plus size={18} />
+              Generate New World
+            </button>
           </div>
+        ) : (
+          <>
+            <div className={styles.stats}>
+              <div>Nodes: {worldState.nodes.size}</div>
+              <div>Characters: {worldState.characters.size}</div>
+              <div>Groups: {worldState.groups.size}</div>
+              <div>Historical Events: {worldState.history.length}</div>
+            </div>
+            <div className={styles.controls}>
+              <button onClick={runSimulation} disabled={isLoading}>
+                {isLoading ? 'Simulating...' : 'Run Simulation'}
+              </button>
+              <button onClick={saveWorld}>Save World</button>
+              <button onClick={loadWorld}>Load World</button>
+              <button onClick={generateWorld} disabled={isLoading}>
+                Generate New World
+              </button>
+            </div>
+            {isLoading && (
+              <div className={styles.progress}>
+                <div 
+                  className={styles.progressBar}
+                  style={{ width: `${simulationProgress}%` }}
+                />
+                <div className={styles.progressText}>
+                  {Math.round(simulationProgress)}%
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     );

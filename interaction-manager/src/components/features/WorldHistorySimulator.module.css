@@ -223,4 +223,100 @@
   .analysis {
     grid-template-columns: 1fr;
   }
+}
+
+.noWorld {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.generateButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.generateButton:hover {
+  background: #45a049;
+}
+
+.generateButton:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+.systemInfo {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  max-width: 800px;
+}
+
+.systemInfo h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.infoSection {
+  margin-bottom: 24px;
+}
+
+.infoSection:last-child {
+  margin-bottom: 0;
+}
+
+.infoSection h4 {
+  color: #34495e;
+  margin-bottom: 12px;
+  font-size: 1.1em;
+}
+
+.infoSection p {
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.infoSection ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.infoSection li {
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+  color: #555;
+}
+
+.infoSection li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #3498db;
+}
+
+.infoSection strong {
+  color: #2c3e50;
 } 

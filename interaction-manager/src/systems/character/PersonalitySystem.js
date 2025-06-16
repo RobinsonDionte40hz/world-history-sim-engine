@@ -72,6 +72,24 @@ class PersonalitySystem {
     constructor() {
         this.traits = new Map();
         this.attributes = new Map();
+        this.emotionalTendencies = new Map();
+        this.cognitiveTraits = new Map();
+        this.traitCategories = new Set([
+            'Personality',
+            'Social',
+            'Emotional',
+            'Behavioral',
+            'Moral',
+            'Intellectual'
+        ]);
+        this.cognitiveCategories = new Set([
+            'Analytical',
+            'Creative',
+            'Practical',
+            'Theoretical',
+            'Strategic',
+            'Tactical'
+        ]);
         this.initializeDefaultAttributes();
     }
 
@@ -213,11 +231,95 @@ class PersonalitySystem {
         return this.traits.delete(id);
     }
 
+    // Emotional Tendency methods
+    createEmotionalTendency(config) {
+        if (!this.validateEmotionalTendencyConfig(config)) {
+            throw new Error('Invalid emotional tendency configuration');
+        }
+
+        const tendency = new EmotionalTendency(config);
+        this.emotionalTendencies.set(tendency.id, tendency);
+        return tendency;
+    }
+
+    validateEmotionalTendencyConfig(config) {
+        const requiredFields = ['id', 'name', 'description', 'category'];
+        for (const field of requiredFields) {
+            if (!config[field]) {
+                console.error(`Missing required field: ${field}`);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    updateEmotionalTendency(id, updates) {
+        const tendency = this.emotionalTendencies.get(id);
+        if (!tendency) {
+            throw new Error(`Emotional tendency with ID ${id} not found`);
+        }
+
+        const updatedTendency = {
+            ...tendency,
+            ...updates
+        };
+
+        this.emotionalTendencies.set(id, updatedTendency);
+        return updatedTendency;
+    }
+
+    deleteEmotionalTendency(id) {
+        return this.emotionalTendencies.delete(id);
+    }
+
+    // Cognitive Trait methods
+    createCognitiveTrait(config) {
+        if (!this.validateCognitiveTraitConfig(config)) {
+            throw new Error('Invalid cognitive trait configuration');
+        }
+
+        const trait = new CognitiveTrait(config);
+        this.cognitiveTraits.set(trait.id, trait);
+        return trait;
+    }
+
+    validateCognitiveTraitConfig(config) {
+        const requiredFields = ['id', 'name', 'description', 'category'];
+        for (const field of requiredFields) {
+            if (!config[field]) {
+                console.error(`Missing required field: ${field}`);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    updateCognitiveTrait(id, updates) {
+        const trait = this.cognitiveTraits.get(id);
+        if (!trait) {
+            throw new Error(`Cognitive trait with ID ${id} not found`);
+        }
+
+        const updatedTrait = {
+            ...trait,
+            ...updates
+        };
+
+        this.cognitiveTraits.set(id, updatedTrait);
+        return updatedTrait;
+    }
+
+    deleteCognitiveTrait(id) {
+        return this.cognitiveTraits.delete(id);
+    }
+
     // Data persistence methods
     toJSON() {
         return {
             traits: Array.from(this.traits.values()),
-            attributes: Array.from(this.attributes.values())
+            attributes: Array.from(this.attributes.values()),
+            emotionalTendencies: Array.from(this.emotionalTendencies.values()),
+            cognitiveTraits: Array.from(this.cognitiveTraits.values())
         };
     }
 
@@ -225,6 +327,8 @@ class PersonalitySystem {
         // Clear existing data
         this.traits.clear();
         this.attributes.clear();
+        this.emotionalTendencies.clear();
+        this.cognitiveTraits.clear();
 
         // Restore attributes
         if (data.attributes) {
@@ -240,7 +344,29 @@ class PersonalitySystem {
             });
         }
 
+        // Restore emotional tendencies
+        if (data.emotionalTendencies) {
+            data.emotionalTendencies.forEach(tendency => {
+                this.createEmotionalTendency(tendency);
+            });
+        }
+
+        // Restore cognitive traits
+        if (data.cognitiveTraits) {
+            data.cognitiveTraits.forEach(trait => {
+                this.createCognitiveTrait(trait);
+            });
+        }
+
         return this;
+    }
+
+    getTraitCategories() {
+        return Array.from(this.traitCategories);
+    }
+
+    getCognitiveCategories() {
+        return Array.from(this.cognitiveCategories);
     }
 }
 

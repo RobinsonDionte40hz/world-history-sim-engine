@@ -1,12 +1,12 @@
 import React from 'react';
 import styles from './MainContent.module.css';
-import InteractionManager from '../../InteractionManager.js';
+import InteractionManager from '../features/interaction-management/InteractionManager.jsx';
 import NodeTypeCreator from '../features/node-system/components/NodeTypeCreator.jsx';
 import PersonalityTraitManager from '../features/personality-system/components/PersonalityTraitManager.jsx';
 import ConsciousnessManager from '../features/consciousness-system/components/ConsciousnessManager.jsx';
 import ConnectionManager from '../features/node-system/components/ConnectionManager.jsx';
 import QuestManager from '../features/quest-system/components/QuestManager.jsx';
-import PersonalityManager from '../features/personality-system/PersonalityManager.jsx';
+import CharacterTypeManager from '../features/character-system/CharacterTypeManager.jsx';
 import WorldNodeCreator from '../features/node-system/components/WorldNodeCreator.jsx';
 import ItemManager from '../features/item-system/components/ItemManager.jsx';
 import { InfluenceManager } from '../../systems/interaction/InfluenceSystem.js';
@@ -34,7 +34,9 @@ const MainContent = ({
   alignmentAxes,
   setAlignmentAxes,
   mainContentRef,
-  engine
+  engine,
+  characterTypes,
+  setCharacterTypes
 }) => {
   const renderContent = () => {
     switch (activeTab) {
@@ -50,27 +52,21 @@ const MainContent = ({
             alignmentSystem={alignmentSystem}
             alignmentAxes={alignmentAxes}
             setAlignmentAxes={setAlignmentAxes}
+            personalitySystem={personalitySystem}
           />
         );
       case 'characters':
         return (
-          <InteractionManager
-            initialTab="characters"
-            influenceSystem={influenceSystem}
-            influenceDomains={influenceDomains}
-            setInfluenceDomains={setInfluenceDomains}
-            prestigeSystem={prestigeSystem}
-            prestigeTracks={prestigeTracks}
-            setPrestigeTracks={setPrestigeTracks}
-            alignmentSystem={alignmentSystem}
-            alignmentAxes={alignmentAxes}
-            setAlignmentAxes={setAlignmentAxes}
+          <CharacterTypeManager
+            personalitySystem={personalitySystem}
+            characterTypes={characterTypes}
+            setCharacterTypes={setCharacterTypes}
           />
         );
       case 'nodeTypes':
-        return <NodeTypeCreator system={nodeTypeSystem} />;
+        return <NodeTypeCreator nodeTypeSystem={nodeTypeSystem} />;
       case 'personalities':
-        return <PersonalityTraitManager system={personalitySystem} />;
+        return <PersonalityTraitManager personalitySystem={personalitySystem} />;
       case 'consciousness':
         return <ConsciousnessManager system={consciousnessSystem} />;
       case 'connections':
@@ -85,40 +81,10 @@ const MainContent = ({
         />;
       case 'items':
         return <ItemManager itemSystem={itemSystem} />;
-      case 'templates':
-        return <TemplateManager engine={engine} />;
-      case 'influence':
-        return (
-          <>
-            <InfluenceManager system={influenceSystem} />
-            <InfluenceManager
-              domains={influenceDomains}
-              setDomains={setInfluenceDomains}
-            />
-          </>
-        );
-      case 'prestige':
-        return (
-          <>
-            <PrestigeManager system={prestigeSystem} />
-            <PrestigeManager
-              tracks={prestigeTracks}
-              setTracks={setPrestigeTracks}
-            />
-          </>
-        );
-      case 'alignment':
-        return (
-          <>
-            <AlignmentManager system={alignmentSystem} />
-            <AlignmentManager
-              axes={alignmentAxes}
-              setAxes={setAlignmentAxes}
-            />
-          </>
-        );
       case 'worldHistory':
         return <WorldHistorySimulator />;
+      case 'templates':
+        return <TemplateManager engine={engine} />;
       default:
         return <div>Select a tab to begin</div>;
     }

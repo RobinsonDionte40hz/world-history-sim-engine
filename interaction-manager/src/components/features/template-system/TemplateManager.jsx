@@ -20,8 +20,19 @@ const TemplateManager = ({ engine }) => {
 
   // Load templates when component mounts
   useEffect(() => {
-    if (engine) {
-      const loadedTemplates = engine.templateManager.getAllTemplates();
+    if (engine && engine.templateManager) {
+      const templateTypes = ['characters', 'nodes', 'interactions', 'events', 'groups', 'items'];
+      const loadedTemplates = {};
+      
+      templateTypes.forEach(type => {
+        try {
+          loadedTemplates[type] = engine.templateManager.getAllTemplates(type) || [];
+        } catch (error) {
+          console.warn(`Failed to load templates for type ${type}:`, error);
+          loadedTemplates[type] = [];
+        }
+      });
+      
       setTemplates(loadedTemplates);
     }
   }, [engine]);
@@ -60,11 +71,12 @@ const TemplateManager = ({ engine }) => {
         await engine.templateManager.updateTemplate(selectedType, selectedTemplate.id, formData);
       } else {
         // Create new template
-        await engine.templateManager.createTemplate(selectedType, formData);
+        await engine.templateManager.createTemplate(selectedType, formData.name, formData.description, formData);
       }
 
       // Refresh templates
-      const updatedTemplates = engine.templateManager.getAllTemplates();
+      const updatedTemplates = { ...templates };
+      updatedTemplates[selectedType] = engine.templateManager.getAllTemplates(selectedType);
       setTemplates(updatedTemplates);
       setIsEditing(false);
       setSelectedTemplate(null);
@@ -86,7 +98,8 @@ const TemplateManager = ({ engine }) => {
 
     try {
       await engine.templateManager.deleteTemplate(selectedType, templateToDelete);
-      const updatedTemplates = engine.templateManager.getAllTemplates();
+      const updatedTemplates = { ...templates };
+      updatedTemplates[selectedType] = engine.templateManager.getAllTemplates(selectedType);
       setTemplates(updatedTemplates);
       setSelectedTemplate(null);
       setIsEditing(false);

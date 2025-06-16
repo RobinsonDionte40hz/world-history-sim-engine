@@ -40,6 +40,28 @@ export interface CharacterType {
   defaultPersonality?: Partial<PersonalityProfile>;
   emotionalTendencies?: EmotionalTendency[];
   cognitiveTraits?: CognitiveTrait[];
+  // Race system
+  race?: {
+    id: string;
+    name: string;
+    description: string;
+    subrace?: {
+      name: string;
+      description: string;
+      attributeModifiers?: Record<string, number>;
+      skillModifiers?: Record<string, number>;
+      features?: string[];
+    };
+    traits?: {
+      name: string;
+      description: string;
+      effects?: Record<string, any>;
+    }[];
+    lifespan?: {
+      average: number;
+      maximum: number;
+    };
+  };
 }
 
 export interface Node {
