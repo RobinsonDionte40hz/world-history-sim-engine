@@ -1,0 +1,226 @@
+.container {
+  padding: var(--space-5);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-color);
+  color: var(--text-primary);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
+}
+
+.viewControls {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.viewControls button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-color);
+  background: var(--background-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewControls button:hover {
+  background: var(--hover-bg);
+}
+
+.viewControls button.active {
+  background: var(--primary-color);
+  color: var(--card-background);
+  border-color: var(--primary-color);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+  background: var(--background-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+/* World View Styles */
+.worldView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background: var(--background-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.stats > div {
+  padding: var(--space-4);
+  background: var(--background-color);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.controls button {
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-color);
+  color: var(--card-background);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.controls button:hover {
+  background: var(--primary-dark, #059669);
+}
+
+.controls button:disabled {
+  background: var(--disabled-color, #d1d5db);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.progress {
+  width: 100%;
+  height: 20px;
+  background: var(--background-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.progressBar {
+  height: 100%;
+  background: var(--primary-color);
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--card-background);
+  font-size: var(--font-size-xs);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* History View Styles */
+.historyView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.event {
+  padding: var(--space-4);
+  background: var(--background-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.eventHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.eventType {
+  font-weight: var(--font-weight-bold);
+  color: var(--primary-color);
+}
+
+.eventTime {
+  color: var(--text-secondary);
+}
+
+.eventDescription {
+  margin-bottom: var(--space-4);
+}
+
+.eventAttributes {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+}
+
+.eventAttributes h4 {
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text-secondary);
+}
+
+/* Analysis View Styles */
+.analysisView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.analysis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-5);
+}
+
+.summary,
+.attributeInfluence,
+.personalityPatterns {
+  padding: var(--space-5);
+  background: var(--background-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.summary h3,
+.attributeInfluence h3,
+.personalityPatterns h3 {
+  margin: 0 0 var(--space-4) 0;
+  color: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .viewControls {
+    width: 100%;
+    justify-content: center;
+  }
+  .stats {
+    grid-template-columns: 1fr;
+  }
+  .analysis {
+    grid-template-columns: 1fr;
+  }
+} 

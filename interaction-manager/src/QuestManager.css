@@ -1,0 +1,237 @@
+.quest-manager {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quest-manager .tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.quest-manager .tab {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.quest-manager .tab:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.quest-manager .tab.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.quest-manager .content {
+    padding: 1rem 0;
+}
+
+.quest-manager .create-btn {
+    margin-bottom: 2rem;
+}
+
+.quest-manager .quest-form,
+.quest-manager .node-form {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.quest-manager .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.quest-manager .form-group label {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.quest-manager .form-group input,
+.quest-manager .form-group textarea,
+.quest-manager .form-group select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.quest-manager .form-group input:focus,
+.quest-manager .form-group textarea:focus,
+.quest-manager .form-group select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.quest-manager .form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.quest-manager .sub-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.quest-manager .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.quest-manager .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quest-manager .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.quest-manager .btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.quest-manager .btn-secondary {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.quest-manager .btn-secondary:hover {
+    background-color: var(--border-color);
+}
+
+.quest-manager .btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.quest-manager .btn-danger:hover {
+    background-color: var(--danger-hover);
+}
+
+.quest-manager .quest-list {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.quest-manager .quest-item {
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.quest-manager .quest-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.quest-manager .quest-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.quest-manager .quest-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.quest-manager .quest-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.quest-manager .detail-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.quest-manager .detail-group label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.quest-manager .detail-group span {
+    color: var(--text-primary);
+}
+
+.quest-manager .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    color: var(--text-secondary);
+}
+
+.quest-manager .empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .quest-manager {
+        padding: 1rem;
+    }
+
+    .quest-manager .tabs {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .quest-manager .tab {
+        width: 100%;
+        text-align: center;
+    }
+
+    .quest-manager .sub-form {
+        grid-template-columns: 1fr;
+    }
+
+    .quest-manager .quest-details {
+        grid-template-columns: 1fr;
+    }
+
+    .quest-manager .quest-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .quest-manager .quest-actions {
+        width: 100%;
+        justify-content: center;
+    }
+} 

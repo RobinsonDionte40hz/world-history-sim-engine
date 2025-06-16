@@ -1,0 +1,298 @@
+.container {
+  padding: var(--space-5);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-color);
+  color: var(--text-primary);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--primary-color);
+  color: var(--card-background);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.addButton:hover {
+  background: var(--primary-dark, #059669);
+}
+
+.content {
+  display: flex;
+  gap: var(--space-5);
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--card-background);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.typeButton {
+  padding: var(--space-3);
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.typeButton:hover {
+  background: var(--hover-bg);
+}
+
+.typeButton.active {
+  background: var(--primary-color);
+  color: var(--card-background);
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--card-background);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.templateList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.templateCard {
+  padding: var(--space-4);
+  background: var(--background-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.templateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.templateHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+.templateActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.editButton,
+.deleteButton {
+  padding: var(--space-1);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editButton {
+  color: var(--primary-color);
+}
+
+.deleteButton {
+  color: var(--error-color, #EF4444);
+}
+
+.editButton:hover {
+  background: var(--primary-light);
+}
+
+.deleteButton:hover {
+  background: var(--error-light, #fee2e2);
+}
+
+/* Form Styles */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.formGroup label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--background-color);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.formActions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.saveButton,
+.cancelButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saveButton {
+  background: var(--primary-color);
+  color: var(--card-background);
+}
+
+.saveButton:hover {
+  background: var(--primary-dark, #059669);
+}
+
+.cancelButton {
+  background: var(--secondary-color);
+  color: var(--card-background);
+}
+
+.cancelButton:hover {
+  background: var(--secondary-light);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .typeButton {
+    flex: 1;
+    text-align: center;
+  }
+  .templateList {
+    grid-template-columns: 1fr;
+  }
+}
+
+.confirmDialog {
+  background: var(--card-background);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border: 1px solid var(--border-color);
+}
+
+.confirmDialogContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.confirmDialogContent h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+.confirmDialogContent p {
+  color: var(--text-secondary);
+}
+
+.confirmDialogButtons {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.confirmButton {
+  background: var(--error-color, #EF4444);
+  color: var(--card-background);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirmButton:hover {
+  background: var(--error-light, #fee2e2);
+}
+
+.cancelButton {
+  background: var(--secondary-color);
+  color: var(--card-background);
+}
+
+.cancelButton:hover {
+  background: var(--secondary-light);
+} 
