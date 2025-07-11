@@ -1,8 +1,8 @@
-// src/application/services/SimulationService.js
+// src/application/use-cases/services/SimulationService.js
 
-import generateWorld from '../use-cases/simulation/GenerateWorld.js';
-import runTick from '../use-cases/simulation/RunTick.js';
-import analyzeHistory from '../use-cases/history/AnalyzeHistory.js';
+import generateWorld from '../simulation/GenerateWorld.js';
+import runTick from '../simulation/RunTick.js';
+import analyzeHistory from '../history/AnalyzeHistory.js';
 import Position from '../../../domain/value-objects/Positions.js';
 import Character from '../../../domain/entities/Character.js';
 

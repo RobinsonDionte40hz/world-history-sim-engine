@@ -1,7 +1,7 @@
 // src/presentation/hooks/useSimulation.js
 
 import { useState, useEffect, useCallback } from 'react';
-import SimulationService from '../../application/services/SimulationService.js';
+import SimulationService from '../../application/use-cases/services/SimulationService.js';
 
 const useSimulation = () => {
   const [worldState, setWorldState] = useState(SimulationService.worldState || SimulationService.loadState());
@@ -24,7 +24,7 @@ const useSimulation = () => {
     return () => {
       SimulationService.setOnTick(null);  // Remove callback
     };
-  }, []);
+  }, [worldState]);
 
   const startSimulation = useCallback(() => {
     SimulationService.start();

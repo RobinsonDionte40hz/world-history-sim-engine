@@ -1,9 +1,32 @@
 // src/application/use-cases/simulation/GenerateWorld.js
 
-import Character from '../../domain/entities/Character.js';
-import Interaction from '../../domain/entities/Interaction.js';
-import Position from '../../domain/entities/Position.js';
-import Attributes from '../../domain/entities/Attributes.js';
+import Character from '../../../domain/entities/Character.js';
+import Interaction from '../../../domain/entities/Interaction.js';
+import Position from '../../../domain/value-objects/Positions.js';
+
+// Generate sample interactions for nodes
+const generateNodeInteractions = () => [
+  new Interaction({
+    name: 'Trade Goods',
+    type: 'dialogue',
+    requirements: [{ attr: 'charisma', min: 10 }],
+    branches: [{ id: 'success', text: 'Deal made', effects: [{ type: 'influence', value: 5 }] }],
+  }),
+  new Interaction({
+    name: 'Gather Resources',
+    type: 'action',
+    requirements: [{ attr: 'strength', min: 12 }],
+    branches: [{ id: 'success', text: 'Resources gathered', effects: [{ type: 'resource', value: 10, target: 'food' }] }],
+  }),
+];
+
+// Calculate initial coherence based on node conditions (quantum-inspired)
+const calculateInitialCoherence = (node) => {
+  // Simulate ordered water shielding (papers' 0.28 nm spacing) with node density
+  const densityFactor = Math.random() * 0.5 + 0.5;  // 0.5-1.0 (higher density = better shielding)
+  const baseCoherence = 0.7;  // Default from papers' microtubule coherence
+  return Math.min(1, baseCoherence * densityFactor);  // Caps at 1
+};
 
 const generateWorld = (config = {}) => {
   const {
@@ -30,7 +53,8 @@ const generateWorld = (config = {}) => {
         x: Math.floor(Math.random() * size.width),
         y: Math.floor(Math.random() * size.height),
       }),
-      interactions: this.generateNodeInteractions(),
+      interactions: generateNodeInteractions(),
+      population: Math.floor(Math.random() * 1000) + 100, // Random population 100-1100
     };
     worldState.nodes.push(node);
   }
@@ -41,18 +65,23 @@ const generateWorld = (config = {}) => {
     const character = new Character({
       name: `NPC ${i + 1}`,
       currentNodeId: node.id,
-      position: new Position({ nodeId: node.id }),  // Tie to node
       consciousness: {
         frequency: 40,  // 40 Hz gamma baseline from papers
-        coherence: this.calculateInitialCoherence(node),  // Node-dependent
+        coherence: calculateInitialCoherence(node),  // Node-dependent
       },
       personality: { aggression: Math.random(), curiosity: Math.random() },  // Random traits
-      attributes: new Attributes({
+      attributes: {
         strength: { score: Math.floor(Math.random() * 10) + 10 },
         dexterity: { score: Math.floor(Math.random() * 10) + 10 },
-        // ... other attributes
-      }),
+        constitution: { score: Math.floor(Math.random() * 10) + 10 },
+        intelligence: { score: Math.floor(Math.random() * 10) + 10 },
+        wisdom: { score: Math.floor(Math.random() * 10) + 10 },
+        charisma: { score: Math.floor(Math.random() * 10) + 10 },
+      },
       goals: [{ id: 'gather_resources', progress: 0 }],
+      energy: 100,
+      health: 100,
+      mood: 80,
     });
     worldState.npcs.push(character);
   }
@@ -63,30 +92,6 @@ const generateWorld = (config = {}) => {
   });
 
   return worldState;
-};
-
-// Generate sample interactions for nodes (reused from old Interactions tab)
-generateWorld.generateNodeInteractions = () => [
-  new Interaction({
-    name: 'Trade Goods',
-    type: 'dialogue',
-    requirements: [{ attr: 'charisma', min: 10 }],
-    branches: [{ id: 'success', text: 'Deal made', effects: [{ type: 'influence', value: 5 }] }],
-  }),
-  new Interaction({
-    name: 'Gather Resources',
-    type: 'action',
-    requirements: [{ attr: 'strength', min: 12 }],
-    branches: [{ id: 'success', text: 'Resources gathered', effects: [{ type: 'resource', value: 10, target: 'food' }] }],
-  }),
-];
-
-// Calculate initial coherence based on node conditions (quantum-inspired)
-generateWorld.calculateInitialCoherence = (node) => {
-  // Simulate ordered water shielding (papers' 0.28 nm spacing) with node density
-  const densityFactor = Math.random() * 0.5 + 0.5;  // 0.5-1.0 (higher density = better shielding)
-  const baseCoherence = 0.7;  // Default from papers' microtubule coherence
-  return Math.min(1, baseCoherence * densityFactor);  // Caps at 1
 };
 
 export default generateWorld;

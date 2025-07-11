@@ -1,9 +1,9 @@
 // src/application/use-cases/simulation/RunTick.js
 
-import Character from '../../domain/entities/Character.js';
+import Character from '../../../domain/entities/Character.js';
 import generateBehavior from '../npc/GenerateBehavior.js';
-import EvolutionService from '../../domain/services/EvolutionService.js';
-import HistoryGenerator from '../../domain/services/HistoryGenerator.js';
+import EvolutionService from '../../../domain/services/EvolutionService.js';
+import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 
 const runTick = (worldState) => {
   if (!worldState || !Array.isArray(worldState.npcs) || !Array.isArray(worldState.nodes)) {
