@@ -1,15 +1,15 @@
-# Branching Interaction Manager
+# World History Simulation Engine
 
-A powerful React-based tool for creating interactive narratives, dialogue trees, and complex branching storylines with advanced character psychology and progression systems.
+A sophisticated React-based simulation engine for generating dynamic historical worlds with complex character interactions, civilizations, and emergent storytelling.
 
 ## 🚀 Quick Start
 
 ### Installation & Launch
 ```bash
 # Clone/download the project
-cd interaction-manager
+cd world-history-sim-engine/sim-engine
 
-# Install dependencies (if not already done)
+# Install dependencies
 npm install
 
 # Start the development server
@@ -18,86 +18,76 @@ npm start
 
 The app will open at `http://localhost:3000`
 
-### Your First 5 Minutes
-1. Click the **"Characters"** tab in the top section
-2. Create a character type (e.g., "Village Guard")
-3. Switch to **"Interactions"** tab
-4. Create your first dialogue with branching options
-5. Use **"View"** to test your creation
+### Your First Simulation
+1. Click **"Generate World"** to create a new historical world
+2. View the **"History Timeline"** to see generated events
+3. Examine **"Characters"** to see NPCs with personalities and relationships
+4. Use **"Simulation Control"** to advance time and watch history unfold
 
-## 📋 What This Tool Can Do
+## 📋 What This Engine Can Do
 
 ### Core Features
-- **Interactive Dialogue Trees** - Create branching conversations with multiple paths
-- **Character Psychology** - NPCs with personalities, memories, and emotional states
-- **Progression Systems** - Influence, prestige, and alignment tracking
-- **World Building** - Locations, connections, and spatial relationships
-- **Quest Management** - Multi-step quests that evolve based on player choices
-- **Advanced Prerequisites** - Gate content behind complex conditions
+- **Dynamic World Generation** - Create living, breathing historical worlds
+- **Complex Character Systems** - NPCs with consciousness, personalities, and racial traits
+- **Historical Event Generation** - Emergent storytelling through procedural events
+- **Settlement Evolution** - Cities and towns that grow and change over time
+- **Quantum Simulation** - Advanced probability systems for realistic outcomes
+- **Memory & Influence Systems** - Characters remember interactions and build relationships
+- **Template-Based Content** - Flexible system for creating custom content
 
 ### Perfect For
-- **Game Developers** - RPG dialogue systems and branching narratives
-- **Interactive Fiction Writers** - Complex choice-driven stories
-- **Educators** - Scenario-based learning and decision simulations
-- **Storytellers** - Exploring narrative possibilities and character development
+- **Game Developers** - Procedural world generation and dynamic storytelling
+- **Writers & Worldbuilders** - Historical fiction and fantasy world creation
+- **Educators** - Historical simulation and interactive learning
+- **Researchers** - Social dynamics and civilization modeling
 
-## 🎯 New User Tutorial
+## 🎯 System Architecture
 
-### Step 1: Create Your First Character Type (2 minutes)
+### Clean Architecture Design
+The simulation engine follows clean architecture principles:
 
-Character Types are templates that help organize your NPCs visually and behaviorally.
+```
+src/
+├── application/         # Use cases and business logic
+│   ├── use-cases/      # Application-specific business rules
+│   └── ports/          # Interface definitions
+├── domain/             # Core business entities and rules
+│   ├── entities/       # Core domain objects
+│   ├── events/         # Domain events
+│   ├── services/       # Domain services
+│   └── value-objects/  # Immutable value objects
+├── infrastructure/     # External services and persistence
+│   ├── external/       # External API integrations
+│   └── persistence/    # Data storage implementations
+├── presentation/       # UI components and user interactions
+│   ├── components/     # Reusable UI components
+│   ├── features/       # Feature-specific components
+│   └── hooks/          # Custom React hooks
+└── shared/            # Shared utilities and constants
+    ├── constants/      # Application constants
+    ├── types/          # TypeScript type definitions
+    └── utils/          # Utility functions
+```
 
-1. Go to **"Characters"** tab (top section)
-2. Click **"Create New Character Type"**
-3. Fill out:
-   ```
-   Name: Village Merchant
-   Description: A friendly shopkeeper
-   Color: #4CAF50 (or any color)
-   ```
-4. Click **"Save"**
+### Key Systems
 
-### Step 2: Create Your First Interaction (5 minutes)
+#### Character System
+- **Consciousness System** - Simulates awareness and decision-making
+- **Personality System** - Traits that influence behavior
+- **Race System** - Different species with unique characteristics
+- **Memory Service** - Characters remember interactions and events
 
-Interactions are individual dialogue scenes or story moments.
+#### World Generation
+- **Settlement Evolution** - Cities grow and change over time
+- **Historical Event Generation** - Emergent storytelling through events
+- **Quantum Simulation** - Probabilistic outcomes for realism
+- **Template System** - Flexible content creation
 
-1. Go to **"Interactions"** tab
-2. Click **"Create New Interaction"**
-3. Fill out:
-   ```
-   Title: Meeting the Merchant
-   Description: Player's first encounter with the shopkeeper
-   Content: "Welcome to my shop, traveler! What brings you here?"
-   Character Type: Village Merchant (select from dropdown)
-   ```
-
-4. **Add Response Options** (click "Add Option"):
-   ```
-   Option 1:
-   - Text: "I need supplies for my journey"
-   - Option ID: buy_supplies
-   
-   Option 2:
-   - Text: "Just looking around"
-   - Option ID: browse_shop
-   ```
-
-5. Click **"Save"**
-
-### Step 3: Create Follow-up Interactions (10 minutes)
-
-Create the interactions your options lead to:
-
-**For "buy_supplies" option:**
-1. Create new interaction: **"Buying Supplies"**
-2. Content: `"Excellent! I have the best gear in town. What do you need?"`
-3. Add options like:
-   - `"Show me your weapons"` → leads to weapon shop interaction
-   - `"I need healing potions"` → leads to alchemy interaction
-
-**For "browse_shop" option:**
-1. Create new interaction: **"Browsing the Shop"**
-2. Content: `"Feel free to look around! Everything's handcrafted locally."`
+#### Interaction Systems
+- **Influence Tracking** - Characters build relationships
+- **Prestige System** - Social standing and reputation
+- **Alignment System** - Moral and ethical positioning
+- **Prerequisite System** - Conditional content and events
 3. Add options that lead back to other interactions or end the conversation
 
 ### Step 4: Link Everything Together (3 minutes)
@@ -107,166 +97,247 @@ Create the interactions your options lead to:
    - `buy_supplies` → Select "Buying Supplies"
    - `browse_shop` → Select "Browsing the Shop"
 3. **Save**
+## 🚀 Getting Started
 
-🎉 **Test it!** Click **"View"** on your first interaction to see your branching dialogue in action.
+### Quick Start Guide
 
-## 🔧 Adding Progression Systems
-
-### Simple Reputation System (10 minutes)
-
-Make player choices have consequences:
-
-1. **Go to "Influence" tab**
-2. **Create New Domain**:
-   ```
-   Name: Merchant Relations
-   Description: Standing with local traders
-   Min Value: -100
-   Max Value: 100
-   Default Value: 0
+1. **Initialize World Generation**
+   ```javascript
+   const worldGenerator = new GenerateWorld();
+   const world = await worldGenerator.execute();
    ```
 
-3. **Edit your interactions** to add effects:
-   - In "Buying Supplies": Add +5 Merchant Relations
-   - In "Browsing the Shop": Add +2 Merchant Relations
+2. **Create Characters**
+   ```javascript
+   const characterService = new GenerateBehavior();
+   const characters = await characterService.generateFor(world);
+   ```
 
-4. **Create a VIP interaction** with prerequisites:
-   - Title: "Merchant's Special Offer"
-   - Prerequisite: Merchant Relations ≥ 20
-   - Content: Special dialogue only available to valued customers
+3. **Run Historical Simulation**
+   ```javascript
+   const simulator = new RunTick();
+   const timeline = await simulator.execute(world, characters);
+   ```
 
-### Character Psychology (Advanced)
-
-1. **Go to "Consciousness" tab** (bottom section)
-2. Create consciousness states for your characters
-3. Characters will remember interactions and respond differently based on their mental state
-
-## 🏗️ Project Structure
+### Project Structure
 
 ```
-Your App Interface:
-├── Extended Interaction Manager (Top)
-│   ├── Interactions Tab - Main dialogue creation
-│   ├── Characters Tab - Character type management
-│   ├── Influence Tab - Reputation systems
-│   ├── Prestige Tab - Achievement tracking
-│   └── Alignment Tab - Moral choice systems
-│
-└── Advanced Systems (Bottom)
-    ├── Node Types - Location management
-    ├── Personality - Character trait systems
-    ├── Consciousness - Advanced character psychology
-    ├── Connections - World relationship mapping
-    └── Quests - Multi-step quest creation
+sim-engine/
+├── src/
+│   ├── application/         # Use cases and business logic
+│   │   ├── use-cases/      # Core application operations
+│   │   └── services/       # Application services
+│   ├── domain/             # Core business entities
+│   │   ├── entities/       # Domain objects
+│   │   ├── events/         # Domain events
+│   │   └── services/       # Domain services
+│   ├── infrastructure/     # External integrations
+│   │   ├── external/       # External services
+│   │   └── persistence/    # Data storage
+│   ├── presentation/       # React UI components
+│   │   ├── components/     # Reusable components
+│   │   ├── features/       # Feature components
+│   │   └── hooks/          # Custom hooks
+│   └── shared/            # Shared utilities
+│       ├── constants/      # Application constants
+│       ├── types/          # TypeScript definitions
+│       └── utils/          # Utility functions
+├── package.json
+├── tailwind.config.js
+└── tsconfig.json
 ```
 
-## 💾 Data Management
+## 🎮 Features
 
-### Saving Your Work
-- **Auto-save**: Everything saves automatically to browser storage
-- **Export**: Use the "Export" button to download JSON backups
-- **Import**: Load previous projects or share with others
+### World Generation
+- **Procedural Settlements** - Dynamically generated cities and towns
+- **Geographical Features** - Mountains, rivers, forests, and more
+- **Resource Distribution** - Strategic placement of valuable resources
+- **Climate Systems** - Weather patterns affecting civilization
 
-### File Formats
-All data is stored as human-readable JSON:
-```json
+### Character Systems
+- **Personality Traits** - Big Five personality model implementation
+- **Consciousness Levels** - Varying degrees of self-awareness
+- **Racial Diversity** - Multiple species with unique characteristics
+- **Social Hierarchies** - Complex relationship networks
+
+### Historical Simulation
+- **Event Generation** - Emergent historical events
+- **Cause and Effect** - Actions have lasting consequences
+- **Cultural Evolution** - Societies change over time
+- **Technological Progress** - Innovation and discovery systems
+
+## 🔧 Configuration
+
+### Environment Setup
+```bash
+# Install dependencies
+npm install
+
+# Development server
+npm start
+
+# Build for production
+npm run build
+
+# Run tests
+npm test
+```
+
+### Customization Options
+- **World Size** - Adjust simulation scale
+- **Time Progression** - Control simulation speed
+- **Character Density** - Population parameters
+- **Event Frequency** - Historical event rates
+
+## 📊 Data Models
+
+### Character Entity
+```javascript
 {
-  "interactions": [...],
-  "characterTypes": [...],
-  "influenceDomains": [...],
-  "prestigeTracks": [...],
-  "alignmentAxes": [...]
+  id: string,
+  name: string,
+  race: RaceType,
+  personality: PersonalityTraits,
+  consciousness: ConsciousnessLevel,
+  attributes: AttributeSet,
+  relationships: RelationshipMap,
+  history: HistoricalRecord[]
 }
 ```
 
-## 🎨 Example Projects
+### Settlement Entity
+```javascript
+{
+  id: string,
+  name: string,
+  position: Coordinates,
+  population: number,
+  resources: ResourceMap,
+  culture: CulturalTraits,
+  government: GovernmentType,
+  history: HistoricalRecord[]
+}
+```
 
-### Beginner Projects
-- **Tavern Conversations** - Simple NPC interactions with branching dialogue
-- **Shop Encounters** - Trading scenarios with reputation effects
-- **Guard Interrogations** - Investigation scenes with clue tracking
+### Historical Event
+```javascript
+{
+  id: string,
+  timestamp: number,
+  type: EventType,
+  participants: CharacterReference[],
+  location: SettlementReference,
+  description: string,
+  consequences: Effect[]
+}
+```
 
-### Intermediate Projects
-- **Political Intrigue** - Multiple factions with competing interests
-- **Romance Subplots** - Relationship development over time
-- **Mystery Investigation** - Clue collection unlocking new dialogue options
+## 🧪 Testing
 
-### Advanced Projects
-- **City Management** - Conversations that affect world state
-- **Psychological Drama** - Character consciousness affects available choices
-- **Educational Simulations** - Learning scenarios with meaningful consequences
+### Integration Tests
+```bash
+# Run simulation integration tests
+npm test -- --testPathPattern=simulation-integration-test
+```
 
-## 🛠️ Technical Details
+### Unit Tests
+```bash
+# Run all unit tests
+npm test
 
-### Built With
-- **React 18.2.0** - Modern React with hooks
-- **Tailwind CSS** - Utility-first styling
-- **Lucide React** - Beautiful icons
-- **localStorage** - Browser-based data persistence
+# Run specific test suites
+npm test -- --testPathPattern=domain/entities
+npm test -- --testPathPattern=application/use-cases
+```
 
-### Browser Compatibility
-- Chrome, Firefox, Safari, Edge (modern versions)
-- Requires JavaScript enabled
-- Works offline after initial load
+## 🎨 Styling
 
-### Performance
-- Handles hundreds of interactions smoothly
-- Efficient localStorage-based persistence
-- Real-time prerequisite validation
+### Tailwind CSS
+The project uses Tailwind CSS for styling:
+- **Responsive Design** - Mobile-first approach
+- **Dark Mode Support** - Automatic theme switching
+- **Custom Components** - Reusable UI elements
+- **Utility Classes** - Rapid development
 
-## 🔍 Tips & Best Practices
+### Custom Themes
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'sim-primary': '#3B82F6',
+        'sim-secondary': '#10B981',
+        'sim-accent': '#F59E0B'
+      }
+    }
+  }
+}
+```
 
-### Organization
-- **Use descriptive names** for interactions and character types
-- **Color-code character types** for visual organization
-- **Group related content** with categories
-- **Export regularly** to avoid data loss
+## 🔍 API Reference
 
-### Writing Effective Interactions
-- **Keep dialogue concise** but engaging
-- **Make choices meaningful** with real consequences
-- **Use prerequisites** to create dynamic narratives
-- **Test frequently** using the View feature
+### Core Services
 
-### Debugging Common Issues
-- **Broken links**: Check Next Interaction IDs match exactly
-- **Prerequisites not working**: Verify influence domains are set up correctly
-- **Data loss**: Export backups regularly
+#### WorldGenerator
+```javascript
+class GenerateWorld {
+  async execute(parameters: WorldGenParams): Promise<World>
+}
+```
 
-## 📚 Advanced Features
+#### CharacterService  
+```javascript
+class GenerateBehavior {
+  async generateFor(world: World): Promise<Character[]>
+}
+```
 
-### Complex Progression Systems
-- **Multi-axis alignment** - Track moral complexity
-- **Counter-tracks** - Mutually exclusive progression paths
-- **Decay systems** - Reputation that changes over time
+#### SimulationEngine
+```javascript
+class RunTick {
+  async execute(world: World, characters: Character[]): Promise<Timeline>
+}
+```
 
-### Character Psychology
-- **Consciousness frequencies** - Character mental states
-- **Emotional coherence** - How stable characters are
-- **Memory systems** - Characters remember past interactions
-- **Collective consciousness** - Group psychology effects
+## 📈 Performance
 
-### World Building
-- **Spatial relationships** - 3D coordinate mapping
-- **Node hierarchies** - Nested location systems
-- **Connection dependencies** - Requirements for world access
+### Optimization Strategies
+- **Lazy Loading** - Components load on demand
+- **Memoization** - Cache expensive calculations
+- **Virtual Scrolling** - Handle large datasets efficiently
+- **Web Workers** - Background processing for simulations
 
-## 🤝 Contributing & Support
+### Performance Monitoring
+```javascript
+// Performance metrics
+const metrics = {
+  simulationSpeed: 'ticks per second',
+  memoryUsage: 'MB allocated',
+  renderTime: 'milliseconds'
+};
+```
 
-### Getting Help
-- Check the in-app tooltips and validation messages
-- Use the View feature to test your creations
-- Export your data before making major changes
+## 🤝 Contributing
 
-### Sharing Projects
-- Export as JSON to share with others
-- Include character types and progression systems
-- Document your narrative structure
+### Development Guidelines
+1. **Follow Clean Architecture** - Maintain separation of concerns
+2. **Write Tests** - Cover new functionality with tests
+3. **Document Changes** - Update relevant documentation
+4. **Code Style** - Follow ESLint and Prettier configurations
+
+### Submitting Changes
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
 
 ## 📄 License
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is licensed under the MIT License. See the LICENSE file for details.
 
 ---
 
-**Ready to create your first interactive narrative?** Follow the tutorial above and start building! 🎭✨
+**Ready to simulate history?** Start by generating your first world and watch civilizations emerge! �✨
