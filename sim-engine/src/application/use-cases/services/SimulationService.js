@@ -3,6 +3,8 @@
 import generateWorld from '../use-cases/simulation/GenerateWorld.js';
 import runTick from '../use-cases/simulation/RunTick.js';
 import analyzeHistory from '../use-cases/history/AnalyzeHistory.js';
+import Position from '../../../domain/value-objects/Positions.js';
+import Character from '../../../domain/entities/Character.js';
 
 class SimulationService {
   constructor() {
@@ -82,4 +84,5 @@ class SimulationService {
   }
 }
 
-export default new SimulationService();  // Singleton instance for global access
+const simulationService = new SimulationService();
+export default simulationService;  // Singleton instance for global access

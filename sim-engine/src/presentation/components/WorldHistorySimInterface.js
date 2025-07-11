@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, SkipForward, RotateCcw, Globe, Users, History, Map, Zap, TrendingUp, Calendar, Activity, ChevronRight, Settings, Info, Filter, Search, Download, Eye, EyeOff, Clock } from 'lucide-react';
+import { Play, Pause, SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Calendar, Activity, ChevronRight, Settings, Filter, Download, Clock } from 'lucide-react';
 
 const WorldHistorySimInterface = () => {
   const [isRunning, setIsRunning] = useState(false);
@@ -13,6 +13,7 @@ const WorldHistorySimInterface = () => {
   });
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [selectedNode, setSelectedNode] = useState(null);
   const [simulationSpeed, setSimulationSpeed] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
@@ -357,7 +358,7 @@ const WorldHistorySimInterface = () => {
         {selectedView === 'overview' && <DashboardView />}
         {selectedView === 'timeline' && <TimelineView />}
         {selectedView === 'characters' && <CharactersView />}
-        {selectedView === 'settlements' && <SettlementsView />}
+        {selectedView === 'settlements' && <SettlementsView worldState={worldState} />}
       </main>
     </div>
   );
@@ -401,9 +402,7 @@ const CharacterDetail = ({ character }) => (
 );
 
 // Component for settlements view
-const SettlementsView = () => {
-  const [selectedNode, setSelectedNode] = useState(null);
-  
+const SettlementsView = ({ worldState }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {worldState.nodes.map(node => (
