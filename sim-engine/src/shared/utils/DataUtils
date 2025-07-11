@@ -1,0 +1,9 @@
+// src/shared/utils/DataUtils.js
+
+export const mergeObjects = (base, updates) => {
+  return { ...base, ...updates };
+};
+
+export const filterByCriteria = (items, criteria) => {
+  return items.filter(item => Object.keys(criteria).every(key => item[key] === criteria[key]));
+};
