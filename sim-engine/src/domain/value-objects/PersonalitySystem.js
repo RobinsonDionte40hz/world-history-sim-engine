@@ -91,6 +91,9 @@ class PersonalitySystem {
             'Tactical'
         ]);
         this.initializeDefaultAttributes();
+        
+        // Freeze the object to make it immutable
+        Object.freeze(this);
     }
 
     initializeDefaultAttributes() {
@@ -323,42 +326,44 @@ class PersonalitySystem {
         };
     }
 
-    fromJSON(data) {
-        // Clear existing data
-        this.traits.clear();
-        this.attributes.clear();
-        this.emotionalTendencies.clear();
-        this.cognitiveTraits.clear();
+    static fromJSON(data) {
+        const system = new PersonalitySystem();
+        
+        // Clear default attributes since we'll restore from data
+        system.traits.clear();
+        system.attributes.clear();
+        system.emotionalTendencies.clear();
+        system.cognitiveTraits.clear();
 
         // Restore attributes
         if (data.attributes) {
             data.attributes.forEach(attr => {
-                this.createAttribute(attr);
+                system.createAttribute(attr);
             });
         }
 
         // Restore traits
         if (data.traits) {
             data.traits.forEach(trait => {
-                this.createTrait(trait);
+                system.createTrait(trait);
             });
         }
 
         // Restore emotional tendencies
         if (data.emotionalTendencies) {
             data.emotionalTendencies.forEach(tendency => {
-                this.createEmotionalTendency(tendency);
+                system.createEmotionalTendency(tendency);
             });
         }
 
         // Restore cognitive traits
         if (data.cognitiveTraits) {
             data.cognitiveTraits.forEach(trait => {
-                this.createCognitiveTrait(trait);
+                system.createCognitiveTrait(trait);
             });
         }
 
-        return this;
+        return system;
     }
 
     getTraitCategories() {

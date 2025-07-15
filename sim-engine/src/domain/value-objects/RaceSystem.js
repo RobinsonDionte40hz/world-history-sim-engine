@@ -4,6 +4,9 @@ class RaceSystem {
     constructor() {
         this.races = new Map();
         this.initializeDefaultRaces();
+        
+        // Freeze the object to make it immutable
+        Object.freeze(this);
     }
 
     initializeDefaultRaces() {
