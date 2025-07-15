@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, SkipForward, RotateCcw, Globe, Users, History, Map, Zap, TrendingUp, Calendar, Activity, ChevronRight, Settings, Info, Filter, Search, Download, Eye, EyeOff, Clock } from 'lucide-react';
+import { Play, Pause, SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Calendar, Activity, ChevronRight, Settings, Filter, Download, Clock } from 'lucide-react';
+import useSimulation from '../hooks/useSimulation.js';
+import TurnCounter from './TurnCounter.js';
 
 const WorldHistorySimInterface = () => {
-  const [isRunning, setIsRunning] = useState(false);
-  const [currentTick, setCurrentTick] = useState(0);
-  const [worldState, setWorldState] = useState({
-    time: 0,
-    npcs: [],
-    nodes: [],
-    events: [],
-    resources: {}
-  });
+  // Use the simulation hook instead of local state
+  const { worldState, isRunning, currentTurn, startSimulation, stopSimulation, resetSimulation, stepSimulation } = useSimulation();
+  
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -18,48 +14,34 @@ const WorldHistorySimInterface = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data for demonstration
-  useEffect(() => {
-    // Initialize with some mock data
-    setWorldState({
-      time: 0,
-      npcs: [
-        { id: '1', name: 'Aldric the Bold', location: 'Riverhold', attributes: { charisma: 15, strength: 18 }, consciousness: { frequency: 40, coherence: 0.8 }, race: 'Human' },
-        { id: '2', name: 'Elara Moonwhisper', location: 'Silverwood', attributes: { intelligence: 17, wisdom: 16 }, consciousness: { frequency: 45, coherence: 0.9 }, race: 'Elf' },
-        { id: '3', name: 'Thorin Ironforge', location: 'Mountain Pass', attributes: { constitution: 19, strength: 16 }, consciousness: { frequency: 35, coherence: 0.7 }, race: 'Dwarf' }
-      ],
-      nodes: [
-        { id: '1', name: 'Riverhold', type: 'city', population: 5000, resources: { food: 100, gold: 50 } },
-        { id: '2', name: 'Silverwood', type: 'forest', population: 300, resources: { wood: 200, herbs: 80 } },
-        { id: '3', name: 'Mountain Pass', type: 'fortress', population: 1200, resources: { iron: 150, stone: 180 } }
-      ],
-      events: [
-        { id: '1', timestamp: 0, type: 'trade', description: 'Trade caravan arrives at Riverhold', significance: 3 },
-        { id: '2', timestamp: 10, type: 'diplomacy', description: 'Elves and Humans sign peace treaty', significance: 8 },
-        { id: '3', timestamp: 20, type: 'exploration', description: 'New ore vein discovered in Mountain Pass', significance: 5 }
-      ],
-      resources: { totalGold: 300, totalFood: 450, totalPopulation: 6500 }
-    });
-  }, []);
-
-  // Simulation control
-  const toggleSimulation = () => {
-    setIsRunning(!isRunning);
+  // Minimal fallback data for when worldState is not available
+  const displayWorldState = worldState || {
+    time: 0,
+    npcs: [],
+    nodes: [],
+    events: [],
+    resources: { totalGold: 0, totalFood: 0, totalPopulation: 0 }
   };
 
-  const resetSimulation = () => {
-    setIsRunning(false);
-    setCurrentTick(0);
-    // Reset world state
+  // Simulation control functions using the hook
+  const toggleSimulation = () => {
+    if (isRunning) {
+      stopSimulation();
+    } else {
+      startSimulation();
+    }
+  };
+
+  const handleResetSimulation = () => {
+    resetSimulation();
   };
 
   const stepForward = () => {
-    setCurrentTick(currentTick + 1);
-    // Run one tick of simulation
+    stepSimulation();
   };
 
   // Filter events based on search
-  const filteredEvents = worldState.events.filter(event => 
+  const filteredEvents = (displayWorldState.events || []).filter(event => 
     event.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -71,27 +53,27 @@ const WorldHistorySimInterface = () => {
         <StatCard 
           icon={<Users className="w-6 h-6" />}
           label="Total Population"
-          value={worldState.resources.totalPopulation?.toLocaleString() || '0'}
+          value={displayWorldState.resources.totalPopulation?.toLocaleString() || '0'}
           trend="+5%"
           color="blue"
         />
         <StatCard 
           icon={<TrendingUp className="w-6 h-6" />}
           label="Total Resources"
-          value={worldState.resources.totalGold || 0}
+          value={displayWorldState.resources.totalGold || 0}
           trend="+12%"
           color="green"
         />
         <StatCard 
           icon={<Globe className="w-6 h-6" />}
           label="Active Settlements"
-          value={worldState.nodes.length}
+          value={displayWorldState.nodes.length}
           color="purple"
         />
         <StatCard 
           icon={<Activity className="w-6 h-6" />}
           label="Historical Events"
-          value={worldState.events.length}
+          value={displayWorldState.events?.length || 0}
           color="orange"
         />
       </div>
@@ -112,7 +94,7 @@ const WorldHistorySimInterface = () => {
         
         {/* Settlement Quick Stats */}
         <div className="mt-4 grid grid-cols-3 gap-2">
-          {worldState.nodes.map(node => (
+          {displayWorldState.nodes.map(node => (
             <button
               key={node.id}
               onClick={() => setSelectedNode(node)}
@@ -172,7 +154,7 @@ const WorldHistorySimInterface = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Characters</h3>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {worldState.npcs.map(npc => (
+            {displayWorldState.npcs.map(npc => (
               <button
                 key={npc.id}
                 onClick={() => setSelectedCharacter(npc)}
@@ -266,9 +248,7 @@ const WorldHistorySimInterface = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Turn: {currentTick}
-              </span>
+              <TurnCounter currentTurn={currentTurn} />
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Settings className="w-5 h-5" />
               </button>
@@ -299,7 +279,7 @@ const WorldHistorySimInterface = () => {
               </button>
               
               <button
-                onClick={resetSimulation}
+                onClick={handleResetSimulation}
                 className="p-2 bg-blue-700 rounded-lg hover:bg-blue-800"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -357,7 +337,7 @@ const WorldHistorySimInterface = () => {
         {selectedView === 'overview' && <DashboardView />}
         {selectedView === 'timeline' && <TimelineView />}
         {selectedView === 'characters' && <CharactersView />}
-        {selectedView === 'settlements' && <SettlementsView />}
+        {selectedView === 'settlements' && <SettlementsView worldState={displayWorldState} />}
       </main>
     </div>
   );
@@ -401,7 +381,7 @@ const CharacterDetail = ({ character }) => (
 );
 
 // Component for settlements view
-const SettlementsView = () => {
+const SettlementsView = ({ worldState }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   
   return (

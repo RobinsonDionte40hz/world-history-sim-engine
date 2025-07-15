@@ -4,6 +4,19 @@ import Character from '../../../domain/entities/Character.js';
 import Interaction from '../../../domain/entities/Interaction.js';
 import Position from '../../../domain/value-objects/Positions.js';
 
+// Utility function to generate UUID with fallback for test environments
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for test environments
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 // Generate sample interactions for nodes
 const generateNodeInteractions = () => [
   new Interaction({
@@ -47,7 +60,7 @@ const generateWorld = (config = {}) => {
   // Generate nodes (reused from old Node Types)
   for (let i = 0; i < nodeCount; i++) {
     const node = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: `Node ${i + 1} - ${['Village', 'Forest', 'Hill'][i % 3]}`,
       position: new Position({
         x: Math.floor(Math.random() * size.width),

@@ -1,7 +1,7 @@
 // src/domain/services/EvolutionService.js
 
 import Character from '../entities/Character.js';
-import Attributes from '../entities/Attributes.js';
+import Attributes from '../value-objects/Attributes.js';
 
 class EvolutionService {
   // Evolve a character based on an interaction outcome

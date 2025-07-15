@@ -1,9 +1,9 @@
 // src/domain/value-objects/BaseValueObject.js
 
-import { 
-  SerializationUtils, 
-  SerializationError, 
-  ValidationError 
+import {
+  SerializationUtils,
+  SerializationError,
+  ValidationError
 } from '../../shared/types/ValueObjectTypes';
 
 /**
@@ -106,7 +106,7 @@ export class BaseValueObject {
   equals(other) {
     if (this === other) return true;
     if (!other || this.constructor !== other.constructor) return false;
-    
+
     try {
       return JSON.stringify(this.toJSON()) === JSON.stringify(other.toJSON());
     } catch (error) {

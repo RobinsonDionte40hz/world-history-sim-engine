@@ -1,8 +1,21 @@
 // src/domain/entities/Interaction.js
 
+// Utility function to generate UUID with fallback for test environments
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for test environments
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 class Interaction {
   constructor(config = {}) {
-    this.id = config.id || crypto.randomUUID();  // Unique ID for tracking in history
+    this.id = config.id || generateId();  // Unique ID for tracking in history
     this.nodeId = config.nodeId || null;  // Link to world node (from Node Types)
     this.name = config.name || 'Unnamed Interaction';
     this.description = config.description || '';
