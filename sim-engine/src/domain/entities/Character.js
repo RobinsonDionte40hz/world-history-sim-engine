@@ -2,12 +2,11 @@
 
 import ConsciousnessSystem from '../value-objects/ConsciousnessSystem.js';  // Reuse your existing
 import PersonalitySystem from '../value-objects/PersonalitySystem.js';        // Reuse
-import RaceSystem from './RaceSystem.js';                      // Reuse if racial traits affect attrs
-// Import from historical-simulation/interaction/ as needed
-import AlignmentSystem from '../historical-simulation/interaction/AlignmentSystem.js';
-import InfluenceSystem from '../historical-simulation/interaction/InfluenceSystem.js';
-import PrestigeSystem from '../historical-simulation/interaction/PrestigeSystem.js';
-import PrerequisiteSystem from '../historical-simulation/interaction/PrerequisiteSystem.js';  // For checks
+import RaceSystem from '../value-objects/RaceSystem.js';                     
+import AlignmentSystem from '../entities/AlignmentSystem.js';  // Adjust based on location
+import InfluenceSystem from '../entities/InfluenceSystem.js';
+import PrestigeSystem from '../entities/PrestigeSystem.js';
+import PrerequisiteSystem from '../entities/PrerequisiteSystem.js';  // For checks
 
 class Character {
   constructor(config = {}) {

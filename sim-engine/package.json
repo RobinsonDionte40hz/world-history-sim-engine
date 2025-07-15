@@ -25,13 +25,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "migrate:reset": "prisma migrate reset",
-    "migrate:dry": "prisma migrate dev --create-only",
-    "prisma:generate": "prisma generate",
-    "prisma:studio": "prisma studio"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
@@ -54,19 +48,12 @@
   "description": "This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).",
   "main": "index.js",
   "devDependencies": {
-    "@prisma/client": "^5.10.2",
     "@types/node": "^24.0.1",
-    "prisma": "^5.10.2",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^4.9.5"
   },
-  "migscripts": {
-    "migrate": "node scripts/migrate-structure.js",
-    "migrate:dry": "node scripts/migrate-structure.js --dry-run --verbose",
-    "generate:component": "node scripts/generate-component.js"
-  },
   "keywords": [],
-  "author": "",
+  "author": "Dionte Robinson",
   "license": "ISC"
 }

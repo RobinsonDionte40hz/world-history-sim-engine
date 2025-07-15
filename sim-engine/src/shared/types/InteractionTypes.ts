@@ -1,7 +1,5 @@
 // src/shared/types/InteractionTypes.ts
 
-import { CharacterAttributes } from './CharacterTypes';
-
 export type InteractionType = 'dialogue' | 'action' | 'event' | 'trade';
 
 export interface InteractionRequirement {
@@ -13,7 +11,7 @@ export interface InteractionRequirement {
 export interface InteractionBranch {
   id: string;
   text: string;
-  condition?: (character: any) => boolean;  // Using any for now to avoid circular import
+  condition?: (character: Character) => boolean;
   effects: InteractionEffect[];
   requiredEnergy?: number;  // For resonance calc
 }

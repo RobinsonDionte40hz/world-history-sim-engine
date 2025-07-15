@@ -1,6 +1,6 @@
 // src/domain/services/EvolutionService.js
 
-import Character from '../entities/character.js';
+import Character from '../entities/Character.js';
 import Attributes from '../entities/Attributes.js';
 
 class EvolutionService {

@@ -1,4 +1,4 @@
-import { DDAttributes, DDSkills } from '../../../types/DDAttributes';
+// src/domain/value-objects/RaceSystem.js
 
 class RaceSystem {
     constructor() {

@@ -1,11 +1,11 @@
 // src/application/use-cases/npc/GenerateBehavior.js
 
-import Character from '../../domain/entities/character.js';
-import Interaction from '../../domain/entities/interaction.js';
-import InteractionResolver from '../../domain/services/InteractionResolver.js';
-import MemoryService from '../../domain/services/MemoryService.js';
-import EvolutionService from '../../domain/services/EvolutionService.js';
-import HistoryGenerator from '../../domain/services/HistoryGenerator.js';
+import Character from '../../../domain/entities/Character.js';
+import Interaction from '../../../domain/entities/Interaction.js';
+import InteractionResolver from '../../../domain/services/InteractionResolver.js';
+import MemoryService from '../../../domain/services/MemoryService.js';
+import EvolutionService from '../../../domain/services/EvolutionService.js';
+import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 
 const generateBehavior = (character, worldState) => {
   if (!(character instanceof Character)) {

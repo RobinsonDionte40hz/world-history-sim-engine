@@ -1,6 +1,6 @@
 // src/application/use-cases/history/AnalyzeHistory.js
 
-import HistoryGenerator from '../../domain/services/HistoryGenerator.js';
+import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 
 const analyzeHistory = (criteria = {}) => {
   const { timeRange, characterId, interactionType, minSignificance = 0, limit = 10 } = criteria;

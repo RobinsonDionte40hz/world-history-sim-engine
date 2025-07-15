@@ -1,4 +1,4 @@
-// src/AlignmentSystem.js
+// src/entities/AlignmentSystem.js
 import React, { useState } from 'react';
 import { Plus, Trash2, Save, X, Edit, ChevronDown, ChevronUp, Scale, ArrowLeft, ArrowRight } from 'lucide-react';
 

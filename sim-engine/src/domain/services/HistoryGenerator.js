@@ -1,7 +1,7 @@
 // src/domain/services/HistoryGenerator.js
 
-import Character from '../entities/character.js';
-import Interaction from '../entities/interaction.js';
+import Character from '../entities/Character.js';
+import Interaction from '../entities/Interaction.js';
 
 class HistoryGenerator {
   // Log a historical event from an interaction outcome
