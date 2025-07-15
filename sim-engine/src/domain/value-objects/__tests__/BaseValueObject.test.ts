@@ -1,7 +1,7 @@
 // src/domain/value-objects/__tests__/BaseValueObject.test.ts
 
 import { BaseValueObject } from '../BaseValueObject';
-import { ValidationError, SerializationError } from '../../../shared/types/ValueObjectTypes';
+import { ValidationError } from '../../../shared/types/ValueObjectTypes';
 import { it } from 'node:test';
 import { describe } from 'node:test';
 import { it } from 'node:test';
