@@ -1,7 +1,6 @@
-// src/domain/value-objects/BaseValueObject.ts
+// src/domain/value-objects/BaseValueObject.js
 
 import { 
-  ValueObject, 
   SerializationUtils, 
   SerializationError, 
   ValidationError 
@@ -11,7 +10,7 @@ import {
  * Abstract base class for all value objects in the system
  * Provides common functionality for immutability, validation, and serialization
  */
-export abstract class BaseValueObject<T> implements ValueObject<T> {
+export class BaseValueObject {
   /**
    * Constructor that sets up the value object
    * Subclasses should call freeze() after setting all properties
@@ -24,7 +23,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
    * Freezes the object to ensure immutability
    * Should be called by subclasses after all properties are set
    */
-  protected freeze(): void {
+  freeze() {
     SerializationUtils.deepFreeze(this);
   }
 
@@ -32,20 +31,22 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
    * Abstract method that must be implemented by all value objects
    * Converts the value object to a JSON-serializable format
    */
-  abstract toJSON(): T;
+  toJSON() {
+    throw new Error('toJSON() must be implemented by subclasses');
+  }
 
   /**
    * Validates the value object's state
    * Override in subclasses to add specific validation logic
    */
-  protected validate(): void {
+  validate() {
     // Base validation - can be overridden by subclasses
   }
 
   /**
    * Helper method to validate required fields
    */
-  protected validateRequired(field: string, value: any): void {
+  validateRequired(field, value) {
     if (value === null || value === undefined) {
       throw new ValidationError(field, value, 'Field is required');
     }
@@ -54,7 +55,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
   /**
    * Helper method to validate numeric ranges
    */
-  protected validateRange(field: string, value: number, min: number, max: number): void {
+  validateRange(field, value, min, max) {
     if (typeof value !== 'number' || value < min || value > max) {
       throw new ValidationError(field, value, `Value must be between ${min} and ${max}`);
     }
@@ -63,7 +64,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
   /**
    * Helper method to validate string length
    */
-  protected validateStringLength(field: string, value: string, minLength: number, maxLength?: number): void {
+  validateStringLength(field, value, minLength, maxLength) {
     if (typeof value !== 'string' || value.length < minLength) {
       throw new ValidationError(field, value, `String must be at least ${minLength} characters long`);
     }
@@ -75,7 +76,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
   /**
    * Helper method to validate arrays
    */
-  protected validateArray(field: string, value: any[], minLength: number = 0, maxLength?: number): void {
+  validateArray(field, value, minLength = 0, maxLength) {
     if (!Array.isArray(value) || value.length < minLength) {
       throw new ValidationError(field, value, `Array must have at least ${minLength} elements`);
     }
@@ -88,16 +89,13 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
    * Helper method to create a new instance with updated properties
    * This is the primary way to "modify" immutable value objects
    */
-  protected withUpdates<U extends BaseValueObject<any>>(
-    constructor: new (...args: any[]) => U,
-    updates: Partial<any>
-  ): U {
+  withUpdates(constructor, updates) {
     try {
       const currentData = this.toJSON();
       const updatedData = { ...currentData, ...updates };
-      return constructor.prototype.constructor.fromJSON(updatedData);
+      return constructor.fromJSON(updatedData);
     } catch (error) {
-      throw new SerializationError('deserialize', error as Error, { updates });
+      throw new SerializationError('deserialize', error, { updates });
     }
   }
 
@@ -105,7 +103,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
    * Equality comparison for value objects
    * Two value objects are equal if their JSON representations are equal
    */
-  equals(other: BaseValueObject<T>): boolean {
+  equals(other) {
     if (this === other) return true;
     if (!other || this.constructor !== other.constructor) return false;
     
@@ -119,7 +117,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
   /**
    * Generate a hash code for the value object based on its JSON representation
    */
-  hashCode(): number {
+  hashCode() {
     try {
       const str = JSON.stringify(this.toJSON());
       let hash = 0;
@@ -137,7 +135,7 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
   /**
    * String representation of the value object
    */
-  toString(): string {
+  toString() {
     try {
       return JSON.stringify(this.toJSON(), null, 2);
     } catch (error) {
@@ -145,3 +143,5 @@ export abstract class BaseValueObject<T> implements ValueObject<T> {
     }
   }
 }
+
+export default BaseValueObject;

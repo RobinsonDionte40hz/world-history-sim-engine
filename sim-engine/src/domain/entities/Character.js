@@ -17,12 +17,12 @@ class Character {
     this.name = config.name || 'Unnamed Character';
     this.age = config.age || 25;
     this.level = config.level || 1;
-    
+
     // Initialize racial traits first (affects other systems)
-    this.racialTraits = config.racialTraits instanceof RacialTraits 
-      ? config.racialTraits 
+    this.racialTraits = config.racialTraits instanceof RacialTraits
+      ? config.racialTraits
       : new RacialTraits(config.raceId || 'human', config.subraceId);
-    
+
     // Initialize personality profile with racial influence
     const personalityConfig = this._mergePersonalityWithRacialInfluence(
       config.personalityConfig || {},
@@ -31,7 +31,7 @@ class Character {
     this.personality = config.personality instanceof PersonalityProfile
       ? config.personality
       : new PersonalityProfile(personalityConfig);
-    
+
     // Initialize alignment with default axes if not provided
     const alignmentAxes = config.alignmentAxes || this._getDefaultAlignmentAxes();
     const alignmentValues = config.alignmentValues || {};
@@ -39,7 +39,7 @@ class Character {
     this.alignment = config.alignment instanceof Alignment
       ? config.alignment
       : new Alignment(alignmentAxes, alignmentValues, alignmentHistory);
-    
+
     // Initialize influence with default domains if not provided
     const influenceDomains = config.influenceDomains || this._getDefaultInfluenceDomains();
     const influenceValues = config.influenceValues || {};
@@ -47,7 +47,7 @@ class Character {
     this.influence = config.influence instanceof Influence
       ? config.influence
       : new Influence(influenceDomains, influenceValues, influenceHistory);
-    
+
     // Initialize prestige with default tracks if not provided
     const prestigeTracks = config.prestigeTracks || this._getDefaultPrestigeTracks();
     const prestigeValues = config.prestigeValues || {};
@@ -55,22 +55,22 @@ class Character {
     this.prestige = config.prestige instanceof Prestige
       ? config.prestige
       : new Prestige(prestigeTracks, prestigeValues, prestigeHistory);
-    
+
     // Apply racial modifiers to base attributes
     this.baseAttributes = config.baseAttributes || this._getDefaultAttributes();
     this.attributes = this.racialTraits.applyAttributeModifiers(this.baseAttributes);
-    
+
     // Apply racial modifiers to base skills
     this.baseSkills = config.baseSkills || this._getDefaultSkills();
     this.skills = this.racialTraits.applySkillModifiers(this.baseSkills);
-    
+
     // Other character properties
     this.inventory = config.inventory || [];
     this.quests = config.quests || [];
     this.relationships = config.relationships || new Map();
     this.memories = config.memories || [];
     this.location = config.location || null;
-    
+
     // Freeze the character to maintain immutability at the entity level
     Object.freeze(this);
   }
@@ -114,7 +114,7 @@ class Character {
     if (!(newAlignment instanceof Alignment)) {
       throw new Error('New alignment must be an instance of Alignment');
     }
-    
+
     return new Character({
       ...this._getSerializableConfig(),
       alignment: newAlignment
@@ -128,7 +128,7 @@ class Character {
     if (!(newInfluence instanceof Influence)) {
       throw new Error('New influence must be an instance of Influence');
     }
-    
+
     return new Character({
       ...this._getSerializableConfig(),
       influence: newInfluence
@@ -142,7 +142,7 @@ class Character {
     if (!(newPrestige instanceof Prestige)) {
       throw new Error('New prestige must be an instance of Prestige');
     }
-    
+
     return new Character({
       ...this._getSerializableConfig(),
       prestige: newPrestige
@@ -156,7 +156,7 @@ class Character {
     if (!(newPersonality instanceof PersonalityProfile)) {
       throw new Error('New personality must be an instance of PersonalityProfile');
     }
-    
+
     return new Character({
       ...this._getSerializableConfig(),
       personality: newPersonality
@@ -170,13 +170,13 @@ class Character {
     if (typeof newAge !== 'number' || newAge < 0) {
       throw new Error('Age must be a non-negative number');
     }
-    
+
     // Apply age modifiers to personality
     const ageModifiedPersonality = this.personality.withAgeModifiers(newAge);
-    
+
     // Apply racial age modifiers
     const racialAgeModifiers = this.racialTraits.calculateAgeModifiers(newAge);
-    
+
     return new Character({
       ...this._getSerializableConfig(),
       age: newAge,
@@ -211,7 +211,7 @@ class Character {
     if (!(otherCharacter instanceof Character)) {
       throw new Error('Other character must be an instance of Character');
     }
-    
+
     const alignmentService = new AlignmentService();
     return alignmentService.analyzeCompatibility(this.alignment, otherCharacter.alignment);
   }
@@ -454,14 +454,14 @@ class Character {
     if (trauma.alignmentImpact) {
       const alignmentService = new AlignmentService();
       const personalityTraits = this._getPersonalityTraitsForAlignment();
-      
+
       // Create a trauma-based moral choice
       const traumaChoice = {
         description: `Trauma response: ${trauma.description}`,
         alignmentImpact: new Map(Object.entries(trauma.alignmentImpact)),
         intensity: severity
       };
-      
+
       newAlignment = alignmentService.applyMoralChoice(
         this.alignment,
         traumaChoice,
@@ -486,20 +486,20 @@ class Character {
       name: this.name,
       age: this.age,
       level: this.level,
-      
+
       // Value objects
       alignment: this.alignment.toJSON(),
       influence: this.influence.toJSON(),
       prestige: this.prestige.toJSON(),
       personality: this.personality.toJSON(),
       racialTraits: this.racialTraits.toJSON(),
-      
+
       // Attributes and skills
       baseAttributes: { ...this.baseAttributes },
       attributes: { ...this.attributes },
       baseSkills: { ...this.baseSkills },
       skills: { ...this.skills },
-      
+
       // Other properties
       inventory: [...this.inventory],
       quests: [...this.quests],
@@ -516,24 +516,24 @@ class Character {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid JSON data for Character');
     }
-    
+
     return new Character({
       id: data.id,
       name: data.name,
       age: data.age,
       level: data.level,
-      
+
       // Reconstruct value objects
       alignment: data.alignment ? Alignment.fromJSON(data.alignment) : undefined,
       influence: data.influence ? Influence.fromJSON(data.influence) : undefined,
       prestige: data.prestige ? Prestige.fromJSON(data.prestige) : undefined,
       personality: data.personality ? PersonalityProfile.fromJSON(data.personality) : undefined,
       racialTraits: data.racialTraits ? RacialTraits.fromJSON(data.racialTraits) : undefined,
-      
+
       // Attributes and skills
       baseAttributes: data.baseAttributes,
       baseSkills: data.baseSkills,
-      
+
       // Other properties
       inventory: data.inventory,
       quests: data.quests,
@@ -584,7 +584,7 @@ class Character {
   _mergePersonalityWithRacialInfluence(personalityConfig, racialTraits) {
     const racialInfluence = racialTraits.getPersonalityInfluence();
     const mergedConfig = { ...personalityConfig };
-    
+
     // Apply racial personality influences to traits
     if (mergedConfig.traits) {
       mergedConfig.traits = mergedConfig.traits.map(trait => {
@@ -599,7 +599,7 @@ class Character {
         };
       });
     }
-    
+
     return mergedConfig;
   }
 
@@ -608,7 +608,7 @@ class Character {
    */
   _applyAgeModifiersToAttributes(baseAttributes, ageModifiers) {
     const modifiedAttributes = { ...baseAttributes };
-    
+
     Object.entries(ageModifiers).forEach(([modifier, value]) => {
       switch (modifier) {
         case 'physical':
@@ -623,9 +623,12 @@ class Character {
             modifiedAttributes.wisdom = Math.min(20, Math.round(modifiedAttributes.wisdom * value));
           }
           break;
+        default:
+          // Unknown modifier type - skip silently
+          break;
       }
     });
-    
+
     return modifiedAttributes;
   }
 

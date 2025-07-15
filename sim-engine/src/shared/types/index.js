@@ -1,4 +1,4 @@
-// src/shared/types/index.ts
+// src/shared/types/index.js
 
 // Export all value object types and utilities
 export * from './ValueObjectTypes';

@@ -1,10 +1,10 @@
-// src/shared/types/__tests__/SerializationUtils.test.ts
+// src/shared/types/__tests__/SerializationUtils.test.js
 
 import { SerializationUtils } from '../ValueObjectTypes';
 
 describe('SerializationUtils', () => {
   describe('Map Serialization', () => {
-    it('should serialize and deserialize Maps correctly', () => {
+    test('should serialize and deserialize Maps correctly', () => {
       const originalMap = new Map([
         ['key1', 'value1'],
         ['key2', 'value2'],
@@ -21,7 +21,7 @@ describe('SerializationUtils', () => {
       expect(deserialized.size).toBe(3);
     });
 
-    it('should handle empty Maps', () => {
+    test('should handle empty Maps', () => {
       const emptyMap = new Map();
       const serialized = SerializationUtils.serializeMap(emptyMap);
       const deserialized = SerializationUtils.deserializeMap(serialized);
@@ -30,7 +30,7 @@ describe('SerializationUtils', () => {
       expect(deserialized.size).toBe(0);
     });
 
-    it('should handle Maps with complex values', () => {
+    test('should handle Maps with complex values', () => {
       const complexMap = new Map([
         ['obj1', { id: 1, name: 'Object 1' }],
         ['obj2', { id: 2, name: 'Object 2' }],
@@ -47,7 +47,7 @@ describe('SerializationUtils', () => {
   });
 
   describe('Set Serialization', () => {
-    it('should serialize and deserialize Sets correctly', () => {
+    test('should serialize and deserialize Sets correctly', () => {
       const originalSet = new Set(['value1', 'value2', 'value3']);
 
       const serialized = SerializationUtils.serializeSet(originalSet);
@@ -60,7 +60,7 @@ describe('SerializationUtils', () => {
       expect(deserialized.size).toBe(3);
     });
 
-    it('should handle empty Sets', () => {
+    test('should handle empty Sets', () => {
       const emptySet = new Set();
       const serialized = SerializationUtils.serializeSet(emptySet);
       const deserialized = SerializationUtils.deserializeSet(serialized);
@@ -69,7 +69,7 @@ describe('SerializationUtils', () => {
       expect(deserialized.size).toBe(0);
     });
 
-    it('should handle Sets with complex values', () => {
+    test('should handle Sets with complex values', () => {
       const complexSet = new Set([
         { id: 1, name: 'Object 1' },
         { id: 2, name: 'Object 2' },
@@ -85,7 +85,7 @@ describe('SerializationUtils', () => {
   });
 
   describe('Deep Freeze', () => {
-    it('should freeze objects deeply', () => {
+    test('should freeze objects deeply', () => {
       const obj = {
         level1: {
           level2: {
@@ -104,7 +104,7 @@ describe('SerializationUtils', () => {
       expect(Object.isFrozen(frozen.level1.level2.array)).toBe(true);
     });
 
-    it('should handle null and undefined values', () => {
+    test('should handle null and undefined values', () => {
       const obj = {
         nullValue: null,
         undefinedValue: undefined,
@@ -115,8 +115,8 @@ describe('SerializationUtils', () => {
       expect(Object.isFrozen(obj)).toBe(true);
     });
 
-    it('should handle circular references gracefully', () => {
-      const obj: any = { value: 'test' };
+    test('should handle circular references gracefully', () => {
+      const obj = { value: 'test' };
       obj.self = obj;
 
       expect(() => SerializationUtils.deepFreeze(obj)).not.toThrow();
@@ -125,7 +125,7 @@ describe('SerializationUtils', () => {
   });
 
   describe('Round-trip Serialization', () => {
-    it('should maintain data integrity through serialization cycles', () => {
+    test('should maintain data integrity through serialization cycles', () => {
       const complexData = {
         map: new Map([
           ['key1', { nested: 'value1' }],
