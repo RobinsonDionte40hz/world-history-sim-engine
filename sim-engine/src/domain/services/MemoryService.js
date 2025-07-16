@@ -1,6 +1,6 @@
 // src/domain/services/MemoryService.js
 
-import Character from '../entities/character.js';
+import Character from '../entities/Character.js';
 
 class MemoryService {
   // Query memory for relevant past interactions

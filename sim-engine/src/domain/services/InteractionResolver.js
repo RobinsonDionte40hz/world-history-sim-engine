@@ -1,12 +1,12 @@
 // src/domain/services/InteractionResolver.js
 
-import Interaction from '../entities/interaction.js';
-import Character from '../entities/character.js';
+import Interaction from '../entities/Interaction.js';
+import Character from '../entities/Character.js';
 
 class InteractionResolver {
   // Resolve an interaction for a character, returning outcome and applying effects
   resolve(character, interaction, branchId) {
-    if (!(interaction instanceof Interaction) || !character instanceof Character) {
+    if (!(interaction instanceof Interaction) || !(character instanceof Character)) {
       throw new Error('Invalid interaction or character');
     }
 

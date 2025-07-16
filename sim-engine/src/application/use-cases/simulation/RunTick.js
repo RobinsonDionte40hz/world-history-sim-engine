@@ -16,34 +16,40 @@ const runTick = (worldState) => {
   const avgCoherence = worldState.npcs.reduce((sum, npc) => sum + (npc.consciousness?.coherence || 0), 0) / worldState.npcs.length;
   const tickDelay = Math.max(100, 1000 - (avgCoherence * 900));  // 100-1000ms, higher coherence slows time
 
-  worldState.npcs.forEach(npc => {
+  worldState.npcs.forEach((npc, index) => {
     if (!(npc instanceof Character)) {
       throw new Error('Invalid character in world state');
     }
 
-    // Update basic state (reused from old updateCharacter)
-    npc.energy = Math.max(0, Math.min(100, npc.energy - 1));
-    npc.health = Math.max(0, Math.min(100, npc.health));
-    npc.mood = Math.max(0, Math.min(100, npc.mood));
+    // Create a mutable copy for basic state updates
+    const npcState = {
+      ...npc,
+      energy: Math.max(0, Math.min(100, (npc.energy || 50) - 1)),
+      health: Math.max(0, Math.min(100, npc.health || 100)),
+      mood: Math.max(0, Math.min(100, npc.mood || 50))
+    };
 
     // Evolve over time
-    new EvolutionService().evolveOverTime(npc, 1);  // 1 tick elapsed
+    const evolvedNpc = new EvolutionService().evolveOverTime(npcState, 1);  // 1 tick elapsed
 
     // Generate and resolve behavior
-    const behavior = generateBehavior(npc, worldState);
+    const behavior = generateBehavior(evolvedNpc, worldState);
     if (behavior) {
-      npc.lastInteractionType = behavior.interaction.type;  // Track for evolution
+      evolvedNpc.lastInteractionType = behavior.interaction.type;  // Track for evolution
 
       // Log history
       new HistoryGenerator().logEvent({
         timestamp: worldState.time,
-        character: npc,
+        character: evolvedNpc,
         interaction: behavior.interaction,
         outcome: behavior.resolution.outcome,
         roll: behavior.resolution.roll,
         dc: behavior.resolution.dc,
       });
     }
+
+    // Update the NPC in the world state
+    worldState.npcs[index] = evolvedNpc;
   });
 
   worldState.time++;

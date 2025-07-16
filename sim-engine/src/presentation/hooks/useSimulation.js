@@ -4,7 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import SimulationService from '../../application/use-cases/services/SimulationService.js';
 
 const useSimulation = () => {
-  const [worldState, setWorldState] = useState(SimulationService.worldState || SimulationService.loadState());
+  const [worldState, setWorldState] = useState(() => {
+    // Try to load existing state first, then initialize if needed
+    const loadedState = SimulationService.loadState();
+    if (loadedState) {
+      return loadedState;
+    }
+    // If no saved state, initialize with default
+    return SimulationService.initialize();
+  });
   const [isRunning, setIsRunning] = useState(SimulationService.isRunning);
   const [historyAnalysis, setHistoryAnalysis] = useState(null);
   const [currentTurn, setCurrentTurn] = useState(() => {
@@ -23,9 +31,10 @@ const useSimulation = () => {
 
   // Sync with service on mount
   useEffect(() => {
-    if (!worldState) {
-      SimulationService.initialize();  // Auto-init if no state
-      setWorldState(SimulationService.worldState);
+    // Ensure service is initialized
+    if (!SimulationService.worldState) {
+      const initializedState = SimulationService.initialize();
+      setWorldState(initializedState);
     }
 
     // Set onTick callback for real-time updates

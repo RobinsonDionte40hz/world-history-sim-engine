@@ -8,7 +8,7 @@ import { RacialTraits } from '../value-objects/RacialTraits.js';
 import AlignmentService from '../services/AlignmentService.js';
 import InfluenceService from '../services/InfluenceService.js';
 import PrestigeService from '../services/PrestigeService.js';
-import PrerequisiteValidator from '../services/PrerequisiteValidator.js';
+import { PrerequisiteValidator } from '../services/PrerequisiteValidator.js';
 
 class Character {
   constructor(config = {}) {

@@ -1,7 +1,7 @@
 // src/infrastructure/persistence/LocalStorageCharacterRepository.js
 
 import ICharacterRepository from '../../application/ports/ICharacterRepository.js';
-import Character from '../../domain/entities/character.js';
+import Character from '../../domain/entities/Character.js';
 
 const LocalStorageCharacterRepository = {
   save: async (character) => {

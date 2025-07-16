@@ -80,7 +80,7 @@ class EvolutionService {
   }
 
   // Update influence/prestige (reused from old progression systems)
-  updateProgression(character, interaction, learningRate) {
+  updateProgression(character, interaction, outcome, learningRate) {
     if (interaction.effects.some(e => e.type === 'influence')) {
       character.influence.value += learningRate * (outcome === 'positive' ? 2 : 1);
     }
