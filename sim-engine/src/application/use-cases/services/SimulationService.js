@@ -3,8 +3,8 @@
 import generateWorld from '../simulation/GenerateWorld.js';
 import runTick from '../simulation/RunTick.js';
 import analyzeHistory from '../history/AnalyzeHistory.js';
-import Position from '../../../domain/value-objects/Positions.js';
 import Character from '../../../domain/entities/Character.js';
+import Node from '../../../domain/entities/Node.js';
 
 class SimulationService {
   constructor() {
@@ -31,7 +31,7 @@ class SimulationService {
       try {
         const previousTime = this.worldState.time;
         const updatedState = runTick(this.worldState);
-        
+
         // Validate that the tick operation succeeded and time was incremented properly
         if (!updatedState) {
           console.error('SimulationService.start: runTick returned null/undefined state');
@@ -44,13 +44,13 @@ class SimulationService {
         }
 
         this.worldState = updatedState;
-        
+
         // Only save state if the update was successful
         const saveSuccess = this.saveState();
         if (!saveSuccess) {
           console.warn('SimulationService.start: Failed to save state after tick', updatedState.time);
         }
-        
+
         // Only trigger UI callback if everything succeeded
         if (this.onTick) {
           try {
@@ -99,7 +99,7 @@ class SimulationService {
     try {
       const previousTime = this.worldState.time;
       const updatedState = runTick(this.worldState);
-      
+
       // Validate that the step operation succeeded and time was incremented properly
       if (!updatedState) {
         console.error('SimulationService.step: runTick returned null/undefined state');
@@ -112,13 +112,13 @@ class SimulationService {
       }
 
       this.worldState = updatedState;
-      
+
       // Only save state if the update was successful
       const saveSuccess = this.saveState();
       if (!saveSuccess) {
         console.warn('SimulationService.step: Failed to save state after step', updatedState.time);
       }
-      
+
       // Only trigger UI callback if everything succeeded
       if (this.onTick) {
         try {
@@ -128,7 +128,7 @@ class SimulationService {
           // Don't fail the step operation for UI callback errors
         }
       }
-      
+
       return this.worldState;
     } catch (stepError) {
       console.error('SimulationService.step: Error during simulation step:', stepError);
@@ -142,76 +142,114 @@ class SimulationService {
     return analyzeHistory(criteria);
   }
 
-  // Save state to localStorage (reused from old project)
+  // Update saveState to properly serialize nodes
   saveState() {
+    if (!this.worldState) {
+      console.warn('SimulationService: No world state to save');
+      return false;
+    }
     try {
-      if (!this.worldState) {
-        console.warn('SimulationService: Cannot save state - worldState is null');
-        return false;
-      }
-
       const stateToSave = {
         time: this.worldState.time || 0,
-        nodes: this.worldState.nodes?.map(node => ({ 
-          id: node.id, 
-          name: node.name, 
-          position: node.position?.toJSON ? node.position.toJSON() : node.position 
-        })) || [],
-        npcs: this.worldState.npcs?.map(npc => npc.toJSON ? npc.toJSON() : npc) || [],
-        resources: this.worldState.resources || {},
+        nodes: this.worldState.nodes.map(node => node.toJSON ? node.toJSON() : node),
+        npcs: this.worldState.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc),
+        resources: this.worldState.resources || {}
       };
-      
       localStorage.setItem('worldState', JSON.stringify(stateToSave));
+      console.log('SimulationService: State saved to localStorage');
       return true;
     } catch (error) {
-      console.error('SimulationService: Failed to save state to localStorage:', error);
+      console.error('SimulationService: Failed to save state:', error);
       return false;
     }
   }
 
-  // Load state from localStorage
+  // Update SimulationService.js loadState method
   loadState() {
     try {
-      const savedStateString = localStorage.getItem('worldState');
-      if (!savedStateString) {
+      const savedStateStr = localStorage.getItem('worldState');
+      if (!savedStateStr) {
         console.info('SimulationService: No saved state found in localStorage');
         return null;
       }
 
-      const savedState = JSON.parse(savedStateString);
-      
-      // Validate the saved state structure
+      const savedState = JSON.parse(savedStateStr);
       if (!this.isValidSavedState(savedState)) {
         console.warn('SimulationService: Invalid saved state structure, resetting to default');
         localStorage.removeItem('worldState');
         return null;
       }
 
-      this.worldState = {
+      // Properly reconstruct nodes first
+      const reconstructedNodes = Array.isArray(savedState.nodes) ? savedState.nodes.map(nodeData => {
+        try {
+          if (nodeData && typeof nodeData === 'object') {
+            // Ensure node has an ID
+            if (!nodeData.id) {
+              console.warn('SimulationService: Node missing ID, generating new one');
+              nodeData.id = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            }
+            return Node.fromJSON(nodeData);
+          }
+          console.warn('SimulationService: Invalid node data, skipping:', nodeData);
+          return null;
+        } catch (error) {
+          console.error('SimulationService: Failed to reconstruct node:', error, nodeData);
+          return null;
+        }
+      }).filter(node => node !== null) : [];
+
+      // Log available node IDs for debugging
+      const nodeIds = reconstructedNodes.map(n => n.id);
+      console.log('SimulationService: Reconstructed nodes with IDs:', nodeIds);
+
+      // Reconstruct NPCs and validate their currentNodeId
+      const reconstructedNPCs = Array.isArray(savedState.npcs) ? savedState.npcs.map(npcData => {
+        try {
+          if (npcData && typeof npcData === 'object') {
+            // Check if NPC's currentNodeId is valid
+            if (!npcData.currentNodeId || !nodeIds.includes(npcData.currentNodeId)) {
+              console.warn(`SimulationService: NPC ${npcData.name} has invalid currentNodeId: ${npcData.currentNodeId}`);
+              // Assign to first available node if exists
+              if (reconstructedNodes.length > 0) {
+                npcData.currentNodeId = reconstructedNodes[0].id;
+                console.log(`SimulationService: Reassigned NPC ${npcData.name} to node ${npcData.currentNodeId}`);
+              } else {
+                console.error('SimulationService: No nodes available for NPC assignment');
+                return null;
+              }
+            }
+            return Character.fromJSON(npcData);
+          }
+          console.warn('SimulationService: Invalid NPC data, skipping:', npcData);
+          return null;
+        } catch (error) {
+          console.error('SimulationService: Failed to reconstruct NPC:', error, npcData);
+          return null;
+        }
+      }).filter(npc => npc !== null) : [];
+
+      // Final validation: ensure we have at least one node if we have NPCs
+      if (reconstructedNPCs.length > 0 && reconstructedNodes.length === 0) {
+        console.error('SimulationService: Have NPCs but no nodes, cannot continue');
+        localStorage.removeItem('worldState');
+        return null;
+      }
+
+      const reconstructedState = {
         time: typeof savedState.time === 'number' ? savedState.time : 0,
-        nodes: Array.isArray(savedState.nodes) ? savedState.nodes.map(node => ({
-          id: node.id,
-          name: node.name,
-          position: new Position(node.position),
-          interactions: [],  // Rebuild interactions if needed
-        })) : [],
-        npcs: Array.isArray(savedState.npcs) ? savedState.npcs.map(npc => new Character(npc)) : [],
-        resources: savedState.resources && typeof savedState.resources === 'object' ? savedState.resources : {},
+        nodes: reconstructedNodes,
+        npcs: reconstructedNPCs,
+        resources: savedState.resources && typeof savedState.resources === 'object' ? savedState.resources : {}
       };
 
-      console.info(`SimulationService: Loaded state from localStorage with turn ${this.worldState.time}`);
-      return this.worldState;
+      this.worldState = reconstructedState;
+      console.log(`SimulationService: Loaded state from localStorage with turn ${reconstructedState.time}`);
+      console.log(`SimulationService: ${reconstructedNodes.length} nodes, ${reconstructedNPCs.length} NPCs`);
+      return reconstructedState;
     } catch (error) {
       console.error('SimulationService: Failed to load state from localStorage:', error);
-      console.warn('SimulationService: Clearing corrupted localStorage data');
-      
-      // Clear corrupted data
-      try {
-        localStorage.removeItem('worldState');
-      } catch (clearError) {
-        console.error('SimulationService: Failed to clear corrupted localStorage:', clearError);
-      }
-      
+      localStorage.removeItem('worldState');
       return null;
     }
   }

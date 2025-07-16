@@ -1,53 +1,73 @@
 // src/domain/entities/Node.js
+// Update the Node class to ensure proper serialization/deserialization
 
-import Position from './Position.js';
-import Interaction from './interaction.js';
+import Position from '../value-objects/Positions.js';
+import Interaction from './Interaction.js';
 
 class Node {
   constructor(config = {}) {
-    this.id = config.id || crypto.randomUUID();  // Unique ID for referencing
+    this.id = config.id || this._generateId();
     this.name = config.name || 'Unnamed Node';
     this.description = config.description || '';
-    this.type = config.type || 'location';  // e.g., 'location', 'narrative', 'decision' (from Paper2)
-    this.position = new Position(config.position || {});  // Spatial data (reused from old spatial relationships)
-    this.interactions = (config.interactions || []).map(i => new Interaction(i));  // Array of interactions available here
-    this.resources = config.resources || {};  // e.g., { food: 50, wood: 30 }
-    this.environment = config.environment || { density: 0.5 };  // Influences coherence (quantum-inspired)
-    this.connectedNodes = config.connectedNodes || [];  // Array of node IDs for navigation
+    this.type = config.type || 'location';
+    this.position = config.position instanceof Position ? 
+      config.position : new Position(config.position || {});
+    
+    // Ensure interactions is always an array
+    this.interactions = Array.isArray(config.interactions) ? 
+      config.interactions.map(i => i instanceof Interaction ? i : new Interaction(i)) : 
+      [];
+    
+    this.resources = config.resources || {};
+    this.environment = config.environment || { density: 0.5 };
+    this.connectedNodes = config.connectedNodes || [];
+    this.population = config.population || 0;
 
-    // Freeze to enforce immutability where possible
-    Object.freeze(this);
+    // Don't freeze in constructor to allow modifications if needed
   }
 
-  // Check if an interaction is available in this node
+  _generateId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   hasInteraction(interactionId) {
     return this.interactions.some(i => i.id === interactionId);
   }
 
-  // Get available interactions for a character (filtered by requirements)
   getAvailableInteractions(character) {
-    return this.interactions.filter(i => i.meetsRequirements(character) && i.isAvailable(Date.now()));
+    return this.interactions.filter(i => 
+      i.meetsRequirements && i.meetsRequirements(character) && 
+      i.isAvailable && i.isAvailable(Date.now())
+    );
   }
 
-  // Quantum-inspired method: Environment factor for coherence adjustment
   getEnvironmentFactor() {
-    // Simulate water shielding (papers' 0.28 nm spacing) with density
-    return this.environment.density || 0.5;  // 0-1 range, higher density = better shielding
+    return this.environment.density || 0.5;
   }
 
-  // Serialize for persistence (match old JSON format)
   toJSON() {
     return {
       id: this.id,
       name: this.name,
       description: this.description,
       type: this.type,
-      position: this.position.toJSON(),
-      interactions: this.interactions.map(i => i.toJSON()),
+      position: this.position.toJSON ? this.position.toJSON() : this.position,
+      interactions: this.interactions.map(i => i.toJSON ? i.toJSON() : i),
       resources: this.resources,
       environment: this.environment,
       connectedNodes: this.connectedNodes,
+      population: this.population
     };
+  }
+
+  static fromJSON(data) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid JSON data for Node');
+    }
+    return new Node(data);
   }
 }
 

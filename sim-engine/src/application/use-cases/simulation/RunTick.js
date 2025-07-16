@@ -18,38 +18,56 @@ const runTick = (worldState) => {
 
   worldState.npcs.forEach((npc, index) => {
     if (!(npc instanceof Character)) {
-      throw new Error('Invalid character in world state');
+      console.error('Invalid character in world state at index', index, npc);
+      // Try to recover by converting to Character instance
+      try {
+        npc = Character.fromJSON(npc);
+        worldState.npcs[index] = npc;
+      } catch (error) {
+        console.error('Failed to convert NPC to Character instance:', error);
+        return; // Skip this NPC
+      }
     }
 
-    // Create a mutable copy for basic state updates
-    const npcState = {
-      ...npc,
+    // Create a new Character instance with updated basic state
+    // This maintains the Character class while updating properties
+    const updatedNpc = new Character({
+      ...npc.toJSON(), // Get all current properties
+      // Update basic properties
       energy: Math.max(0, Math.min(100, (npc.energy || 50) - 1)),
       health: Math.max(0, Math.min(100, npc.health || 100)),
       mood: Math.max(0, Math.min(100, npc.mood || 50))
-    };
+    });
 
-    // Evolve over time
-    const evolvedNpc = new EvolutionService().evolveOverTime(npcState, 1);  // 1 tick elapsed
+    // Evolve over time - now passing a proper Character instance
+    const evolutionService = new EvolutionService();
+    const evolvedNpc = evolutionService.evolveOverTime(updatedNpc, 1);  // 1 tick elapsed
 
     // Generate and resolve behavior
     const behavior = generateBehavior(evolvedNpc, worldState);
     if (behavior) {
-      evolvedNpc.lastInteractionType = behavior.interaction.type;  // Track for evolution
+      // Create a new Character instance with the interaction type tracked
+      const npcWithInteraction = new Character({
+        ...evolvedNpc.toJSON(),
+        lastInteractionType: behavior.interaction.type
+      });
 
       // Log history
       new HistoryGenerator().logEvent({
         timestamp: worldState.time,
-        character: evolvedNpc,
+        character: npcWithInteraction,
         interaction: behavior.interaction,
         outcome: behavior.resolution.outcome,
         roll: behavior.resolution.roll,
         dc: behavior.resolution.dc,
       });
-    }
 
-    // Update the NPC in the world state
-    worldState.npcs[index] = evolvedNpc;
+      // Update the reference to the new character instance
+      worldState.npcs[index] = npcWithInteraction;
+    } else {
+      // Update even if no behavior was generated
+      worldState.npcs[index] = evolvedNpc;
+    }
   });
 
   worldState.time++;

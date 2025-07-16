@@ -71,6 +71,22 @@ class Character {
     this.memories = config.memories || [];
     this.location = config.location || null;
 
+    // Add these default properties to prevent undefined errors
+    this.energy = config.energy !== undefined ? config.energy : 50;
+    this.health = config.health !== undefined ? config.health : 100;
+    this.mood = config.mood !== undefined ? config.mood : 50;
+    this.currentNodeId = config.currentNodeId || null;
+    this.lastInteractionType = config.lastInteractionType || null;
+
+    // Ensure consciousness exists with proper structure
+    this.consciousness = config.consciousness || {
+      frequency: 40, // Default gamma baseline
+      coherence: 0.5
+    };
+
+    // Ensure goals array exists
+    this.goals = Array.isArray(config.goals) ? config.goals : [];
+
     // Freeze the character to maintain immutability at the entity level
     Object.freeze(this);
   }
@@ -505,7 +521,16 @@ class Character {
       quests: [...this.quests],
       relationships: Array.from(this.relationships.entries()),
       memories: [...this.memories],
-      location: this.location
+      location: this.location,
+
+      // Add these properties to serialization
+      energy: this.energy,
+      health: this.health,
+      mood: this.mood,
+      currentNodeId: this.currentNodeId,
+      lastInteractionType: this.lastInteractionType,
+      consciousness: this.consciousness,
+      goals: this.goals
     };
   }
 
@@ -539,7 +564,16 @@ class Character {
       quests: data.quests,
       relationships: data.relationships ? new Map(data.relationships) : undefined,
       memories: data.memories,
-      location: data.location
+      location: data.location,
+
+      // Include these properties in deserialization
+      energy: data.energy,
+      health: data.health,
+      mood: data.mood,
+      currentNodeId: data.currentNodeId,
+      lastInteractionType: data.lastInteractionType,
+      consciousness: data.consciousness,
+      goals: data.goals
     });
   }
 

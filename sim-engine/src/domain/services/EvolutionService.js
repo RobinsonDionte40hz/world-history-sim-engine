@@ -1,7 +1,6 @@
 // src/domain/services/EvolutionService.js
 
 import Character from '../entities/Character.js';
-import Attributes from '../value-objects/Attributes.js';
 
 class EvolutionService {
   // Evolve a character based on an interaction outcome
@@ -11,100 +10,159 @@ class EvolutionService {
     }
 
     const success = outcome === 'positive';
-    const coherence = character.consciousness.coherence || 0;
-    const learningRate = this.calculateLearningRate(coherence, success);  // Scales evolution
+    const coherence = character.consciousness?.coherence || 0;
+    const learningRate = this.calculateLearningRate(coherence, success);
+
+    // Create evolved character data
+    let evolvedData = character.toJSON();
 
     // Update attributes (D&D-style progression)
-    this.updateAttributes(character, learningRate, success);
+    const attrToImprove = this.selectAttributeToImprove(character, success);
+    if (attrToImprove && evolvedData.attributes) {
+      const current = evolvedData.attributes[attrToImprove] || { score: 10 };
+      const newScore = Math.min(20, current.score + learningRate);
+      evolvedData.attributes = {
+        ...evolvedData.attributes,
+        [attrToImprove]: {
+          score: newScore,
+          modifier: Math.floor((newScore - 10) / 2)
+        }
+      };
+    }
 
-    // Update skills (placeholder; assume skill system exists or add later)
-    this.updateSkills(character, learningRate, interaction.type);
+    // Update skills
+    evolvedData = this.updateSkillsData(evolvedData, learningRate, interaction.type);
 
-    // Update relationships (based on interaction participants)
-    this.updateRelationships(character, interaction, learningRate);
+    // Update relationships
+    evolvedData = this.updateRelationshipsData(evolvedData, interaction, learningRate);
 
-    // Update influence/prestige (reused from old progression systems)
-    this.updateProgression(character, interaction, learningRate);
+    // Update influence/prestige
+    evolvedData = this.updateProgressionData(evolvedData, interaction, outcome, learningRate);
+
+    // Return new Character instance with evolved data
+    return Character.fromJSON(evolvedData);
   }
 
   // Calculate learning rate based on coherence and success (quantum-inspired)
   calculateLearningRate(coherence, success) {
-    // Inspired by papers' coherence time (408 fs) and golden ratio (φ ≈ 1.618)
-    const baseRate = success ? 0.1 : 0.02;  // Higher rate for success
-    const coherenceFactor = 1 + (coherence * 0.5);  // Scales with coherence (0-1 to 1-1.5)
-    const goldenBoost = 1.618;  // Natural growth factor
-    return baseRate * coherenceFactor * (success ? goldenBoost : 1);  // Caps at ~0.25 for success
+    const baseRate = success ? 0.1 : 0.02;
+    const coherenceFactor = 1 + (coherence * 0.5);
+    const goldenBoost = 1.618;
+    return baseRate * coherenceFactor * (success ? goldenBoost : 1);
   }
 
-  // Update D&D attributes
-  updateAttributes(character, learningRate, success) {
-    const attrToImprove = this.selectAttributeToImprove(character, success);
-    if (attrToImprove) {
-      const current = character.attributes[attrToImprove];
-      const newScore = Math.min(20, current.score + learningRate);  // Cap at 20 (D&D max)
-      character.attributes = new Attributes({
-        ...character.attributes.toJSON(),
-        [attrToImprove]: { ...current, score: newScore, modifier: Math.floor((newScore - 10) / 2) },
-      });
-    }
-  }
-
-  // Select attribute to improve (e.g., based on interaction type)
+  // Select attribute to improve based on interaction type
   selectAttributeToImprove(character, success) {
     const mappings = {
       'dialogue': 'charisma',
       'action': 'strength',
       'trade': 'intelligence',
     };
-    return success ? mappings[character.lastInteractionType] || 'wisdom' : null;  // Wisdom on failure
+    return success ?
+      mappings[character.lastInteractionType] || 'wisdom' :
+      null;
   }
 
-  // Update skills (placeholder; extend with skill system later)
-  updateSkills(character, learningRate, interactionType) {
-    // Assume a skills object exists (e.g., character.skills)
+  // Update skills in character data
+  updateSkillsData(characterData, learningRate, interactionType) {
     const skillToImprove = interactionType === 'trade' ? 'bargaining' : 'combat';
-    if (character.skills && character.skills[skillToImprove]) {
-      character.skills[skillToImprove].level = Math.min(20, character.skills[skillToImprove].level + learningRate);
+
+    if (characterData.skills && characterData.skills[skillToImprove]) {
+      return {
+        ...characterData,
+        skills: {
+          ...characterData.skills,
+          [skillToImprove]: {
+            ...characterData.skills[skillToImprove],
+            level: Math.min(20, (characterData.skills[skillToImprove].level || 0) + learningRate)
+          }
+        }
+      };
     }
+
+    return characterData;
   }
 
-  // Update relationships based on interaction
-  updateRelationships(character, interaction, learningRate) {
+  // Update relationships in character data
+  updateRelationshipsData(characterData, interaction, learningRate) {
+    if (!interaction.participants || !Array.isArray(characterData.relationships)) {
+      return characterData;
+    }
+
+    const relationshipsMap = new Map(characterData.relationships);
+
     interaction.participants.forEach(participantId => {
-      if (participantId !== character.id) {
-        const currentAffinity = character.relationships.get(participantId) || 0;
-        const delta = interaction.type === 'dialogue' ? learningRate * 0.5 : -learningRate * 0.5;  // Positive for dialogue, negative for conflict
-        character.relationships.set(participantId, Math.max(-1, Math.min(1, currentAffinity + delta)));
+      if (participantId !== characterData.id) {
+        const currentAffinity = relationshipsMap.get(participantId) || 0;
+        const delta = interaction.type === 'dialogue' ? learningRate * 0.5 : -learningRate * 0.5;
+        relationshipsMap.set(participantId, Math.max(-1, Math.min(1, currentAffinity + delta)));
       }
     });
+
+    return {
+      ...characterData,
+      relationships: Array.from(relationshipsMap.entries())
+    };
   }
 
-  // Update influence/prestige (reused from old progression systems)
-  updateProgression(character, interaction, outcome, learningRate) {
-    if (interaction.effects.some(e => e.type === 'influence')) {
-      character.influence.value += learningRate * (outcome === 'positive' ? 2 : 1);
+  // Update influence/prestige in character data
+  updateProgressionData(characterData, interaction, outcome, learningRate) {
+    let updatedData = { ...characterData };
+
+    if (interaction.effects?.some(e => e.type === 'influence') && characterData.influence) {
+      updatedData.influence = {
+        ...characterData.influence,
+        value: (characterData.influence.value || 0) + learningRate * (outcome === 'positive' ? 2 : 1)
+      };
     }
-    if (interaction.effects.some(e => e.type === 'prestige')) {
-      character.prestige.value += learningRate * (outcome === 'positive' ? 1.5 : 0.5);
+
+    if (interaction.effects?.some(e => e.type === 'prestige') && characterData.prestige) {
+      updatedData.prestige = {
+        ...characterData.prestige,
+        value: (characterData.prestige.value || 0) + learningRate * (outcome === 'positive' ? 1.5 : 0.5)
+      };
     }
+
+    return updatedData;
   }
 
-  // Evolve character over time (e.g., passive growth during ticks)
+  // Evolve character over time (passive growth during ticks)
   evolveOverTime(character, ticksElapsed) {
     if (!(character instanceof Character)) {
-      throw new Error('Invalid character');
+      throw new Error('Invalid character - expected Character instance');
     }
 
-    const passiveRate = 0.01 * (character.consciousness.coherence || 0);  // Slow growth tied to coherence
-    const attrToImprove = this.selectAttributeToImprove(character, true);  // Assume passive success
-    if (attrToImprove) {
-      const current = character.attributes[attrToImprove];
-      const newScore = Math.min(20, current.score + passiveRate * ticksElapsed);
-      character.attributes = new Attributes({
-        ...character.attributes.toJSON(),
-        [attrToImprove]: { ...current, score: newScore, modifier: Math.floor((newScore - 10) / 2) },
-      });
+    const passiveRate = 0.01 * (character.consciousness?.coherence || 0);
+    const attrToImprove = this.selectAttributeToImprove(character, true);
+
+    if (!attrToImprove || !passiveRate) {
+      return character; // No evolution needed
     }
+
+    // Get current character data
+    const characterData = character.toJSON();
+
+    if (characterData.attributes && characterData.attributes[attrToImprove]) {
+      const current = characterData.attributes[attrToImprove];
+      const newScore = Math.min(20, current.score + passiveRate * ticksElapsed);
+
+      // Create updated character data
+      const evolvedData = {
+        ...characterData,
+        attributes: {
+          ...characterData.attributes,
+          [attrToImprove]: {
+            score: newScore,
+            modifier: Math.floor((newScore - 10) / 2)
+          }
+        }
+      };
+
+      // Return new Character instance
+      return Character.fromJSON(evolvedData);
+    }
+
+    return character; // Return unchanged if no attributes to improve
   }
 }
 
