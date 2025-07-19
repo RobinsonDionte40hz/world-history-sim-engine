@@ -1,6 +1,6 @@
 // src/infrastructure/external/NarrativeGenerator.js
 
-import IExternalService from '../../application/ports/IExternalService.js';  // Reuse or add INarrativeService
+import IExternalService from '../../application/use-cases/ports/IExternalService.js';  // Reuse or add INarrativeService
 
 const NarrativeGenerator = {
   generateNarrative: async (events) => {
@@ -9,4 +9,5 @@ const NarrativeGenerator = {
   },
 };
 
-export default { ...IExternalService, ...NarrativeGenerator };
+const NarrativeService = { ...IExternalService, ...NarrativeGenerator };
+export default NarrativeService;

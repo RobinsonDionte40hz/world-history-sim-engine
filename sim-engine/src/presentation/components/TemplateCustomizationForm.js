@@ -1,5 +1,62 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-// Template customization form without Redux
+// import { useDispatch } from '../../store/selectors/templateSelectors.js'; // TODO: Use when Redux actions are needed
+
+// Tag input component to avoid hooks in render functions
+const TagInput = ({ tags = [], onChange }) => {
+  const [newTag, setNewTag] = useState('');
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      onChange([...tags, newTag.trim()]);
+      setNewTag('');
+    }
+  };
+
+  const handleRemoveTag = (index) => {
+    onChange(tags.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2 mb-2">
+        {tags.map((tag, index) => (
+          <span
+            key={index}
+            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm flex items-center gap-1"
+          >
+            {tag}
+            <button
+              onClick={() => handleRemoveTag(index)}
+              className="text-red-600 hover:text-red-800"
+              type="button"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+          placeholder="Add tag..."
+          className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800"
+        />
+        <button
+          onClick={handleAddTag}
+          type="button"
+          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Template customization form with Redux placeholder
 
 // Template type constants for six-step world building
 const TEMPLATE_TYPES = {
@@ -624,54 +681,8 @@ const FieldInput = ({ field, value, onChange, errors = {} }) => {
 
       case FIELD_TYPES.TAGS:
         const tags = Array.isArray(fieldValue) ? fieldValue : [];
-        const [newTag, setNewTag] = useState('');
         
-        return (
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2 mb-2">
-              {tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm flex items-center gap-1"
-                >
-                  {tag}
-                  <button
-                    onClick={() => handleChange(tags.filter((_, i) => i !== index))}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && newTag.trim()) {
-                    handleChange([...tags, newTag.trim()]);
-                    setNewTag('');
-                  }
-                }}
-                placeholder={field.placeholder || 'Add tag...'}
-                className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-              />
-              <button
-                onClick={() => {
-                  if (newTag.trim()) {
-                    handleChange([...tags, newTag.trim()]);
-                    setNewTag('');
-                  }
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        );
+        return <TagInput tags={tags} onChange={handleChange} />;
 
       default:
         return (
@@ -1012,11 +1023,11 @@ const TemplateCustomizationForm = ({
   className = '',
   enableSpatialFields = false // Disable spatial fields for mappless design
 }) => {
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch(); // TODO: Use when actual Redux actions are needed
   
   const [customizations, setCustomizations] = useState({});
   const [errors, setErrors] = useState({});
-  const [activeSection, setActiveSection] = useState(null);
+  // const [activeSection, setActiveSection] = useState(null); // TODO: Use for section-based navigation
 
   // Get effective customization schema (use default if none provided)
   const effectiveSchema = useMemo(() => {
@@ -1145,6 +1156,10 @@ const TemplateCustomizationForm = ({
                 if (field.maxLength && value.length > field.maxLength) {
                   newErrors[field.key] = `${field.label} must be at most ${field.maxLength} characters`;
                 }
+                break;
+              
+              default:
+                // No specific validation for other field types
                 break;
             }
           }

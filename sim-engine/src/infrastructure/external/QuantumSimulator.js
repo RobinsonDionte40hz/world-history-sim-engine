@@ -1,6 +1,6 @@
 // src/infrastructure/external/QuantumSimulator.js
 
-import IExternalService from '../../application/ports/IExternalService.js';
+import IExternalService from '../../application/use-cases/ports/IExternalService.js';
 
 const QuantumSimulator = {
   simulateCoherence: async (params) => {
@@ -14,4 +14,6 @@ const QuantumSimulator = {
   },
 };
 
-export default { ...IExternalService, ...QuantumSimulator };
+const QuantumSimulatorService = { ...IExternalService, ...QuantumSimulator };
+
+export default QuantumSimulatorService;

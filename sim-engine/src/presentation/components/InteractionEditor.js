@@ -1,5 +1,30 @@
 import React, { useState, useCallback } from 'react';
 
+// Note: Redux integration will need to be implemented when store is available
+// import { useDispatch } from 'react-redux';
+// import { createInteractionTemplate, updateInteractionTemplate } from '../store/actions/interactionActions';
+
+// Placeholder functions for interaction management
+const createInteractionTemplate = (interactionData) => {
+  // TODO: Implement actual Redux action or API call
+  console.log('Creating interaction template:', interactionData);
+  return { type: 'CREATE_INTERACTION_TEMPLATE', payload: interactionData };
+};
+
+const updateInteractionTemplate = (interactionData) => {
+  // TODO: Implement actual Redux action or API call
+  console.log('Updating interaction template:', interactionData);
+  return { type: 'UPDATE_INTERACTION_TEMPLATE', payload: interactionData };
+};
+
+// Placeholder dispatch function
+const useDispatch = () => {
+  return (action) => {
+    console.log('Dispatching action:', action);
+    // TODO: Replace with actual Redux dispatch
+  };
+};
+
 // Interaction categories
 const INTERACTION_CATEGORIES = [
   { id: 'dialogue', label: 'Dialogue', icon: '💬', color: 'blue' },
@@ -1282,22 +1307,48 @@ const InteractionEditor = ({
                 Category
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {INTERACTION_CATEGORIES.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setInteractionData({...interactionData, category: cat.id})}
-                    className={`
-                      p-3 rounded-lg border-2 transition-all
-                      ${interactionData.category === cat.id
-                        ? `border-${cat.color}-500 bg-${cat.color}-50 dark:bg-${cat.color}-950`
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                      }
-                    `}
-                  >
-                    <div className="text-2xl mb-1">{cat.icon}</div>
-                    <div className="text-sm font-medium">{cat.label}</div>
-                  </button>
-                ))}
+                {INTERACTION_CATEGORIES.map(cat => {
+                  // Create proper class names for each color
+                  const getColorClasses = (color) => {
+                    switch (color) {
+                      case 'blue':
+                        return 'border-blue-500 bg-blue-50 dark:bg-blue-950';
+                      case 'green':
+                        return 'border-green-500 bg-green-50 dark:bg-green-950';
+                      case 'red':
+                        return 'border-red-500 bg-red-50 dark:bg-red-950';
+                      case 'purple':
+                        return 'border-purple-500 bg-purple-50 dark:bg-purple-950';
+                      case 'yellow':
+                        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950';
+                      case 'orange':
+                        return 'border-orange-500 bg-orange-50 dark:bg-orange-950';
+                      case 'indigo':
+                        return 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950';
+                      case 'pink':
+                        return 'border-pink-500 bg-pink-50 dark:bg-pink-950';
+                      default:
+                        return 'border-gray-500 bg-gray-50 dark:bg-gray-950';
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setInteractionData({...interactionData, category: cat.id})}
+                      className={`
+                        p-3 rounded-lg border-2 transition-all
+                        ${interactionData.category === cat.id
+                          ? getColorClasses(cat.color)
+                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                        }
+                      `}
+                    >
+                      <div className="text-2xl mb-1">{cat.icon}</div>
+                      <div className="text-sm font-medium">{cat.label}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

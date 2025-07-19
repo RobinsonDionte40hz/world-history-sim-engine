@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-// Node population editor without Redux
+// import { useDispatch } from '../../store/selectors/templateSelectors.js'; // TODO: Use when Redux actions are needed
+// Node population editor with Redux placeholder
 
 // Character assignment component for individual nodes
 const CharacterAssignmentCard = ({ character, isAssigned, onToggle, nodeCapacity, currentPopulation }) => {
@@ -253,7 +254,7 @@ const NodePopulationEditor = ({
   onCancel,
   mode = 'edit'
 }) => {
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch(); // TODO: Use when Redux actions are needed
   
   const [activeNodeId, setActiveNodeId] = useState(nodes[0]?.id || null);
   const [errors, setErrors] = useState({});

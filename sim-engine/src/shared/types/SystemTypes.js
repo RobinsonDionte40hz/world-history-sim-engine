@@ -1,422 +1,483 @@
-// src/shared/types/SystemTypes.ts
-
-import { SerializedMap, SerializedSet } from './ValueObjectTypes';
+// src/shared/types/SystemTypes.js
 
 /**
  * Common interfaces for historical context and temporal evolution
  */
-export interface HistoricalContext {
-  era: string;
-  year: number;
-  season: string;
-  culturalValues: Map<string, number>;
-  politicalClimate: string;
-  economicConditions: string;
-}
 
-export interface SerializedHistoricalContext {
-  era: string;
-  year: number;
-  season: string;
-  culturalValues: SerializedMap<string, number>;
-  politicalClimate: string;
-  economicConditions: string;
-}
+/**
+ * @typedef {Object} HistoricalContext
+ * @property {string} era
+ * @property {number} year
+ * @property {string} season
+ * @property {Map<string, number>} culturalValues
+ * @property {string} politicalClimate
+ * @property {string} economicConditions
+ */
+
+/**
+ * @typedef {Object} SerializedHistoricalContext
+ * @property {string} era
+ * @property {number} year
+ * @property {string} season
+ * @property {SerializedMap<string, number>} culturalValues
+ * @property {string} politicalClimate
+ * @property {string} economicConditions
+ */
 
 /**
  * Alignment System Types
  */
-export interface AlignmentAxis {
-  id: string;
-  name: string;
-  description: string;
-  min: number;
-  max: number;
-  defaultValue: number;
-  zones: AlignmentZone[];
-}
 
-export interface AlignmentZone {
-  name: string;
-  min: number;
-  max: number;
-  description: string;
-  effects: ZoneEffect[];
-}
+/**
+ * @typedef {Object} ZoneEffect
+ * @property {string} type
+ * @property {number} value
+ * @property {string} description
+ */
 
-export interface ZoneEffect {
-  type: string;
-  value: number;
-  description: string;
-}
+/**
+ * @typedef {Object} AlignmentZone
+ * @property {string} name
+ * @property {number} min
+ * @property {number} max
+ * @property {string} description
+ * @property {ZoneEffect[]} effects
+ */
 
-export interface AlignmentChange {
-  timestamp: Date;
-  axisId: string;
-  change: number;
-  newValue: number;
-  reason: string;
-  historicalContext?: HistoricalContext;
-}
+/**
+ * @typedef {Object} AlignmentAxis
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {number} min
+ * @property {number} max
+ * @property {number} defaultValue
+ * @property {AlignmentZone[]} zones
+ */
 
-export interface SerializedAlignmentChange {
-  timestamp: string;
-  axisId: string;
-  change: number;
-  newValue: number;
-  reason: string;
-  historicalContext?: SerializedHistoricalContext;
-}
+/**
+ * @typedef {Object} AlignmentChange
+ * @property {Date} timestamp
+ * @property {string} axisId
+ * @property {number} change
+ * @property {number} newValue
+ * @property {string} reason
+ * @property {HistoricalContext} [historicalContext]
+ */
 
-export interface SerializedAlignment {
-  axes: SerializedMap<string, AlignmentAxis>;
-  values: SerializedMap<string, number>;
-  history: SerializedAlignmentChange[];
-}
+/**
+ * @typedef {Object} SerializedAlignmentChange
+ * @property {string} timestamp
+ * @property {string} axisId
+ * @property {number} change
+ * @property {number} newValue
+ * @property {string} reason
+ * @property {SerializedHistoricalContext} [historicalContext]
+ */
+
+/**
+ * @typedef {Object} SerializedAlignment
+ * @property {SerializedMap<string, AlignmentAxis>} axes
+ * @property {SerializedMap<string, number>} values
+ * @property {SerializedAlignmentChange[]} history
+ */
 
 /**
  * Influence System Types
  */
-export interface InfluenceDomain {
-  id: string;
-  name: string;
-  description: string;
-  settlementTypes: string[];
-  tiers: InfluenceTier[];
-}
 
-export interface InfluenceTier {
-  name: string;
-  minValue: number;
-  maxValue: number;
-  benefits: string[];
-  responsibilities: string[];
-}
+/**
+ * @typedef {Object} InfluenceTier
+ * @property {string} name
+ * @property {number} minValue
+ * @property {number} maxValue
+ * @property {string[]} benefits
+ * @property {string[]} responsibilities
+ */
 
-export interface InfluenceChange {
-  timestamp: Date;
-  domainId: string;
-  change: number;
-  newValue: number;
-  reason: string;
-  settlementId?: string;
-}
+/**
+ * @typedef {Object} InfluenceDomain
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string[]} settlementTypes
+ * @property {InfluenceTier[]} tiers
+ */
 
-export interface SerializedInfluenceChange {
-  timestamp: string;
-  domainId: string;
-  change: number;
-  newValue: number;
-  reason: string;
-  settlementId?: string;
-}
+/**
+ * @typedef {Object} InfluenceChange
+ * @property {Date} timestamp
+ * @property {string} domainId
+ * @property {number} change
+ * @property {number} newValue
+ * @property {string} reason
+ * @property {string} [settlementId]
+ */
 
-export interface SerializedInfluence {
-  domains: SerializedMap<string, InfluenceDomain>;
-  values: SerializedMap<string, number>;
-  history: SerializedInfluenceChange[];
-}
+/**
+ * @typedef {Object} SerializedInfluenceChange
+ * @property {string} timestamp
+ * @property {string} domainId
+ * @property {number} change
+ * @property {number} newValue
+ * @property {string} reason
+ * @property {string} [settlementId]
+ */
+
+/**
+ * @typedef {Object} SerializedInfluence
+ * @property {SerializedMap<string, InfluenceDomain>} domains
+ * @property {SerializedMap<string, number>} values
+ * @property {SerializedInfluenceChange[]} history
+ */
 
 /**
  * Prestige System Types
  */
-export interface PrestigeTrack {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  decayRate: number;
-  levels: PrestigeLevel[];
-}
 
-export interface PrestigeLevel {
-  name: string;
-  minValue: number;
-  maxValue: number;
-  socialBenefits: string[];
-  politicalPower: number;
-}
+/**
+ * @typedef {Object} PrestigeLevel
+ * @property {string} name
+ * @property {number} minValue
+ * @property {number} maxValue
+ * @property {string[]} socialBenefits
+ * @property {number} politicalPower
+ */
 
-export interface PrestigeChange {
-  timestamp: Date;
-  trackId: string;
-  change: number;
-  newValue: number;
-  reason: string;
-  witnessCount?: number;
-}
+/**
+ * @typedef {Object} PrestigeTrack
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} category
+ * @property {number} decayRate
+ * @property {PrestigeLevel[]} levels
+ */
 
-export interface SerializedPrestigeChange {
-  timestamp: string;
-  trackId: string;
-  change: number;
-  newValue: number;
-  reason: string;
-  witnessCount?: number;
-}
+/**
+ * @typedef {Object} PrestigeChange
+ * @property {Date} timestamp
+ * @property {string} trackId
+ * @property {number} change
+ * @property {number} newValue
+ * @property {string} reason
+ * @property {number} [witnessCount]
+ */
 
-export interface SerializedPrestige {
-  tracks: SerializedMap<string, PrestigeTrack>;
-  values: SerializedMap<string, number>;
-  history: SerializedPrestigeChange[];
-}
+/**
+ * @typedef {Object} SerializedPrestigeChange
+ * @property {string} timestamp
+ * @property {string} trackId
+ * @property {number} change
+ * @property {number} newValue
+ * @property {string} reason
+ * @property {number} [witnessCount]
+ */
+
+/**
+ * @typedef {Object} SerializedPrestige
+ * @property {SerializedMap<string, PrestigeTrack>} tracks
+ * @property {SerializedMap<string, number>} values
+ * @property {SerializedPrestigeChange[]} history
+ */
 
 /**
  * Personality System Types
  */
-export interface PersonalityTrait {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  intensity: number;
-  baseLevel: number;
-  volatility: number;
-}
 
-export interface Attribute {
-  id: string;
-  name: string;
-  description: string;
-  baseValue: number;
-  modifier: number;
-}
+/**
+ * @typedef {Object} PersonalityTrait
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} category
+ * @property {number} intensity
+ * @property {number} baseLevel
+ * @property {number} volatility
+ */
 
-export interface EmotionalTendency {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  intensity: number;
-  baseLevel: number;
-  volatility: number;
-}
+/**
+ * @typedef {Object} Attribute
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {number} baseValue
+ * @property {number} modifier
+ */
 
-export interface CognitiveTrait {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  complexity: number;
-  adaptability: number;
-}
+/**
+ * @typedef {Object} EmotionalTendency
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} category
+ * @property {number} intensity
+ * @property {number} baseLevel
+ * @property {number} volatility
+ */
 
-export interface PersonalityConfig {
-  traits: PersonalityTrait[];
-  attributes: Attribute[];
-  emotionalTendencies: EmotionalTendency[];
-  cognitiveTraits: CognitiveTrait[];
-}
+/**
+ * @typedef {Object} CognitiveTrait
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} category
+ * @property {number} complexity
+ * @property {number} adaptability
+ */
 
-export interface SerializedPersonality {
-  traits: SerializedMap<string, PersonalityTrait>;
-  attributes: SerializedMap<string, Attribute>;
-  emotionalTendencies: SerializedMap<string, EmotionalTendency>;
-  cognitiveTraits: SerializedMap<string, CognitiveTrait>;
-}
+/**
+ * @typedef {Object} PersonalityConfig
+ * @property {PersonalityTrait[]} traits
+ * @property {Attribute[]} attributes
+ * @property {EmotionalTendency[]} emotionalTendencies
+ * @property {CognitiveTrait[]} cognitiveTraits
+ */
 
-export interface PersonalityEvolution {
-  traitChanges: Map<string, number>;
-  newTraits: PersonalityTrait[];
-  ageModifiers: Map<string, number>;
-  experienceInfluences: ExperienceInfluence[];
-}
+/**
+ * @typedef {Object} SerializedPersonality
+ * @property {SerializedMap<string, PersonalityTrait>} traits
+ * @property {SerializedMap<string, Attribute>} attributes
+ * @property {SerializedMap<string, EmotionalTendency>} emotionalTendencies
+ * @property {SerializedMap<string, CognitiveTrait>} cognitiveTraits
+ */
 
-export interface ExperienceInfluence {
-  experienceType: string;
-  traitId: string;
-  influence: number;
-  timestamp: Date;
-}
+/**
+ * @typedef {Object} ExperienceInfluence
+ * @property {string} experienceType
+ * @property {string} traitId
+ * @property {number} influence
+ * @property {Date} timestamp
+ */
+
+/**
+ * @typedef {Object} PersonalityEvolution
+ * @property {Map<string, number>} traitChanges
+ * @property {PersonalityTrait[]} newTraits
+ * @property {Map<string, number>} ageModifiers
+ * @property {ExperienceInfluence[]} experienceInfluences
+ */
 
 /**
  * Racial System Types
  */
-export interface Race {
-  id: string;
-  name: string;
-  description: string;
-  subraces: Subrace[];
-  traits: RacialTrait[];
-  lifespan: LifespanInfo;
-}
 
-export interface Subrace {
-  name: string;
-  description: string;
-  attributeModifiers: Map<string, number>;
-  skillModifiers: Map<string, number>;
-  features: string[];
-}
+/**
+ * @typedef {Object} LifespanInfo
+ * @property {number} average
+ * @property {number} maximum
+ */
 
-export interface SerializedSubrace {
-  name: string;
-  description: string;
-  attributeModifiers: SerializedMap<string, number>;
-  skillModifiers: SerializedMap<string, number>;
-  features: string[];
-}
+/**
+ * @typedef {Object} SerializedSubrace
+ * @property {string} name
+ * @property {string} description
+ * @property {SerializedMap<string, number>} attributeModifiers
+ * @property {SerializedMap<string, number>} skillModifiers
+ * @property {string[]} features
+ */
 
-export interface RacialTrait {
-  name: string;
-  description: string;
-  effects: Map<string, number>;
-}
+/**
+ * @typedef {Object} Subrace
+ * @property {string} name
+ * @property {string} description
+ * @property {Map<string, number>} attributeModifiers
+ * @property {Map<string, number>} skillModifiers
+ * @property {string[]} features
+ */
 
-export interface SerializedRacialTrait {
-  name: string;
-  description: string;
-  effects: SerializedMap<string, number>;
-}
+/**
+ * @typedef {Object} SerializedRacialTrait
+ * @property {string} name
+ * @property {string} description
+ * @property {SerializedMap<string, number>} effects
+ */
 
-export interface RacialModifiers {
-  attributes: Map<string, number>;
-  skills: Map<string, number>;
-  features: string[];
-  effects: Map<string, number>;
-}
+/**
+ * @typedef {Object} RacialTrait
+ * @property {string} name
+ * @property {string} description
+ * @property {Map<string, number>} effects
+ */
 
-export interface SerializedRacialModifiers {
-  attributes: SerializedMap<string, number>;
-  skills: SerializedMap<string, number>;
-  features: string[];
-  effects: SerializedMap<string, number>;
-}
+/**
+ * @typedef {Object} Race
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {Subrace[]} subraces
+ * @property {RacialTrait[]} traits
+ * @property {LifespanInfo} lifespan
+ */
 
-export interface RacialFeature {
-  name: string;
-  description: string;
-  type: 'passive' | 'active' | 'conditional';
-  effects?: Map<string, number>;
-}
+/**
+ * @typedef {Object} SerializedRacialModifiers
+ * @property {SerializedMap<string, number>} attributes
+ * @property {SerializedMap<string, number>} skills
+ * @property {string[]} features
+ * @property {SerializedMap<string, number>} effects
+ */
 
-export interface SerializedRacialFeature {
-  name: string;
-  description: string;
-  type: 'passive' | 'active' | 'conditional';
-  effects?: SerializedMap<string, number>;
-}
+/**
+ * @typedef {Object} RacialModifiers
+ * @property {Map<string, number>} attributes
+ * @property {Map<string, number>} skills
+ * @property {string[]} features
+ * @property {Map<string, number>} effects
+ */
 
-export interface LifespanInfo {
-  average: number;
-  maximum: number;
-}
+/**
+ * @typedef {Object} SerializedRacialFeature
+ * @property {string} name
+ * @property {string} description
+ * @property {'passive' | 'active' | 'conditional'} type
+ * @property {SerializedMap<string, number>} [effects]
+ */
 
-export interface SerializedRacialTraits {
-  race: Race;
-  subrace: SerializedSubrace | null;
-  modifiers: SerializedRacialModifiers;
-  features: SerializedRacialFeature[];
-}
+/**
+ * @typedef {Object} RacialFeature
+ * @property {string} name
+ * @property {string} description
+ * @property {'passive' | 'active' | 'conditional'} type
+ * @property {Map<string, number>} [effects]
+ */
+
+/**
+ * @typedef {Object} SerializedRacialTraits
+ * @property {Race} race
+ * @property {SerializedSubrace|null} subrace
+ * @property {SerializedRacialModifiers} modifiers
+ * @property {SerializedRacialFeature[]} features
+ */
 
 /**
  * Character Action and Event Types
  */
-export interface CharacterAction {
-  id: string;
-  type: string;
-  description: string;
-  timestamp: Date;
-  characterId: string;
-  context: ActionContext;
-}
 
-export interface ActionContext {
-  location: string;
-  participants: string[];
-  circumstances: Map<string, any>;
-}
+/**
+ * @typedef {Object} ActionContext
+ * @property {string} location
+ * @property {string[]} participants
+ * @property {Map<string, any>} circumstances
+ */
 
-export interface MoralChoice {
-  id: string;
-  description: string;
-  alignmentImpact: Map<string, number>;
-  context: HistoricalContext;
-}
+/**
+ * @typedef {Object} CharacterAction
+ * @property {string} id
+ * @property {string} type
+ * @property {string} description
+ * @property {Date} timestamp
+ * @property {string} characterId
+ * @property {ActionContext} context
+ */
 
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  prestigeValue: number;
-  requirements: string[];
-}
+/**
+ * @typedef {Object} MoralChoice
+ * @property {string} id
+ * @property {string} description
+ * @property {Map<string, number>} alignmentImpact
+ * @property {HistoricalContext} context
+ */
 
-export interface SocialContext {
-  settlement: string;
-  witnesses: number;
-  culturalRelevance: number;
-  politicalImportance: number;
-}
+/**
+ * @typedef {Object} Achievement
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {string} category
+ * @property {number} prestigeValue
+ * @property {string[]} requirements
+ */
 
-export interface SocialStanding {
-  overall: number;
-  byTrack: Map<string, number>;
-  reputation: string;
-  politicalInfluence: number;
-}
+/**
+ * @typedef {Object} SocialContext
+ * @property {string} settlement
+ * @property {number} witnesses
+ * @property {number} culturalRelevance
+ * @property {number} politicalImportance
+ */
+
+/**
+ * @typedef {Object} SocialStanding
+ * @property {number} overall
+ * @property {Map<string, number>} byTrack
+ * @property {string} reputation
+ * @property {number} politicalInfluence
+ */
 
 /**
  * Settlement and World Types
  */
-export interface Settlement {
-  id: string;
-  name: string;
-  type: string;
-  population: number;
-  culturalValues: Map<string, number>;
-  politicalStructure: string;
-  economicStatus: string;
-}
 
-export interface SettlementEvent {
-  id: string;
-  type: string;
-  description: string;
-  timestamp: Date;
-  settlementId: string;
-  impact: Map<string, number>;
-}
+/**
+ * @typedef {Object} Settlement
+ * @property {string} id
+ * @property {string} name
+ * @property {string} type
+ * @property {number} population
+ * @property {Map<string, number>} culturalValues
+ * @property {string} politicalStructure
+ * @property {string} economicStatus
+ */
 
-export interface WorldState {
-  currentTime: Date;
-  settlements: Settlement[];
-  activeEvents: SettlementEvent[];
-  globalConditions: Map<string, number>;
-}
+/**
+ * @typedef {Object} SettlementEvent
+ * @property {string} id
+ * @property {string} type
+ * @property {string} description
+ * @property {Date} timestamp
+ * @property {string} settlementId
+ * @property {Map<string, number>} impact
+ */
+
+/**
+ * @typedef {Object} WorldState
+ * @property {Date} currentTime
+ * @property {Settlement[]} settlements
+ * @property {SettlementEvent[]} activeEvents
+ * @property {Map<string, number>} globalConditions
+ */
 
 /**
  * Validation and Prerequisite Types
  */
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings: string[];
-}
 
-export interface ValidationError {
-  field: string;
-  message: string;
-  severity: 'error' | 'warning';
-}
+/**
+ * @typedef {Object} ValidationError
+ * @property {string} field
+ * @property {string} message
+ * @property {'error' | 'warning'} severity
+ */
 
-export interface Prerequisite {
-  id: string;
-  type: string;
-  condition: string;
-  value: any;
-  description: string;
-}
+/**
+ * @typedef {Object} ValidationResult
+ * @property {boolean} isValid
+ * @property {ValidationError[]} errors
+ * @property {string[]} warnings
+ */
+
+/**
+ * @typedef {Object} Prerequisite
+ * @property {string} id
+ * @property {string} type
+ * @property {string} condition
+ * @property {any} value
+ * @property {string} description
+ */
 
 /**
  * Character Evolution Types
  */
-export interface CharacterEvolution {
-  characterId: string;
-  timespan: number;
-  alignmentChanges: AlignmentChange[];
-  influenceChanges: InfluenceChange[];
-  prestigeChanges: PrestigeChange[];
-  personalityEvolution: PersonalityEvolution;
-}
+
+/**
+ * @typedef {Object} CharacterEvolution
+ * @property {string} characterId
+ * @property {number} timespan
+ * @property {AlignmentChange[]} alignmentChanges
+ * @property {InfluenceChange[]} influenceChanges
+ * @property {PrestigeChange[]} prestigeChanges
+ * @property {PersonalityEvolution} personalityEvolution
+ */
+
+// Export empty object to make this a proper module
+export {};

@@ -1,23 +1,31 @@
-// src/shared/types/InteractionTypes.ts
+// src/shared/types/InteractionTypes.js
 
-export type InteractionType = 'dialogue' | 'action' | 'event' | 'trade';
+/**
+ * @typedef {'dialogue' | 'action' | 'event' | 'trade'} InteractionType
+ */
 
-export interface InteractionRequirement {
-  attr: keyof CharacterAttributes;
-  min: number;
-  type?: 'attribute' | 'proximity';
-}
+/**
+ * @typedef {Object} InteractionRequirement
+ * @property {string} attr - Key of CharacterAttributes
+ * @property {number} min
+ * @property {'attribute' | 'proximity'} [type] - Optional type
+ */
 
-export interface InteractionBranch {
-  id: string;
-  text: string;
-  condition?: (character: Character) => boolean;
-  effects: InteractionEffect[];
-  requiredEnergy?: number;  // For resonance calc
-}
+/**
+ * @typedef {Object} InteractionBranch
+ * @property {string} id
+ * @property {string} text
+ * @property {function} [condition] - Optional condition function that takes a Character
+ * @property {InteractionEffect[]} effects
+ * @property {number} [requiredEnergy] - Optional required energy for resonance calc
+ */
 
-export interface InteractionEffect {
-  type: 'influence' | 'relationship' | 'attribute' | 'resource';
-  target: string;
-  value: number;
-}
+/**
+ * @typedef {Object} InteractionEffect
+ * @property {'influence' | 'relationship' | 'attribute' | 'resource'} type
+ * @property {string} target
+ * @property {number} value
+ */
+
+// Export empty object to make this a proper module
+export {};

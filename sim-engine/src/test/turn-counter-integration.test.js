@@ -159,6 +159,9 @@ describe('Turn Counter Integration Tests - Turn-Based Implementation', () => {
       // Should increment turn counter
       await waitFor(() => {
         expect(SimulationService.processTurn).toHaveBeenCalled();
+      });
+      
+      await waitFor(() => {
         expect(screen.getByTestId('header-turn-counter')).toHaveTextContent('Turn: 1');
       });
     });
@@ -236,6 +239,9 @@ describe('Turn Counter Integration Tests - Turn-Based Implementation', () => {
       // Should save state after processing turn
       await waitFor(() => {
         expect(SimulationService.saveState).toHaveBeenCalled();
+      });
+      
+      await waitFor(() => {
         expect(screen.getByTestId('header-turn-counter')).toHaveTextContent('Turn: 1');
       });
     });
@@ -342,7 +348,6 @@ describe('Turn Counter Integration Tests - Turn-Based Implementation', () => {
         // Get turn values from all components
         const headerTurn = screen.getByTestId('header-turn-counter').textContent.match(/Turn: (\d+)/)[1];
         const sidebarTurn = screen.getByTestId('sidebar-turn-counter').textContent.match(/Turn: (\d+)/)[1];
-        const statusTurn = screen.getByTestId('status-turn-counter').textContent.match(/Current Turn: (\d+)/)[1];
         
         // All should be the same and > 0
         expect(headerTurn).toBe(sidebarTurn);

@@ -9,8 +9,8 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { AlertCircle, CheckCircle, Clock, Play, Settings } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { AlertCircle, Settings } from 'lucide-react';
 import WorldBuilderInterface from './WorldBuilderInterface.js';
 import SimulationControl from '../features/SimulationControl.js';
 import HistoryTimeline from '../features/HistoryTimeline.js';
@@ -32,7 +32,6 @@ const ConditionalSimulationInterface = ({
   onWorldComplete,
   templateManager
 }) => {
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState(null);
   const [showWorldBuilder, setShowWorldBuilder] = useState(true);
 
@@ -64,181 +63,14 @@ const ConditionalSimulationInterface = ({
       errors: worldBuilderState.validationStatus?.errors || [],
       warnings: worldBuilderState.validationStatus?.warnings || [],
       canStartSimulation: isComplete && stepStatus[6],
-      completeness: worldBuilderState.validationStatus?.completeness || 0
+      completeness: worldBuilderState.validationStatus?.completeness || (completedSteps / 6)
     };
   }, [worldBuilderState]);
-
-  // Transition to simulation when Step 6 is complete
-  const handleTransitionToSimulation = useCallback(async () => {
-    if (!worldValidation.canStartSimulation) {
-      setTransitionError('World building must be completed before starting simulation');
-      return;
-    }
-
-    try {
-      setIsTransitioning(true);
-      setTransitionError(null);
-
-      // Build the world state for simulation
-      const worldState = worldBuilderState.buildWorld();
-      
-      // Notify parent component that world is complete
-      if (onWorldComplete) {
-        await onWorldComplete(worldState);
-      }
-
-      // Switch to simulation interface
-      setShowWorldBuilder(false);
-      
-    } catch (error) {
-      console.error('ConditionalSimulationInterface: Transition error:', error);
-      setTransitionError(`Failed to transition to simulation: ${error.message}`);
-    } finally {
-      setIsTransitioning(false);
-    }
-  }, [worldValidation.canStartSimulation, worldBuilderState, onWorldComplete]);
-
-  // Handle world builder to simulation interface transitions
-  useEffect(() => {
-    if (worldValidation.canStartSimulation && !simulationState?.isInitialized) {
-      handleTransitionToSimulation();
-    }
-  }, [worldValidation.canStartSimulation, simulationState?.isInitialized, handleTransitionToSimulation]);
-
-
-
-  // Handle manual transition request
-  const handleStartSimulation = () => {
-    if (worldValidation.canStartSimulation) {
-      handleTransitionToSimulation();
-    }
-  };
 
   // Handle return to world builder
   const handleReturnToWorldBuilder = () => {
     setShowWorldBuilder(true);
     setTransitionError(null);
-  };
-
-  // Render step-by-step progress when world is incomplete
-  const renderStepProgress = () => {
-    const steps = [
-      { number: 1, title: 'Create World', description: 'Set world properties and rules' },
-      { number: 2, title: 'Create Nodes', description: 'Add abstract locations/contexts' },
-      { number: 3, title: 'Create Interactions', description: 'Define character capabilities' },
-      { number: 4, title: 'Create Characters', description: 'Add NPCs with capabilities' },
-      { number: 5, title: 'Populate Nodes', description: 'Assign characters to locations' },
-      { number: 6, title: 'Simulation Ready', description: 'World ready for simulation' }
-    ];
-
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-          World Building Progress
-        </h3>
-        
-        <div className="space-y-3">
-          {steps.map((step) => {
-            const isCompleted = worldValidation.stepStatus[step.number];
-            const isCurrent = worldValidation.currentStep === step.number;
-            
-            return (
-              <div
-                key={step.number}
-                className={`flex items-center p-3 rounded-lg border ${
-                  isCompleted
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    : isCurrent
-                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                    : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
-                }`}
-              >
-                <div className="flex-shrink-0 mr-3">
-                  {isCompleted ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  ) : isCurrent ? (
-                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-500" />
-                  )}
-                </div>
-                
-                <div className="flex-grow">
-                  <div className="flex items-center justify-between">
-                    <h4 className={`font-medium ${
-                      isCompleted
-                        ? 'text-green-800 dark:text-green-200'
-                        : isCurrent
-                        ? 'text-blue-800 dark:text-blue-200'
-                        : 'text-gray-600 dark:text-gray-400'
-                    }`}>
-                      Step {step.number}: {step.title}
-                    </h4>
-                    
-                    <span className={`text-sm px-2 py-1 rounded ${
-                      isCompleted
-                        ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
-                        : isCurrent
-                        ? 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200'
-                        : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                    }`}>
-                      {isCompleted ? 'Complete' : isCurrent ? 'Current' : 'Pending'}
-                    </span>
-                  </div>
-                  
-                  <p className={`text-sm mt-1 ${
-                    isCompleted
-                      ? 'text-green-600 dark:text-green-300'
-                      : isCurrent
-                      ? 'text-blue-600 dark:text-blue-300'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    {step.description}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Progress bar */}
-        <div className="mt-4">
-          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <span>Progress: {worldValidation.completedSteps}/6 steps</span>
-            <span>{Math.round(worldValidation.completeness * 100)}% complete</span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div
-              className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${worldValidation.completeness * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Start simulation button */}
-        {worldValidation.canStartSimulation && (
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-            <button
-              onClick={handleStartSimulation}
-              disabled={isTransitioning}
-              className="w-full flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-medium transition-colors"
-            >
-              {isTransitioning ? (
-                <>
-                  <Clock className="w-4 h-4 mr-2 animate-spin" />
-                  Initializing Simulation...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  Start Simulation
-                </>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Render validation errors and warnings
@@ -373,7 +205,7 @@ const ConditionalSimulationInterface = ({
     );
   }
 
-  // Show world builder interface with progress
+  // Show world builder interface
   return (
     <div className="p-4">
       <div className="max-w-6xl mx-auto">
@@ -383,9 +215,8 @@ const ConditionalSimulationInterface = ({
 
         {renderTransitionError()}
         {renderValidationMessages()}
-        {renderStepProgress()}
 
-        {/* World builder interface */}
+        {/* World builder interface - includes its own progress display */}
         <WorldBuilderInterface
           worldBuilderState={worldBuilderState}
           templateManager={templateManager}

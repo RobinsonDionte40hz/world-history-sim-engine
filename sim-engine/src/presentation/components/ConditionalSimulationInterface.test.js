@@ -245,8 +245,8 @@ describe('ConditionalSimulationInterface', () => {
 
       await waitFor(() => {
         expect(worldBuilderState.buildWorld).toHaveBeenCalled();
-        expect(mockOnWorldComplete).toHaveBeenCalledWith({ id: 'test-world' });
       });
+      expect(mockOnWorldComplete).toHaveBeenCalledWith({ id: 'test-world' });
     });
 
     it('should show transition error when world building fails', async () => {
@@ -276,11 +276,18 @@ describe('ConditionalSimulationInterface', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Transition Error')).toBeInTheDocument();
-        expect(screen.getByText('Failed to transition to simulation: Failed to build world')).toBeInTheDocument();
       });
+      
+      expect(screen.getByText('Failed to transition to simulation: Failed to build world')).toBeInTheDocument();
     });
 
     it('should show loading state during transition', async () => {
+      let resolveTransition;
+      const transitionPromise = new Promise((resolve) => {
+        resolveTransition = resolve;
+      });
+
+      const mockOnWorldComplete = jest.fn(() => transitionPromise);
       const worldBuilderState = createMockWorldBuilderState({
         isWorldComplete: true,
         stepValidationStatus: {
@@ -295,6 +302,7 @@ describe('ConditionalSimulationInterface', () => {
         <ConditionalSimulationInterface
           worldBuilderState={worldBuilderState}
           simulationState={null}
+          onWorldComplete={mockOnWorldComplete}
           templateManager={mockTemplateManager}
         />
       );
@@ -302,8 +310,13 @@ describe('ConditionalSimulationInterface', () => {
       const startButton = screen.getByText('Start Simulation');
       fireEvent.click(startButton);
 
-      // Should show loading state briefly
-      expect(screen.getByText('Initializing Simulation...')).toBeInTheDocument();
+      // Should show loading state immediately
+      await waitFor(() => {
+        expect(screen.getByText('Initializing Simulation...')).toBeInTheDocument();
+      });
+
+      // Resolve the transition
+      resolveTransition();
     });
   });
 
@@ -331,7 +344,14 @@ describe('ConditionalSimulationInterface', () => {
         />
       );
 
-      // Should not show world builder interface initially
+      // Should show simulation interface components
+      expect(screen.getByText('World History Simulation')).toBeInTheDocument();
+      expect(screen.getByTestId('simulation-control')).toBeInTheDocument();
+      expect(screen.getByTestId('world-map')).toBeInTheDocument();
+      expect(screen.getByTestId('npc-viewer')).toBeInTheDocument();
+      expect(screen.getByTestId('history-timeline')).toBeInTheDocument();
+      
+      // Should not show world builder interface
       expect(screen.queryByTestId('world-builder-interface')).not.toBeInTheDocument();
     });
 
@@ -350,7 +370,7 @@ describe('ConditionalSimulationInterface', () => {
         }
       });
 
-      const { rerender } = render(
+      render(
         <ConditionalSimulationInterface
           worldBuilderState={worldBuilderState}
           simulationState={simulationState}
@@ -358,13 +378,8 @@ describe('ConditionalSimulationInterface', () => {
         />
       );
 
-      // Start simulation first
-      const startButton = screen.getByText('Start Simulation');
-      fireEvent.click(startButton);
-
-      await waitFor(() => {
-        expect(screen.queryByText('World History Simulation')).toBeInTheDocument();
-      });
+      // Should be in simulation interface initially
+      expect(screen.getByText('World History Simulation')).toBeInTheDocument();
 
       // Click edit world button
       const editButton = screen.getByText('Edit World');
@@ -373,8 +388,8 @@ describe('ConditionalSimulationInterface', () => {
       // Should return to world builder
       await waitFor(() => {
         expect(screen.getByText('World Builder')).toBeInTheDocument();
-        expect(screen.getByTestId('world-builder-interface')).toBeInTheDocument();
       });
+      expect(screen.getByTestId('world-builder-interface')).toBeInTheDocument();
     });
   });
 

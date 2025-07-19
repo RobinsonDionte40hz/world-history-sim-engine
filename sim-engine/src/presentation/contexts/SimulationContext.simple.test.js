@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { SimulationProvider, useSimulationContext } from './SimulationContext.js';
 
 // Mock the hooks to avoid dependency issues
 jest.mock('../hooks/useSimulation.js', () => {
@@ -73,9 +74,6 @@ jest.mock('../../template/TemplateManager.js', () => {
   }));
 });
 
-// Import the context after mocking dependencies
-import { SimulationProvider, useSimulationContext } from './SimulationContext.js';
-
 // Test component to access context
 const TestComponent = () => {
   const context = useSimulationContext();
@@ -111,15 +109,15 @@ describe('SimulationContext - Basic Tests', () => {
   });
 
   it('should provide all required context properties', () => {
-    const { getByTestId } = render(
+    render(
       <SimulationProvider>
         <TestComponent />
       </SimulationProvider>
     );
 
-    expect(getByTestId('has-template-manager')).toHaveTextContent('true');
-    expect(getByTestId('has-world-builder')).toHaveTextContent('true');
-    expect(getByTestId('has-simulation')).toHaveTextContent('true');
+    expect(screen.getByTestId('has-template-manager')).toHaveTextContent('true');
+    expect(screen.getByTestId('has-world-builder')).toHaveTextContent('true');
+    expect(screen.getByTestId('has-simulation')).toHaveTextContent('true');
   });
 
   it('should throw error when useSimulationContext is used outside provider', () => {

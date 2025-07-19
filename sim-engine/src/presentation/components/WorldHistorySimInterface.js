@@ -9,7 +9,6 @@ const WorldHistorySimInterface = () => {
   
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);
-  const [selectedNode, setSelectedNode] = useState(null);
   const [simulationSpeed, setSimulationSpeed] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,14 +92,13 @@ const WorldHistorySimInterface = () => {
         {/* Settlement Quick Stats */}
         <div className="mt-4 grid grid-cols-3 gap-2">
           {displayWorldState.nodes.map(node => (
-            <button
+            <div
               key={node.id}
-              onClick={() => setSelectedNode(node)}
-              className="p-3 text-left bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+              className="p-3 text-left bg-gray-50 dark:bg-gray-700 rounded-lg"
             >
               <p className="font-medium text-sm">{node.name}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Pop: {node.population}</p>
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -382,8 +380,6 @@ const CharacterDetail = ({ character }) => (
 
 // Component for settlements view
 const SettlementsView = ({ worldState }) => {
-  const [selectedNode, setSelectedNode] = useState(null);
-  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {worldState.nodes.map(node => (

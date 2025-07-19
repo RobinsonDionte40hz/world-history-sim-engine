@@ -181,7 +181,8 @@ describe('WorldBuilderInterface', () => {
     render(<WorldBuilderInterface />);
     
     // Try to click on step 2 (should be accessible)
-    const step2Indicator = screen.getByText('Step 2: Create Nodes').closest('div');
+    const step2Indicator = screen.getByRole('button', { name: /Step 2: Create Nodes/i }) || 
+                          screen.getByText('Step 2: Create Nodes');
     fireEvent.click(step2Indicator);
     
     expect(mockProceedToStep).toHaveBeenCalledWith(2);

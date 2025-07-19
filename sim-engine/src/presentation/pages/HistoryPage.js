@@ -16,6 +16,21 @@ const HistoryPage = () => {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold">History Analysis</h1>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">
+          Event Limit:
+          <input
+            type="number"
+            value={criteria.limit}
+            onChange={(e) => setCriteria({ ...criteria, limit: parseInt(e.target.value) || 10 })}
+            className="ml-2 px-2 py-1 border rounded"
+            min="1"
+            max="100"
+          />
+        </label>
+      </div>
+      
       <button onClick={handleAnalyze} className="bg-blue-500 text-white p-2">Analyze</button>
       {analysis && (
         <div>

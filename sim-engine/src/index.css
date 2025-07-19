@@ -1,7 +1,9 @@
-@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS base styles */
+@import 'tailwindcss/base';
+/* Tailwind CSS components */
+@import 'tailwindcss/components';
+/* Tailwind CSS utilities */
+@import 'tailwindcss/utilities';
 
 body {
   margin: 0;

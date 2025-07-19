@@ -1,8 +1,8 @@
 // src/infrastructure/persistence/LocalStorageWorldRepository.js
 
-import IWorldRepository from '../../application/ports/IWorldRepository.js';
+import IWorldRepository from '../../application/use-cases/ports/IWorldRepository.js';
 import Position from '../../domain/entities/Position.js';
-import Character from '../../domain/entities/character.js';
+import Character from '../../domain/entities/Character.js';
 
 const LocalStorageWorldRepository = {
   saveWorld: async (worldState) => {
@@ -48,4 +48,6 @@ const LocalStorageWorldRepository = {
   },
 };
 
-export default { ...IWorldRepository, ...LocalStorageWorldRepository };
+const WorldRepositoryService = { ...IWorldRepository, ...LocalStorageWorldRepository };
+
+export default WorldRepositoryService;

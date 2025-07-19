@@ -1,49 +1,58 @@
-// src/shared/types/SimulationTypes.ts
+// src/shared/types/SimulationTypes.js
 
-export interface Character {
-  id: string;
-  name: string;
-  location: string;
-  // Add other properties as needed
-}
+/**
+ * @typedef {Object} Character
+ * @property {string} id
+ * @property {string} name
+ * @property {string} location
+ * // Add other properties as needed
+ */
 
-export interface WorldState {
-  time: number;
-  nodes: Node[];
-  npcs: Character[];
-  resources: Record<string, number>;
-}
+/**
+ * @typedef {Object} WorldState
+ * @property {number} time
+ * @property {Node[]} nodes
+ * @property {Character[]} npcs
+ * @property {Record<string, number>} resources
+ */
 
-export enum InteractionType {
-  BATTLE = 'battle',
-  TRADE = 'trade',
-  DIPLOMACY = 'diplomacy',
-  MIGRATION = 'migration',
-  EXPLORATION = 'exploration',
-  CULTURAL = 'cultural',
-  OTHER = 'other'
-}
-
-export interface HistoricalEvent {
-  id: string;
-  timestamp: number;
-  characterId: string;
-  characterName: string;
-  interactionId: string;
-  interactionName: string;
-  type: InteractionType;
-  outcome: 'positive' | 'negative' | 'neutral';
-  roll?: number;
-  dc?: number;
-  location: string;
-  significance: number;
-  description: string;
-}
-
-export type HistoryCriteria = {
-  timeRange?: { start: number; end: number };
-  characterId?: string;
-  interactionType?: InteractionType;
-  minSignificance?: number;
-  limit?: number;
+/**
+ * Interaction type constants
+ */
+export const InteractionType = {
+  BATTLE: 'battle',
+  TRADE: 'trade',
+  DIPLOMACY: 'diplomacy',
+  MIGRATION: 'migration',
+  EXPLORATION: 'exploration',
+  CULTURAL: 'cultural',
+  OTHER: 'other'
 };
+
+/**
+ * @typedef {Object} HistoricalEvent
+ * @property {string} id
+ * @property {number} timestamp
+ * @property {string} characterId
+ * @property {string} characterName
+ * @property {string} interactionId
+ * @property {string} interactionName
+ * @property {string} type - One of InteractionType values
+ * @property {'positive' | 'negative' | 'neutral'} outcome
+ * @property {number} [roll] - Optional roll value
+ * @property {number} [dc] - Optional DC value
+ * @property {string} location
+ * @property {number} significance
+ * @property {string} description
+ */
+
+/**
+ * @typedef {Object} HistoryCriteria
+ * @property {Object} [timeRange] - Optional time range
+ * @property {number} [timeRange.start] - Start time
+ * @property {number} [timeRange.end] - End time
+ * @property {string} [characterId] - Optional character ID filter
+ * @property {string} [interactionType] - Optional interaction type filter
+ * @property {number} [minSignificance] - Optional minimum significance filter
+ * @property {number} [limit] - Optional result limit
+ */

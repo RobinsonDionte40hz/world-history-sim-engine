@@ -1,4 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+// import { useDispatch } from '../../store/selectors/templateSelectors.js'; // TODO: Use when Redux actions are needed
+
+// Placeholder functions for node management
+const createNodeTemplate = (nodeData) => {
+  // TODO: Implement actual Redux action or API call
+  console.log('Creating node template:', nodeData);
+  return { type: 'CREATE_NODE_TEMPLATE', payload: nodeData };
+};
+
+const updateNodeTemplate = (nodeData) => {
+  // TODO: Implement actual Redux action or API call
+  console.log('Updating node template:', nodeData);
+  return { type: 'UPDATE_NODE_TEMPLATE', payload: nodeData };
+};
 
 // Environment type constants
 const ENVIRONMENT_TYPES = [
@@ -332,7 +346,7 @@ const NodeEditor = ({
   onCancel,
   mode = 'create' // 'create' or 'edit'
 }) => {
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch(); // TODO: Use when Redux actions are needed
   
   // Form state
   const [nodeData, setNodeData] = useState({
@@ -383,12 +397,13 @@ const NodeEditor = ({
       ? createNodeTemplate(nodeData)
       : updateNodeTemplate(nodeData);
     
-    dispatch(action);
+    // dispatch(action); // TODO: Use when Redux is properly set up
+    console.log('Would dispatch action:', action);
     
     if (onSave) {
       onSave(nodeData);
     }
-  }, [nodeData, mode, dispatch, onSave, validateNode]);
+  }, [nodeData, mode, onSave, validateNode]);
 
   // Handle feature toggle
   const handleToggleFeature = (featureId) => {

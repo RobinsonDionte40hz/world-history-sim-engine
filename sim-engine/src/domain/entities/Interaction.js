@@ -7,8 +7,8 @@ const generateId = () => {
   }
   // Fallback for test environments
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
     return v.toString(16);
   });
 };
@@ -68,6 +68,9 @@ class Interaction {
           character.attributes[effect.target].modifier = Math.floor((character.attributes[effect.target].score - 10) / 2);  // D&D mod
           break;
         // Add more effect types as needed (e.g., 'quest', 'resource')
+        default:
+          console.warn(`Unknown effect type: ${effect.type}`);
+          break;
       }
     });
   }

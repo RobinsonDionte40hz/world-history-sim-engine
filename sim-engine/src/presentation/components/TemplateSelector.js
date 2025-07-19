@@ -1,4 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { 
+  useSelector, 
+  useDispatch, 
+  selectCharacterTemplates, 
+  selectNodeTemplates, 
+  selectInteractionTemplates, 
+  selectGroupTemplates, 
+  selectActiveTemplate,
+  setActiveTemplate 
+} from '../../store/selectors/templateSelectors.js';
 
 // Template type constants for six-step world building
 const TEMPLATE_TYPES = {
@@ -569,7 +579,8 @@ const TemplateSelector = ({
   className = '',
   showCustomization = true
 }) => {
-  // Template selector logic without Redux
+  // Template selector logic with Redux placeholders
+  const dispatch = useDispatch();
   
   // Redux selectors
   const characterTemplates = useSelector(selectCharacterTemplates);

@@ -1,7 +1,7 @@
 // src/application/use-cases/npc/GenerateBehavior.js
 
 import Character from '../../../domain/entities/Character.js';
-import Interaction from '../../../domain/entities/Interaction.js';
+// import Interaction from '../../../domain/entities/Interaction.js'; // Currently unused
 import InteractionResolver from '../../../domain/services/InteractionResolver.js';
 import MemoryService from '../../../domain/services/MemoryService.js';
 import EvolutionService from '../../../domain/services/EvolutionService.js';

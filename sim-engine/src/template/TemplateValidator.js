@@ -1,12 +1,13 @@
-import {
-  BaseTemplate,
-  CharacterTemplate,
-  NodeTemplate,
-  InteractionTemplate,
-  EventTemplate,
-  GroupTemplate,
-  ItemTemplate
-} from './TemplateTypes';
+// Currently not using specific template types, commenting out unused imports
+// import {
+//   BaseTemplate,
+//   CharacterTemplate,
+//   NodeTemplate,
+//   InteractionTemplate,
+//   EventTemplate,
+//   GroupTemplate,
+//   ItemTemplate
+// } from './TemplateTypes';
 
 class TemplateValidator {
   static validateBaseTemplate(template) {

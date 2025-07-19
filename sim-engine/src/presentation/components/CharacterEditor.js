@@ -703,15 +703,26 @@ const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
   );
 };
 
-// Main CharacterEditor component
+/**
+ * CharacterEditor - A comprehensive character template editor component
+ * 
+ * This component follows clean architecture principles:
+ * - Pure presentation layer - no domain logic
+ * - Uses callbacks to communicate with parent components
+ * - Maintains internal state for form management
+ * - Validates user input before submission
+ * 
+ * @param {Object} initialCharacter - Existing character data for editing (optional)
+ * @param {Function} onSave - Callback when character is saved (required)
+ * @param {Function} onCancel - Callback when editing is cancelled (optional)
+ * @param {string} mode - 'create' or 'edit' mode (default: 'create')
+ */
 const CharacterEditor = ({ 
   initialCharacter = null, 
   onSave,
   onCancel,
   mode = 'create' // 'create' or 'edit'
 }) => {
-  const dispatch = useDispatch();
-  
   // Form state
   const [characterData, setCharacterData] = useState({
     id: initialCharacter?.id || `character_${Date.now()}`,
@@ -775,16 +786,12 @@ const CharacterEditor = ({
       return;
     }
 
-    const action = mode === 'create' 
-      ? createCharacterTemplate(characterData)
-      : updateCharacterTemplate(characterData);
-    
-    dispatch(action);
-    
+    // Let parent component handle the actual save operation
+    // This maintains clean architecture - presentation layer doesn't know about domain services
     if (onSave) {
       onSave(characterData);
     }
-  }, [characterData, mode, dispatch, onSave, validateCharacter]);
+  }, [characterData, onSave, validateCharacter]);
 
   // Handle archetype selection
   const handleArchetypeSelect = (archetypeId) => {

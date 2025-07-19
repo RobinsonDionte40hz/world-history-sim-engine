@@ -630,23 +630,16 @@ const NodeStepContent = ({
 };
 
 const WorldBuilderInterface = ({ 
+  worldBuilderState = null, // Accept external world builder state
   templateManager = null, 
   onWorldReady = null,
   className = '' 
 }) => {
-  const worldBuilderHook = useWorldBuilder(templateManager);
+  // Use external worldBuilderState if provided, otherwise create our own instance
+  const internalWorldBuilderHook = useWorldBuilder(templateManager);
+  const worldBuilderHook = worldBuilderState || internalWorldBuilderHook;
   
-  // Handle case where hook returns undefined (e.g., in tests)
-  if (!worldBuilderHook) {
-    return (
-      <div className={`world-builder-interface ${className}`} style={{ padding: '20px' }}>
-        <div style={{ color: '#dc2626', padding: '16px', backgroundColor: '#fef2f2', borderRadius: '8px' }}>
-          Error: World builder hook not properly initialized
-        </div>
-      </div>
-    );
-  }
-
+  // Extract hook data with defaults (must be called before any early returns)
   const {
     worldConfig = {},
     currentStep = 1,
@@ -661,7 +654,7 @@ const WorldBuilderInterface = ({
     // Step navigation
     canProceedToStep = () => false,
     proceedToStep = () => {},
-    validateCurrentStep = () => {},
+    // validateCurrentStep = () => {}, // Currently unused
     
     // Step 1 methods
     setWorldProperties = () => {},
@@ -684,8 +677,8 @@ const WorldBuilderInterface = ({
     removeCharacter = () => {},
     
     // Step 5 methods
-    assignCharacterToNode = () => {},
-    populateNode = () => {},
+    // assignCharacterToNode = () => {}, // Currently unused
+    // populateNode = () => {}, // Currently unused
     
     // Final methods
     validateWorld = () => {},
@@ -694,7 +687,7 @@ const WorldBuilderInterface = ({
     saveAsTemplate = () => {}
   } = worldBuilderHook || {};
 
-  // Local state for form inputs
+  // Local state for form inputs (must be called after hook but before any early returns)
   const [worldName, setWorldName] = useState(worldConfig?.name || '');
   const [worldDescription, setWorldDescription] = useState(worldConfig?.description || '');
   const [worldRules, setWorldRules] = useState(worldConfig?.rules || {});
@@ -709,6 +702,17 @@ const WorldBuilderInterface = ({
       setLocalInitialConditions(worldConfig.initialConditions || {});
     }
   }, [worldConfig]);
+
+  // Handle case where hook returns undefined (e.g., in tests) - after all hooks
+  if (!worldBuilderHook) {
+    return (
+      <div className={`world-builder-interface ${className}`} style={{ padding: '20px' }}>
+        <div style={{ color: '#dc2626', padding: '16px', backgroundColor: '#fef2f2', borderRadius: '8px' }}>
+          Error: World builder hook not properly initialized
+        </div>
+      </div>
+    );
+  }
 
   // Handle step navigation
   const handleStepClick = (stepNumber) => {

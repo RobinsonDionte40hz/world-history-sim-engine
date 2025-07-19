@@ -1,6 +1,6 @@
 // src/infrastructure/persistence/LocalStorageCharacterRepository.js
 
-import ICharacterRepository from '../../application/ports/ICharacterRepository.js';
+import ICharacterRepository from '../../application/use-cases/ports/ICharacterRepository.js';
 import Character from '../../domain/entities/Character.js';
 
 const LocalStorageCharacterRepository = {
@@ -34,4 +34,6 @@ const LocalStorageCharacterRepository = {
   },
 };
 
-export default { ...ICharacterRepository, ...LocalStorageCharacterRepository };
+const CharacterRepositoryService = { ...ICharacterRepository, ...LocalStorageCharacterRepository };
+
+export default CharacterRepositoryService;
