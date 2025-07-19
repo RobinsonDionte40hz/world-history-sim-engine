@@ -7,7 +7,30 @@ jest.mock('../simulation/GenerateWorld.js', () => jest.fn());
 jest.mock('../simulation/RunTick.js', () => jest.fn());
 jest.mock('../history/AnalyzeHistory.js', () => jest.fn());
 jest.mock('../../../domain/value-objects/Positions.js', () => jest.fn());
-jest.mock('../../../domain/entities/Character.js', () => jest.fn());
+jest.mock('../../../domain/entities/Character.js', () => {
+  return jest.fn().mockImplementation((config) => {
+    const character = {
+      id: config.id,
+      name: config.name,
+      currentNodeId: config.currentNodeId,
+      attributes: config.attributes,
+      personality: config.personality,
+      consciousness: config.consciousness,
+      assignedInteractions: config.assignedInteractions,
+      skills: config.skills,
+      goals: config.goals,
+      energy: config.energy,
+      health: config.health,
+      mood: config.mood
+    };
+    // Allow setting currentNodeId after creation
+    Object.defineProperty(character, 'currentNodeId', {
+      writable: true,
+      value: config.currentNodeId
+    });
+    return character;
+  });
+});
 
 describe('SimulationService', () => {
   let service;
@@ -19,6 +42,199 @@ describe('SimulationService', () => {
     service.isRunning = false;
     service.tickInterval = null;
     service.onTick = null;
+  });
+
+  // Helper function to create valid mappless world config
+  const createValidMapplessConfig = () => ({
+    worldName: 'Test World',
+    worldDescription: 'A test world for simulation',
+    rules: { timeProgression: 'standard' },
+    initialConditions: { season: 'spring' },
+    nodes: [
+      {
+        id: 'node1',
+        name: 'Village',
+        type: 'settlement',
+        description: 'A small village',
+        environmentalProperties: { climate: 'temperate' },
+        resourceAvailability: { food: 100 },
+        culturalContext: { language: 'common' },
+        assignedCharacters: ['char1']
+      }
+    ],
+    characters: [
+      {
+        id: 'char1',
+        name: 'Test Character',
+        assignedInteractions: ['interact1'],
+        attributes: {
+          strength: { score: 12 },
+          dexterity: { score: 14 },
+          constitution: { score: 13 },
+          intelligence: { score: 15 },
+          wisdom: { score: 11 },
+          charisma: { score: 16 }
+        }
+      }
+    ],
+    interactions: [
+      {
+        id: 'interact1',
+        name: 'Trade Goods',
+        type: 'economic',
+        requirements: [],
+        branches: [],
+        effects: []
+      }
+    ]
+  });
+
+  describe('mappless world validation', () => {
+    test('should validate valid mappless world config', () => {
+      const config = createValidMapplessConfig();
+      expect(service.validateMapplessWorldConfig(config)).toBe(true);
+    });
+
+    test('should reject config without worldName', () => {
+      const config = createValidMapplessConfig();
+      delete config.worldName;
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+
+    test('should reject config without nodes', () => {
+      const config = createValidMapplessConfig();
+      config.nodes = [];
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+
+    test('should reject config without characters', () => {
+      const config = createValidMapplessConfig();
+      config.characters = [];
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+
+    test('should reject config without interactions', () => {
+      const config = createValidMapplessConfig();
+      config.interactions = [];
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+
+    test('should reject nodes with spatial coordinates', () => {
+      const config = createValidMapplessConfig();
+      config.nodes[0].position = { x: 10, y: 20 };
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+
+    test('should reject characters without assigned interactions', () => {
+      const config = createValidMapplessConfig();
+      config.characters[0].assignedInteractions = [];
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+
+    test('should reject nodes without assigned characters', () => {
+      const config = createValidMapplessConfig();
+      config.nodes[0].assignedCharacters = [];
+      expect(service.validateMapplessWorldConfig(config)).toBe(false);
+    });
+  });
+
+  describe('mappless world processing', () => {
+    test('should process valid mappless world config', () => {
+      const config = createValidMapplessConfig();
+      const worldState = service.processMapplessWorldState(config);
+
+      expect(worldState.worldName).toBe('Test World');
+      expect(worldState.nodes).toHaveLength(1);
+      expect(worldState.npcs).toHaveLength(1);
+      expect(worldState.interactions).toHaveLength(1);
+      expect(worldState.time).toBe(0);
+    });
+
+    test('should assign characters to correct nodes', () => {
+      const config = createValidMapplessConfig();
+      const worldState = service.processMapplessWorldState(config);
+
+      expect(worldState.npcs[0].currentNodeId).toBe('node1');
+    });
+
+    test('should initialize resources from nodes', () => {
+      const config = createValidMapplessConfig();
+      const worldState = service.processMapplessWorldState(config);
+
+      expect(worldState.resources.food).toBe(100);
+    });
+  });
+
+  describe('six-step validation', () => {
+    test('should validate complete six-step world', () => {
+      const config = createValidMapplessConfig();
+      const worldState = service.processMapplessWorldState(config);
+      
+      const validation = service.validateSixStepCompletion(worldState);
+      expect(validation.isComplete).toBe(true);
+      expect(validation.missingSteps).toHaveLength(0);
+    });
+
+    test('should detect missing world properties', () => {
+      const worldState = { time: 0, nodes: [], npcs: [], interactions: [] };
+      const validation = service.validateSixStepCompletion(worldState);
+      
+      expect(validation.isComplete).toBe(false);
+      expect(validation.missingSteps).toContain('Step 1: World properties incomplete');
+    });
+
+    test('should detect missing nodes', () => {
+      const worldState = { 
+        time: 0, 
+        worldName: 'Test', 
+        rules: {}, 
+        nodes: [], 
+        npcs: [], 
+        interactions: [] 
+      };
+      const validation = service.validateSixStepCompletion(worldState);
+      
+      expect(validation.isComplete).toBe(false);
+      expect(validation.missingSteps).toContain('Step 2: No nodes created');
+    });
+  });
+
+  describe('canStart method', () => {
+    test('should return false when no world state', () => {
+      service.worldState = null;
+      const result = service.canStart();
+      
+      expect(result.canStart).toBe(false);
+      expect(result.reason).toBe('No world state initialized');
+    });
+
+    test('should return true when world is complete', () => {
+      const config = createValidMapplessConfig();
+      service.worldState = service.processMapplessWorldState(config);
+      
+      const result = service.canStart();
+      expect(result.canStart).toBe(true);
+      expect(result.reason).toBe('Ready to start');
+    });
+  });
+
+  describe('initialize with mappless config', () => {
+    test('should initialize with valid mappless config', () => {
+      const config = createValidMapplessConfig();
+      const worldState = service.initialize(config);
+
+      expect(worldState).toBeDefined();
+      expect(worldState.worldName).toBe('Test World');
+      expect(service.worldState).toBe(worldState);
+    });
+
+    test('should throw error with invalid config', () => {
+      const invalidConfig = { invalid: 'config' };
+      
+      expect(() => {
+        service.initialize(invalidConfig);
+      }).toThrow('Invalid mappless world configuration');
+    });
   });
 
   describe('getCurrentTurn', () => {
@@ -76,7 +292,7 @@ describe('SimulationService', () => {
       const result = service.saveState();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith('SimulationService: Cannot save state - worldState is null');
+      expect(consoleSpy).toHaveBeenCalledWith('SimulationService: No world state to save');
       
       consoleSpy.mockRestore();
     });
@@ -442,7 +658,7 @@ describe('SimulationService', () => {
       
       expect(result).toBe(false);
       expect(consoleSpy).toHaveBeenCalledWith(
-        'SimulationService: Failed to save state to localStorage:', 
+        'SimulationService: Failed to save state:', 
         expect.any(Error)
       );
 

@@ -3,71 +3,73 @@
 import { useState, useEffect, useCallback } from 'react';
 import SimulationService from '../../application/use-cases/services/SimulationService.js';
 
-const useSimulation = () => {
-  const [worldState, setWorldState] = useState(() => {
-    // Try to load existing state first, then initialize if needed
-    const loadedState = SimulationService.loadState();
-    if (loadedState) {
-      return loadedState;
-    }
-    // If no saved state, initialize with default
-    return SimulationService.initialize();
-  });
-  const [isRunning, setIsRunning] = useState(SimulationService.isRunning);
+const useSimulation = (worldBuilderState = null) => {
+  const [worldState, setWorldState] = useState(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initializationError, setInitializationError] = useState(null);
   const [historyAnalysis, setHistoryAnalysis] = useState(null);
-  const [currentTurn, setCurrentTurn] = useState(() => {
-    try {
-      const turn = SimulationService.getCurrentTurn();
-      if (typeof turn !== 'number' || !Number.isFinite(turn) || turn < 0) {
-        console.error('useSimulation: Invalid turn value from service:', turn);
-        return 0;
-      }
-      return turn;
-    } catch (error) {
-      console.error('useSimulation: Error getting current turn during initialization:', error);
-      return 0;
-    }
-  });
+  const [currentTurn, setCurrentTurn] = useState(0);
 
-  // Sync with service on mount
+  // Initialize simulation only when valid world builder state is provided
   useEffect(() => {
-    // Ensure service is initialized
-    if (!SimulationService.worldState) {
-      const initializedState = SimulationService.initialize();
-      setWorldState(initializedState);
-    }
-
-    // Set onTick callback for real-time updates
-    SimulationService.setOnTick((updatedState) => {
+    if (worldBuilderState && worldBuilderState.isValid && worldBuilderState.stepValidation[6]) {
       try {
-        // Validate the updated state before using it
-        if (!updatedState) {
-          console.error('useSimulation: onTick received null/undefined state');
-          return;
-        }
-
-        setWorldState(updatedState);
-        
-        // Get and validate the current turn
-        const newTurn = SimulationService.getCurrentTurn();
-        if (typeof newTurn === 'number' && Number.isFinite(newTurn) && newTurn >= 0) {
-          setCurrentTurn(newTurn);
-        } else {
-          console.error('useSimulation: Invalid turn value in onTick:', newTurn);
-          // Don't update currentTurn to preserve last known good value
-        }
+        // Convert world builder state to simulation config
+        const simulationConfig = worldBuilderState.toSimulationConfig();
+        const initializedState = SimulationService.initialize(simulationConfig);
+        setWorldState(initializedState);
+        setIsInitialized(true);
+        setInitializationError(null);
       } catch (error) {
-        console.error('useSimulation: Error in onTick callback:', error);
-        console.error('useSimulation: Updated state:', updatedState);
-        // Don't update currentTurn on error to preserve last known good value
+        console.error('useSimulation: Failed to initialize simulation from world builder state:', error);
+        setInitializationError(error.message);
+        setIsInitialized(false);
+        setWorldState(null);
       }
-    });
+    } else {
+      // Clear simulation state if world builder state is invalid
+      setWorldState(null);
+      setIsInitialized(false);
+      setInitializationError(null);
+    }
+  }, [worldBuilderState]);
+
+  // Set up onTick callback when simulation is initialized
+  useEffect(() => {
+    if (isInitialized) {
+      // Set onTick callback for real-time updates
+      SimulationService.setOnTick((updatedState) => {
+        try {
+          // Validate the updated state before using it
+          if (!updatedState) {
+            console.error('useSimulation: onTick received null/undefined state');
+            return;
+          }
+
+          setWorldState(updatedState);
+          
+          // Get and validate the current turn
+          const newTurn = SimulationService.getCurrentTurn();
+          if (typeof newTurn === 'number' && Number.isFinite(newTurn) && newTurn >= 0) {
+            setCurrentTurn(newTurn);
+          } else {
+            console.error('useSimulation: Invalid turn value in onTick:', newTurn);
+            // Don't update currentTurn to preserve last known good value
+          }
+        } catch (error) {
+          console.error('useSimulation: Error in onTick callback:', error);
+          console.error('useSimulation: Updated state:', updatedState);
+          // Don't update currentTurn on error to preserve last known good value
+        }
+      });
+    }
 
     // Cleanup
     return () => {
       SimulationService.setOnTick(null);  // Remove callback
     };
-  }, [worldState]);
+  }, [isInitialized]);
 
   // Update currentTurn when worldState changes
   useEffect(() => {
@@ -87,9 +89,12 @@ const useSimulation = () => {
   }, [worldState]);
 
   const startSimulation = useCallback(() => {
+    if (!isInitialized || !worldState) {
+      throw new Error('Cannot start simulation without valid world state');
+    }
     SimulationService.start();
     setIsRunning(true);
-  }, []);
+  }, [isInitialized, worldState]);
 
   const stopSimulation = useCallback(() => {
     SimulationService.stop();
@@ -97,36 +102,28 @@ const useSimulation = () => {
   }, []);
 
   const resetSimulation = useCallback(() => {
+    if (!isInitialized) {
+      console.warn('useSimulation: Cannot reset - simulation not initialized');
+      return null;
+    }
+    
     try {
-      const newWorldState = SimulationService.reset();
-      
-      // Validate the reset state before using it
-      if (!newWorldState) {
-        console.error('useSimulation: resetSimulation received null/undefined state');
-        setCurrentTurn(0);
-        return null;
-      }
-      
-      setWorldState(newWorldState);
+      SimulationService.stop(); // Stop if running
       setIsRunning(false);
+      setWorldState(null);
+      setCurrentTurn(0);
+      setIsInitialized(false);
+      setInitializationError(null);
       
-      // Get and validate the current turn after reset
-      const newTurn = SimulationService.getCurrentTurn();
-      if (typeof newTurn === 'number' && Number.isFinite(newTurn) && newTurn >= 0) {
-        setCurrentTurn(newTurn);
-      } else {
-        console.error('useSimulation: Invalid turn value after reset:', newTurn);
-        setCurrentTurn(0);
-      }
-      
-      return newWorldState;
+      return null; // Reset clears state, re-initialization requires valid world builder state
     } catch (error) {
       console.error('useSimulation: Error resetting simulation:', error);
       setCurrentTurn(0);
       setIsRunning(false);
+      setIsInitialized(false);
       return null;
     }
-  }, []);
+  }, [isInitialized]);
 
   const stepSimulation = useCallback(() => {
     if (isRunning) {
@@ -169,8 +166,11 @@ const useSimulation = () => {
   return {
     worldState,
     isRunning,
+    isInitialized,
+    initializationError,
     historyAnalysis,
     currentTurn,
+    canStart: isInitialized && !isRunning,
     startSimulation,
     stopSimulation,
     resetSimulation,

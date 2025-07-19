@@ -8,16 +8,16 @@ import SimulationService from '../../application/use-cases/services/SimulationSe
 jest.mock('../../application/use-cases/services/SimulationService.js', () => ({
   worldState: null,
   isRunning: false,
-  loadState: jest.fn(),
   initialize: jest.fn(),
   getCurrentTurn: jest.fn(),
   setOnTick: jest.fn(),
   start: jest.fn(),
   stop: jest.fn(),
+  step: jest.fn(),
   getHistoryAnalysis: jest.fn(),
 }));
 
-describe('useSimulation Hook - Turn Counter Functionality', () => {
+describe('useSimulation Hook - Six-Step World Dependency', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset console.error mock
@@ -28,49 +28,138 @@ describe('useSimulation Hook - Turn Counter Functionality', () => {
     console.error.mockRestore();
   });
 
-  describe('currentTurn initialization', () => {
-    it('should initialize currentTurn to 0 when getCurrentTurn returns 0', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-
+  describe('initialization without world builder state', () => {
+    it('should not initialize simulation without world builder state', () => {
       const { result } = renderHook(() => useSimulation());
 
+      expect(result.current.isInitialized).toBe(false);
+      expect(result.current.worldState).toBeNull();
       expect(result.current.currentTurn).toBe(0);
-      expect(SimulationService.getCurrentTurn).toHaveBeenCalled();
+      expect(result.current.canStart).toBe(false);
+      expect(SimulationService.initialize).not.toHaveBeenCalled();
     });
 
-    it('should initialize currentTurn to correct value when simulation has progressed', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(42);
-      SimulationService.loadState.mockReturnValue({ time: 42 });
+    it('should not initialize simulation with invalid world builder state', () => {
+      const invalidWorldState = { isValid: false };
+      const { result } = renderHook(() => useSimulation(invalidWorldState));
 
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(42);
+      expect(result.current.isInitialized).toBe(false);
+      expect(result.current.worldState).toBeNull();
+      expect(result.current.canStart).toBe(false);
+      expect(SimulationService.initialize).not.toHaveBeenCalled();
     });
 
-    it('should handle getCurrentTurn errors during initialization', () => {
-      SimulationService.getCurrentTurn.mockImplementation(() => {
-        throw new Error('Service error');
-      });
-      SimulationService.loadState.mockReturnValue({});
+    it('should not initialize simulation with incomplete world builder state', () => {
+      const incompleteWorldState = { 
+        isValid: true, 
+        stepValidation: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: false }
+      };
+      const { result } = renderHook(() => useSimulation(incompleteWorldState));
 
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-      expect(console.error).toHaveBeenCalledWith('useSimulation: Error getting current turn during initialization:', expect.any(Error));
+      expect(result.current.isInitialized).toBe(false);
+      expect(result.current.worldState).toBeNull();
+      expect(result.current.canStart).toBe(false);
+      expect(SimulationService.initialize).not.toHaveBeenCalled();
     });
   });
 
-  describe('currentTurn updates via onTick callback', () => {
-    it('should update currentTurn when onTick callback is triggered', () => {
+  describe('initialization with valid world builder state', () => {
+    const createValidWorldState = () => ({
+      isValid: true,
+      stepValidation: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true },
+      toSimulationConfig: jest.fn().mockReturnValue({
+        worldName: 'Test World',
+        nodes: [],
+        characters: [],
+        interactions: []
+      })
+    });
+
+    it('should initialize simulation with valid world builder state', () => {
+      const validWorldState = createValidWorldState();
+      const mockSimulationState = { time: 0, nodes: [], npcs: [] };
+      SimulationService.initialize.mockReturnValue(mockSimulationState);
+
+      const { result } = renderHook(() => useSimulation(validWorldState));
+
+      expect(result.current.isInitialized).toBe(true);
+      expect(result.current.worldState).toBe(mockSimulationState);
+      expect(result.current.initializationError).toBeNull();
+      expect(result.current.canStart).toBe(true);
+      expect(SimulationService.initialize).toHaveBeenCalledWith(validWorldState.toSimulationConfig());
+    });
+
+    it('should handle initialization errors gracefully', () => {
+      const validWorldState = createValidWorldState();
+      const initError = new Error('Initialization failed');
+      SimulationService.initialize.mockImplementation(() => {
+        throw initError;
+      });
+
+      const { result } = renderHook(() => useSimulation(validWorldState));
+
+      expect(result.current.isInitialized).toBe(false);
+      expect(result.current.worldState).toBeNull();
+      expect(result.current.initializationError).toBe('Initialization failed');
+      expect(result.current.canStart).toBe(false);
+      expect(console.error).toHaveBeenCalledWith(
+        'useSimulation: Failed to initialize simulation from world builder state:',
+        initError
+      );
+    });
+  });
+
+  describe('simulation operations with valid world state', () => {
+    const createValidWorldState = () => ({
+      isValid: true,
+      stepValidation: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true },
+      toSimulationConfig: jest.fn().mockReturnValue({
+        worldName: 'Test World',
+        nodes: [],
+        characters: [],
+        interactions: []
+      })
+    });
+
+    it('should allow starting simulation when properly initialized', () => {
+      const validWorldState = createValidWorldState();
+      const mockSimulationState = { time: 0, nodes: [], npcs: [] };
+      SimulationService.initialize.mockReturnValue(mockSimulationState);
+
+      const { result } = renderHook(() => useSimulation(validWorldState));
+
+      expect(result.current.canStart).toBe(true);
+      
+      act(() => {
+        result.current.startSimulation();
+      });
+
+      expect(SimulationService.start).toHaveBeenCalled();
+      expect(result.current.isRunning).toBe(true);
+    });
+
+    it('should prevent starting simulation without initialization', () => {
+      const { result } = renderHook(() => useSimulation());
+
+      expect(() => {
+        act(() => {
+          result.current.startSimulation();
+        });
+      }).toThrow('Cannot start simulation without valid world state');
+    });
+
+    it('should handle onTick updates when initialized', () => {
       let onTickCallback;
+      const validWorldState = createValidWorldState();
+      const mockSimulationState = { time: 0, nodes: [], npcs: [] };
+      
+      SimulationService.initialize.mockReturnValue(mockSimulationState);
       SimulationService.getCurrentTurn.mockReturnValue(0);
       SimulationService.setOnTick.mockImplementation((callback) => {
         onTickCallback = callback;
       });
-      SimulationService.loadState.mockReturnValue({ time: 0 });
 
-      const { result } = renderHook(() => useSimulation());
+      const { result } = renderHook(() => useSimulation(validWorldState));
 
       expect(result.current.currentTurn).toBe(0);
 
@@ -82,370 +171,38 @@ describe('useSimulation Hook - Turn Counter Functionality', () => {
 
       expect(result.current.currentTurn).toBe(1);
     });
-
-    it('should handle getCurrentTurn errors in onTick callback', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(5);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 5 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(5);
-
-      // Simulate an error in getCurrentTurn during onTick
-      SimulationService.getCurrentTurn.mockImplementation(() => {
-        throw new Error('Tick error');
-      });
-
-      act(() => {
-        onTickCallback({ time: 6 });
-      });
-
-      expect(result.current.currentTurn).toBe(5); // Should preserve the initial value
-      expect(console.error).toHaveBeenCalledWith('useSimulation: Error in onTick callback:', expect.any(Error));
-    });
-
-    it('should update currentTurn multiple times during simulation', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      // Simulate multiple ticks
-      const turns = [1, 2, 3, 4, 5];
-      turns.forEach((turn) => {
-        SimulationService.getCurrentTurn.mockReturnValue(turn);
-        act(() => {
-          onTickCallback({ time: turn });
-        });
-        expect(result.current.currentTurn).toBe(turn);
-      });
-    });
-  });
-
-  describe('currentTurn synchronization with worldState changes', () => {
-    it('should sync currentTurn when worldState changes via onTick', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(10);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 10 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(10);
-
-      // Simulate worldState change via onTick callback
-      SimulationService.getCurrentTurn.mockReturnValue(15);
-      act(() => {
-        onTickCallback({ time: 15 });
-      });
-
-      expect(result.current.currentTurn).toBe(15);
-    });
-
-    it('should handle sync errors gracefully during worldState updates', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(20);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 20 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(20);
-
-      // Simulate error during sync
-      SimulationService.getCurrentTurn.mockImplementation(() => {
-        throw new Error('Sync error');
-      });
-
-      act(() => {
-        onTickCallback({ time: 25 });
-      });
-
-      expect(result.current.currentTurn).toBe(20); // Should preserve the initial value
-      expect(console.error).toHaveBeenCalledWith('useSimulation: Error in onTick callback:', expect.any(Error));
-    });
   });
 
   describe('hook return value', () => {
-    it('should include currentTurn in the returned object', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(7);
-      SimulationService.loadState.mockReturnValue({ time: 7 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current).toHaveProperty('currentTurn');
-      expect(result.current.currentTurn).toBe(7);
-    });
-
-    it('should maintain all existing hook properties', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-
+    it('should include all expected properties', () => {
       const { result } = renderHook(() => useSimulation());
 
       // Check that all expected properties are present
       expect(result.current).toHaveProperty('worldState');
       expect(result.current).toHaveProperty('isRunning');
+      expect(result.current).toHaveProperty('isInitialized');
+      expect(result.current).toHaveProperty('initializationError');
       expect(result.current).toHaveProperty('historyAnalysis');
       expect(result.current).toHaveProperty('currentTurn');
+      expect(result.current).toHaveProperty('canStart');
       expect(result.current).toHaveProperty('startSimulation');
       expect(result.current).toHaveProperty('stopSimulation');
+      expect(result.current).toHaveProperty('resetSimulation');
+      expect(result.current).toHaveProperty('stepSimulation');
       expect(result.current).toHaveProperty('analyzeHistory');
-    });
-  });
-
-  describe('edge cases and error handling', () => {
-    it('should handle null worldState gracefully', () => {
-      SimulationService.worldState = null;
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue(null);
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-    });
-
-    it('should handle undefined worldState gracefully', () => {
-      SimulationService.worldState = undefined;
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue(undefined);
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-    });
-
-    it('should handle invalid world state scenarios', () => {
-      SimulationService.worldState = { time: null };
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: null });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-    });
-  });
-
-  describe('enhanced error handling for simulation operations', () => {
-    it('should handle invalid turn values during initialization', () => {
-      SimulationService.getCurrentTurn.mockReturnValue('invalid');
-      SimulationService.loadState.mockReturnValue({ time: 'invalid' });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Invalid turn value from service:',
-        'invalid'
-      );
-    });
-
-    it('should handle non-finite turn values during initialization', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(NaN);
-      SimulationService.loadState.mockReturnValue({ time: NaN });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Invalid turn value from service:',
-        NaN
-      );
-    });
-
-    it('should handle negative turn values during initialization', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(-5);
-      SimulationService.loadState.mockReturnValue({ time: -5 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      expect(result.current.currentTurn).toBe(0);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Invalid turn value from service:',
-        -5
-      );
-    });
-
-    it('should handle null/undefined updatedState in onTick callback', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-
-      renderHook(() => useSimulation());
-
-      // Simulate onTick with null state
-      act(() => {
-        onTickCallback(null);
-      });
-
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: onTick received null/undefined state'
-      );
-
-      // Simulate onTick with undefined state
-      act(() => {
-        onTickCallback(undefined);
-      });
-
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: onTick received null/undefined state'
-      );
-    });
-
-    it('should handle invalid turn values in onTick callback', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      // Simulate onTick with invalid turn value
-      SimulationService.getCurrentTurn.mockReturnValue('invalid');
-      act(() => {
-        onTickCallback({ time: 'invalid' });
-      });
-
-      expect(result.current.currentTurn).toBe(0);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Invalid turn value in onTick:',
-        'invalid'
-      );
-    });
-
-    it('should handle errors in onTick callback gracefully', () => {
-      let onTickCallback;
-      SimulationService.getCurrentTurn.mockReturnValue(5);
-      SimulationService.setOnTick.mockImplementation((callback) => {
-        onTickCallback = callback;
-      });
-      SimulationService.loadState.mockReturnValue({ time: 5 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      // Mock getCurrentTurn to throw error during onTick
-      SimulationService.getCurrentTurn.mockImplementation(() => {
-        throw new Error('Service error in onTick');
-      });
-
-      const initialTurn = result.current.currentTurn;
-
-      act(() => {
-        onTickCallback({ time: 6 });
-      });
-
-      // Should preserve the last known good value
-      expect(result.current.currentTurn).toBe(initialTurn);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Error in onTick callback:',
-        expect.any(Error)
-      );
-    });
-  });
-
-  describe('simulation operation error handling', () => {
-    it('should handle stepSimulation with null/undefined state', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-      SimulationService.step = jest.fn().mockReturnValue(null);
-
-      const { result } = renderHook(() => useSimulation());
-
-      act(() => {
-        result.current.stepSimulation();
-      });
-
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: stepSimulation received null/undefined state'
-      );
-    });
-
-    it('should handle stepSimulation with invalid turn value', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-      SimulationService.step = jest.fn().mockReturnValue({ time: 1 });
-
-      const { result } = renderHook(() => useSimulation());
-
-      // Mock getCurrentTurn to return invalid value after step
-      SimulationService.getCurrentTurn.mockReturnValue('invalid');
-
-      act(() => {
-        result.current.stepSimulation();
-      });
-
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Invalid turn value after step:',
-        'invalid'
-      );
-    });
-
-    it('should handle resetSimulation with null/undefined state', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: 0 });
-      SimulationService.reset = jest.fn().mockReturnValue(null);
-
-      const { result } = renderHook(() => useSimulation());
-
-      let resetResult;
-      act(() => {
-        resetResult = result.current.resetSimulation();
-      });
-
-      expect(resetResult).toBeNull();
-      expect(result.current.currentTurn).toBe(0);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: resetSimulation received null/undefined state'
-      );
-    });
-
-    it('should handle resetSimulation errors gracefully', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(5);
-      SimulationService.loadState.mockReturnValue({ time: 5 });
-      SimulationService.reset = jest.fn().mockImplementation(() => {
-        throw new Error('Reset error');
-      });
-
-      const { result } = renderHook(() => useSimulation());
-
-      let resetResult;
-      act(() => {
-        resetResult = result.current.resetSimulation();
-      });
-
-      expect(resetResult).toBeNull();
-      expect(result.current.currentTurn).toBe(0);
-      expect(result.current.isRunning).toBe(false);
-      expect(console.error).toHaveBeenCalledWith(
-        'useSimulation: Error resetting simulation:',
-        expect.any(Error)
-      );
     });
   });
 
   describe('cleanup', () => {
     it('should remove onTick callback on unmount', () => {
-      SimulationService.getCurrentTurn.mockReturnValue(0);
-      SimulationService.loadState.mockReturnValue({ time: 0 });
+      const validWorldState = {
+        isValid: true,
+        stepValidation: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true },
+        toSimulationConfig: jest.fn().mockReturnValue({})
+      };
+      SimulationService.initialize.mockReturnValue({ time: 0, nodes: [], npcs: [] });
 
-      const { unmount } = renderHook(() => useSimulation());
+      const { unmount } = renderHook(() => useSimulation(validWorldState));
 
       unmount();
 

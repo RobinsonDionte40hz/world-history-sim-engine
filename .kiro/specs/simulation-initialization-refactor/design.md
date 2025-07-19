@@ -2,9 +2,9 @@
 
 ## Overview
 
-This design refactors the simulation initialization system to provide controlled, world-driven simulation startup. The current system automatically initializes and potentially starts simulations on app load, which lacks user control and proper validation. The new architecture introduces a comprehensive world builder system that integrates with the existing template system, enabling users to create, customize, and manage all aspects of their simulation worlds including characters, nodes, interactions, and events.
+This design implements a manual, step-by-step world building system that follows the World Building Flow specification. The system is mappless (nodes are abstract contexts without spatial coordinates) and capability-driven (characters are defined by what they can DO through interactions). The architecture enforces a strict six-step dependency chain: Create World → Create Nodes → Create Interactions → Create Characters → Populate Nodes → Simulation Ready.
 
-The design follows clean architecture principles, separating world building concerns from simulation execution while leveraging the existing template system for flexible content creation and management. Users can create worlds from scratch, use predefined templates, or combine both approaches for maximum flexibility.
+The design integrates with the existing template system to enable saving and reusing any component while maintaining complete user control over the world building process. Every step includes validation to ensure proper dependencies are met before proceeding to the next phase.
 
 ## Architecture
 
@@ -12,47 +12,59 @@ The design follows clean architecture principles, separating world building conc
 
 ```mermaid
 graph TB
-    UI[User Interface] --> WB[World Builder]
-    UI --> SC[Simulation Controller]
-    WB --> TM[Template Manager]
-    WB --> WV[World Validator]
-    TM --> TS[Template System]
-    WV --> WS[World State]
-    WS --> SS[Simulation Service]
-    SC --> SS
-    SS --> DE[Domain Entities]
+    UI[Step-by-Step UI] --> WBF[World Building Flow]
+    WBF --> Step1[1. Create World]
+    WBF --> Step2[2. Create Nodes]
+    WBF --> Step3[3. Create Interactions]
+    WBF --> Step4[4. Create Characters]
+    WBF --> Step5[5. Populate Nodes]
+    WBF --> Step6[6. Simulation Ready]
     
-    subgraph "Template Integration"
-        TM
-        TS
+    Step1 --> WS[World State]
+    Step2 --> NS[Node State]
+    Step3 --> IS[Interaction State]
+    Step4 --> CS[Character State]
+    Step5 --> PS[Population State]
+    Step6 --> SS[Simulation Service]
+    
+    WS --> TM[Template Manager]
+    NS --> TM
+    IS --> TM
+    CS --> TM
+    PS --> WV[World Validator]
+    WV --> SS
+    
+    subgraph "Six-Step Flow"
+        Step1
+        Step2
+        Step3
+        Step4
+        Step5
+        Step6
     end
     
-    subgraph "New Components"
-        WB
-        WV
+    subgraph "State Management"
         WS
+        NS
+        IS
+        CS
+        PS
     end
     
-    subgraph "Modified Components"
-        SC
-        SS
-    end
-    
-    subgraph "Existing Components"
-        DE
-        UI
+    subgraph "Validation & Templates"
+        WV
+        TM
     end
 ```
 
-### Component Interaction Flow
+### Six-Step World Building Flow
 
-1. **Template Selection Phase**: User browses and selects from existing templates or creates new ones
-2. **World Building Phase**: User interacts with World Builder to configure world properties using templates
-3. **Character/NPC Creation Phase**: User creates and customizes characters using character templates
-4. **Content Population Phase**: User populates world with nodes, interactions, and events from templates
-5. **Validation Phase**: World Validator ensures all required properties are set and valid
-6. **Simulation Ready Phase**: Valid world state enables simulation controls
-7. **Simulation Execution Phase**: Modified Simulation Service uses validated world state
+1. **Step 1 - Create World**: User defines world name, description, rules, and initial conditions (no spatial properties)
+2. **Step 2 - Create Nodes**: User creates abstract locations/contexts with environmental properties and cultural context
+3. **Step 3 - Create Interactions**: User defines character capabilities (economic, social, combat, crafting, etc.)
+4. **Step 4 - Create Characters**: User creates NPCs with D&D attributes and assigns specific interaction capabilities
+5. **Step 5 - Populate Nodes**: User assigns characters to nodes, ensuring each node has at least one character
+6. **Step 6 - Simulation Ready**: System validates all dependencies and enables simulation start
 
 ## Components and Interfaces
 
@@ -63,49 +75,73 @@ graph TB
 class WorldBuilder {
   constructor(templateManager) {
     this.templateManager = templateManager;
+    this.currentStep = 1;
     this.worldConfig = {
-      dimensions: null,
+      // Step 1: World properties (no spatial dimensions)
+      name: null,
+      description: null,
       rules: null,
       initialConditions: null,
+      
+      // Step 2: Abstract nodes (no coordinates)
       nodes: [],
-      characters: [],
+      
+      // Step 3: Character capabilities
       interactions: [],
-      events: [],
-      groups: [],
-      items: [],
+      
+      // Step 4: Characters with assigned capabilities
+      characters: [],
+      
+      // Step 5: Character-to-node assignments
+      nodePopulations: {},
+      
+      // Validation state
       isComplete: false,
-      isValid: false
+      isValid: false,
+      stepValidation: {
+        1: false, // World created
+        2: false, // Nodes created
+        3: false, // Interactions created
+        4: false, // Characters created
+        5: false, // Nodes populated
+        6: false  // Ready for simulation
+      }
     };
   }
 
-  // Configuration methods
-  setDimensions(width, height) { /* ... */ }
+  // Step 1: World creation methods (no spatial dimensions)
+  setWorldProperties(name, description) { /* ... */ }
   setRules(rules) { /* ... */ }
   setInitialConditions(conditions) { /* ... */ }
   
-  // Template-based content creation
+  // Step 2: Node creation methods (abstract locations, no coordinates)
+  addNode(nodeConfig) { 
+    // Requires: name, type, description, environmentalProperties, resourceAvailability, culturalContext
+    // No spatial coordinates - purely conceptual
+  }
   addNodeFromTemplate(templateId, customizations = {}) { /* ... */ }
-  addCharacterFromTemplate(templateId, customizations = {}) { /* ... */ }
+  
+  // Step 3: Interaction creation methods (character capabilities)
+  addInteraction(interactionConfig) {
+    // Requires: name, type, requirements, branches, effects, context
+    // Types: economic, resource gathering, exploration, social, combat, crafting
+  }
   addInteractionFromTemplate(templateId, customizations = {}) { /* ... */ }
-  addEventFromTemplate(templateId, customizations = {}) { /* ... */ }
-  addGroupFromTemplate(templateId, customizations = {}) { /* ... */ }
-  addItemFromTemplate(templateId, customizations = {}) { /* ... */ }
   
-  // Direct content creation
-  addNode(nodeConfig) { /* ... */ }
-  addCharacter(characterConfig) { /* ... */ }
-  addInteraction(interactionConfig) { /* ... */ }
-  addEvent(eventConfig) { /* ... */ }
-  addGroup(groupConfig) { /* ... */ }
-  addItem(itemConfig) { /* ... */ }
+  // Step 4: Character creation methods (with capability assignment)
+  addCharacter(characterConfig) {
+    // Requires: name, D&D attributes, personality, consciousness, assignedInteractions
+    // Characters NOT placed in nodes yet
+  }
+  addCharacterFromTemplate(templateId, customizations = {}) { /* ... */ }
   
-  // Content removal
-  removeNode(nodeId) { /* ... */ }
-  removeCharacter(characterId) { /* ... */ }
-  removeInteraction(interactionId) { /* ... */ }
-  removeEvent(eventId) { /* ... */ }
-  removeGroup(groupId) { /* ... */ }
-  removeItem(itemId) { /* ... */ }
+  // Step 5: Node population methods (assign characters to nodes)
+  assignCharacterToNode(characterId, nodeId) { /* ... */ }
+  populateNode(nodeId, characterIds) { /* ... */ }
+  
+  // Step validation methods
+  validateStep(stepNumber) { /* ... */ }
+  canProceedToStep(stepNumber) { /* ... */ }
   
   // Template management
   saveAsTemplate(type, name, description) { /* ... */ }
@@ -123,95 +159,89 @@ class WorldBuilder {
 const useWorldBuilder = (templateManager) => {
   const [worldBuilder] = useState(() => new WorldBuilder(templateManager));
   const [worldConfig, setWorldConfig] = useState(worldBuilder.worldConfig);
+  const [currentStep, setCurrentStep] = useState(1);
   const [validationStatus, setValidationStatus] = useState(null);
-  const [isBuilding, setIsBuilding] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState({
-    characters: [],
+    worlds: [],
     nodes: [],
     interactions: [],
-    events: [],
-    groups: [],
-    items: []
+    characters: [],
+    composite: []
   });
 
   // Template management
   const loadTemplates = useCallback(async () => {
     const templates = {
-      characters: templateManager.getAllTemplates('characters'),
+      worlds: templateManager.getAllTemplates('worlds'),
       nodes: templateManager.getAllTemplates('nodes'),
       interactions: templateManager.getAllTemplates('interactions'),
-      events: templateManager.getAllTemplates('events'),
-      groups: templateManager.getAllTemplates('groups'),
-      items: templateManager.getAllTemplates('items')
+      characters: templateManager.getAllTemplates('characters'),
+      composite: templateManager.getAllTemplates('composite')
     };
     setAvailableTemplates(templates);
   }, [templateManager]);
 
-  // Builder methods
-  const updateDimensions = (dimensions) => { /* ... */ };
-  const updateRules = (rules) => { /* ... */ };
-  const updateInitialConditions = (conditions) => { /* ... */ };
+  // Step 1: World creation methods (no dimensions)
+  const setWorldProperties = (name, description) => { /* ... */ };
+  const setRules = (rules) => { /* ... */ };
+  const setInitialConditions = (conditions) => { /* ... */ };
   
-  // Template-based content methods
-  const addNodeFromTemplate = (templateId, customizations) => { /* ... */ };
-  const addCharacterFromTemplate = (templateId, customizations) => { /* ... */ };
-  const addInteractionFromTemplate = (templateId, customizations) => { /* ... */ };
-  const addEventFromTemplate = (templateId, customizations) => { /* ... */ };
-  const addGroupFromTemplate = (templateId, customizations) => { /* ... */ };
-  const addItemFromTemplate = (templateId, customizations) => { /* ... */ };
-  
-  // Direct content methods
+  // Step 2: Node creation methods (abstract locations)
   const addNode = (nodeConfig) => { /* ... */ };
-  const addCharacter = (characterConfig) => { /* ... */ };
-  const addInteraction = (interactionConfig) => { /* ... */ };
-  const addEvent = (eventConfig) => { /* ... */ };
-  const addGroup = (groupConfig) => { /* ... */ };
-  const addItem = (itemConfig) => { /* ... */ };
-  
-  // Content removal methods
+  const addNodeFromTemplate = (templateId, customizations) => { /* ... */ };
   const removeNode = (nodeId) => { /* ... */ };
-  const removeCharacter = (characterId) => { /* ... */ };
-  const removeInteraction = (interactionId) => { /* ... */ };
-  const removeEvent = (eventId) => { /* ... */ };
-  const removeGroup = (groupId) => { /* ... */ };
-  const removeItem = (itemId) => { /* ... */ };
   
-  // Template creation from current content
+  // Step 3: Interaction creation methods (character capabilities)
+  const addInteraction = (interactionConfig) => { /* ... */ };
+  const addInteractionFromTemplate = (templateId, customizations) => { /* ... */ };
+  const removeInteraction = (interactionId) => { /* ... */ };
+  
+  // Step 4: Character creation methods (with capability assignment)
+  const addCharacter = (characterConfig) => { /* ... */ };
+  const addCharacterFromTemplate = (templateId, customizations) => { /* ... */ };
+  const removeCharacter = (characterId) => { /* ... */ };
+  
+  // Step 5: Node population methods
+  const assignCharacterToNode = (characterId, nodeId) => { /* ... */ };
+  const populateNode = (nodeId, characterIds) => { /* ... */ };
+  
+  // Step navigation and validation
+  const canProceedToStep = (stepNumber) => { /* ... */ };
+  const proceedToStep = (stepNumber) => { /* ... */ };
+  const validateCurrentStep = () => { /* ... */ };
+  
+  // Template management
   const saveAsTemplate = (type, name, description) => { /* ... */ };
   const loadFromTemplate = (templateId) => { /* ... */ };
   
-  // Validation and building
+  // Final world building
   const validateWorld = () => { /* ... */ };
   const buildWorld = () => { /* ... */ };
   const resetBuilder = () => { /* ... */ };
 
   return {
     worldConfig,
+    currentStep,
     validationStatus,
-    isBuilding,
     availableTemplates,
     loadTemplates,
-    updateDimensions,
-    updateRules,
-    updateInitialConditions,
-    addNodeFromTemplate,
-    addCharacterFromTemplate,
-    addInteractionFromTemplate,
-    addEventFromTemplate,
-    addGroupFromTemplate,
-    addItemFromTemplate,
+    setWorldProperties,
+    setRules,
+    setInitialConditions,
     addNode,
-    addCharacter,
-    addInteraction,
-    addEvent,
-    addGroup,
-    addItem,
+    addNodeFromTemplate,
     removeNode,
-    removeCharacter,
+    addInteraction,
+    addInteractionFromTemplate,
     removeInteraction,
-    removeEvent,
-    removeGroup,
-    removeItem,
+    addCharacter,
+    addCharacterFromTemplate,
+    removeCharacter,
+    assignCharacterToNode,
+    populateNode,
+    canProceedToStep,
+    proceedToStep,
+    validateCurrentStep,
     saveAsTemplate,
     loadFromTemplate,
     validateWorld,
@@ -312,146 +342,246 @@ class WorldValidator {
   static validate(worldConfig) {
     const errors = [];
     const warnings = [];
+    const stepValidation = {};
 
-    // Validate dimensions
-    if (!this.validateDimensions(worldConfig.dimensions)) {
-      errors.push('Invalid or missing world dimensions');
+    // Step 1: Validate world properties (no dimensions)
+    stepValidation[1] = this.validateWorldProperties(worldConfig);
+    if (!stepValidation[1].valid) {
+      errors.push(...stepValidation[1].errors);
     }
 
-    // Validate nodes
-    if (!this.validateNodes(worldConfig.nodes)) {
-      errors.push('Invalid node configuration');
+    // Step 2: Validate nodes (abstract locations, no coordinates)
+    stepValidation[2] = this.validateNodes(worldConfig.nodes);
+    if (!stepValidation[2].valid) {
+      errors.push(...stepValidation[2].errors);
     }
 
-    // Validate characters
-    if (!this.validateCharacters(worldConfig.characters)) {
-      errors.push('Invalid character configuration');
+    // Step 3: Validate interactions (character capabilities)
+    stepValidation[3] = this.validateInteractions(worldConfig.interactions);
+    if (!stepValidation[3].valid) {
+      errors.push(...stepValidation[3].errors);
     }
 
-    // Validate interactions
-    if (!this.validateInteractions(worldConfig.interactions)) {
-      warnings.push('Some interactions may not function properly');
+    // Step 4: Validate characters (with assigned capabilities)
+    stepValidation[4] = this.validateCharacters(worldConfig.characters, worldConfig.interactions);
+    if (!stepValidation[4].valid) {
+      errors.push(...stepValidation[4].errors);
     }
 
-    // Validate events
-    if (!this.validateEvents(worldConfig.events)) {
-      warnings.push('Some events may not function properly');
-    }
-
-    // Validate character-node relationships
-    if (!this.validateCharacterNodeRelationships(worldConfig.characters, worldConfig.nodes)) {
-      errors.push('Characters must be assigned to valid nodes');
+    // Step 5: Validate node populations (character assignments)
+    stepValidation[5] = this.validateNodePopulations(worldConfig.nodePopulations, worldConfig.nodes, worldConfig.characters);
+    if (!stepValidation[5].valid) {
+      errors.push(...stepValidation[5].errors);
     }
 
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
+      stepValidation,
       completeness: this.calculateCompleteness(worldConfig)
     };
   }
 
-  static validateDimensions(dimensions) {
-    return dimensions && 
-           typeof dimensions.width === 'number' && dimensions.width > 0 &&
-           typeof dimensions.height === 'number' && dimensions.height > 0;
+  static validateWorldProperties(worldConfig) {
+    const errors = [];
+    
+    if (!worldConfig.name || worldConfig.name.trim() === '') {
+      errors.push('World name is required');
+    }
+    
+    if (!worldConfig.description || worldConfig.description.trim() === '') {
+      errors.push('World description is required');
+    }
+    
+    if (!worldConfig.rules) {
+      errors.push('World rules are required');
+    }
+    
+    if (!worldConfig.initialConditions) {
+      errors.push('Initial conditions are required');
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   }
 
   static validateNodes(nodes) {
+    const errors = [];
+    
     if (!Array.isArray(nodes) || nodes.length === 0) {
-      return false;
+      errors.push('At least one node is required');
+      return { valid: false, errors };
     }
 
-    return nodes.every(node => 
-      node.id && 
-      node.name && 
-      node.position &&
-      typeof node.position.x === 'number' &&
-      typeof node.position.y === 'number'
-    );
-  }
+    nodes.forEach((node, index) => {
+      if (!node.id || !node.name) {
+        errors.push(`Node ${index + 1}: ID and name are required`);
+      }
+      
+      if (!node.type) {
+        errors.push(`Node ${index + 1}: Type is required (settlement, wilderness, market, temple, etc.)`);
+      }
+      
+      if (!node.description) {
+        errors.push(`Node ${index + 1}: Description is required`);
+      }
+      
+      // Ensure no spatial coordinates
+      if (node.position || node.x !== undefined || node.y !== undefined) {
+        errors.push(`Node ${index + 1}: Spatial coordinates not allowed in mappless system`);
+      }
+    });
 
-  static validateCharacters(characters) {
-    if (!Array.isArray(characters)) {
-      return false;
-    }
-
-    return characters.every(character =>
-      character.id &&
-      character.name &&
-      character.currentNodeId &&
-      character.attributes &&
-      typeof character.attributes === 'object'
-    );
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   }
 
   static validateInteractions(interactions) {
-    if (!Array.isArray(interactions)) {
-      return true; // Interactions are optional
+    const errors = [];
+    
+    if (!Array.isArray(interactions) || interactions.length === 0) {
+      errors.push('At least one interaction (character capability) is required');
+      return { valid: false, errors };
     }
 
-    return interactions.every(interaction =>
-      interaction.id &&
-      interaction.name &&
-      interaction.type
-    );
+    interactions.forEach((interaction, index) => {
+      if (!interaction.id || !interaction.name) {
+        errors.push(`Interaction ${index + 1}: ID and name are required`);
+      }
+      
+      if (!interaction.type) {
+        errors.push(`Interaction ${index + 1}: Type is required (economic, resource gathering, social, combat, etc.)`);
+      }
+      
+      if (!interaction.requirements) {
+        errors.push(`Interaction ${index + 1}: Requirements are required`);
+      }
+      
+      if (!interaction.branches || !Array.isArray(interaction.branches)) {
+        errors.push(`Interaction ${index + 1}: Branches (possible outcomes) are required`);
+      }
+      
+      if (!interaction.effects) {
+        errors.push(`Interaction ${index + 1}: Effects are required`);
+      }
+    });
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   }
 
-  static validateEvents(events) {
-    if (!Array.isArray(events)) {
-      return true; // Events are optional
+  static validateCharacters(characters, interactions) {
+    const errors = [];
+    
+    if (!Array.isArray(characters) || characters.length === 0) {
+      errors.push('At least one character is required');
+      return { valid: false, errors };
     }
 
-    return events.every(event =>
-      event.id &&
-      event.name &&
-      event.trigger
-    );
+    const interactionIds = new Set(interactions.map(i => i.id));
+
+    characters.forEach((character, index) => {
+      if (!character.id || !character.name) {
+        errors.push(`Character ${index + 1}: ID and name are required`);
+      }
+      
+      if (!character.attributes || !character.attributes.strength || !character.attributes.dexterity) {
+        errors.push(`Character ${index + 1}: D&D attributes (STR, DEX, CON, INT, WIS, CHA) are required`);
+      }
+      
+      if (!character.assignedInteractions || !Array.isArray(character.assignedInteractions) || character.assignedInteractions.length === 0) {
+        errors.push(`Character ${index + 1}: Must have at least one assigned interaction (capability)`);
+      } else {
+        // Validate assigned interactions exist
+        character.assignedInteractions.forEach(interactionId => {
+          if (!interactionIds.has(interactionId)) {
+            errors.push(`Character ${index + 1}: Assigned interaction '${interactionId}' does not exist`);
+          }
+        });
+      }
+      
+      // Ensure characters are not yet placed in nodes at this step
+      if (character.currentNodeId) {
+        errors.push(`Character ${index + 1}: Should not be assigned to nodes yet (Step 5)`);
+      }
+    });
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   }
 
-  static validateCharacterNodeRelationships(characters, nodes) {
-    if (!Array.isArray(characters) || !Array.isArray(nodes)) {
-      return true; // Skip if either is missing
+  static validateNodePopulations(nodePopulations, nodes, characters) {
+    const errors = [];
+    
+    if (!nodePopulations || typeof nodePopulations !== 'object') {
+      errors.push('Node populations are required');
+      return { valid: false, errors };
     }
 
-    const nodeIds = new Set(nodes.map(node => node.id));
-    return characters.every(character => 
-      !character.currentNodeId || nodeIds.has(character.currentNodeId)
-    );
+    const nodeIds = new Set(nodes.map(n => n.id));
+    const characterIds = new Set(characters.map(c => c.id));
+
+    // Ensure every node has at least one character
+    nodes.forEach(node => {
+      if (!nodePopulations[node.id] || !Array.isArray(nodePopulations[node.id]) || nodePopulations[node.id].length === 0) {
+        errors.push(`Node '${node.name}' must have at least one character assigned`);
+      } else {
+        // Validate assigned characters exist
+        nodePopulations[node.id].forEach(characterId => {
+          if (!characterIds.has(characterId)) {
+            errors.push(`Node '${node.name}': Assigned character '${characterId}' does not exist`);
+          }
+        });
+      }
+    });
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   }
 
   static calculateCompleteness(worldConfig) {
     let score = 0;
     let maxScore = 0;
 
-    // Dimensions (required)
+    // Step 1: World properties (required)
     maxScore += 20;
-    if (this.validateDimensions(worldConfig.dimensions)) {
+    if (this.validateWorldProperties(worldConfig).valid) {
       score += 20;
     }
 
-    // Nodes (required)
-    maxScore += 30;
-    if (this.validateNodes(worldConfig.nodes)) {
-      score += 30;
+    // Step 2: Nodes (required)
+    maxScore += 20;
+    if (this.validateNodes(worldConfig.nodes).valid) {
+      score += 20;
     }
 
-    // Characters (recommended)
-    maxScore += 25;
-    if (worldConfig.characters && worldConfig.characters.length > 0) {
-      score += 25;
+    // Step 3: Interactions (required)
+    maxScore += 20;
+    if (this.validateInteractions(worldConfig.interactions).valid) {
+      score += 20;
     }
 
-    // Interactions (optional)
-    maxScore += 15;
-    if (worldConfig.interactions && worldConfig.interactions.length > 0) {
-      score += 15;
+    // Step 4: Characters (required)
+    maxScore += 20;
+    if (this.validateCharacters(worldConfig.characters, worldConfig.interactions).valid) {
+      score += 20;
     }
 
-    // Events (optional)
-    maxScore += 10;
-    if (worldConfig.events && worldConfig.events.length > 0) {
-      score += 10;
+    // Step 5: Node populations (required)
+    maxScore += 20;
+    if (this.validateNodePopulations(worldConfig.nodePopulations, worldConfig.nodes, worldConfig.characters).valid) {
+      score += 20;
     }
 
     return score / maxScore;
@@ -467,15 +597,16 @@ class WorldState {
   constructor(config) {
     this.id = generateId();
     this.name = config.name || 'Untitled World';
-    this.dimensions = config.dimensions;
+    this.description = config.description || '';
     this.rules = config.rules;
     this.initialConditions = config.initialConditions;
+    
+    // Mappless design - no spatial dimensions
     this.nodes = config.nodes || [];
-    this.characters = config.characters || [];
     this.interactions = config.interactions || [];
-    this.events = config.events || [];
-    this.groups = config.groups || [];
-    this.items = config.items || [];
+    this.characters = config.characters || [];
+    this.nodePopulations = config.nodePopulations || {};
+    
     this.isValid = false;
     this.validationResult = null;
     this.createdAt = new Date();
@@ -494,18 +625,42 @@ class WorldState {
       throw new Error('Cannot convert invalid world to simulation config');
     }
     
+    // Convert mappless world to simulation config
     return {
-      size: this.dimensions,
+      worldName: this.name,
+      worldDescription: this.description,
+      rules: this.rules,
+      initialConditions: this.initialConditions,
+      
+      // Abstract nodes (no spatial coordinates)
+      nodes: this.nodes.map(node => ({
+        ...node,
+        assignedCharacters: this.nodePopulations[node.id] || []
+      })),
+      
+      // Character capabilities
+      interactions: this.interactions,
+      
+      // Characters with their assigned capabilities
+      characters: this.characters.map(character => ({
+        ...character,
+        currentNodeId: this.findCharacterNode(character.id)
+      })),
+      
+      // Metadata
       nodeCount: this.nodes.length,
       characterCount: this.characters.length,
-      resourceTypes: this.initialConditions.resourceTypes,
-      customNodes: this.nodes,
-      customCharacters: this.characters,
-      customInteractions: this.interactions,
-      customEvents: this.events,
-      customGroups: this.groups,
-      customItems: this.items
+      interactionCount: this.interactions.length
     };
+  }
+
+  findCharacterNode(characterId) {
+    for (const [nodeId, characterIds] of Object.entries(this.nodePopulations)) {
+      if (characterIds.includes(characterId)) {
+        return nodeId;
+      }
+    }
+    return null;
   }
 
   // Template integration methods
@@ -515,22 +670,22 @@ class WorldState {
       name: templateName,
       description: `World template: ${this.name}`,
       version: '1.0.0',
-      tags: ['world', 'custom'],
+      tags: ['world', 'custom', 'mappless'],
       worldConfig: {
-        dimensions: this.dimensions,
+        name: this.name,
+        description: this.description,
         rules: this.rules,
         initialConditions: this.initialConditions,
         nodes: this.nodes,
-        characters: this.characters,
         interactions: this.interactions,
-        events: this.events,
-        groups: this.groups,
-        items: this.items
+        characters: this.characters,
+        nodePopulations: this.nodePopulations
       },
       metadata: {
         createdAt: new Date().toISOString(),
         lastModified: new Date().toISOString(),
-        author: 'User'
+        author: 'User',
+        type: 'mappless-world'
       }
     };
 

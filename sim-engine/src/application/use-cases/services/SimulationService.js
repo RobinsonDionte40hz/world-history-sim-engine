@@ -1,6 +1,6 @@
 // src/application/use-cases/services/SimulationService.js
 
-import generateWorld from '../simulation/GenerateWorld.js';
+// Removed import of generateWorld - now using processMapplessWorldState
 import runTick from '../simulation/RunTick.js';
 import analyzeHistory from '../history/AnalyzeHistory.js';
 import Character from '../../../domain/entities/Character.js';
@@ -13,11 +13,273 @@ class SimulationService {
     this.tickInterval = null;
   }
 
-  // Initialize or reset the simulation
+  // Initialize or reset the simulation with mappless world configuration
   initialize(config = {}) {
-    this.worldState = generateWorld(config);
+    if (!this.validateMapplessWorldConfig(config)) {
+      throw new Error('Invalid mappless world configuration');
+    }
+
+    this.worldState = this.processMapplessWorldState(config);
     this.saveState();  // Persist initial state
     return this.worldState;
+  }
+
+  // Validate mappless world configuration before initialization
+  validateMapplessWorldConfig(config) {
+    if (!config || typeof config !== 'object') {
+      console.error('SimulationService: Configuration must be an object');
+      return false;
+    }
+
+    // Check required properties for mappless world
+    if (!config.worldName || typeof config.worldName !== 'string') {
+      console.error('SimulationService: worldName is required and must be a string');
+      return false;
+    }
+
+    if (!Array.isArray(config.nodes) || config.nodes.length === 0) {
+      console.error('SimulationService: At least one node is required');
+      return false;
+    }
+
+    if (!Array.isArray(config.characters) || config.characters.length === 0) {
+      console.error('SimulationService: At least one character is required');
+      return false;
+    }
+
+    if (!Array.isArray(config.interactions) || config.interactions.length === 0) {
+      console.error('SimulationService: At least one interaction is required');
+      return false;
+    }
+
+    // Validate nodes are mappless (no spatial coordinates)
+    for (const node of config.nodes) {
+      if (node.position || node.x !== undefined || node.y !== undefined) {
+        console.error('SimulationService: Nodes must not contain spatial coordinates (mappless design)');
+        return false;
+      }
+      if (!node.id || !node.name || !node.type) {
+        console.error('SimulationService: Each node must have id, name, and type');
+        return false;
+      }
+    }
+
+    // Validate characters have assigned interactions
+    for (const character of config.characters) {
+      if (!character.assignedInteractions || !Array.isArray(character.assignedInteractions) || character.assignedInteractions.length === 0) {
+        console.error('SimulationService: Each character must have at least one assigned interaction');
+        return false;
+      }
+      if (!character.id || !character.name) {
+        console.error('SimulationService: Each character must have id and name');
+        return false;
+      }
+    }
+
+    // Validate all nodes have assigned characters
+    const nodeIds = new Set(config.nodes.map(n => n.id));
+    const characterIds = new Set(config.characters.map(c => c.id));
+    
+    for (const node of config.nodes) {
+      if (!node.assignedCharacters || !Array.isArray(node.assignedCharacters) || node.assignedCharacters.length === 0) {
+        console.error(`SimulationService: Node '${node.name}' must have at least one assigned character`);
+        return false;
+      }
+      
+      // Validate assigned characters exist
+      for (const characterId of node.assignedCharacters) {
+        if (!characterIds.has(characterId)) {
+          console.error(`SimulationService: Node '${node.name}' references non-existent character '${characterId}'`);
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // Process mappless world state for simulation
+  processMapplessWorldState(config) {
+    const worldState = {
+      time: 0,
+      worldName: config.worldName,
+      worldDescription: config.worldDescription || '',
+      rules: config.rules || {},
+      initialConditions: config.initialConditions || {},
+      nodes: [],
+      npcs: [],
+      interactions: config.interactions || [],
+      resources: {}
+    };
+
+    // Process abstract nodes (no spatial coordinates)
+    worldState.nodes = config.nodes.map(nodeConfig => {
+      return {
+        id: nodeConfig.id,
+        name: nodeConfig.name,
+        type: nodeConfig.type,
+        description: nodeConfig.description || '',
+        environmentalProperties: nodeConfig.environmentalProperties || {},
+        resourceAvailability: nodeConfig.resourceAvailability || {},
+        culturalContext: nodeConfig.culturalContext || {},
+        assignedCharacters: nodeConfig.assignedCharacters || [],
+        // No position or spatial coordinates - mappless design
+        interactions: this.getNodeInteractions(nodeConfig, config.interactions)
+      };
+    });
+
+    // Process capability-driven characters
+    worldState.npcs = config.characters.map(characterConfig => {
+      // Find which node this character is assigned to
+      const assignedNode = config.nodes.find(node => 
+        node.assignedCharacters && node.assignedCharacters.includes(characterConfig.id)
+      );
+
+      const character = new Character({
+        id: characterConfig.id,
+        name: characterConfig.name,
+        currentNodeId: assignedNode ? assignedNode.id : null,
+        attributes: characterConfig.attributes || this.generateDefaultAttributes(),
+        personality: characterConfig.personality || {},
+        consciousness: characterConfig.consciousness || { frequency: 40, coherence: 0.7 },
+        skills: characterConfig.skills || {},
+        goals: characterConfig.goals || [],
+        energy: characterConfig.energy || 100,
+        health: characterConfig.health || 100,
+        mood: characterConfig.mood || 80
+      });
+
+      // Add assignedInteractions as a separate property since Character entity doesn't support it
+      character.assignedInteractions = characterConfig.assignedInteractions || [];
+
+      // Ensure currentNodeId is set correctly
+      if (assignedNode) {
+        character.currentNodeId = assignedNode.id;
+      }
+
+      return character;
+    });
+
+    // Initialize resources based on node availability
+    this.initializeResourcesFromNodes(worldState);
+
+    return worldState;
+  }
+
+  // Get interactions available at a specific node
+  getNodeInteractions(nodeConfig, allInteractions) {
+    return allInteractions.filter(interaction => {
+      // Check if interaction is contextually appropriate for this node
+      return !interaction.context || 
+             !interaction.context.nodeTypes || 
+             interaction.context.nodeTypes.includes(nodeConfig.type);
+    });
+  }
+
+  // Generate default D&D attributes for characters
+  generateDefaultAttributes() {
+    return {
+      strength: { score: Math.floor(Math.random() * 10) + 10 },
+      dexterity: { score: Math.floor(Math.random() * 10) + 10 },
+      constitution: { score: Math.floor(Math.random() * 10) + 10 },
+      intelligence: { score: Math.floor(Math.random() * 10) + 10 },
+      wisdom: { score: Math.floor(Math.random() * 10) + 10 },
+      charisma: { score: Math.floor(Math.random() * 10) + 10 }
+    };
+  }
+
+  // Initialize resources based on node resource availability
+  initializeResourcesFromNodes(worldState) {
+    const resourceTypes = new Set();
+    
+    // Collect all resource types from nodes
+    worldState.nodes.forEach(node => {
+      if (node.resourceAvailability) {
+        Object.keys(node.resourceAvailability).forEach(resource => {
+          resourceTypes.add(resource);
+        });
+      }
+    });
+
+    // Initialize global resource pools
+    resourceTypes.forEach(resourceType => {
+      worldState.resources[resourceType] = 0;
+      // Sum up initial resources from all nodes
+      worldState.nodes.forEach(node => {
+        if (node.resourceAvailability && node.resourceAvailability[resourceType]) {
+          worldState.resources[resourceType] += node.resourceAvailability[resourceType];
+        }
+      });
+    });
+  }
+
+  // Check if simulation can start (validates six-step completion)
+  canStart() {
+    if (!this.worldState) {
+      return { canStart: false, reason: 'No world state initialized' };
+    }
+
+    // Validate six-step completion
+    const validation = this.validateSixStepCompletion(this.worldState);
+    return {
+      canStart: validation.isComplete,
+      reason: validation.isComplete ? 'Ready to start' : validation.missingSteps.join(', ')
+    };
+  }
+
+  // Validate that all six steps are completed
+  validateSixStepCompletion(worldState) {
+    const missingSteps = [];
+
+    // Step 1: World properties
+    if (!worldState.worldName || !worldState.rules) {
+      missingSteps.push('Step 1: World properties incomplete');
+    }
+
+    // Step 2: Nodes exist
+    if (!worldState.nodes || worldState.nodes.length === 0) {
+      missingSteps.push('Step 2: No nodes created');
+    }
+
+    // Step 3: Interactions exist
+    if (!worldState.interactions || worldState.interactions.length === 0) {
+      missingSteps.push('Step 3: No interactions created');
+    }
+
+    // Step 4: Characters exist with assigned interactions
+    if (!worldState.npcs || worldState.npcs.length === 0) {
+      missingSteps.push('Step 4: No characters created');
+    } else {
+      const charactersWithoutInteractions = worldState.npcs.filter(npc => 
+        !npc.assignedInteractions || npc.assignedInteractions.length === 0
+      );
+      if (charactersWithoutInteractions.length > 0) {
+        missingSteps.push('Step 4: Some characters have no assigned interactions');
+      }
+    }
+
+    // Step 5: All nodes have assigned characters
+    if (worldState.nodes) {
+      const nodesWithoutCharacters = worldState.nodes.filter(node => 
+        !node.assignedCharacters || node.assignedCharacters.length === 0
+      );
+      if (nodesWithoutCharacters.length > 0) {
+        missingSteps.push('Step 5: Some nodes have no assigned characters');
+      }
+    }
+
+    // Step 6: All characters are assigned to nodes
+    if (worldState.npcs) {
+      const charactersWithoutNodes = worldState.npcs.filter(npc => !npc.currentNodeId);
+      if (charactersWithoutNodes.length > 0) {
+        missingSteps.push('Step 6: Some characters are not assigned to nodes');
+      }
+    }
+
+    return {
+      isComplete: missingSteps.length === 0,
+      missingSteps
+    };
   }
 
   // Start the simulation loop
@@ -83,8 +345,8 @@ class SimulationService {
     this.stop(); // Stop if running
     this.worldState = null;
     localStorage.removeItem('worldState'); // Clear saved state
-    this.initialize(); // Reinitialize with fresh state
-    return this.worldState;
+    // Note: reset() no longer auto-initializes - requires valid world config
+    return null;
   }
 
   // Execute a single tick manually
@@ -142,7 +404,7 @@ class SimulationService {
     return analyzeHistory(criteria);
   }
 
-  // Update saveState to properly serialize nodes
+  // Update saveState to properly serialize mappless world state
   saveState() {
     if (!this.worldState) {
       console.warn('SimulationService: No world state to save');
@@ -151,8 +413,15 @@ class SimulationService {
     try {
       const stateToSave = {
         time: this.worldState.time || 0,
-        nodes: this.worldState.nodes.map(node => node.toJSON ? node.toJSON() : node),
-        npcs: this.worldState.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc),
+        worldName: this.worldState.worldName || '',
+        worldDescription: this.worldState.worldDescription || '',
+        rules: this.worldState.rules || {},
+        initialConditions: this.worldState.initialConditions || {},
+        nodes: Array.isArray(this.worldState.nodes) ? 
+          this.worldState.nodes.map(node => node.toJSON ? node.toJSON() : node) : [],
+        npcs: Array.isArray(this.worldState.npcs) ? 
+          this.worldState.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc) : [],
+        interactions: this.worldState.interactions || [],
         resources: this.worldState.resources || {}
       };
       localStorage.setItem('worldState', JSON.stringify(stateToSave));

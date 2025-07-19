@@ -5,6 +5,7 @@ export * from './BaseDomainService';
 
 // Export new services
 export { default as AlignmentService } from './AlignmentService';
+export { default as WorldBuilder } from './WorldBuilder';
 export { default as WorldValidator } from './WorldValidator';
 
 // Re-export existing services for compatibility

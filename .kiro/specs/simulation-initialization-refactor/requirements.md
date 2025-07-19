@@ -2,109 +2,114 @@
 
 ## Introduction
 
-This feature refactors the simulation initialization logic to provide better control over when simulations begin. Currently, the useSimulation hook runs automatically on app start, which is not ideal for user experience or system reliability. The new approach will require a valid world to be created and validated before any simulation can begin, giving users explicit control over the simulation lifecycle and ensuring proper initialization conditions are met.
+This feature implements a manual, step-by-step world building system that gives users complete control over every aspect of their simulation. The system follows a mappless design where nodes represent abstract locations or contexts, not spatial positions. Characters are capability-driven, defined by what they can DO (interactions) rather than just their attributes. The world building process follows a strict dependency chain where each step requires previous steps to be completed, ensuring proper world construction and NPC-to-node assignment.
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** As a developer using the simulation engine, I want the simulation to only start when a valid world exists, so that I can ensure proper initialization and avoid running simulations with incomplete or invalid configurations.
+**User Story:** As a user of the simulation engine, I want to create a world with basic properties as the first step, so that I can establish the foundation for my simulation without any spatial constraints.
 
 #### Acceptance Criteria
 
-1. WHEN the application starts THEN the simulation SHALL NOT begin automatically
-2. WHEN no valid world exists THEN the simulation SHALL remain in a stopped state
-3. WHEN a world is created but not yet validated THEN the simulation SHALL NOT be allowed to start
-4. WHEN a valid world exists THEN the simulation SHALL be available to start
-5. IF the simulation is running AND the world becomes invalid THEN the simulation SHALL stop immediately
+1. WHEN starting world creation THEN the system SHALL require a world name and description
+2. WHEN creating a world THEN the system SHALL allow setting rules for time progression and simulation parameters
+3. WHEN creating a world THEN the system SHALL allow setting initial conditions without spatial dimensions
+4. WHEN a world is created THEN the system SHALL prevent proceeding to other steps until world exists
+5. IF no world exists THEN the system SHALL block access to node, interaction, and character creation
 
 ### Requirement 2
 
-**User Story:** As a user of the simulation engine, I want to create and configure a world with essential properties, so that I can define the simulation environment before running it.
+**User Story:** As a user of the simulation engine, I want to create abstract nodes (locations/contexts) within my world, so that I can define the conceptual spaces where characters will interact.
 
 #### Acceptance Criteria
 
-1. WHEN creating a world THEN the system SHALL provide mechanisms to set dimensions, rules, and initial conditions
-2. WHEN building a world THEN the system SHALL allow step-by-step configuration via user input or predefined configurations
-3. WHEN a world configuration is incomplete THEN the system SHALL indicate which properties are missing
-4. WHEN all required world properties are set THEN the system SHALL mark the world as complete
-5. IF world properties are modified THEN the system SHALL re-validate the world state
+1. WHEN creating nodes THEN the system SHALL require a world to exist first
+2. WHEN creating nodes THEN the system SHALL require name, type, and description for each node
+3. WHEN creating nodes THEN the system SHALL allow setting environmental properties that affect character behavior
+4. WHEN creating nodes THEN the system SHALL allow setting resource availability and cultural/social context
+5. WHEN creating nodes THEN the system SHALL NOT require spatial coordinates or positions
+6. WHEN creating nodes THEN the system SHALL allow conceptual connections between nodes
+7. WHEN nodes are created THEN they SHALL be empty with no characters assigned yet
 
 ### Requirement 3
 
-**User Story:** As a user of the simulation engine, I want to populate my world with characters, nodes, and interactions using templates or custom creation, so that I can define the entities and behaviors that will participate in the simulation.
+**User Story:** As a user of the simulation engine, I want to create interactions (character capabilities) that define what characters can do, so that I can establish the possible actions before creating characters.
 
 #### Acceptance Criteria
 
-1. WHEN a world is being built THEN the system SHALL allow adding characters (NPCs) from templates or custom creation
-2. WHEN a world is being built THEN the system SHALL allow adding nodes (entities, agents, or objects) from templates or custom creation
-3. WHEN a world is being built THEN the system SHALL allow defining interactions (rules for node behavior, collision, evolution) from templates or custom creation
-4. WHEN adding characters THEN the system SHALL provide template selection with customization options
-5. WHEN adding nodes THEN the system SHALL provide modular functions or components for dynamic addition/removal
-6. WHEN defining interactions THEN the system SHALL store them in a central state object
-7. WHEN characters, nodes, or interactions are modified THEN the system SHALL update the world validation status
-8. IF characters have node assignments THEN the system SHALL validate those assignments are to valid nodes
-9. IF nodes have dependencies THEN the system SHALL validate those dependencies are met
+1. WHEN creating interactions THEN the system SHALL require at least one node to exist first
+2. WHEN creating interactions THEN the system SHALL support economic, resource gathering, exploration, social, combat, and crafting types
+3. WHEN creating interactions THEN the system SHALL require name, type, requirements, branches, effects, and context
+4. WHEN creating interactions THEN the system SHALL allow defining attribute, skill, or item requirements
+5. WHEN creating interactions THEN the system SHALL allow multiple possible outcomes through branches
+6. WHEN creating interactions THEN the system SHALL specify which nodes or situations allow the interaction
+7. WHEN interactions are created THEN the system SHALL prevent character creation until at least one interaction exists
 
 ### Requirement 4
 
-**User Story:** As a user of the simulation engine, I want clear feedback about my world's validity status, so that I know when my world is ready for simulation and what needs to be fixed if it's not.
+**User Story:** As a user of the simulation engine, I want to create characters with assigned capabilities, so that I can define NPCs by what they can DO in the simulation.
 
 #### Acceptance Criteria
 
-1. WHEN a world is being built THEN the system SHALL provide real-time validation feedback
-2. WHEN validation fails THEN the system SHALL display specific error messages indicating what needs to be corrected
-3. WHEN a world becomes valid THEN the system SHALL clearly indicate the world is ready for simulation
-4. WHEN validation status changes THEN the system SHALL update the UI to reflect the current state
-5. IF multiple validation errors exist THEN the system SHALL display all errors in a prioritized list
+1. WHEN creating characters THEN the system SHALL require both nodes and interactions to exist first
+2. WHEN creating characters THEN the system SHALL require name, D&D attributes, personality traits, and consciousness properties
+3. WHEN creating characters THEN the system SHALL require assignment of specific interactions the character can perform
+4. WHEN creating characters THEN the system SHALL allow setting skills, abilities, and initial goals
+5. WHEN creating characters THEN the system SHALL NOT automatically place them in nodes
+6. WHEN assigning interactions THEN the system SHALL match character roles with appropriate capabilities
+7. IF a merchant is created THEN they SHALL get trading, negotiation, and appraisal interactions
 
 ### Requirement 5
 
-**User Story:** As a user of the simulation engine, I want an intuitive setup interface when no valid world exists, so that I can easily create and configure my simulation environment.
+**User Story:** As a user of the simulation engine, I want to populate nodes by assigning characters to specific locations, so that I can complete the world setup and enable simulation.
 
 #### Acceptance Criteria
 
-1. WHEN no valid world exists THEN the system SHALL display a setup UI instead of simulation controls
-2. WHEN in setup mode THEN the system SHALL guide users through world creation steps
-3. WHEN setup is incomplete THEN the system SHALL prevent access to simulation controls
-4. WHEN setup is complete THEN the system SHALL transition to the simulation interface
-5. IF users want to modify an existing world THEN the system SHALL allow returning to setup mode
+1. WHEN populating nodes THEN the system SHALL require both nodes and characters with interactions to exist
+2. WHEN populating nodes THEN the system SHALL allow selecting a node and choosing which characters belong there
+3. WHEN populating nodes THEN the system SHALL validate node capacity and thematic consistency
+4. WHEN populating nodes THEN the system SHALL consider character roles matching node types
+5. WHEN populating nodes THEN the system SHALL require each node to have at least one character
+6. WHEN all nodes are populated THEN characters SHALL be able to perform their interactions within assigned nodes
 
 ### Requirement 6
 
-**User Story:** As a user of the simulation engine, I want to use the existing template system to create, save, and manage templates for all world content, so that I can efficiently build worlds and reuse successful configurations.
+**User Story:** As a user of the simulation engine, I want the system to validate my world is ready for simulation, so that I can ensure all dependencies are met before starting.
 
 #### Acceptance Criteria
 
-1. WHEN creating world content THEN the system SHALL integrate with the existing TemplateManager
-2. WHEN selecting templates THEN the system SHALL provide access to character, node, interaction, event, group, and item templates
-3. WHEN using a template THEN the system SHALL allow customization of template properties before adding to world
-4. WHEN world content is created THEN the system SHALL allow saving individual items or entire worlds as new templates
-5. WHEN templates are modified THEN the system SHALL maintain template versioning and metadata
-6. IF template dependencies exist THEN the system SHALL validate and resolve those dependencies
-7. WHEN importing templates THEN the system SHALL validate template compatibility with current world
+1. WHEN validation runs THEN the system SHALL check that a world exists
+2. WHEN validation runs THEN the system SHALL check that at least one node exists
+3. WHEN validation runs THEN the system SHALL check that all nodes have at least one character
+4. WHEN validation runs THEN the system SHALL check that all characters have at least one interaction capability
+5. WHEN all validations pass THEN the system SHALL enable the simulation start button
+6. IF any validation fails THEN the system SHALL prevent simulation from starting
 
 ### Requirement 7
 
-**User Story:** As a user of the simulation engine, I want to create and customize characters/NPCs with detailed properties and assign them to world locations, so that I can populate my simulation with diverse and interesting entities.
+**User Story:** As a user of the simulation engine, I want to save and reuse any component as a template, so that I can efficiently build future worlds and share configurations.
 
 #### Acceptance Criteria
 
-1. WHEN creating characters THEN the system SHALL provide access to character templates with personality, cognitive, and emotional traits
-2. WHEN customizing characters THEN the system SHALL allow modification of attributes, skills, background, race, and subrace
-3. WHEN adding characters to world THEN the system SHALL require assignment to valid nodes/locations
-4. WHEN characters are created THEN the system SHALL validate character configuration completeness
-5. WHEN character-node relationships change THEN the system SHALL re-validate world consistency
-6. IF character templates are used THEN the system SHALL preserve template lineage for future updates
+1. WHEN creating any component THEN the system SHALL allow saving it as a template
+2. WHEN using templates THEN the system SHALL provide world, node, interaction, character, and composite template types
+3. WHEN using templates THEN the system SHALL allow loading components from saved templates
+4. WHEN using templates THEN the system SHALL include metadata like name, description, category, author, and version
+5. WHEN using templates THEN the system SHALL support template browsing, search, and filtering
+6. WHEN using templates THEN the system SHALL allow modification and variant creation
+7. WHEN using templates THEN the system SHALL support import/export and sharing capabilities
 
 ### Requirement 8
 
-**User Story:** As a developer integrating with the simulation engine, I want the useSimulation hook to conditionally start based on world validity, so that I can ensure simulations only run with proper initialization.
+**User Story:** As a user of the simulation engine, I want clear step-by-step guidance through the world building process, so that I can understand the dependency chain and complete setup correctly.
 
 #### Acceptance Criteria
 
-1. WHEN useSimulation hook is called THEN it SHALL check world validity before starting
-2. WHEN world is invalid THEN the hook SHALL not initialize the simulation loop
-3. WHEN world becomes valid THEN the hook SHALL be able to start the simulation
-4. WHEN simulation is running AND world becomes invalid THEN the hook SHALL stop the simulation
-5. IF world validation changes THEN the hook SHALL react appropriately to the new state
+1. WHEN building a world THEN the system SHALL enforce the six-step dependency chain
+2. WHEN building a world THEN the system SHALL provide clear visual indicators of current step and progress
+3. WHEN building a world THEN the system SHALL prevent out-of-order operations
+4. WHEN building a world THEN the system SHALL allow editing previous steps with cascading updates
+5. WHEN building a world THEN the system SHALL provide contextual help at each stage
+6. WHEN building a world THEN the system SHALL maintain referential integrity between components
+7. IF dependencies are not met THEN the system SHALL provide clear error messages and guidance
