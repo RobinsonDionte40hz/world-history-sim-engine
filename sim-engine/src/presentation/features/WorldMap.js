@@ -1,7 +1,7 @@
 // src/presentation/components/features/WorldMap.js
 
 import React from 'react';
-import SimulationService from '../../../application/services/SimulationService.js';
+import SimulationService from '../../application/use-cases/services/SimulationService.js';
 
 const WorldMap = () => {
   const worldState = SimulationService.worldState || { nodes: [], npcs: [] };

@@ -84,6 +84,7 @@ class SimulationService {
     }
 
     // Validate all nodes have assigned characters
+    const nodeIds = new Set(config.nodes.map(n => n.id));
     const characterIds = new Set(config.characters.map(c => c.id));
     
     for (const node of config.nodes) {
@@ -306,12 +307,13 @@ class SimulationService {
   }
 
   // Process a single turn manually (replaces automatic ticking)
-  // Process a single turn manually (for turn-based simulation)
   processTurn() {
     if (!this.worldState) {
       throw new Error('Simulation not initialized');
     }
-    // Remove the isRunning check - turn-based simulation doesn't need to be "running"
+    if (!this.isRunning) {
+      throw new Error('Simulation not started');
+    }
 
     try {
       const previousTime = this.worldState.time;
@@ -626,7 +628,7 @@ class SimulationService {
         return null;
       }
 
-      // Handle simple test states (nodes and npcs might not exist or be empty)
+      // Properly reconstruct nodes first
       const reconstructedNodes = Array.isArray(savedState.nodes) ? savedState.nodes.map(nodeData => {
         try {
           if (nodeData && typeof nodeData === 'object') {
@@ -635,7 +637,7 @@ class SimulationService {
               console.warn('SimulationService: Node missing ID, generating new one');
               nodeData.id = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             }
-            return Node.fromJSON ? Node.fromJSON(nodeData) : nodeData;
+            return Node.fromJSON(nodeData);
           }
           console.warn('SimulationService: Invalid node data, skipping:', nodeData);
           return null;
@@ -645,22 +647,27 @@ class SimulationService {
         }
       }).filter(node => node !== null) : [];
 
-      // Handle NPCs (might not exist or be empty for simple test states)
+      // Log available node IDs for debugging
+      const nodeIds = reconstructedNodes.map(n => n.id);
+      console.log('SimulationService: Reconstructed nodes with IDs:', nodeIds);
+
+      // Reconstruct NPCs and validate their currentNodeId
       const reconstructedNPCs = Array.isArray(savedState.npcs) ? savedState.npcs.map(npcData => {
         try {
           if (npcData && typeof npcData === 'object') {
-            // For simple test states, don't validate currentNodeId if no nodes exist
-            if (reconstructedNodes.length > 0) {
-              const nodeIds = reconstructedNodes.map(n => n.id);
-              // Check if NPC's currentNodeId is valid
-              if (!npcData.currentNodeId || !nodeIds.includes(npcData.currentNodeId)) {
-                console.warn(`SimulationService: NPC ${npcData.name} has invalid currentNodeId: ${npcData.currentNodeId}`);
-                // Assign to first available node if exists
+            // Check if NPC's currentNodeId is valid
+            if (!npcData.currentNodeId || !nodeIds.includes(npcData.currentNodeId)) {
+              console.warn(`SimulationService: NPC ${npcData.name} has invalid currentNodeId: ${npcData.currentNodeId}`);
+              // Assign to first available node if exists
+              if (reconstructedNodes.length > 0) {
                 npcData.currentNodeId = reconstructedNodes[0].id;
                 console.log(`SimulationService: Reassigned NPC ${npcData.name} to node ${npcData.currentNodeId}`);
+              } else {
+                console.error('SimulationService: No nodes available for NPC assignment');
+                return null;
               }
             }
-            return Character.fromJSON ? Character.fromJSON(npcData) : npcData;
+            return Character.fromJSON(npcData);
           }
           console.warn('SimulationService: Invalid NPC data, skipping:', npcData);
           return null;
@@ -669,6 +676,13 @@ class SimulationService {
           return null;
         }
       }).filter(npc => npc !== null) : [];
+
+      // Final validation: ensure we have at least one node if we have NPCs
+      if (reconstructedNPCs.length > 0 && reconstructedNodes.length === 0) {
+        console.error('SimulationService: Have NPCs but no nodes, cannot continue');
+        localStorage.removeItem('worldState');
+        return null;
+      }
 
       const reconstructedState = {
         time: typeof savedState.time === 'number' ? savedState.time : 0,

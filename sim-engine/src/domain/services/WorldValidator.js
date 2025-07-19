@@ -1,115 +1,634 @@
 /**
- * WorldValidator - Comprehensive validation service for world configurations
- * Validates dimensions, nodes, characters, interactions, events and their relationships
- * Provides real-time validation feedback with detailed error messages
+ * WorldValidator - Six-step validation service for mappless world configurations
+ * Implements step-by-step validation (world properties, nodes, interactions, characters, populations)
+ * Removes spatial validation (no dimensions or coordinates in mappless system)
+ * Adds character capability validation (ensure characters have assigned interactions)
+ * Adds node population validation (ensure all nodes have assigned characters)
+ * Creates completeness scoring system for six-step progression
+ * Adds real-time validation feedback with step-specific error messages
+ * 
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
  */
 class WorldValidator {
   /**
-   * Validates a complete world configuration
+   * Validates a complete world configuration using six-step mappless validation
    * @param {Object} worldConfig - The world configuration to validate
-   * @returns {Object} Validation result with errors, warnings, and completeness score
+   * @returns {Object} Validation result with step-by-step errors, warnings, and completeness score
    */
   static validate(worldConfig) {
     const errors = [];
     const warnings = [];
-    const details = {};
+    const stepDetails = {};
+    const stepValidation = {
+      1: false, // World properties
+      2: false, // Nodes
+      3: false, // Interactions
+      4: false, // Characters
+      5: false, // Node populations
+      6: false  // Complete and ready
+    };
 
-    // Validate dimensions (required)
-    const dimensionResult = this.validateDimensions(worldConfig.dimensions);
-    details.dimensions = dimensionResult;
-    if (!dimensionResult.valid) {
-      errors.push(...dimensionResult.errors);
+    // Step 1: Validate world properties (no spatial dimensions)
+    const worldPropertiesResult = this.validateWorldProperties(worldConfig);
+    stepDetails.worldProperties = worldPropertiesResult;
+    stepValidation[1] = worldPropertiesResult.valid;
+    if (!worldPropertiesResult.valid) {
+      errors.push(...worldPropertiesResult.errors.map(error => ({ step: 1, ...error })));
     }
-    if (dimensionResult.warnings.length > 0) {
-      warnings.push(...dimensionResult.warnings);
-    }
-
-    // Validate nodes (required)
-    const nodeResult = this.validateNodes(worldConfig.nodes);
-    details.nodes = nodeResult;
-    if (!nodeResult.valid) {
-      errors.push(...nodeResult.errors);
-    }
-    if (nodeResult.warnings.length > 0) {
-      warnings.push(...nodeResult.warnings);
-    }
-
-    // Validate characters (optional but recommended)
-    const characterResult = this.validateCharacters(worldConfig.characters);
-    details.characters = characterResult;
-    if (!characterResult.valid) {
-      errors.push(...characterResult.errors);
-    }
-    if (characterResult.warnings.length > 0) {
-      warnings.push(...characterResult.warnings);
+    if (worldPropertiesResult.warnings.length > 0) {
+      warnings.push(...worldPropertiesResult.warnings.map(warning => ({ step: 1, ...warning })));
     }
 
-    // Validate interactions (optional)
-    const interactionResult = this.validateInteractions(worldConfig.interactions);
-    details.interactions = interactionResult;
-    if (!interactionResult.valid) {
-      errors.push(...interactionResult.errors);
+    // Step 2: Validate abstract nodes (no coordinates)
+    const nodesResult = this.validateAbstractNodes(worldConfig.nodes);
+    stepDetails.nodes = nodesResult;
+    stepValidation[2] = nodesResult.valid && stepValidation[1];
+    if (!nodesResult.valid) {
+      errors.push(...nodesResult.errors.map(error => ({ step: 2, ...error })));
     }
-    if (interactionResult.warnings.length > 0) {
-      warnings.push(...interactionResult.warnings);
-    }
-
-    // Validate events (optional)
-    const eventResult = this.validateEvents(worldConfig.events);
-    details.events = eventResult;
-    if (!eventResult.valid) {
-      errors.push(...eventResult.errors);
-    }
-    if (eventResult.warnings.length > 0) {
-      warnings.push(...eventResult.warnings);
+    if (nodesResult.warnings.length > 0) {
+      warnings.push(...nodesResult.warnings.map(warning => ({ step: 2, ...warning })));
     }
 
-    // Validate character-node relationships
-    const relationshipResult = this.validateCharacterNodeRelationships(
-      worldConfig.characters, 
-      worldConfig.nodes
-    );
-    details.relationships = relationshipResult;
-    if (!relationshipResult.valid) {
-      errors.push(...relationshipResult.errors);
+    // Step 3: Validate character interactions (capabilities)
+    const interactionsResult = this.validateCharacterCapabilities(worldConfig.interactions);
+    stepDetails.interactions = interactionsResult;
+    stepValidation[3] = interactionsResult.valid && stepValidation[2];
+    if (!interactionsResult.valid) {
+      errors.push(...interactionsResult.errors.map(error => ({ step: 3, ...error })));
     }
-    if (relationshipResult.warnings.length > 0) {
-      warnings.push(...relationshipResult.warnings);
+    if (interactionsResult.warnings.length > 0) {
+      warnings.push(...interactionsResult.warnings.map(warning => ({ step: 3, ...warning })));
     }
 
-    // Validate rules and initial conditions
-    const rulesResult = this.validateRules(worldConfig.rules);
-    details.rules = rulesResult;
-    if (!rulesResult.valid) {
-      errors.push(...rulesResult.errors);
+    // Step 4: Validate characters with assigned capabilities
+    const charactersResult = this.validateCharactersWithCapabilities(worldConfig.characters, worldConfig.interactions);
+    stepDetails.characters = charactersResult;
+    stepValidation[4] = charactersResult.valid && stepValidation[3];
+    if (!charactersResult.valid) {
+      errors.push(...charactersResult.errors.map(error => ({ step: 4, ...error })));
     }
-    if (rulesResult.warnings.length > 0) {
-      warnings.push(...rulesResult.warnings);
+    if (charactersResult.warnings.length > 0) {
+      warnings.push(...charactersResult.warnings.map(warning => ({ step: 4, ...warning })));
     }
 
-    const initialConditionsResult = this.validateInitialConditions(worldConfig.initialConditions);
-    details.initialConditions = initialConditionsResult;
-    if (!initialConditionsResult.valid) {
-      errors.push(...initialConditionsResult.errors);
+    // Step 5: Validate node populations (character-to-node assignments)
+    const populationsResult = this.validateNodePopulations(worldConfig.nodePopulations, worldConfig.nodes, worldConfig.characters);
+    stepDetails.nodePopulations = populationsResult;
+    stepValidation[5] = populationsResult.valid && stepValidation[4];
+    if (!populationsResult.valid) {
+      errors.push(...populationsResult.errors.map(error => ({ step: 5, ...error })));
     }
-    if (initialConditionsResult.warnings.length > 0) {
-      warnings.push(...initialConditionsResult.warnings);
+    if (populationsResult.warnings.length > 0) {
+      warnings.push(...populationsResult.warnings.map(warning => ({ step: 5, ...warning })));
     }
+
+    // Step 6: Final completeness validation
+    const completenessResult = this.validateCompleteness(worldConfig);
+    stepDetails.completeness = completenessResult;
+    stepValidation[6] = completenessResult.valid && stepValidation[5];
+    if (!completenessResult.valid) {
+      errors.push(...completenessResult.errors.map(error => ({ step: 6, ...error })));
+    }
+    if (completenessResult.warnings.length > 0) {
+      warnings.push(...completenessResult.warnings.map(warning => ({ step: 6, ...warning })));
+    }
+
+    // Calculate completeness score (0-1 based on completed steps)
+    const completenessScore = this.calculateCompletenessScore(stepValidation, stepDetails);
 
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
-      completeness: this.calculateCompleteness(worldConfig, details),
-      details
+      completeness: completenessScore,
+      stepValidation,
+      stepDetails,
+      currentStep: this.getCurrentStep(stepValidation),
+      nextRequirements: this.getNextStepRequirements(stepValidation, stepDetails)
     };
   }
 
   /**
-   * Validates world dimensions
-   * @param {Object} dimensions - Dimensions configuration
+   * Validates world properties for step 1 (mappless - no spatial dimensions)
+   * @param {Object} worldConfig - World configuration to validate
    * @returns {Object} Validation result
    */
+  static validateWorldProperties(worldConfig) {
+    const errors = [];
+    const warnings = [];
+
+    // Required world properties (no spatial dimensions needed)
+    if (!worldConfig.name || typeof worldConfig.name !== 'string' || worldConfig.name.trim().length === 0) {
+      errors.push({ message: 'World name is required and must be a non-empty string', field: 'name' });
+    }
+
+    if (!worldConfig.description || typeof worldConfig.description !== 'string' || worldConfig.description.trim().length === 0) {
+      warnings.push({ message: 'World description is recommended for better understanding', field: 'description' });
+    }
+
+    // Validate rules (optional but recommended)
+    if (worldConfig.rules) {
+      if (typeof worldConfig.rules !== 'object' || worldConfig.rules === null) {
+        errors.push({ message: 'World rules must be an object if provided', field: 'rules' });
+      }
+    } else {
+      warnings.push({ message: 'World rules are recommended for consistent simulation behavior', field: 'rules' });
+    }
+
+    // Validate initial conditions (optional but recommended)
+    if (worldConfig.initialConditions) {
+      if (typeof worldConfig.initialConditions !== 'object' || worldConfig.initialConditions === null) {
+        errors.push({ message: 'Initial conditions must be an object if provided', field: 'initialConditions' });
+      }
+    } else {
+      warnings.push({ message: 'Initial conditions are recommended for predictable world setup', field: 'initialConditions' });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      message: errors.length === 0 ? 'Valid world properties' : 'Invalid world properties'
+    };
+  }
+
+  /**
+   * Validates abstract nodes for step 2 (mappless - no coordinates)
+   * @param {Array} nodes - Array of abstract node configurations
+   * @returns {Object} Validation result
+   */
+  static validateAbstractNodes(nodes) {
+    const errors = [];
+    const warnings = [];
+
+    if (!Array.isArray(nodes)) {
+      errors.push({ message: 'Nodes must be an array', field: 'nodes' });
+      return { valid: false, errors, warnings, count: 0, message: 'Invalid nodes structure' };
+    }
+
+    if (nodes.length === 0) {
+      errors.push({ message: 'At least one node is required for a valid world', field: 'nodes' });
+      return { valid: false, errors, warnings, count: 0, message: 'No nodes defined' };
+    }
+
+    const nodeIds = new Set();
+    const duplicateIds = new Set();
+
+    nodes.forEach((node, index) => {
+      const nodePrefix = `Node ${index + 1}`;
+
+      // Required fields for abstract nodes
+      if (!node.id) {
+        errors.push({ message: `${nodePrefix}: ID is required`, field: 'id', index });
+      } else {
+        if (nodeIds.has(node.id)) {
+          duplicateIds.add(node.id);
+          errors.push({ message: `${nodePrefix}: Duplicate node ID '${node.id}'`, field: 'id', index });
+        }
+        nodeIds.add(node.id);
+      }
+
+      if (!node.name || typeof node.name !== 'string') {
+        errors.push({ message: `${nodePrefix}: Name is required and must be a string`, field: 'name', index });
+      }
+
+      if (!node.type || typeof node.type !== 'string') {
+        errors.push({ message: `${nodePrefix}: Type is required and must be a string`, field: 'type', index });
+      }
+
+      // Environmental properties validation (mappless - no coordinates)
+      if (node.environment) {
+        if (typeof node.environment !== 'object') {
+          errors.push({ message: `${nodePrefix}: Environment must be an object if provided`, field: 'environment', index });
+        }
+      } else {
+        warnings.push({ message: `${nodePrefix}: Environmental properties are recommended`, field: 'environment', index });
+      }
+
+      // Resources validation
+      if (node.resources && !Array.isArray(node.resources)) {
+        errors.push({ message: `${nodePrefix}: Resources must be an array if provided`, field: 'resources', index });
+      }
+
+      // Capacity validation
+      if (node.capacity !== undefined) {
+        if (typeof node.capacity !== 'number' || node.capacity < 0) {
+          errors.push({ message: `${nodePrefix}: Capacity must be a non-negative number if provided`, field: 'capacity', index });
+        }
+      } else {
+        warnings.push({ message: `${nodePrefix}: Population capacity is recommended for better simulation`, field: 'capacity', index });
+      }
+    });
+
+    // Minimum nodes recommendation
+    if (nodes.length < 3) {
+      warnings.push({ message: 'At least 3 nodes are recommended for interesting interactions', field: 'nodes' });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      count: nodes.length,
+      uniqueIds: nodeIds.size,
+      duplicates: Array.from(duplicateIds),
+      message: errors.length === 0 ? `${nodes.length} valid abstract nodes` : 'Invalid nodes'
+    };
+  }
+
+  /**
+   * Validates character capabilities (interactions) for step 3
+   * @param {Array} interactions - Array of interaction/capability configurations
+   * @returns {Object} Validation result
+   */
+  static validateCharacterCapabilities(interactions) {
+    const errors = [];
+    const warnings = [];
+
+    if (!Array.isArray(interactions)) {
+      errors.push({ message: 'Interactions must be an array', field: 'interactions' });
+      return { valid: false, errors, warnings, count: 0, message: 'Invalid interactions structure' };
+    }
+
+    if (interactions.length === 0) {
+      errors.push({ message: 'At least one interaction type is required for character capabilities', field: 'interactions' });
+      return { valid: false, errors, warnings, count: 0, message: 'No interactions defined' };
+    }
+
+    const interactionIds = new Set();
+    const capabilityTypes = new Set();
+
+    interactions.forEach((interaction, index) => {
+      const interactionPrefix = `Interaction ${index + 1}`;
+
+      // Required fields
+      if (!interaction.id) {
+        errors.push({ message: `${interactionPrefix}: ID is required`, field: 'id', index });
+      } else {
+        if (interactionIds.has(interaction.id)) {
+          errors.push({ message: `${interactionPrefix}: Duplicate interaction ID '${interaction.id}'`, field: 'id', index });
+        }
+        interactionIds.add(interaction.id);
+      }
+
+      if (!interaction.name || typeof interaction.name !== 'string') {
+        errors.push({ message: `${interactionPrefix}: Name is required and must be a string`, field: 'name', index });
+      }
+
+      if (!interaction.type || typeof interaction.type !== 'string') {
+        errors.push({ message: `${interactionPrefix}: Type is required and must be a string`, field: 'type', index });
+      } else {
+        capabilityTypes.add(interaction.type);
+      }
+
+      // Capability category validation
+      const validCategories = ['economic', 'social', 'combat', 'crafting', 'exploration', 'governance', 'religious', 'cultural'];
+      if (interaction.category && !validCategories.includes(interaction.category)) {
+        warnings.push({ message: `${interactionPrefix}: Category '${interaction.category}' is not a standard capability type`, field: 'category', index });
+      }
+
+      // Requirements validation
+      if (interaction.requirements) {
+        if (typeof interaction.requirements !== 'object') {
+          errors.push({ message: `${interactionPrefix}: Requirements must be an object if provided`, field: 'requirements', index });
+        }
+      }
+
+      // Effects validation
+      if (interaction.effects) {
+        if (typeof interaction.effects !== 'object') {
+          errors.push({ message: `${interactionPrefix}: Effects must be an object if provided`, field: 'effects', index });
+        }
+      } else {
+        warnings.push({ message: `${interactionPrefix}: Effects are recommended to define interaction outcomes`, field: 'effects', index });
+      }
+    });
+
+    // Capability diversity recommendation
+    if (capabilityTypes.size < 3) {
+      warnings.push({ message: 'At least 3 different capability types are recommended for diverse character interactions', field: 'interactions' });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      count: interactions.length,
+      uniqueTypes: capabilityTypes.size,
+      types: Array.from(capabilityTypes),
+      message: errors.length === 0 ? `${interactions.length} valid character capabilities` : 'Invalid interactions'
+    };
+  }
+
+  /**
+   * Validates characters with assigned capabilities for step 4
+   * @param {Array} characters - Array of character configurations
+   * @param {Array} interactions - Array of available interactions/capabilities
+   * @returns {Object} Validation result
+   */
+  static validateCharactersWithCapabilities(characters, interactions) {
+    const errors = [];
+    const warnings = [];
+
+    if (!Array.isArray(characters)) {
+      errors.push({ message: 'Characters must be an array', field: 'characters' });
+      return { valid: false, errors, warnings, count: 0, message: 'Invalid characters structure' };
+    }
+
+    if (characters.length === 0) {
+      errors.push({ message: 'At least one character is required for world simulation', field: 'characters' });
+      return { valid: false, errors, warnings, count: 0, message: 'No characters defined' };
+    }
+
+    const characterIds = new Set();
+    const availableInteractionIds = new Set(interactions?.map(i => i.id) || []);
+    const charactersWithoutCapabilities = [];
+
+    characters.forEach((character, index) => {
+      const characterPrefix = `Character ${index + 1}`;
+
+      // Required fields
+      if (!character.id) {
+        errors.push({ message: `${characterPrefix}: ID is required`, field: 'id', index });
+      } else {
+        if (characterIds.has(character.id)) {
+          errors.push({ message: `${characterPrefix}: Duplicate character ID '${character.id}'`, field: 'id', index });
+        }
+        characterIds.add(character.id);
+      }
+
+      if (!character.name || typeof character.name !== 'string') {
+        errors.push({ message: `${characterPrefix}: Name is required and must be a string`, field: 'name', index });
+      }
+
+      // Capability validation (assigned interactions)
+      if (!character.capabilities || !Array.isArray(character.capabilities) || character.capabilities.length === 0) {
+        errors.push({ message: `${characterPrefix}: At least one capability must be assigned`, field: 'capabilities', index });
+        charactersWithoutCapabilities.push(character.id || index);
+      } else {
+        character.capabilities.forEach((capabilityId, capIndex) => {
+          if (!availableInteractionIds.has(capabilityId)) {
+            errors.push({ message: `${characterPrefix}: Capability '${capabilityId}' is not available in defined interactions`, field: 'capabilities', index, capabilityIndex: capIndex });
+          }
+        });
+      }
+
+      // Attributes validation
+      if (character.attributes) {
+        if (typeof character.attributes !== 'object') {
+          errors.push({ message: `${characterPrefix}: Attributes must be an object if provided`, field: 'attributes', index });
+        }
+      } else {
+        warnings.push({ message: `${characterPrefix}: Attributes are recommended for character uniqueness`, field: 'attributes', index });
+      }
+
+      // Personality validation
+      if (character.personality) {
+        if (typeof character.personality !== 'object') {
+          errors.push({ message: `${characterPrefix}: Personality must be an object if provided`, field: 'personality', index });
+        }
+      } else {
+        warnings.push({ message: `${characterPrefix}: Personality profile is recommended for realistic behavior`, field: 'personality', index });
+      }
+    });
+
+    // Character diversity recommendations
+    if (characters.length < 5) {
+      warnings.push({ message: 'At least 5 characters are recommended for dynamic interactions', field: 'characters' });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      count: characters.length,
+      uniqueIds: characterIds.size,
+      charactersWithoutCapabilities: charactersWithoutCapabilities.length,
+      message: errors.length === 0 ? `${characters.length} valid characters with capabilities` : 'Invalid characters'
+    };
+  }
+
+  /**
+   * Validates node populations (character-to-node assignments) for step 5
+   * @param {Object} nodePopulations - Object mapping node IDs to character arrays
+   * @param {Array} nodes - Array of available nodes
+   * @param {Array} characters - Array of available characters
+   * @returns {Object} Validation result
+   */
+  static validateNodePopulations(nodePopulations, nodes, characters) {
+    const errors = [];
+    const warnings = [];
+
+    if (!nodePopulations || typeof nodePopulations !== 'object') {
+      errors.push({ message: 'Node populations must be an object mapping node IDs to character arrays', field: 'nodePopulations' });
+      return { valid: false, errors, warnings, message: 'Invalid node populations structure' };
+    }
+
+    const availableNodeIds = new Set(nodes?.map(n => n.id) || []);
+    const availableCharacterIds = new Set(characters?.map(c => c.id) || []);
+    const assignedCharacters = new Set();
+    const unassignedCharacters = new Set(availableCharacterIds);
+    const unpopulatedNodes = new Set(availableNodeIds);
+
+    // Validate each node population
+    Object.entries(nodePopulations).forEach(([nodeId, characterIds]) => {
+      const nodePrefix = `Node '${nodeId}'`;
+
+      // Validate node exists
+      if (!availableNodeIds.has(nodeId)) {
+        errors.push({ message: `${nodePrefix}: Node does not exist`, field: 'nodeId', nodeId });
+        return;
+      }
+
+      unpopulatedNodes.delete(nodeId);
+
+      // Validate character array
+      if (!Array.isArray(characterIds)) {
+        errors.push({ message: `${nodePrefix}: Character list must be an array`, field: 'characters', nodeId });
+        return;
+      }
+
+      if (characterIds.length === 0) {
+        warnings.push({ message: `${nodePrefix}: Node has no assigned characters`, field: 'characters', nodeId });
+        return;
+      }
+
+      // Validate each character assignment
+      characterIds.forEach((characterId, index) => {
+        if (!availableCharacterIds.has(characterId)) {
+          errors.push({ message: `${nodePrefix}: Character '${characterId}' does not exist`, field: 'characterId', nodeId, characterIndex: index });
+        } else {
+          if (assignedCharacters.has(characterId)) {
+            errors.push({ message: `${nodePrefix}: Character '${characterId}' is assigned to multiple nodes`, field: 'characterId', nodeId, characterIndex: index });
+          } else {
+            assignedCharacters.add(characterId);
+            unassignedCharacters.delete(characterId);
+          }
+        }
+      });
+
+      // Node capacity validation
+      const node = nodes?.find(n => n.id === nodeId);
+      if (node && node.capacity && characterIds.length > node.capacity) {
+        warnings.push({ message: `${nodePrefix}: Population (${characterIds.length}) exceeds capacity (${node.capacity})`, field: 'capacity', nodeId });
+      }
+    });
+
+    // Check for unassigned characters
+    if (unassignedCharacters.size > 0) {
+      errors.push({ 
+        message: `${unassignedCharacters.size} character(s) not assigned to any node: ${Array.from(unassignedCharacters).join(', ')}`, 
+        field: 'unassigned', 
+        unassignedCharacters: Array.from(unassignedCharacters) 
+      });
+    }
+
+    // Check for unpopulated nodes
+    if (unpopulatedNodes.size > 0) {
+      warnings.push({ 
+        message: `${unpopulatedNodes.size} node(s) have no assigned characters: ${Array.from(unpopulatedNodes).join(', ')}`, 
+        field: 'unpopulated', 
+        unpopulatedNodes: Array.from(unpopulatedNodes) 
+      });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      populatedNodes: Object.keys(nodePopulations).length,
+      assignedCharacters: assignedCharacters.size,
+      unassignedCharacters: unassignedCharacters.size,
+      unpopulatedNodes: unpopulatedNodes.size,
+      message: errors.length === 0 ? 'Valid character-to-node assignments' : 'Invalid node populations'
+    };
+  }
+
+  /**
+   * Validates world completeness for step 6 (final validation)
+   * @param {Object} worldConfig - Complete world configuration
+   * @returns {Object} Validation result
+   */
+  static validateCompleteness(worldConfig) {
+    const errors = [];
+    const warnings = [];
+
+    // Check all required components are present
+    const requiredComponents = ['name', 'nodes', 'interactions', 'characters', 'nodePopulations'];
+    const missingComponents = requiredComponents.filter(comp => {
+      if (comp === 'nodePopulations') return !worldConfig[comp] || Object.keys(worldConfig[comp]).length === 0;
+      if (Array.isArray(worldConfig[comp])) return !worldConfig[comp] || worldConfig[comp].length === 0;
+      return !worldConfig[comp];
+    });
+
+    if (missingComponents.length > 0) {
+      errors.push({ message: `Missing required components: ${missingComponents.join(', ')}`, field: 'completeness', missing: missingComponents });
+    }
+
+    // Check minimum quantities for viable simulation
+    if (worldConfig.nodes && worldConfig.nodes.length < 2) {
+      errors.push({ message: 'At least 2 nodes are required for world interactions', field: 'nodes' });
+    }
+
+    if (worldConfig.characters && worldConfig.characters.length < 2) {
+      errors.push({ message: 'At least 2 characters are required for world interactions', field: 'characters' });
+    }
+
+    if (worldConfig.interactions && worldConfig.interactions.length < 1) {
+      errors.push({ message: 'At least 1 interaction type is required for character capabilities', field: 'interactions' });
+    }
+
+    // Check for simulation readiness
+    const hasRules = worldConfig.rules && typeof worldConfig.rules === 'object';
+    const hasInitialConditions = worldConfig.initialConditions && typeof worldConfig.initialConditions === 'object';
+
+    if (!hasRules) {
+      warnings.push({ message: 'World rules are recommended for consistent simulation behavior', field: 'rules' });
+    }
+
+    if (!hasInitialConditions) {
+      warnings.push({ message: 'Initial conditions are recommended for predictable simulation start', field: 'initialConditions' });
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      readyForSimulation: errors.length === 0,
+      message: errors.length === 0 ? 'World is complete and ready for simulation' : 'World is incomplete'
+    };
+  }
+
+  /**
+   * Calculates completeness score based on step validation results
+   * @param {Object} stepValidation - Step validation status
+   * @param {Object} stepDetails - Detailed step validation results
+   * @returns {number} Completeness score (0-1)
+   */
+  static calculateCompletenessScore(stepValidation, stepDetails) {
+    const weights = {
+      1: 0.1,  // World properties
+      2: 0.2,  // Nodes
+      3: 0.2,  // Interactions
+      4: 0.25, // Characters
+      5: 0.15, // Populations
+      6: 0.1   // Final completeness
+    };
+
+    let score = 0;
+    for (let step = 1; step <= 6; step++) {
+      if (stepValidation[step]) {
+        score += weights[step];
+      }
+    }
+
+    return Math.round(score * 100) / 100; // Round to 2 decimal places
+  }
+
+  /**
+   * Determines current step based on validation status
+   * @param {Object} stepValidation - Step validation status
+   * @returns {number} Current step (1-6)
+   */
+  static getCurrentStep(stepValidation) {
+    for (let step = 1; step <= 6; step++) {
+      if (!stepValidation[step]) {
+        return step;
+      }
+    }
+    return 6; // All steps complete
+  }
+
+  /**
+   * Gets requirements for the next step
+   * @param {Object} stepValidation - Step validation status
+   * @param {Object} stepDetails - Detailed step validation results
+   * @returns {Object} Next step requirements
+   */
+  static getNextStepRequirements(stepValidation, stepDetails) {
+    const currentStep = this.getCurrentStep(stepValidation);
+    
+    const stepRequirements = {
+      1: 'Set world name, description, rules, and initial conditions',
+      2: 'Create at least one abstract node with name, type, and environment properties',
+      3: 'Define at least one character interaction/capability type',
+      4: 'Create at least one character with assigned capabilities',
+      5: 'Assign all characters to nodes through node populations',
+      6: 'Final validation - ensure all components are complete and consistent'
+    };
+
+    const stepErrors = stepDetails[Object.keys(stepDetails)[currentStep - 1]]?.errors || [];
+
+    return {
+      currentStep,
+      requirement: stepRequirements[currentStep],
+      errors: stepErrors.slice(0, 3), // Show top 3 errors
+      isComplete: currentStep > 6
+    };
+  }
+
+  // Legacy method compatibility (deprecated - use six-step validation instead)
   static validateDimensions(dimensions) {
     const errors = [];
     const warnings = [];

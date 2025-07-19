@@ -43,21 +43,24 @@ export const SimulationProvider = ({ children }) => {
     
     // Legacy compatibility - expose simulation properties at root level
     worldState: simulationState?.worldState || null,
-    isRunning: simulationState?.isRunning || false,
     isInitialized: simulationState?.isInitialized || false,
     initializationError: simulationState?.initializationError || null,
     historyAnalysis: simulationState?.historyAnalysis || null,
     currentTurn: simulationState?.currentTurn || 0,
-    canStart: simulationState?.canStart || false,
-    startSimulation: simulationState?.startSimulation || (() => {}),
-    stopSimulation: simulationState?.stopSimulation || (() => {}),
-    resetSimulation: simulationState?.resetSimulation || (() => {}),
-    stepSimulation: simulationState?.stepSimulation || (() => {}),
-    analyzeHistory: simulationState?.analyzeHistory || (() => {}),
+    turnSummary: simulationState?.turnSummary || null,
+    turnHistory: simulationState?.turnHistory || [],
+    canProcessTurn: simulationState?.canProcessTurn || false,
+    
+    // Turn-based actions
+    initializeWorld: simulationState?.initializeWorld || (() => false),
+    resetSimulation: simulationState?.resetSimulation || (() => false),
+    processTurn: simulationState?.processTurn || (() => ({ success: false, error: 'Not available' })),
+    getTurnHistory: simulationState?.getTurnHistory || (() => []),
+    analyzeHistory: simulationState?.analyzeHistory || (() => null),
     
     // World building completion status
     isWorldComplete: worldBuilderState?.isWorldComplete || false,
-    canStartSimulation: worldBuilderState?.isWorldComplete && worldBuilderState?.stepValidationStatus?.[6]
+    canInitializeSimulation: worldBuilderState?.isWorldComplete && worldBuilderState?.stepValidationStatus?.[6]
   };
 
   return (

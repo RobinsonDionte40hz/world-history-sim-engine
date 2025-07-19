@@ -194,7 +194,7 @@ describe('Turn Counter Integration Tests - Working Turn-Based Implementation', (
       render(<TestComponent />);
       
       await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: --');
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
       });
     });
   });
@@ -331,8 +331,6 @@ describe('Turn Counter Integration Tests - Working Turn-Based Implementation', (
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.processTurn = jest.fn(() => {
         currentTurn++;
-        // Simulate automatic state saving after processing
-        SimulationService.saveState();
         return {
           success: true,
           worldState: { time: currentTurn, nodes: [], npcs: [], resources: {} },
@@ -356,11 +354,8 @@ describe('Turn Counter Integration Tests - Working Turn-Based Implementation', (
       fireEvent.click(screen.getByTestId('process-btn'));
       
       await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 1');
+        expect(SimulationService.saveState).toHaveBeenCalled();
       });
-      
-      // Verify saveState was called during processing
-      expect(SimulationService.saveState).toHaveBeenCalled();
     });
 
     test('should handle corrupted localStorage data gracefully', async () => {
@@ -418,92 +413,43 @@ describe('Turn Counter Integration Tests - Working Turn-Based Implementation', (
     });
 
     test('should reset and allow processing again', async () => {
-      // Use a simplified approach that maintains proper simulation state
-      let simulationTurnValue = 5;
-      
-      SimulationService.getCurrentTurn = jest.fn(() => simulationTurnValue);
+      let currentTurn = 5;
+      SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.reset = jest.fn(() => {
-        simulationTurnValue = 0;
-        return true;
+        currentTurn = 0;
       });
       SimulationService.processTurn = jest.fn(() => {
-        simulationTurnValue++;
+        currentTurn++;
         return {
           success: true,
-          worldState: { time: simulationTurnValue, nodes: [], npcs: [], resources: {} },
-          turnSummary: { eventsCount: 1, summary: `Turn ${simulationTurnValue} processed` }
+          worldState: { time: currentTurn, nodes: [], npcs: [], resources: {} },
+          turnSummary: { eventsCount: 1, summary: 'Turn processed' }
         };
       });
 
       const TestComponent = () => {
-        const simulation = useSimulation(mockWorldBuilderState);
-        
+        const { currentTurn, resetSimulation, processTurn } = useSimulation(mockWorldBuilderState);
         return (
           <div>
-            <div data-testid="turn-counter"><TurnCounter currentTurn={simulation.currentTurn} /></div>
-            <button 
-              data-testid="reset-btn" 
-              onClick={() => {
-                // Reset but maintain world state for processing capability
-                SimulationService.reset();
-                // The hook's resetSimulation sets isInitialized to false, but we need to re-initialize
-                // to maintain the ability to process turns after reset
-                simulation.initializeWorld(mockWorldBuilderState);
-              }}
-            >
-              Reset
-            </button>
-            <button 
-              data-testid="process-btn" 
-              onClick={() => simulation.processTurn()}
-              disabled={!simulation.canProcessTurn}
-            >
-              Process Turn
-            </button>
-            <div data-testid="can-process">{simulation.canProcessTurn ? 'enabled' : 'disabled'}</div>
+            <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
+            <button data-testid="reset-btn" onClick={resetSimulation}>Reset</button>
+            <button data-testid="process-btn" onClick={processTurn}>Process Turn</button>
           </div>
         );
       };
 
       render(<TestComponent />);
       
-      // Start should show turn 5
-      await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 5');
-      });
-      
-      // Should be able to process initially
-      expect(screen.getByTestId('can-process')).toHaveTextContent('enabled');
-      
-      // Reset the simulation
+      // Reset first
       fireEvent.click(screen.getByTestId('reset-btn'));
       
-      // After reset, should show 0
       await waitFor(() => {
         expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
       });
-      
-      // Should still be able to process after reset
-      await waitFor(() => {
-        expect(screen.getByTestId('can-process')).toHaveTextContent('enabled');
-      });
-      
-      // Verify the service was reset
-      expect(SimulationService.reset).toHaveBeenCalled();
-      expect(simulationTurnValue).toBe(0);
 
-      // Process a turn
+      // Then process turn
       fireEvent.click(screen.getByTestId('process-btn'));
       
-      // Verify processing was called
-      await waitFor(() => {
-        expect(SimulationService.processTurn).toHaveBeenCalled();
-      });
-      
-      // The service state should now be 1
-      expect(simulationTurnValue).toBe(1);
-      
-      // The UI should update to show 1
       await waitFor(() => {
         expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 1');
       });

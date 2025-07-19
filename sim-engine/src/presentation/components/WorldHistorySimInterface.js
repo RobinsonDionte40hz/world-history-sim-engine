@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Pause, SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Calendar, Activity, ChevronRight, Settings, Filter, Download, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Calendar, Activity, ChevronRight, Settings, Filter, Download, Clock } from 'lucide-react';
 import useSimulation from '../hooks/useSimulation.js';
 import TurnCounter from './TurnCounter.js';
 
 const WorldHistorySimInterface = () => {
   // Use the simulation hook instead of local state
-  const { worldState, isRunning, currentTurn, startSimulation, stopSimulation, resetSimulation, stepSimulation } = useSimulation();
+  const { worldState, isInitialized, currentTurn, canProcessTurn, resetSimulation, processTurn } = useSimulation();
   
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);
@@ -23,13 +23,10 @@ const WorldHistorySimInterface = () => {
     resources: { totalGold: 0, totalFood: 0, totalPopulation: 0 }
   };
 
-  // Simulation control functions using the hook
+  // Simulation control functions using the hook - turn-based approach
   const toggleSimulation = () => {
-    if (isRunning) {
-      stopSimulation();
-    } else {
-      startSimulation();
-    }
+    // In turn-based mode, this processes a single turn instead of starting/stopping
+    processTurn();
   };
 
   const handleResetSimulation = () => {
@@ -37,7 +34,8 @@ const WorldHistorySimInterface = () => {
   };
 
   const stepForward = () => {
-    stepSimulation();
+    // Same as toggle in turn-based mode
+    processTurn();
   };
 
   // Filter events based on search
@@ -264,16 +262,18 @@ const WorldHistorySimInterface = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleSimulation}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+                disabled={!canProcessTurn}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                {isRunning ? 'Pause' : 'Start'} Simulation
+                <SkipForward className="w-4 h-4" />
+                Process Turn
               </button>
               
               <button
                 onClick={stepForward}
-                disabled={isRunning}
+                disabled={!canProcessTurn}
                 className="p-2 bg-blue-700 rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Same as Process Turn"
               >
                 <SkipForward className="w-4 h-4" />
               </button>
@@ -303,9 +303,9 @@ const WorldHistorySimInterface = () => {
 
             <div className="flex items-center gap-4">
               <span className="text-sm opacity-75">
-                {isRunning ? 'Simulation Running' : 'Simulation Paused'}
+                {isInitialized ? 'Turn-Based Mode' : 'Not Initialized'}
               </span>
-              <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+              <div className={`w-2 h-2 rounded-full ${isInitialized ? 'bg-green-400' : 'bg-gray-400'}`}></div>
             </div>
           </div>
         </div>

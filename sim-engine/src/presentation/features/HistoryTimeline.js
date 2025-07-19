@@ -1,7 +1,7 @@
 // src/presentation/components/features/HistoryTimeline.js
 
 import React, { useState, useEffect } from 'react';
-import analyzeHistory from '../../../application/use-cases/history/AnalyzeHistory.js';
+import analyzeHistory from '../../application/use-cases/history/AnalyzeHistory.js';
 
 const HistoryTimeline = () => {
   const [events, setEvents] = useState([]);

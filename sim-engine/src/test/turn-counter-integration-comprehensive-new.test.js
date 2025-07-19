@@ -1,5 +1,6 @@
-// src/test/turn-counter-integration-final.test.js
-// Integration tests for end-to-end turn counter flow
+// src/test/turn-counter-integration-comprehensive.test.js
+// Comprehensive integration tests for turn counter end-to-end flow
+// Tests cover all requirements from the spec: 1.4, 2.1, 2.2, 3.3, 4.1
 // Updated for turn-based simulation
 
 import React from 'react';
@@ -34,7 +35,7 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
 
-describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () => {
+describe('Turn Counter Integration Tests - Comprehensive End-to-End Flow (Turn-Based)', () => {
   let originalConsoleError;
   let originalConsoleWarn;
   let mockWorldBuilderState;
@@ -98,27 +99,28 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
     jest.clearAllTimers();
   });
 
-  describe('Core Turn-Based Functionality', () => {
-    test('should initialize simulation with turn 0', async () => {
+  describe('Test 1: Turn-Based Simulation Initialization and Processing (Requirement 1.4)', () => {
+    test('should initialize simulation service and turn counter correctly', async () => {
       const TestComponent = () => {
         const { currentTurn, isInitialized } = useSimulation(mockWorldBuilderState);
         return (
           <div>
             <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
-            <div data-testid="initialized">{isInitialized ? 'true' : 'false'}</div>
+            <div data-testid="status">{isInitialized ? 'Initialized' : 'Not Initialized'}</div>
           </div>
         );
       };
 
       render(<TestComponent />);
       
+      // Should initialize to 0 and initialized state
       await waitFor(() => {
         expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
       });
-      expect(screen.getByTestId('initialized')).toHaveTextContent('true');
+      expect(screen.getByTestId('status')).toHaveTextContent('Initialized');
     });
 
-    test('should process single turn correctly', async () => {
+    test('should process turns manually and update counter', async () => {
       let currentTurn = 0;
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.processTurn = jest.fn(() => {
@@ -138,45 +140,19 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
             <button data-testid="process-btn" onClick={processTurn} disabled={!canProcessTurn}>
               Process Turn
             </button>
+            <div data-testid="can-process">{canProcessTurn ? 'Yes' : 'No'}</div>
           </div>
         );
       };
 
       render(<TestComponent />);
       
-      // Process turn
-      fireEvent.click(screen.getByTestId('process-btn'));
-      
+      // Should be able to process turns
       await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 1');
-      });
-    });
-
-    test('should process multiple turns sequentially', async () => {
-      let currentTurn = 0;
-      SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
-      SimulationService.processTurn = jest.fn(() => {
-        currentTurn++;
-        return {
-          success: true,
-          worldState: { time: currentTurn, nodes: [], npcs: [], resources: {} },
-          turnSummary: { eventsCount: 1, summary: 'Turn processed' }
-        };
+        expect(screen.getByTestId('can-process')).toHaveTextContent('Yes');
       });
 
-      const TestComponent = () => {
-        const { currentTurn, processTurn } = useSimulation(mockWorldBuilderState);
-        return (
-          <div>
-            <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
-            <button data-testid="process-btn" onClick={processTurn}>Process Turn</button>
-          </div>
-        );
-      };
-
-      render(<TestComponent />);
-      
-      // Process 5 turns
+      // Process several turns
       for (let i = 1; i <= 5; i++) {
         fireEvent.click(screen.getByTestId('process-btn'));
         
@@ -186,8 +162,8 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
       }
     });
 
-    test('should reset simulation correctly', async () => {
-      let currentTurn = 7;
+    test('should reset turn counter when simulation is reset', async () => {
+      let currentTurn = 10;
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.reset = jest.fn(() => {
         currentTurn = 0;
@@ -205,12 +181,12 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<TestComponent />);
       
-      // Should start with turn 7
+      // Should start with turn 10
       await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 7');
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 10');
       });
 
-      // Reset
+      // Reset should bring back to 0
       fireEvent.click(screen.getByTestId('reset-btn'));
       
       await waitFor(() => {
@@ -219,7 +195,7 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
     });
   });
 
-  describe('State Management and Persistence', () => {
+  describe('Test 2: Persistence and State Recovery (Requirement 2.1)', () => {
     test('should save state after processing turns', async () => {
       let currentTurn = 0;
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
@@ -244,17 +220,19 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<TestComponent />);
       
-      // Process turn
+      // Process a turn
       fireEvent.click(screen.getByTestId('process-btn'));
       
+      // Should save state
       await waitFor(() => {
         expect(SimulationService.saveState).toHaveBeenCalled();
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 1');
       });
     });
 
-    test('should restore from saved state', async () => {
+    test('should restore turn counter from saved state', async () => {
       const savedState = {
-        time: 42,
+        time: 25,
         nodes: [],
         npcs: [],
         resources: {}
@@ -271,13 +249,14 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<TestComponent />);
       
+      // Should restore from saved state
       await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 42');
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 25');
       });
     });
 
-    test('should handle corrupted save data', async () => {
-      localStorageMock.setItem('worldState', 'invalid json data');
+    test('should handle corrupted save data gracefully', async () => {
+      localStorageMock.setItem('worldState', 'invalid json {');
       SimulationService.loadState = jest.fn(() => null);
       
       const TestComponent = () => {
@@ -287,95 +266,15 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<TestComponent />);
       
+      // Should default to 0 with corrupted data
       await waitFor(() => {
         expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
       });
     });
   });
 
-  describe('Error Handling', () => {
-    test('should handle invalid turn values', async () => {
-      SimulationService.getCurrentTurn = jest.fn(() => NaN);
-      
-      const TestComponent = () => {
-        const { currentTurn } = useSimulation(mockWorldBuilderState);
-        return <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>;
-      };
-
-      render(<TestComponent />);
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: --');
-      });
-    });
-
-    test('should handle null turn values', async () => {
-      SimulationService.getCurrentTurn = jest.fn(() => null);
-      
-      const TestComponent = () => {
-        const { currentTurn } = useSimulation(mockWorldBuilderState);
-        return <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>;
-      };
-
-      render(<TestComponent />);
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
-      });
-    });
-
-    test('should handle processing errors', async () => {
-      SimulationService.processTurn = jest.fn(() => {
-        throw new Error('Processing failed');
-      });
-
-      const TestComponent = () => {
-        const { currentTurn, processTurn } = useSimulation(mockWorldBuilderState);
-        return (
-          <div>
-            <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
-            <button data-testid="process-btn" onClick={processTurn}>Process Turn</button>
-          </div>
-        );
-      };
-
-      render(<TestComponent />);
-      
-      // Should not crash
-      fireEvent.click(screen.getByTestId('process-btn'));
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent(/Turn: \d+/);
-      });
-    });
-
-    test('should handle invalid world builder state', async () => {
-      const invalidWorldBuilderState = {
-        isValid: false,
-        stepValidation: [false, false, false, false, false, false, false],
-        toSimulationConfig: () => null
-      };
-
-      const TestComponent = () => {
-        const { currentTurn, canProcessTurn } = useSimulation(invalidWorldBuilderState);
-        return (
-          <div>
-            <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
-            <div data-testid="can-process">{canProcessTurn ? 'true' : 'false'}</div>
-          </div>
-        );
-      };
-
-      render(<TestComponent />);
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('can-process')).toHaveTextContent('false');
-      });
-    });
-  });
-
-  describe('UI Component Synchronization', () => {
-    test('should synchronize multiple turn counters', async () => {
+  describe('Test 3: Multi-Component Synchronization (Requirement 2.2)', () => {
+    test('should synchronize turn counter across multiple UI components', async () => {
       let currentTurn = 0;
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.processTurn = jest.fn(() => {
@@ -401,10 +300,16 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<MultiCounterComponent />);
       
-      // Process turn
+      // All should start at 0
+      await waitFor(() => {
+        expect(screen.getByTestId('counter-1')).toHaveTextContent('Turn: 0');
+      });
+      expect(screen.getByTestId('counter-2')).toHaveTextContent('Turn: 0');
+      expect(screen.getByTestId('counter-3')).toHaveTextContent('Current Turn: 0');
+
+      // Process a turn - all should update together
       fireEvent.click(screen.getByTestId('process-btn'));
       
-      // All should update together
       await waitFor(() => {
         expect(screen.getByTestId('counter-1')).toHaveTextContent('Turn: 1');
       });
@@ -412,8 +317,48 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
       expect(screen.getByTestId('counter-3')).toHaveTextContent('Current Turn: 1');
     });
 
+    test('should maintain synchronization during rapid turn processing', async () => {
+      let currentTurn = 0;
+      SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
+      SimulationService.processTurn = jest.fn(() => {
+        currentTurn++;
+        return {
+          success: true,
+          worldState: { time: currentTurn, nodes: [], npcs: [], resources: {} },
+          turnSummary: { eventsCount: 1, summary: 'Turn processed' }
+        };
+      });
+
+      const MultiCounterComponent = () => {
+        const { currentTurn, processTurn } = useSimulation(mockWorldBuilderState);
+        return (
+          <div>
+            <div data-testid="counter-1"><TurnCounter currentTurn={currentTurn} /></div>
+            <div data-testid="counter-2">Turn: {currentTurn}</div>
+            <div data-testid="counter-3">Current Turn: {currentTurn}</div>
+            <button data-testid="process-btn" onClick={processTurn}>Process Turn</button>
+          </div>
+        );
+      };
+
+      render(<MultiCounterComponent />);
+      
+      // Process turns rapidly
+      for (let i = 1; i <= 10; i++) {
+        fireEvent.click(screen.getByTestId('process-btn'));
+        
+        await waitFor(() => {
+          expect(screen.getByTestId('counter-1')).toHaveTextContent(`Turn: ${i}`);
+        });
+        
+        // Check synchronization
+        expect(screen.getByTestId('counter-2')).toHaveTextContent(`Turn: ${i}`);
+        expect(screen.getByTestId('counter-3')).toHaveTextContent(`Current Turn: ${i}`);
+      }
+    });
+
     test('should maintain synchronization after reset', async () => {
-      let currentTurn = 8;
+      let currentTurn = 15;
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.reset = jest.fn(() => {
         currentTurn = 0;
@@ -433,14 +378,14 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<MultiCounterComponent />);
       
-      // Start with turn 8
+      // Should start at 15
       await waitFor(() => {
-        expect(screen.getByTestId('counter-1')).toHaveTextContent('Turn: 8');
+        expect(screen.getByTestId('counter-1')).toHaveTextContent('Turn: 15');
       });
-      expect(screen.getByTestId('counter-2')).toHaveTextContent('Turn: 8');
-      expect(screen.getByTestId('counter-3')).toHaveTextContent('Current Turn: 8');
+      expect(screen.getByTestId('counter-2')).toHaveTextContent('Turn: 15');
+      expect(screen.getByTestId('counter-3')).toHaveTextContent('Current Turn: 15');
 
-      // Reset - all should go to 0
+      // Reset - all should go to 0 together
       fireEvent.click(screen.getByTestId('reset-btn'));
       
       await waitFor(() => {
@@ -451,94 +396,133 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
     });
   });
 
-  describe('WorldHistorySimInterface Integration', () => {
-    test('should display turn counter in full interface', async () => {
-      render(<WorldHistorySimInterface />);
+  describe('Test 4: Error Handling and Edge Cases (Requirement 3.3)', () => {
+    test('should handle invalid turn values gracefully', async () => {
+      SimulationService.getCurrentTurn = jest.fn(() => NaN);
       
-      await waitFor(() => {
-        expect(screen.getByText(/Turn:/)).toBeInTheDocument();
-      });
-    });
-
-    test('should handle interface interactions', async () => {
-      render(<WorldHistorySimInterface />);
-      
-      // Find any process turn buttons
-      const processTurnBtn = screen.queryByText(/Process Turn/);
-      
-      if (processTurnBtn && !processTurnBtn.disabled) {
-        fireEvent.click(processTurnBtn);
-      }
-      
-      // Turn counter should still be present
-      await waitFor(() => {
-        expect(screen.getByText(/Turn: \d+/)).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('World Builder Integration', () => {
-    test('should enable processing with valid world builder state', async () => {
       const TestComponent = () => {
-        const { canProcessTurn } = useSimulation(mockWorldBuilderState);
-        return <div data-testid="can-process">{canProcessTurn ? 'true' : 'false'}</div>;
+        const { currentTurn } = useSimulation(mockWorldBuilderState);
+        return <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>;
       };
 
       render(<TestComponent />);
       
+      // Should show fallback for invalid turn
       await waitFor(() => {
-        expect(screen.getByTestId('can-process')).toHaveTextContent('true');
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: --');
       });
     });
 
-    test('should prevent processing with invalid world builder state', async () => {
-      const invalidWorldBuilderState = {
-        isValid: false,
-        stepValidation: [false, true, false, true, false, true, false],
-        toSimulationConfig: () => null
-      };
-
+    test('should handle null turn values gracefully', async () => {
+      SimulationService.getCurrentTurn = jest.fn(() => null);
+      
       const TestComponent = () => {
-        const { canProcessTurn } = useSimulation(invalidWorldBuilderState);
-        return <div data-testid="can-process">{canProcessTurn ? 'true' : 'false'}</div>;
+        const { currentTurn } = useSimulation(mockWorldBuilderState);
+        return <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>;
       };
 
       render(<TestComponent />);
       
+      // Should show fallback for null turn
       await waitFor(() => {
-        expect(screen.getByTestId('can-process')).toHaveTextContent('false');
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
       });
     });
 
-    test('should handle world builder configuration errors', async () => {
-      const faultyWorldBuilderState = {
-        isValid: true,
-        stepValidation: [true, true, true, true, true, true, true],
-        toSimulationConfig: () => {
-          throw new Error('Config generation failed');
-        }
-      };
+    test('should handle turn processing errors gracefully', async () => {
+      SimulationService.processTurn = jest.fn(() => {
+        throw new Error('Processing failed');
+      });
 
       const TestComponent = () => {
-        const { currentTurn, canProcessTurn } = useSimulation(faultyWorldBuilderState);
+        const { currentTurn, processTurn, canProcessTurn } = useSimulation(mockWorldBuilderState);
         return (
           <div>
             <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
-            <div data-testid="can-process">{canProcessTurn ? 'true' : 'false'}</div>
+            <button data-testid="process-btn" onClick={processTurn} disabled={!canProcessTurn}>
+              Process Turn
+            </button>
           </div>
         );
       };
 
       render(<TestComponent />);
       
+      // Should not crash when processing fails
+      fireEvent.click(screen.getByTestId('process-btn'));
+      
       await waitFor(() => {
-        expect(screen.getByTestId('can-process')).toHaveTextContent('false');
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent(/Turn: \d+/);
+      });
+    });
+
+    test('should handle world builder validation errors', async () => {
+      const invalidWorldBuilderState = {
+        isValid: false,
+        stepValidation: [false, false, false, false, false, false, false],
+        toSimulationConfig: () => {
+          throw new Error('Invalid configuration');
+        }
+      };
+
+      const TestComponent = () => {
+        const { currentTurn, canProcessTurn } = useSimulation(invalidWorldBuilderState);
+        return (
+          <div>
+            <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
+            <div data-testid="can-process">{canProcessTurn ? 'Yes' : 'No'}</div>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+      
+      // Should not be able to process with invalid state
+      await waitFor(() => {
+        expect(screen.getByTestId('can-process')).toHaveTextContent('No');
       });
     });
   });
 
-  describe('Performance and Scalability', () => {
-    test('should handle rapid turn processing efficiently', async () => {
+  describe('Test 5: Full WorldHistorySimInterface Integration (Requirement 4.1)', () => {
+    test('should integrate turn counter in full interface', async () => {
+      render(<WorldHistorySimInterface />);
+      
+      // Should have turn counter visible
+      await waitFor(() => {
+        expect(screen.getByText(/Turn:/)).toBeInTheDocument();
+      });
+    });
+
+    test('should show proper turn-based controls', async () => {
+      render(<WorldHistorySimInterface />);
+      
+      // Should have turn-based controls
+      await waitFor(() => {
+        const turnText = screen.queryByText(/Turn:/);
+        expect(turnText).toBeInTheDocument();
+      });
+    });
+
+    test('should handle interface interaction gracefully', async () => {
+      render(<WorldHistorySimInterface />);
+      
+      // Find any turn-related buttons
+      const processTurnBtn = screen.queryByText(/Process Turn/);
+      
+      if (processTurnBtn && !processTurnBtn.disabled) {
+        fireEvent.click(processTurnBtn);
+      }
+      
+      // Should still show turn counter after interaction
+      await waitFor(() => {
+        expect(screen.getByText(/Turn: \d+/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Test 6: Performance and Scalability', () => {
+    test('should handle high turn counts efficiently', async () => {
       let currentTurn = 0;
       SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
       SimulationService.processTurn = jest.fn(() => {
@@ -562,21 +546,74 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
 
       render(<TestComponent />);
       
-      // Process turns rapidly
+      // Process many turns rapidly
       const startTime = Date.now();
-      for (let i = 1; i <= 50; i++) {
+      for (let i = 1; i <= 100; i++) {
         fireEvent.click(screen.getByTestId('process-btn'));
+        
+        if (i % 10 === 0) { // Check every 10th turn to avoid excessive waitFor calls
+          await waitFor(() => {
+            expect(screen.getByTestId('turn-counter')).toHaveTextContent(`Turn: ${i}`);
+          });
+        }
       }
-      
-      // Check final result
-      await waitFor(() => {
-        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 50');
-      });
-      
       const endTime = Date.now();
       
-      // Should complete quickly
-      expect(endTime - startTime).toBeLessThan(3000);
+      // Should complete in reasonable time (less than 5 seconds)
+      expect(endTime - startTime).toBeLessThan(5000);
+      
+      // Final check
+      await waitFor(() => {
+        expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 100');
+      });
+    });
+
+    test('should handle frequent reset operations', async () => {
+      let currentTurn = 0;
+      SimulationService.getCurrentTurn = jest.fn(() => currentTurn);
+      SimulationService.processTurn = jest.fn(() => {
+        currentTurn++;
+        return {
+          success: true,
+          worldState: { time: currentTurn, nodes: [], npcs: [], resources: {} },
+          turnSummary: { eventsCount: 1, summary: 'Turn processed' }
+        };
+      });
+      SimulationService.reset = jest.fn(() => {
+        currentTurn = 0;
+      });
+
+      const TestComponent = () => {
+        const { currentTurn, processTurn, resetSimulation } = useSimulation(mockWorldBuilderState);
+        return (
+          <div>
+            <div data-testid="turn-counter"><TurnCounter currentTurn={currentTurn} /></div>
+            <button data-testid="process-btn" onClick={processTurn}>Process Turn</button>
+            <button data-testid="reset-btn" onClick={resetSimulation}>Reset</button>
+          </div>
+        );
+      };
+
+      render(<TestComponent />);
+      
+      // Cycle through processing and resetting
+      for (let cycle = 1; cycle <= 5; cycle++) {
+        // Process some turns
+        for (let turn = 1; turn <= 5; turn++) {
+          fireEvent.click(screen.getByTestId('process-btn'));
+          
+          await waitFor(() => {
+            expect(screen.getByTestId('turn-counter')).toHaveTextContent(`Turn: ${turn}`);
+          });
+        }
+        
+        // Reset
+        fireEvent.click(screen.getByTestId('reset-btn'));
+        
+        await waitFor(() => {
+          expect(screen.getByTestId('turn-counter')).toHaveTextContent('Turn: 0');
+        });
+      }
     });
   });
 });
