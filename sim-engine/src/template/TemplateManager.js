@@ -1,12 +1,3 @@
-import {
-  BaseTemplate,
-  CharacterTemplate,
-  NodeTemplate,
-  InteractionTemplate,
-  EventTemplate,
-  GroupTemplate,
-  ItemTemplate
-} from './TemplateTypes';
 import TemplateValidator from './TemplateValidator';
 import TemplateGenerator from './TemplateGenerator';
 
@@ -18,7 +9,9 @@ class TemplateManager {
       interactions: new Map(),
       events: new Map(),
       groups: new Map(),
-      items: new Map()
+      items: new Map(),
+      worlds: new Map(),      // Added for world templates
+      composite: new Map()    // Added for composite templates (role sets, etc.)
     };
   }
 
@@ -145,11 +138,13 @@ class TemplateManager {
         case 'select':
           combinedTemplate[field] = templates[source][field];
           break;
-        // Add more combination operations as needed
+        default:
+          // Unknown operation, skip
+          break;
       }
     }
 
-    if (!this.validateTemplate(type, combinedTemplate)) return null;
+    if (!TemplateValidator.validateTemplate(type, combinedTemplate)) return null;
 
     this.addTemplate(type, combinedTemplate);
     return combinedTemplate;
@@ -192,7 +187,7 @@ class TemplateManager {
     };
   }
 
-  // Template combination
+  // Template variant creation
   createTemplateVariant(type, baseId, variantData) {
     const baseTemplate = this.getTemplate(type, baseId);
     if (!baseTemplate) return null;
@@ -204,48 +199,10 @@ class TemplateManager {
       parentId: baseId
     };
 
-    if (!this.validateTemplate(type, variantTemplate)) return null;
+    if (!TemplateValidator.validateTemplate(type, variantTemplate)) return null;
 
     this.addTemplate(type, variantTemplate);
     return variantTemplate;
-  }
-
-  // Template combination
-  combineTemplates(type, templateIds, combinationRules) {
-    const templates = templateIds.map(id => this.getTemplate(type, id));
-    if (templates.some(t => !t)) return null;
-
-    const combinedTemplate = {
-      ...templates[0],
-      id: `combined_${Date.now()}`,
-      combinedFrom: templateIds
-    };
-
-    // Apply combination rules
-    for (const rule of combinationRules) {
-      const { field, operation, source } = rule;
-      switch (operation) {
-        case 'merge':
-          combinedTemplate[field] = [
-            ...new Set(templates.flatMap(t => t[field]))
-          ];
-          break;
-        case 'average':
-          combinedTemplate[field] = templates.reduce(
-            (sum, t) => sum + t[field], 0
-          ) / templates.length;
-          break;
-        case 'select':
-          combinedTemplate[field] = templates[source][field];
-          break;
-        // Add more combination operations as needed
-      }
-    }
-
-    if (!this.validateTemplate(type, combinedTemplate)) return null;
-
-    this.addTemplate(type, combinedTemplate);
-    return combinedTemplate;
   }
 
   // Template combination

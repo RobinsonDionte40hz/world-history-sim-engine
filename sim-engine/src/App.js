@@ -1,11 +1,22 @@
+/**
+ * App - Updated for mappless world building integration
+ * 
+ * Integrates SimulationProvider with template manager initialization.
+ * Uses MainPage with conditional interface for six-step world building.
+ * Ensures no automatic simulation startup (only manual after world completion).
+ */
+
 import React from 'react';
-import WorldHistorySimInterface from './presentation/components/WorldHistorySimInterface';
+import { SimulationProvider } from './presentation/contexts/SimulationContext.js';
+import MainPage from './presentation/pages/MainPage.js';
 import './App.css';
 
 function App() {
   return (
     <div className="App">
-      <WorldHistorySimInterface />
+      <SimulationProvider>
+        <MainPage />
+      </SimulationProvider>
     </div>
   );
 }

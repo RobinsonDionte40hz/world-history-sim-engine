@@ -10,7 +10,624 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import useWorldBuilder from '../hooks/useWorldBuilder';
+import useWorldBuilder from '../hooks/useWorldBuilder.js';
+import NodeEditor from './NodeEditor';
+import InteractionEditor from './InteractionEditor';
+import CharacterEditor from './CharacterEditor';
+import NodePopulationEditor from './NodePopulationEditor';
+import TemplateSelector from './TemplateSelector';
+
+// Step 4: Character creation component
+const CharacterStepContent = ({ 
+  worldConfig, 
+  availableTemplates, 
+  addCharacter, 
+  addCharacterFromTemplate, 
+  removeCharacter 
+}) => {
+  const [showCharacterEditor, setShowCharacterEditor] = useState(false);
+  const [editingCharacter, setEditingCharacter] = useState(null);
+
+  const handleCharacterSave = (characterData) => {
+    addCharacter(characterData);
+    setShowCharacterEditor(false);
+    setEditingCharacter(null);
+  };
+
+  const handleCharacterEdit = (character) => {
+    setEditingCharacter(character);
+    setShowCharacterEditor(true);
+  };
+
+  const handleTemplateSelect = (templateId, customizations) => {
+    addCharacterFromTemplate(templateId, customizations);
+  };
+
+  if (showCharacterEditor) {
+    return (
+      <CharacterEditor
+        initialCharacter={editingCharacter}
+        onSave={handleCharacterSave}
+        onCancel={() => {
+          setShowCharacterEditor(false);
+          setEditingCharacter(null);
+        }}
+        mode={editingCharacter ? 'edit' : 'create'}
+      />
+    );
+  }
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+      <h3>Step 4: Create Characters</h3>
+      <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+        Add characters with assigned capabilities. Characters are defined by what they can DO (their interactions).
+      </p>
+
+      {/* Template selector */}
+      {availableTemplates?.characters && availableTemplates.characters.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <TemplateSelector
+            onTemplateSelect={(selection) => {
+              if (selection.template) {
+                handleTemplateSelect(selection.template.id, {});
+              }
+            }}
+            allowedTypes={['character']}
+            className="max-h-64"
+          />
+        </div>
+      )}
+
+      {/* Current characters */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h4>Current Characters ({worldConfig?.characters?.length || 0})</h4>
+          <button
+            onClick={() => setShowCharacterEditor(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Add New Character
+          </button>
+        </div>
+
+        {worldConfig?.characters?.length > 0 ? (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {worldConfig.characters.map(character => (
+              <div 
+                key={character.id} 
+                style={{ 
+                  padding: '16px', 
+                  backgroundColor: '#f8fafc', 
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h5 style={{ margin: '0 0 8px 0', color: '#1e293b' }}>
+                      {character.name}
+                    </h5>
+                    <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+                      {character.description}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ 
+                        padding: '2px 8px', 
+                        backgroundColor: '#dbeafe', 
+                        color: '#1e40af',
+                        borderRadius: '12px', 
+                        fontSize: '12px' 
+                      }}>
+                        {character.archetype}
+                      </span>
+                      {character.assignedInteractions?.length > 0 && (
+                        <span style={{ 
+                          padding: '2px 8px', 
+                          backgroundColor: '#dcfce7', 
+                          color: '#166534',
+                          borderRadius: '12px', 
+                          fontSize: '12px' 
+                        }}>
+                          {character.assignedInteractions.length} capabilities
+                        </span>
+                      )}
+                      {character.attributes && (
+                        <span style={{ 
+                          padding: '2px 8px', 
+                          backgroundColor: '#fef3c7', 
+                          color: '#92400e',
+                          borderRadius: '12px', 
+                          fontSize: '12px' 
+                        }}>
+                          STR {character.attributes.strength || 10}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleCharacterEdit(character)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => removeCharacter(character.id)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ 
+            padding: '40px', 
+            textAlign: 'center', 
+            backgroundColor: '#f8fafc', 
+            borderRadius: '8px',
+            border: '2px dashed #d1d5db'
+          }}>
+            <p style={{ color: '#6b7280', margin: '0 0 16px 0' }}>
+              No characters created yet. Add your first character to get started.
+            </p>
+            <button
+              onClick={() => setShowCharacterEditor(true)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Create First Character
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Step 3: Interaction creation component
+const InteractionStepContent = ({ 
+  worldConfig, 
+  availableTemplates, 
+  addInteraction, 
+  addInteractionFromTemplate, 
+  removeInteraction 
+}) => {
+  const [showInteractionEditor, setShowInteractionEditor] = useState(false);
+  const [editingInteraction, setEditingInteraction] = useState(null);
+
+  const handleInteractionSave = (interactionData) => {
+    addInteraction(interactionData);
+    setShowInteractionEditor(false);
+    setEditingInteraction(null);
+  };
+
+  const handleInteractionEdit = (interaction) => {
+    setEditingInteraction(interaction);
+    setShowInteractionEditor(true);
+  };
+
+  const handleTemplateSelect = (templateId, customizations) => {
+    addInteractionFromTemplate(templateId, customizations);
+  };
+
+  if (showInteractionEditor) {
+    return (
+      <InteractionEditor
+        initialInteraction={editingInteraction}
+        onSave={handleInteractionSave}
+        onCancel={() => {
+          setShowInteractionEditor(false);
+          setEditingInteraction(null);
+        }}
+        mode={editingInteraction ? 'edit' : 'create'}
+      />
+    );
+  }
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+      <h3>Step 3: Create Interactions</h3>
+      <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+        Define character capabilities and actions. Interactions represent what characters can DO in your world.
+      </p>
+
+      {/* Template selector */}
+      {availableTemplates?.interactions && availableTemplates.interactions.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <TemplateSelector
+            onTemplateSelect={(selection) => {
+              if (selection.template) {
+                handleTemplateSelect(selection.template.id, {});
+              }
+            }}
+            allowedTypes={['interaction']}
+            className="max-h-64"
+          />
+        </div>
+      )}
+
+      {/* Current interactions */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h4>Current Interactions ({worldConfig?.interactions?.length || 0})</h4>
+          <button
+            onClick={() => setShowInteractionEditor(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Add New Interaction
+          </button>
+        </div>
+
+        {worldConfig?.interactions?.length > 0 ? (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {worldConfig.interactions.map(interaction => (
+              <div 
+                key={interaction.id} 
+                style={{ 
+                  padding: '16px', 
+                  backgroundColor: '#f8fafc', 
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h5 style={{ margin: '0 0 8px 0', color: '#1e293b' }}>
+                      {interaction.name}
+                    </h5>
+                    <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+                      {interaction.description}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ 
+                        padding: '2px 8px', 
+                        backgroundColor: '#dbeafe', 
+                        color: '#1e40af',
+                        borderRadius: '12px', 
+                        fontSize: '12px' 
+                      }}>
+                        {interaction.type}
+                      </span>
+                      {interaction.prerequisites?.length > 0 && (
+                        <span style={{ 
+                          padding: '2px 8px', 
+                          backgroundColor: '#fef3c7', 
+                          color: '#92400e',
+                          borderRadius: '12px', 
+                          fontSize: '12px' 
+                        }}>
+                          {interaction.prerequisites.length} requirements
+                        </span>
+                      )}
+                      {interaction.effects?.length > 0 && (
+                        <span style={{ 
+                          padding: '2px 8px', 
+                          backgroundColor: '#dcfce7', 
+                          color: '#166534',
+                          borderRadius: '12px', 
+                          fontSize: '12px' 
+                        }}>
+                          {interaction.effects.length} effects
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleInteractionEdit(interaction)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => removeInteraction(interaction.id)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ 
+            padding: '40px', 
+            textAlign: 'center', 
+            backgroundColor: '#f8fafc', 
+            borderRadius: '8px',
+            border: '2px dashed #d1d5db'
+          }}>
+            <p style={{ color: '#6b7280', margin: '0 0 16px 0' }}>
+              No interactions created yet. Add your first interaction to get started.
+            </p>
+            <button
+              onClick={() => setShowInteractionEditor(true)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Create First Interaction
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Step 2: Node creation component
+const NodeStepContent = ({ 
+  worldConfig, 
+  availableTemplates, 
+  addNode, 
+  addNodeFromTemplate, 
+  removeNode 
+}) => {
+  const [showNodeEditor, setShowNodeEditor] = useState(false);
+  const [editingNode, setEditingNode] = useState(null);
+
+  const handleNodeSave = (nodeData) => {
+    if (editingNode) {
+      // Update existing node
+      addNode(nodeData);
+    } else {
+      // Add new node
+      addNode(nodeData);
+    }
+    setShowNodeEditor(false);
+    setEditingNode(null);
+  };
+
+  const handleNodeEdit = (node) => {
+    setEditingNode(node);
+    setShowNodeEditor(true);
+  };
+
+  const handleTemplateSelect = (templateId, customizations) => {
+    addNodeFromTemplate(templateId, customizations);
+  };
+
+  if (showNodeEditor) {
+    return (
+      <NodeEditor
+        initialNode={editingNode}
+        onSave={handleNodeSave}
+        onCancel={() => {
+          setShowNodeEditor(false);
+          setEditingNode(null);
+        }}
+        mode={editingNode ? 'edit' : 'create'}
+      />
+    );
+  }
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+      <h3>Step 2: Create Nodes</h3>
+      <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+        Add abstract locations/contexts to your world. Nodes represent places or situations where characters can interact.
+      </p>
+
+      {/* Template selector */}
+      {availableTemplates?.nodes && availableTemplates.nodes.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <TemplateSelector
+            onTemplateSelect={(selection) => {
+              if (selection.template) {
+                handleTemplateSelect(selection.template.id, {});
+              }
+            }}
+            allowedTypes={['node']}
+            className="max-h-64"
+          />
+        </div>
+      )}
+
+      {/* Current nodes */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h4>Current Nodes ({worldConfig?.nodes?.length || 0})</h4>
+          <button
+            onClick={() => setShowNodeEditor(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Add New Node
+          </button>
+        </div>
+
+        {worldConfig?.nodes?.length > 0 ? (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {worldConfig.nodes.map(node => (
+              <div 
+                key={node.id} 
+                style={{ 
+                  padding: '16px', 
+                  backgroundColor: '#f8fafc', 
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h5 style={{ margin: '0 0 8px 0', color: '#1e293b' }}>
+                      {node.name}
+                    </h5>
+                    <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+                      {node.description}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ 
+                        padding: '2px 8px', 
+                        backgroundColor: '#dbeafe', 
+                        color: '#1e40af',
+                        borderRadius: '12px', 
+                        fontSize: '12px' 
+                      }}>
+                        {node.environment || node.type}
+                      </span>
+                      {node.features?.length > 0 && (
+                        <span style={{ 
+                          padding: '2px 8px', 
+                          backgroundColor: '#dcfce7', 
+                          color: '#166534',
+                          borderRadius: '12px', 
+                          fontSize: '12px' 
+                        }}>
+                          {node.features.length} features
+                        </span>
+                      )}
+                      {node.resources?.length > 0 && (
+                        <span style={{ 
+                          padding: '2px 8px', 
+                          backgroundColor: '#fef3c7', 
+                          color: '#92400e',
+                          borderRadius: '12px', 
+                          fontSize: '12px' 
+                        }}>
+                          {node.resources.length} resources
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleNodeEdit(node)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => removeNode(node.id)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ 
+            padding: '40px', 
+            textAlign: 'center', 
+            backgroundColor: '#f8fafc', 
+            borderRadius: '8px',
+            border: '2px dashed #d1d5db'
+          }}>
+            <p style={{ color: '#6b7280', margin: '0 0 16px 0' }}>
+              No nodes created yet. Add your first node to get started.
+            </p>
+            <button
+              onClick={() => setShowNodeEditor(true)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Create First Node
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const WorldBuilderInterface = ({ 
   templateManager = null, 
@@ -400,83 +1017,53 @@ const WorldBuilderInterface = ({
         return <WorldPropertiesEditor />;
       case 2:
         return (
-          <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h3>Step 2: Create Nodes</h3>
-            <p style={{ color: '#6b7280' }}>
-              Add abstract locations/contexts to your world. Nodes represent places or situations where characters can interact.
-            </p>
-            <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
-              <p><strong>Current Nodes:</strong> {worldConfig.nodes.length}</p>
-              {worldConfig.nodes.map(node => (
-                <div key={node.id} style={{ margin: '8px 0', padding: '8px', backgroundColor: 'white', borderRadius: '4px' }}>
-                  <strong>{node.name}</strong> ({node.type}) - {node.description}
-                </div>
-              ))}
-            </div>
-            <p style={{ marginTop: '16px', fontStyle: 'italic', color: '#6b7280' }}>
-              Node editor components will be implemented in the next subtasks.
-            </p>
-          </div>
+          <NodeStepContent
+            worldConfig={worldConfig}
+            availableTemplates={availableTemplates}
+            addNode={addNode}
+            addNodeFromTemplate={addNodeFromTemplate}
+            removeNode={removeNode}
+          />
         );
       case 3:
         return (
-          <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h3>Step 3: Create Interactions</h3>
-            <p style={{ color: '#6b7280' }}>
-              Define character capabilities and actions. Interactions represent what characters can DO in your world.
-            </p>
-            <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
-              <p><strong>Current Interactions:</strong> {worldConfig.interactions.length}</p>
-              {worldConfig.interactions.map(interaction => (
-                <div key={interaction.id} style={{ margin: '8px 0', padding: '8px', backgroundColor: 'white', borderRadius: '4px' }}>
-                  <strong>{interaction.name}</strong> ({interaction.type})
-                </div>
-              ))}
-            </div>
-            <p style={{ marginTop: '16px', fontStyle: 'italic', color: '#6b7280' }}>
-              Interaction editor components will be implemented in the next subtasks.
-            </p>
-          </div>
+          <InteractionStepContent
+            worldConfig={worldConfig}
+            availableTemplates={availableTemplates}
+            addInteraction={addInteraction}
+            addInteractionFromTemplate={addInteractionFromTemplate}
+            removeInteraction={removeInteraction}
+          />
         );
       case 4:
         return (
-          <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h3>Step 4: Create Characters</h3>
-            <p style={{ color: '#6b7280' }}>
-              Add characters with assigned capabilities. Characters are defined by what they can DO (their interactions).
-            </p>
-            <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
-              <p><strong>Current Characters:</strong> {worldConfig.characters.length}</p>
-              {worldConfig.characters.map(character => (
-                <div key={character.id} style={{ margin: '8px 0', padding: '8px', backgroundColor: 'white', borderRadius: '4px' }}>
-                  <strong>{character.name}</strong> - {character.assignedInteractions?.length || 0} capabilities
-                </div>
-              ))}
-            </div>
-            <p style={{ marginTop: '16px', fontStyle: 'italic', color: '#6b7280' }}>
-              Character editor components will be implemented in the next subtasks.
-            </p>
-          </div>
+          <CharacterStepContent
+            worldConfig={worldConfig}
+            availableTemplates={availableTemplates}
+            addCharacter={addCharacter}
+            addCharacterFromTemplate={addCharacterFromTemplate}
+            removeCharacter={removeCharacter}
+          />
         );
       case 5:
         return (
-          <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h3>Step 5: Populate Nodes</h3>
-            <p style={{ color: '#6b7280' }}>
-              Assign characters to nodes. Each node must have at least one character.
-            </p>
-            <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
-              <p><strong>Node Populations:</strong></p>
-              {worldConfig.nodes.map(node => (
-                <div key={node.id} style={{ margin: '8px 0', padding: '8px', backgroundColor: 'white', borderRadius: '4px' }}>
-                  <strong>{node.name}:</strong> {worldConfig.nodePopulations[node.id]?.length || 0} characters
-                </div>
-              ))}
-            </div>
-            <p style={{ marginTop: '16px', fontStyle: 'italic', color: '#6b7280' }}>
-              Node population editor components will be implemented in the next subtasks.
-            </p>
-          </div>
+          <NodePopulationEditor
+            nodes={worldConfig?.nodes || []}
+            characters={worldConfig?.characters || []}
+            nodePopulations={worldConfig?.nodePopulations || {}}
+            onPopulationChange={(newPopulations) => {
+              // Update the world config with new populations
+              // This would need to be handled by the world builder hook
+              console.log('Population changed:', newPopulations);
+            }}
+            onSave={(populations) => {
+              console.log('Saving populations:', populations);
+            }}
+            onCancel={() => {
+              console.log('Population editing cancelled');
+            }}
+            mode="edit"
+          />
         );
       case 6:
         return (

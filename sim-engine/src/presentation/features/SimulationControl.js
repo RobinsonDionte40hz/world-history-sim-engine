@@ -1,8 +1,7 @@
 // src/presentation/components/features/SimulationControl.js
 
 import React, { useState } from 'react';
-import SimulationService from '../../../application/services/SimulationService.js';
-import HistoryTimeline from './HistoryTimeline.js';  // Import sibling component
+import SimulationService from '../../../application/use-cases/services/SimulationService.js';
 
 const SimulationControl = () => {
   const [isRunning, setIsRunning] = useState(false);
