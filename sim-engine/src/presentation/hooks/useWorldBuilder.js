@@ -89,9 +89,12 @@ const useWorldBuilder = (templateManager = null) => {
   // Step 1: World properties methods (no dimensions)
   const setWorldProperties = useCallback((name, description) => {
     try {
-      worldBuilder.setWorldProperties(name, description);
-      syncWorldConfig();
-      setError(null);
+      // Only validate and sync if both name and description are provided
+      if (name && description) {
+        worldBuilder.setWorldProperties(name, description);
+        syncWorldConfig();
+        setError(null);
+      }
     } catch (err) {
       setError(err.message);
       throw err;

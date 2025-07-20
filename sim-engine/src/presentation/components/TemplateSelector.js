@@ -389,6 +389,7 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
                 placeholder="Enter world name..."
+                maxLength={200}
               />
             </div>
             <div>
@@ -397,8 +398,9 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 value={customizations.description || template.description || ''}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
+                rows={4}
                 placeholder="Describe your world..."
+                maxLength={1000}
               />
             </div>
           </div>
@@ -415,6 +417,7 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
                 placeholder="Enter node name..."
+                maxLength={200}
               />
             </div>
             <div>
@@ -439,8 +442,9 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 value={customizations.description || template.description || ''}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
+                rows={4}
                 placeholder="Describe this location..."
+                maxLength={1000}
               />
             </div>
           </div>
@@ -457,6 +461,7 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
                 placeholder="Enter interaction name..."
+                maxLength={200}
               />
             </div>
             <div>
@@ -481,8 +486,9 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 value={customizations.description || template.description || ''}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
+                rows={4}
                 placeholder="Describe this capability..."
+                maxLength={1000}
               />
             </div>
           </div>
@@ -499,6 +505,7 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
                 placeholder="Enter character name..."
+                maxLength={200}
               />
             </div>
             <div>
@@ -523,8 +530,9 @@ const TemplateCustomizationForm = ({ template, type, onCustomize, onCancel }) =>
                 value={customizations.description || template.description || ''}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
+                rows={4}
                 placeholder="Describe this character..."
+                maxLength={1000}
               />
             </div>
           </div>

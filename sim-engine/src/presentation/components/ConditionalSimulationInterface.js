@@ -12,6 +12,7 @@
 import React, { useState, useMemo } from 'react';
 import { AlertCircle, Settings } from 'lucide-react';
 import WorldBuilderInterface from './WorldBuilderInterface.js';
+import NewWorldBuilderMain from './NewWorldBuilderMain.js';
 import SimulationControl from '../features/SimulationControl.js';
 import HistoryTimeline from '../features/HistoryTimeline.js';
 import NpcViewer from '../features/NpcViewer.js';
@@ -34,6 +35,7 @@ const ConditionalSimulationInterface = ({
 }) => {
   const [transitionError, setTransitionError] = useState(null);
   const [showWorldBuilder, setShowWorldBuilder] = useState(true);
+  const [useNewInterface, setUseNewInterface] = useState(true);
 
   // Six-step world validation checking
   const worldValidation = useMemo(() => {
@@ -209,21 +211,58 @@ const ConditionalSimulationInterface = ({
   return (
     <div className="p-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-          World Builder
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            World Builder
+          </h1>
+          
+          {/* Interface Toggle */}
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className={`text-sm font-medium transition-colors ${!useNewInterface ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                Classic
+              </span>
+              <button
+                onClick={() => setUseNewInterface(!useNewInterface)}
+                className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  useNewInterface ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block w-4 h-4 bg-white rounded-full transition-transform ${
+                    useNewInterface ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className={`text-sm font-medium transition-colors ${useNewInterface ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                New
+              </span>
+            </div>
+            <div className={`px-3 py-1 rounded-full text-xs font-medium border ${
+              useNewInterface 
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700' 
+                : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+            }`}>
+              {useNewInterface ? 'Flexible Interface' : 'Step-by-Step'}
+            </div>
+          </div>
+        </div>
 
         {renderTransitionError()}
-        {renderValidationMessages()}
+        {!useNewInterface && renderValidationMessages()}
 
-        {/* World builder interface - includes its own progress display */}
-        <WorldBuilderInterface
-          worldBuilderState={worldBuilderState}
-          templateManager={templateManager}
-          onValidationChange={(validation) => {
-            // Validation changes are handled through worldBuilderState updates
-          }}
-        />
+        {/* Render appropriate interface */}
+        {useNewInterface ? (
+          <NewWorldBuilderMain />
+        ) : (
+          <WorldBuilderInterface
+            worldBuilderState={worldBuilderState}
+            templateManager={templateManager}
+            onValidationChange={(validation) => {
+              // Validation changes are handled through worldBuilderState updates
+            }}
+          />
+        )}
       </div>
     </div>
   );

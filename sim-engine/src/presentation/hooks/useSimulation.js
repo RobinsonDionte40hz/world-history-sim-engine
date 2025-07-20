@@ -33,84 +33,13 @@ const useSimulation = (worldBuilderState = null) => {
         setWorldState(null);
       }
     } else {
-      // Try to load from localStorage if no world builder state
-      try {
-        const loadedState = SimulationService.loadState();
-        if (loadedState) {
-          setWorldState(loadedState);
-          setIsInitialized(true);
-          setInitializationError(null);
-          
-          // Update current turn from loaded state
-          // First try to get from the loaded state directly for reliability
-          let finalTurn;
-          if (typeof loadedState.time === 'number' && Number.isFinite(loadedState.time) && loadedState.time >= 0) {
-            finalTurn = loadedState.time;
-          } else {
-            // Fallback to getCurrentTurn() if direct access fails
-            try {
-              const turn = SimulationService.getCurrentTurn();
-              if (typeof turn === 'number' && Number.isFinite(turn) && turn >= 0) {
-                finalTurn = turn;
-              } else {
-                finalTurn = null; // Invalid turn from service
-              }
-            } catch (error) {
-              console.warn('useSimulation: getCurrentTurn failed:', error);
-              finalTurn = null;
-            }
-          }
-          setCurrentTurn(finalTurn);
-          
-          // Load turn history and summary if available
-          try {
-            const history = SimulationService.getTurnHistory();
-            const summary = SimulationService.getLatestTurnSummary();
-            setTurnHistory(history || []);
-            setTurnSummary(summary || null);
-          } catch (historyError) {
-            console.warn('useSimulation: Could not load turn history:', historyError);
-            setTurnHistory([]);
-            setTurnSummary(null);
-          }
-        } else {
-          // Clear simulation state if no valid data found
-          setWorldState(null);
-          setIsInitialized(false);
-          setInitializationError(null);
-          
-          // Even without localStorage, check getCurrentTurn() to handle test mocks
-          try {
-            const turn = SimulationService.getCurrentTurn();
-            if (typeof turn === 'number' && Number.isFinite(turn) && turn >= 0) {
-              setCurrentTurn(turn);
-            } else {
-              // When getCurrentTurn() returns invalid values, use null to trigger "--" display
-              setCurrentTurn(null);
-            }
-          } catch (error) {
-            console.warn('useSimulation: getCurrentTurn failed, using null for -- display:', error);
-            setCurrentTurn(null);
-          }
-        }
-      } catch (error) {
-        console.error('useSimulation: Failed to load state from localStorage:', error);
-        setInitializationError(error.message);
-        setIsInitialized(false);
-        setWorldState(null);
-        
-        // On localStorage errors, still check getCurrentTurn for test scenarios
-        try {
-          const turn = SimulationService.getCurrentTurn();
-          if (typeof turn === 'number' && Number.isFinite(turn) && turn >= 0) {
-            setCurrentTurn(turn);
-          } else {
-            setCurrentTurn(null); // Use null for invalid returns from getCurrentTurn
-          }
-        } catch (turnError) {
-          setCurrentTurn(0); // Fallback to 0 only for localStorage errors + getCurrentTurn errors
-        }
-      }
+      // Don't auto-load from localStorage - only initialize when world is complete
+      setWorldState(null);
+      setIsInitialized(false);
+      setInitializationError(null);
+      
+      // Set current turn to null to show "--" in UI
+      setCurrentTurn(null);
     }
   }, [worldBuilderState]);
 

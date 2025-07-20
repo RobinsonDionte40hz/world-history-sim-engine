@@ -9,13 +9,80 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import useWorldBuilder from '../hooks/useWorldBuilder.js';
 import NodeEditor from './NodeEditor';
 import InteractionEditor from './InteractionEditor';
 import CharacterEditor from './CharacterEditor';
 import NodePopulationEditor from './NodePopulationEditor';
 import TemplateSelector from './TemplateSelector';
+import IsolatedJSONTextarea from './IsolatedJSONTextarea';
+
+// Completely isolated text input component - no external state sync during typing
+const IsolatedTextInput = React.memo(({ label, initialValue = '', onBlur, placeholder, required = false, maxLength = 200, rows }) => {
+  const [localValue, setLocalValue] = React.useState(initialValue);
+  
+  const handleChange = (e) => {
+    setLocalValue(e.target.value);
+  };
+  
+  const handleBlur = () => {
+    if (onBlur) {
+      onBlur(localValue);
+    }
+  };
+
+  if (rows) {
+    return (
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>
+          {label} ({localValue.length || 0}/{maxLength})
+        </label>
+        <textarea
+          value={localValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          required={required}
+          maxLength={maxLength}
+          rows={rows}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '4px',
+            fontSize: '14px',
+            resize: 'vertical'
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>
+        {label} ({localValue.length || 0}/{maxLength})
+      </label>
+      <input
+        type="text"
+        value={localValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        required={required}
+        maxLength={maxLength}
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          border: '1px solid #d1d5db',
+          borderRadius: '4px',
+          fontSize: '14px'
+        }}
+      />
+    </div>
+  );
+});
 
 // Step 4: Character creation component
 const CharacterStepContent = ({ 
@@ -687,22 +754,33 @@ const WorldBuilderInterface = ({
     saveAsTemplate = () => {}
   } = worldBuilderHook || {};
 
-  // Local state for form inputs (must be called after hook but before any early returns)
-  const [worldName, setWorldName] = useState(worldConfig?.name || '');
-  const [worldDescription, setWorldDescription] = useState(worldConfig?.description || '');
-  const [worldRules, setWorldRules] = useState(worldConfig?.rules || {});
-  const [localInitialConditions, setLocalInitialConditions] = useState(worldConfig?.initialConditions || {});
+  // Local state for form inputs - completely independent of worldConfig during editing
+  const [worldName, setWorldName] = useState('');
+  const [worldDescription, setWorldDescription] = useState('');
+  const [worldRules, setWorldRules] = useState({});
+  const [worldRulesText, setWorldRulesText] = useState('{}');
+  const [localInitialConditions, setLocalInitialConditions] = useState({});
+  const [initialConditionsText, setInitialConditionsText] = useState('{}');
   
-  // Update local state when worldConfig changes
-  useEffect(() => {
-    if (worldConfig) {
-      setWorldName(worldConfig.name || '');
-      setWorldDescription(worldConfig.description || '');
-      setWorldRules(worldConfig.rules || {});
-      setLocalInitialConditions(worldConfig.initialConditions || {});
+  // Stabilize setter functions to prevent infinite re-renders
+  const handleWorldRulesBlur = React.useCallback((value) => {
+    setWorldRulesText(value);
+    try {
+      setWorldRules(JSON.parse(value));
+    } catch (err) {
+      // Invalid JSON, keep as string for now
     }
-  }, [worldConfig]);
-
+  }, []);
+  
+  const handleInitialConditionsBlur = React.useCallback((value) => {
+    setInitialConditionsText(value);
+    try {
+      setLocalInitialConditions(JSON.parse(value));
+    } catch (err) {
+      // Invalid JSON, keep as string for now
+    }
+  }, []);
+  
   // Handle case where hook returns undefined (e.g., in tests) - after all hooks
   if (!worldBuilderHook) {
     return (
@@ -725,12 +803,15 @@ const WorldBuilderInterface = ({
   const handleWorldPropertiesSubmit = (e) => {
     e.preventDefault();
     try {
-      setWorldProperties(worldName, worldDescription);
-      if (Object.keys(worldRules).length > 0) {
-        setRules(worldRules);
-      }
-      if (Object.keys(localInitialConditions).length > 0) {
-        setInitialConditions(localInitialConditions);
+      // Only submit if both fields have values
+      if (worldName.trim() && worldDescription.trim()) {
+        setWorldProperties(worldName, worldDescription);
+        if (Object.keys(worldRules).length > 0) {
+          setRules(worldRules);
+        }
+        if (Object.keys(localInitialConditions).length > 0) {
+          setInitialConditions(localInitialConditions);
+        }
       }
     } catch (err) {
       console.error('Error setting world properties:', err);
@@ -895,106 +976,42 @@ const WorldBuilderInterface = ({
       </p>
       
       <form onSubmit={handleWorldPropertiesSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>
-            World Name *
-          </label>
-          <input
-            type="text"
-            value={worldName}
-            onChange={(e) => setWorldName(e.target.value)}
-            placeholder="Enter world name..."
-            required
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}
-          />
-        </div>
+        <IsolatedTextInput
+          label="World Name *"
+          initialValue={worldName}
+          onBlur={setWorldName}
+          placeholder="Enter world name..."
+          required={true}
+          maxLength={200}
+        />
+        
+        <IsolatedTextInput
+          label="World Description *"
+          initialValue={worldDescription}
+          onBlur={setWorldDescription}
+          placeholder="Describe your world..."
+          required={true}
+          maxLength={1000}
+          rows={6}
+        />
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>
-            World Description *
-          </label>
-          <textarea
-            value={worldDescription}
-            onChange={(e) => setWorldDescription(e.target.value)}
-            placeholder="Describe your world..."
-            required
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '14px',
-              resize: 'vertical'
-            }}
-          />
-        </div>
+        <IsolatedJSONTextarea
+          label="World Rules"
+          initialValue={worldRulesText}
+          onBlur={handleWorldRulesBlur}
+          placeholder='{"timeProgression": "realtime", "simulationSpeed": 1}'
+          maxLength={2000}
+          rows={8}
+        />
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>
-            World Rules
-          </label>
-          <textarea
-            value={JSON.stringify(worldRules, null, 2)}
-            onChange={(e) => {
-              try {
-                setWorldRules(JSON.parse(e.target.value));
-              } catch (err) {
-                // Invalid JSON, keep as string for now
-              }
-            }}
-            placeholder='{"timeProgression": "realtime", "simulationSpeed": 1}'
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontFamily: 'monospace',
-              resize: 'vertical'
-            }}
-          />
-          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-            Enter rules as JSON (time progression, simulation parameters, etc.)
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>
-            Initial Conditions
-          </label>
-          <textarea
-            value={JSON.stringify(localInitialConditions, null, 2)}
-            onChange={(e) => {
-              try {
-                setLocalInitialConditions(JSON.parse(e.target.value));
-              } catch (err) {
-                // Invalid JSON, keep as string for now
-              }
-            }}
-            placeholder='{"startingYear": 1000, "season": "spring"}'
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontFamily: 'monospace',
-              resize: 'vertical'
-            }}
-          />
-          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-            Enter initial conditions as JSON
-          </div>
-        </div>
+        <IsolatedJSONTextarea
+          label="Initial Conditions"
+          initialValue={initialConditionsText}
+          onBlur={handleInitialConditionsBlur}
+          placeholder='{"startingYear": 1000, "season": "spring"}'
+          maxLength={2000}
+          rows={8}
+        />
 
         <button
           type="submit"

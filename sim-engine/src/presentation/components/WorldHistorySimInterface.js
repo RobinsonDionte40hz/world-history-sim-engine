@@ -198,6 +198,7 @@ const WorldHistorySimInterface = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="px-3 py-1 text-sm border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+            maxLength={100}
           />
           <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             <Download className="w-4 h-4" />
