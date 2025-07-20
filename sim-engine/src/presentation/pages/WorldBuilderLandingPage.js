@@ -6,19 +6,35 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Globe, Users, Layers, Sparkles, Clock, Map, Mail, MessageSquare, Phone } from 'lucide-react';
+import { Navigation } from '../UI';
 
 const WorldBuilderLandingPage = ({ onCreateWorld }) => {
+  const navigate = useNavigate();
+  
+  // Handle create world action - direct users to creation tools
+  const handleCreateWorld = () => {
+    if (onCreateWorld) {
+      onCreateWorld();
+    } else {
+      // Direct users to Node Editor as a good starting point for world creation
+      navigate('/editors/nodes');
+    }
+  };
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [cardsVisible, setCardsVisible] = useState([false, false, false]);
   const [heroButtonVisible, setHeroButtonVisible] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [logoSpinning, setLogoSpinning] = useState(false);
+
   const [contentVisible, setContentVisible] = useState({
     cta: false,
-    reviews: false,
-    howItWorks: false
+    howItWorks: false,
+    enhancedFeatures: false,
+    useCases: false,
+    stats: false,
+    enhancedTestimonials: false,
+    finalCta: false
   });
   const [contentFadedOut, setContentFadedOut] = useState(false);
 
@@ -28,8 +44,8 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
       const scrollPosition = window.scrollY;
       const windowHeight = window.innerHeight;
       
-      // Define scroll threshold for content fadeout (e.g., 3x viewport height)
-      const fadeOutThreshold = windowHeight * 3;
+      // Increased fadeout threshold to prevent premature disappearing
+      const fadeOutThreshold = windowHeight * 8; // Much higher threshold
       
       // Check if user has scrolled past the fadeout threshold
       if (scrollPosition > fadeOutThreshold) {
@@ -37,11 +53,15 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
       } else {
         setContentFadedOut(false);
         
-        // Trigger visibility based on scroll position (only when not faded out)
+        // Trigger visibility based on scroll position with more granular thresholds
         setContentVisible({
           cta: scrollPosition > windowHeight * 0.2,
-          reviews: scrollPosition > windowHeight * 0.4,
-          howItWorks: scrollPosition > windowHeight * 0.7
+          howItWorks: scrollPosition > windowHeight * 0.7,
+          enhancedFeatures: scrollPosition > windowHeight * 1.2,
+          useCases: scrollPosition > windowHeight * 1.8,
+          stats: scrollPosition > windowHeight * 2.4,
+          enhancedTestimonials: scrollPosition > windowHeight * 3.0,
+          finalCta: scrollPosition > windowHeight * 3.6
         });
       }
     };
@@ -144,14 +164,7 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
           }
         }
         
-        @keyframes logoSpin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
+
       `}</style>
       
       <div 
@@ -165,281 +178,51 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
         }}
       >
       {/* Navigation */}
-      <nav 
-        className="px-8 py-6 flex items-center justify-between border-b"
-        style={{ borderColor: 'rgba(71, 85, 105, 0.5)' }}
-      >
-        <div className="flex items-center space-x-4">
-          {/* Logo Button */}
-          <button
-            onClick={() => {
-              setLogoSpinning(true);
-              setSidebarOpen(!sidebarOpen);
-              setTimeout(() => setLogoSpinning(false), 600); // Stop spinning after animation
-            }}
-            className="transition-all duration-300 transform hover:scale-110"
-            style={{
-              background: 'rgba(129, 140, 248, 0.1)',
-              border: '1px solid rgba(129, 140, 248, 0.3)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem',
-              cursor: 'pointer'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'rgba(129, 140, 248, 0.2)';
-              e.target.style.borderColor = 'rgba(129, 140, 248, 0.5)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'rgba(129, 140, 248, 0.1)';
-              e.target.style.borderColor = 'rgba(129, 140, 248, 0.3)';
-            }}
-          >
-            <Globe 
-              className="w-8 h-8" 
-              style={{ 
-                color: '#818cf8',
-                animation: logoSpinning ? 'logoSpin 0.6s ease-in-out' : 'none',
-                transition: 'transform 0.3s ease'
-              }} 
-            />
-          </button>
-          
-          {/* Brand Text */}
-          <span 
-            className="text-2xl font-bold"
-            style={{ 
-              background: 'linear-gradient(to right, #818cf8, #34d399)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}
-          >
-            World Builder
-          </span>
-        </div>
-        
-        <div className="flex items-center space-x-6">
-          <button 
-            className="transition-colors"
-            style={{ color: '#cbd5e1' }}
-            onMouseOver={(e) => e.target.style.color = 'white'}
-            onMouseOut={(e) => e.target.style.color = '#cbd5e1'}
-          >
-            Features
-          </button>
-          <button 
-            className="transition-colors"
-            style={{ color: '#cbd5e1' }}
-            onMouseOver={(e) => e.target.style.color = 'white'}
-            onMouseOut={(e) => e.target.style.color = '#cbd5e1'}
-          >
-            Documentation
-          </button>
-          <button 
-            className="transition-colors"
-            style={{ color: '#cbd5e1' }}
-            onMouseOver={(e) => e.target.style.color = 'white'}
-            onMouseOut={(e) => e.target.style.color = '#cbd5e1'}
-          >
-            Examples
-          </button>
-        </div>
-      </nav>
-
-      {/* Sidebar */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '0',
-          left: sidebarOpen ? '0' : '-320px',
-          width: '320px',
-          height: '100vh',
-          background: 'rgba(15, 23, 42, 0.95)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(71, 85, 105, 0.3)',
-          borderLeft: 'none',
-          zIndex: '100',
-          transition: 'left 0.4s ease-out',
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-3">
-            <Globe className="w-6 h-6" style={{ color: '#818cf8' }} />
-            <span 
-              className="text-lg font-bold"
-              style={{ 
-                background: 'linear-gradient(to right, #818cf8, #34d399)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}
-            >
-              Menu
-            </span>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="transition-colors p-2"
-            style={{ 
-              color: '#cbd5e1',
-              borderRadius: '0.5rem'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.color = 'white';
-              e.target.style.background = 'rgba(71, 85, 105, 0.3)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.color = '#cbd5e1';
-              e.target.style.background = 'transparent';
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Sidebar Menu Items */}
-        <div className="space-y-4">
-          <button
-            className="w-full text-left p-3 rounded-lg transition-all duration-200"
-            style={{ 
-              color: '#e2e8f0',
-              border: '1px solid transparent'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'rgba(129, 140, 248, 0.1)';
-              e.target.style.borderColor = 'rgba(129, 140, 248, 0.3)';
-              e.target.style.transform = 'translateX(8px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.borderColor = 'transparent';
-              e.target.style.transform = 'translateX(0)';
-            }}
-          >
-            🏠 Dashboard
-          </button>
-          
-          <button
-            className="w-full text-left p-3 rounded-lg transition-all duration-200"
-            style={{ 
-              color: '#e2e8f0',
-              border: '1px solid transparent'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'rgba(52, 211, 153, 0.1)';
-              e.target.style.borderColor = 'rgba(52, 211, 153, 0.3)';
-              e.target.style.transform = 'translateX(8px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.borderColor = 'transparent';
-              e.target.style.transform = 'translateX(0)';
-            }}
-          >
-            🌍 My Worlds
-          </button>
-          
-          <button
-            className="w-full text-left p-3 rounded-lg transition-all duration-200"
-            style={{ 
-              color: '#e2e8f0',
-              border: '1px solid transparent'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'rgba(251, 191, 36, 0.1)';
-              e.target.style.borderColor = 'rgba(251, 191, 36, 0.3)';
-              e.target.style.transform = 'translateX(8px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.borderColor = 'transparent';
-              e.target.style.transform = 'translateX(0)';
-            }}
-          >
-            📚 Templates
-          </button>
-          
-          <button
-            className="w-full text-left p-3 rounded-lg transition-all duration-200"
-            style={{ 
-              color: '#e2e8f0',
-              border: '1px solid transparent'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'rgba(168, 85, 247, 0.1)';
-              e.target.style.borderColor = 'rgba(168, 85, 247, 0.3)';
-              e.target.style.transform = 'translateX(8px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.borderColor = 'transparent';
-              e.target.style.transform = 'translateX(0)';
-            }}
-          >
-            ⚙️ Settings
-          </button>
-          
-          <button
-            className="w-full text-left p-3 rounded-lg transition-all duration-200"
-            style={{ 
-              color: '#e2e8f0',
-              border: '1px solid transparent'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'rgba(239, 68, 68, 0.1)';
-              e.target.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-              e.target.style.transform = 'translateX(8px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.borderColor = 'transparent';
-              e.target.style.transform = 'translateX(0)';
-            }}
-          >
-            📞 Support
-          </button>
-        </div>
-
-        {/* Sidebar Footer */}
-        <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
-          <div 
-            style={{ 
-              padding: '1rem',
-              borderRadius: '0.75rem',
-              background: 'rgba(71, 85, 105, 0.2)',
-              border: '1px solid rgba(71, 85, 105, 0.3)'
-            }}
-          >
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-              Quick Tip
-            </p>
-            <p style={{ color: '#cbd5e1', fontSize: '0.875rem', lineHeight: '1.4' }}>
-              Click the globe icon anytime to access your worlds and settings!
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0, 0, 0, 0.3)',
-            zIndex: '99',
-            backdropFilter: 'blur(2px)'
-          }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <Navigation 
+        title="World History Simulation Engine"
+        navItems={[
+          { label: 'Features', onClick: () => navigate('/features') },
+          { label: 'Documentation', onClick: () => navigate('/docs') },
+          { label: 'Examples', onClick: () => navigate('/examples') }
+        ]}
+        menuItems={[
+          {
+            id: 'builder',
+            label: '🏗️ World Builder',
+            onClick: () => navigate('/builder'),
+            hoverColor: 'rgba(129, 140, 248, 0.1)',
+            hoverBorder: 'rgba(129, 140, 248, 0.3)'
+          },
+          {
+            id: 'simulation',
+            label: '🌍 Simulation',
+            onClick: () => navigate('/simulation'),
+            hoverColor: 'rgba(52, 211, 153, 0.1)',
+            hoverBorder: 'rgba(52, 211, 153, 0.3)'
+          },
+          {
+            id: 'examples',
+            label: '📚 Examples',
+            onClick: () => navigate('/examples'),
+            hoverColor: 'rgba(251, 191, 36, 0.1)',
+            hoverBorder: 'rgba(251, 191, 36, 0.3)'
+          },
+          {
+            id: 'docs',
+            label: '📖 Documentation',
+            onClick: () => navigate('/docs'),
+            hoverColor: 'rgba(168, 85, 247, 0.1)',
+            hoverBorder: 'rgba(168, 85, 247, 0.3)'
+          },
+          {
+            id: 'features',
+            label: '✨ Features',
+            onClick: () => navigate('/features'),
+            hoverColor: 'rgba(239, 68, 68, 0.1)',
+            hoverBorder: 'rgba(239, 68, 68, 0.3)'
+          }
+        ]}
+      />
 
       {/* Hero Section */}
       <main className="px-8 py-16 max-w-7xl mx-auto">
@@ -597,7 +380,7 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
           }}
         >
           <button 
-            onClick={onCreateWorld}
+            onClick={handleCreateWorld}
             className="group relative px-12 py-5 text-lg font-semibold transition-all duration-300"
             style={{ 
               background: 'linear-gradient(to right, #6366f1, #10b981)',
@@ -636,7 +419,7 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
           style={{ display: 'none' }}
         >
           <button 
-            onClick={onCreateWorld}
+            onClick={handleCreateWorld}
             className="group relative px-12 py-5 text-lg font-semibold transition-all duration-300 transform hover:scale-105"
             style={{ 
               background: 'linear-gradient(to right, #6366f1, #10b981)',
@@ -661,171 +444,7 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
           </button>
         </div>
 
-        {/* Reviews Section */}
-        <div 
-          className="mt-24 mb-16"
-          style={{
-            transform: `translateY(${contentVisible.reviews ? 0 : 60}px)`,
-            opacity: contentVisible.reviews ? 1 : 0,
-            transition: 'transform 1.3s ease-out, opacity 1.3s ease-out'
-          }}
-        >
-          <div className="text-center mb-16">
-            <h2 
-              className="text-4xl font-bold mb-6"
-              style={{ 
-                color: 'white',
-                textAlign: 'center'
-              }}
-            >
-              What Creators Are Saying
-            </h2>
-            <p 
-              className="text-xl max-w-2xl mx-auto"
-              style={{ color: '#cbd5e1', textAlign: 'center' }}
-            >
-              Join thousands of world builders creating amazing stories
-            </p>
-          </div>
 
-          <div 
-            style={{ 
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'flex-start',
-              gap: '2rem',
-              maxWidth: '1200px',
-              margin: '0 auto',
-              flexWrap: 'wrap'
-            }}
-          >
-            {/* Review 1 */}
-            <div 
-              className="text-center"
-              style={{
-                background: 'rgba(30, 41, 59, 0.4)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(71, 85, 105, 0.3)',
-                borderRadius: '1rem',
-                width: '350px',
-                padding: '2rem',
-                flex: 'none',
-                transform: `translateY(${contentVisible.reviews ? 0 : 40}px)`,
-                opacity: contentVisible.reviews ? 1 : 0,
-                transition: 'transform 1s ease-out 0.1s, opacity 1s ease-out 0.1s'
-              }}
-            >
-              <div className="mb-4">
-                <div style={{ color: '#fbbf24', fontSize: '1.25rem', marginBottom: '1rem' }}>
-                  ★★★★★
-                </div>
-                <p 
-                  style={{ 
-                    color: '#e2e8f0', 
-                    fontSize: '1rem',
-                    lineHeight: '1.6',
-                    fontStyle: 'italic',
-                    marginBottom: '1.5rem'
-                  }}
-                >
-                  "This tool has revolutionized my D&D campaigns. The NPCs feel truly alive and my players are constantly surprised by the emergent stories."
-                </p>
-                <div>
-                  <p style={{ color: 'white', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    Sarah Chen
-                  </p>
-                  <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                    Dungeon Master, 8 years
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Review 2 */}
-            <div 
-              className="text-center"
-              style={{
-                background: 'rgba(30, 41, 59, 0.4)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(71, 85, 105, 0.3)',
-                borderRadius: '1rem',
-                width: '350px',
-                padding: '2rem',
-                flex: 'none',
-                transform: `translateY(${contentVisible.reviews ? 0 : 50}px)`,
-                opacity: contentVisible.reviews ? 1 : 0,
-                transition: 'transform 1s ease-out 0.3s, opacity 1s ease-out 0.3s'
-              }}
-            >
-              <div className="mb-4">
-                <div style={{ color: '#fbbf24', fontSize: '1.25rem', marginBottom: '1rem' }}>
-                  ★★★★★
-                </div>
-                <p 
-                  style={{ 
-                    color: '#e2e8f0', 
-                    fontSize: '1rem',
-                    lineHeight: '1.6',
-                    fontStyle: 'italic',
-                    marginBottom: '1.5rem'
-                  }}
-                >
-                  "As a novelist, this helps me create consistent, believable worlds. Characters develop relationships I never expected, making my stories richer."
-                </p>
-                <div>
-                  <p style={{ color: 'white', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    Marcus Rodriguez
-                  </p>
-                  <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                    Fantasy Author
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Review 3 */}
-            <div 
-              className="text-center"
-              style={{
-                background: 'rgba(30, 41, 59, 0.4)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(71, 85, 105, 0.3)',
-                borderRadius: '1rem',
-                width: '350px',
-                padding: '2rem',
-                flex: 'none',
-                transform: `translateY(${contentVisible.reviews ? 0 : 60}px)`,
-                opacity: contentVisible.reviews ? 1 : 0,
-                transition: 'transform 1s ease-out 0.5s, opacity 1s ease-out 0.5s'
-              }}
-            >
-              <div className="mb-4">
-                <div style={{ color: '#fbbf24', fontSize: '1.25rem', marginBottom: '1rem' }}>
-                  ★★★★★
-                </div>
-                <p 
-                  style={{ 
-                    color: '#e2e8f0', 
-                    fontSize: '1rem',
-                    lineHeight: '1.6',
-                    fontStyle: 'italic',
-                    marginBottom: '1.5rem'
-                  }}
-                >
-                  "The template system is incredibly flexible. I've created everything from medieval kingdoms to space colonies. Each simulation feels unique."
-                </p>
-                <div>
-                  <p style={{ color: 'white', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    Emma Thompson
-                  </p>
-                  <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                    Game Designer
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Combined Features Carousel - How It Works + Additional Features */}
         <div 
@@ -1440,6 +1059,327 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
               >
                 Watch civilizations rise and fall through procedurally generated history. Settlements grow organically based on resources and environment.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Features Section */}
+        <div 
+          className="mt-32 mb-16"
+          style={{
+            transform: `translateY(${contentVisible.enhancedFeatures ? 0 : 60}px)`,
+            opacity: contentVisible.enhancedFeatures ? 1 : 0,
+            transition: 'transform 1.3s ease-out, opacity 1.3s ease-out'
+          }}
+        >
+          <div className="text-center mb-16">
+            <h2 
+              className="text-4xl font-bold mb-6"
+              style={{ 
+                color: 'white',
+                textAlign: 'center'
+              }}
+            >
+              Powerful Features for Dynamic Worlds
+            </h2>
+            <p 
+              className="text-xl max-w-2xl mx-auto"
+              style={{ color: '#cbd5e1', textAlign: 'center' }}
+            >
+              Everything you need to create immersive, living worlds
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+            {[
+              {
+                icon: <Users className="w-8 h-8" />,
+                title: "Complex Character Systems",
+                description: "NPCs with consciousness, personalities, and D&D attributes that drive authentic behavior and decision-making."
+              },
+              {
+                icon: <Globe className="w-8 h-8" />,
+                title: "Dynamic World Generation",
+                description: "Create living, breathing historical worlds with settlements that evolve and civilizations that rise and fall."
+              },
+              {
+                icon: <Sparkles className="w-8 h-8" />,
+                title: "Emergent Storytelling",
+                description: "Watch as characters create their own stories through interactions, relationships, and historical events."
+              },
+              {
+                icon: <Layers className="w-8 h-8" />,
+                title: "Template System",
+                description: "Flexible content creation framework for rapid world building and scenario development."
+              }
+            ].map((feature, index) => (
+              <div
+                key={index}
+                className="group p-6 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-800/70 transition-all duration-500 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transform hover:-translate-y-2"
+                style={{
+                  animationDelay: `${index * 0.1}s`,
+                  opacity: contentVisible.enhancedFeatures ? 1 : 0,
+                  transform: contentVisible.enhancedFeatures ? 'translateY(0)' : 'translateY(20px)'
+                }}
+              >
+                <div className="text-indigo-400 mb-4 group-hover:scale-110 transition-transform duration-300">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-indigo-300 transition-colors">
+                  {feature.title}
+                </h3>
+                <p className="text-slate-300 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Use Cases Section */}
+        <div 
+          className="mt-32 mb-16 bg-slate-900/50 -mx-8 px-8 py-16"
+          style={{
+            transform: `translateY(${contentVisible.useCases ? 0 : 60}px)`,
+            opacity: contentVisible.useCases ? 1 : 0,
+            transition: 'transform 1.3s ease-out, opacity 1.3s ease-out'
+          }}
+        >
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 
+                className="text-4xl font-bold mb-6"
+                style={{ 
+                  color: 'white',
+                  textAlign: 'center'
+                }}
+              >
+                Built for Creators and Researchers
+              </h2>
+              <p 
+                className="text-xl max-w-2xl mx-auto"
+                style={{ color: '#cbd5e1', textAlign: 'center' }}
+              >
+                Trusted by game developers, writers, educators, and researchers worldwide
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {[
+                {
+                  title: "Game Development",
+                  description: "Procedural world generation and dynamic storytelling for immersive gaming experiences.",
+                  action: () => navigate('/examples')
+                },
+                {
+                  title: "Creative Writing",
+                  description: "Historical fiction and fantasy world creation with rich character development.",
+                  action: () => navigate('/examples')
+                },
+                {
+                  title: "Education",
+                  description: "Interactive historical simulations for engaging learning experiences.",
+                  action: () => navigate('/docs')
+                },
+                {
+                  title: "Research",
+                  description: "Social dynamics and civilization modeling for academic and scientific study.",
+                  action: () => navigate('/docs')
+                }
+              ].map((useCase, index) => (
+                <div
+                  key={index}
+                  className="p-8 rounded-lg border border-slate-700 bg-slate-800/30 hover:bg-slate-800/50 transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 hover:shadow-lg"
+                  onClick={useCase.action}
+                >
+                  <h3 className="text-2xl font-semibold text-white mb-4 group-hover:text-indigo-400 transition-colors">
+                    {useCase.title}
+                  </h3>
+                  <p className="text-slate-300 leading-relaxed mb-4">
+                    {useCase.description}
+                  </p>
+                  <div className="flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                    <span className="text-sm font-medium">Learn more</span>
+                    <ChevronRight className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div 
+          className="mt-32 mb-16"
+          style={{
+            transform: `translateY(${contentVisible.stats ? 0 : 60}px)`,
+            opacity: contentVisible.stats ? 1 : 0,
+            transition: 'transform 1.3s ease-out, opacity 1.3s ease-out'
+          }}
+        >
+          <div className="text-center mb-16">
+            <h2 
+              className="text-4xl font-bold mb-6"
+              style={{ 
+                color: 'white',
+                textAlign: 'center'
+              }}
+            >
+              Trusted by Creators Worldwide
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+            {[
+              { number: "10,000+", label: "Worlds Created" },
+              { number: "50,000+", label: "Characters Simulated" },
+              { number: "1M+", label: "Historical Events" },
+              { number: "500+", label: "Active Users" }
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className="text-center"
+                style={{
+                  opacity: contentVisible.stats ? 1 : 0,
+                  transform: contentVisible.stats ? 'translateY(0)' : 'translateY(20px)',
+                  transition: `all 0.7s ease-out ${index * 0.1}s`
+                }}
+              >
+                <div className="text-3xl font-bold text-indigo-400 mb-2">
+                  {stat.number}
+                </div>
+                <div className="text-slate-300 text-sm">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Enhanced Testimonials Section */}
+        <div 
+          className="mt-32 mb-16"
+          style={{
+            transform: `translateY(${contentVisible.enhancedTestimonials ? 0 : 60}px)`,
+            opacity: contentVisible.enhancedTestimonials ? 1 : 0,
+            transition: 'transform 1.3s ease-out, opacity 1.3s ease-out'
+          }}
+        >
+          <div className="text-center mb-16">
+            <h2 
+              className="text-4xl font-bold mb-6"
+              style={{ 
+                color: 'white',
+                textAlign: 'center'
+              }}
+            >
+              What Our Users Say
+            </h2>
+            <p 
+              className="text-xl max-w-2xl mx-auto"
+              style={{ color: '#cbd5e1', textAlign: 'center' }}
+            >
+              Real feedback from creators using our platform
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {[
+              {
+                name: "Sarah Chen",
+                role: "Game Developer",
+                company: "Indie Studios",
+                content: "The character consciousness system is incredible. NPCs feel truly alive and make decisions that surprise even me as the developer.",
+                rating: 5,
+                avatar: "SC"
+              },
+              {
+                name: "Dr. Michael Rodriguez",
+                role: "History Professor",
+                company: "University of California",
+                content: "I use this for teaching medieval history. Students are engaged like never before, watching civilizations rise and fall in real-time.",
+                rating: 5,
+                avatar: "MR"
+              },
+              {
+                name: "Emma Thompson",
+                role: "Fantasy Author",
+                company: "Freelance Writer",
+                content: "This tool has revolutionized my worldbuilding process. The emergent storytelling gives me ideas I never would have thought of.",
+                rating: 5,
+                avatar: "ET"
+              }
+            ].map((testimonial, index) => (
+              <div
+                key={index}
+                className="bg-slate-800/50 rounded-lg p-8 border border-slate-700 transform hover:-translate-y-1 transition-all duration-300"
+                style={{
+                  opacity: contentVisible.enhancedTestimonials ? 1 : 0,
+                  transform: contentVisible.enhancedTestimonials ? 'translateY(0)' : 'translateY(30px)',
+                  transition: `all 0.8s ease-out ${index * 0.2}s`
+                }}
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <span key={i} className="text-yellow-400 text-lg">★</span>
+                  ))}
+                </div>
+                
+                <blockquote className="text-slate-200 leading-relaxed mb-6 italic">
+                  "{testimonial.content}"
+                </blockquote>
+                
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {testimonial.avatar}
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold">
+                      {testimonial.name}
+                    </div>
+                    <div className="text-slate-400 text-sm">
+                      {testimonial.role} • {testimonial.company}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Call to Action Section */}
+        <div 
+          className="mt-32 mb-16 text-center bg-slate-900/30 -mx-8 px-8 py-20"
+          style={{
+            transform: `translateY(${contentVisible.finalCta ? 0 : 60}px)`,
+            opacity: contentVisible.finalCta ? 1 : 0,
+            transition: 'transform 1.3s ease-out, opacity 1.3s ease-out'
+          }}
+        >
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-4xl font-bold text-white mb-6">
+              Ready to Create Your World?
+            </h2>
+            <p className="text-xl text-slate-300 mb-8">
+              Start building dynamic historical worlds with complex characters and emergent narratives.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={handleCreateWorld}
+                className="group flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/25"
+              >
+                <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
+                Launch World Builder
+              </button>
+              
+              <button
+                onClick={() => navigate('/docs')}
+                className="group flex items-center gap-2 px-8 py-4 border border-slate-600 hover:border-slate-400 text-slate-300 hover:text-white font-semibold rounded-lg transition-all duration-300 hover:bg-slate-800/50"
+              >
+                View Documentation
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
             </div>
           </div>
         </div>

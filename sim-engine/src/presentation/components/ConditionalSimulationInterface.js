@@ -22,6 +22,7 @@ import SimulationControl from '../features/SimulationControl.js';
 import HistoryTimeline from '../features/HistoryTimeline.js';
 import NpcViewer from '../features/NpcViewer.js';
 import WorldMap from '../features/WorldMap.js';
+import { Navigation } from '../UI';
 
 /**
  * ConditionalSimulationInterface - Manages transition between world building and simulation
@@ -80,20 +81,6 @@ const ConditionalSimulationInterface = ({
 
     return (
       <div className="space-y-6">
-        {/* Header with return to world builder option */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            World History Simulation
-          </h1>
-          <button
-            onClick={handleReturnToWorldBuilder}
-            className="flex items-center px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Edit World
-          </button>
-        </div>
-
         {/* Simulation controls */}
         <SimulationControl />
 
@@ -129,9 +116,56 @@ const ConditionalSimulationInterface = ({
   // Show simulation interface if world is complete and we're not in world builder mode
   if (!showWorldBuilder && worldBuilderState?.isWorldComplete && simulationState?.isInitialized) {
     return (
-      <div className="p-4">
-        {renderTransitionError()}
-        {renderSimulationInterface()}
+      <div className="min-h-screen" style={{ background: 'transparent' }}>
+        <Navigation 
+          title="World History Simulation"
+          navItems={[
+            { label: 'Edit World', onClick: handleReturnToWorldBuilder },
+            { label: 'Export', onClick: () => console.log('Export clicked') },
+            { label: 'Settings', onClick: () => console.log('Settings clicked') }
+          ]}
+          menuItems={[
+            {
+              id: 'simulation',
+              label: '🎮 Simulation',
+              onClick: () => console.log('Simulation clicked'),
+              hoverColor: 'rgba(129, 140, 248, 0.1)',
+              hoverBorder: 'rgba(129, 140, 248, 0.3)'
+            },
+            {
+              id: 'history',
+              label: '📜 History',
+              onClick: () => console.log('History clicked'),
+              hoverColor: 'rgba(52, 211, 153, 0.1)',
+              hoverBorder: 'rgba(52, 211, 153, 0.3)'
+            },
+            {
+              id: 'characters',
+              label: '👥 Characters',
+              onClick: () => console.log('Characters clicked'),
+              hoverColor: 'rgba(251, 191, 36, 0.1)',
+              hoverBorder: 'rgba(251, 191, 36, 0.3)'
+            },
+            {
+              id: 'world-map',
+              label: '🗺️ World Map',
+              onClick: () => console.log('World Map clicked'),
+              hoverColor: 'rgba(168, 85, 247, 0.1)',
+              hoverBorder: 'rgba(168, 85, 247, 0.3)'
+            },
+            {
+              id: 'export',
+              label: '💾 Export',
+              onClick: () => console.log('Export clicked'),
+              hoverColor: 'rgba(239, 68, 68, 0.1)',
+              hoverBorder: 'rgba(239, 68, 68, 0.3)'
+            }
+          ]}
+        />
+        <div className="p-4">
+          {renderTransitionError()}
+          {renderSimulationInterface()}
+        </div>
       </div>
     );
   }

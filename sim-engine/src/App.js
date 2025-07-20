@@ -1,14 +1,14 @@
 /**
- * App - Updated for mappless world building integration
+ * App - Enhanced with React Router and navigation system
  * 
- * Integrates SimulationProvider with template manager initialization.
- * Uses MainPage with conditional interface for six-step world building.
- * Ensures no automatic simulation startup (only manual after world completion).
+ * Integrates SimulationProvider with new routing infrastructure.
+ * Uses AppRouter for client-side navigation and enhanced UI/UX.
+ * Maintains existing simulation functionality while adding new pages.
  */
 
 import React from 'react';
 import { SimulationProvider } from './presentation/contexts/SimulationContext.js';
-import MainPage from './presentation/pages/MainPage.js';
+import AppRouter from './presentation/components/AppRouter.js';
 import './App.css';
 
 function App() {
@@ -53,7 +53,7 @@ function App() {
       {/* Content */}
       <div style={{ position: 'relative', zIndex: '1', minHeight: '100vh' }}>
         <SimulationProvider>
-          <MainPage />
+          <AppRouter />
         </SimulationProvider>
       </div>
     </div>
