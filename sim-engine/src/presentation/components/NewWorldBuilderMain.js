@@ -10,9 +10,16 @@ import WorldBuilderLandingPage from '../pages/WorldBuilderLandingPage';
 import FlexibleWorldBuilderInterface from './FlexibleWorldBuilderInterface';
 import { useSimulationContext } from '../contexts/SimulationContext';
 
-const NewWorldBuilderMain = () => {
+const NewWorldBuilderMain = ({ onViewChange }) => {
   const [currentView, setCurrentView] = useState('landing'); // 'landing' or 'builder'
   const { worldBuilder, templateManager } = useSimulationContext();
+
+  // Notify parent of view changes
+  React.useEffect(() => {
+    if (onViewChange) {
+      onViewChange(currentView);
+    }
+  }, [currentView, onViewChange]);
 
   // Handle transitioning to the builder from landing
   const handleCreateWorld = useCallback(() => {

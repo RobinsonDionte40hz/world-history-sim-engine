@@ -17,17 +17,17 @@
   --warning-dark: #D97706;
 
   /* Light Theme Variables */
-  --background: #FFFFFF;
-  --surface: #FFFFFF;
-  --surface-hover: #F3F4F6;
-  --text-primary: #1F2937;
-  --text-secondary: #4B5563;
+  --background: transparent; /* Changed to transparent for global video background */
+  --surface: rgba(255, 255, 255, 0.1); /* Semi-transparent for glass effect */
+  --surface-hover: rgba(243, 244, 246, 0.2);
+  --text-primary: #FFFFFF; /* Changed to white for better contrast over video */
+  --text-secondary: #E5E7EB;
   --text-tertiary: #9CA3AF;
   --text-on-primary: #FFFFFF;
-  --border: #E5E7EB;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --border: rgba(229, 231, 235, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 
   /* Dark Theme Variables */
   --dark-background: #111827;
@@ -105,13 +105,14 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
-  background-color: var(--background);
+  background-color: #0f172a; /* Fallback background color */
   color: var(--text-primary);
+  overflow-x: hidden; /* Prevent horizontal scroll from video */
 }
 
 .App {
   min-height: 100vh;
-  background-color: var(--background);
+  background-color: transparent; /* Let global video background show through */
 }
 
 /* Utility Classes */
