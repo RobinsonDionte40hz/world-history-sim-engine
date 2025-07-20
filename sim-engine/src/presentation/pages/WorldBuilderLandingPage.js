@@ -14,19 +14,33 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
       <div className="container mx-auto px-4 py-16 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-20">
-          <div className="flex justify-center mb-8">
-            <div className="p-5 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full shadow-lg">
-              <Globe className="w-16 h-16 md:w-20 md:h-20 text-blue-600 dark:text-blue-400" />
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="p-6 bg-gradient-to-br from-blue-100 via-purple-100 to-indigo-100 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-indigo-900/30 rounded-2xl shadow-xl">
+                <Globe className="w-20 h-20 md:w-24 md:h-24 text-blue-600 dark:text-blue-400" />
+              </div>
+              {/* Subtle glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-2xl blur-xl -z-10"></div>
             </div>
           </div>
           
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 dark:from-white dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent mb-8">
-            World Builder
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 dark:from-white dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent">
+              World History
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              Simulation Engine
+            </span>
           </h1>
           
-          <p className="text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed font-medium">
-            Create rich, detailed worlds with complete creative freedom. Build nodes, characters, 
-            and interactions at your own pace—no rigid steps, just pure creative expression.
+          <p className="text-xl md:text-2xl lg:text-3xl font-semibold text-gray-700 dark:text-gray-200 mb-6">
+            Professional-Grade Procedural World Generation
+          </p>
+          
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-5xl mx-auto leading-relaxed">
+            Create sophisticated worlds with emergent storytelling, consciousness-driven NPCs, 
+            and complex historical simulation. Built for game developers, writers, educators, and researchers.
           </p>
         </div>
 
@@ -101,7 +115,7 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
           <div className="inline-flex items-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full border border-blue-200 dark:border-blue-700 shadow-sm">
             <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400 mr-3" />
             <span className="text-sm md:text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              No step-by-step restrictions • Create at your own pace • Save everything as templates
+              No restrictions • Create at your own pace • Save everything as templates
             </span>
           </div>
         </div>
