@@ -3,26 +3,31 @@
  * 
  * A comprehensive sidebar that combines global navigation with context-specific tools.
  * Adapts content based on current page while maintaining consistent navigation.
+ * 
+ * Enhanced with unified navigation system including EditorNavigation and WorldSelector.
  */
 
-import React from 'react';
-import { Globe, X, Plus, Settings, GitBranch, Play, User, Eye, Save } from 'lucide-react';
+import React, { useState } from 'react';
+import { Globe, X, Settings } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import EditorNavigation from '../components/EditorNavigation';
+import WorldSelector from '../components/WorldSelector';
 
-const Sidebar = ({ 
-  isOpen, 
-  onClose, 
-  menuItems = [], 
+const Sidebar = ({
+  isOpen,
+  onClose,
+  menuItems = [],
   title = "World History Simulator",
-  showTip = true 
+  showTip = true
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const [activeTab, setActiveTab] = useState('navigation'); // 'navigation' | 'worlds' | 'tools'
+
   // Get context-specific menu items based on current page
   const getContextMenuItems = () => {
     const path = location.pathname;
-    
+
     if (path.includes('/editors/nodes')) {
       return [
         {
@@ -96,7 +101,7 @@ const Sidebar = ({
         }
       ];
     }
-    
+
     if (path.includes('/editors/characters')) {
       return [
         {
@@ -195,7 +200,7 @@ const Sidebar = ({
         }
       ];
     }
-    
+
     if (path.includes('/editors/interactions')) {
       return [
         {
@@ -300,19 +305,146 @@ const Sidebar = ({
         }
       ];
     }
-    
+
+    if (path.includes('/editors/encounters')) {
+      return [
+        {
+          id: 'encounter-divider',
+          type: 'divider',
+          label: 'Encounter Editor Tools'
+        },
+        {
+          id: 'new-encounter',
+          label: '⚔️ New Encounter',
+          onClick: () => window.location.reload(), // Reset to create new
+          hoverColor: 'rgba(34, 197, 94, 0.1)',
+          hoverBorder: 'rgba(34, 197, 94, 0.3)'
+        },
+        {
+          id: 'add-outcome',
+          label: '🎯 Add Outcome',
+          onClick: () => console.log('Add Outcome'),
+          hoverColor: 'rgba(52, 211, 153, 0.1)',
+          hoverBorder: 'rgba(52, 211, 153, 0.3)'
+        },
+        {
+          id: 'add-trigger',
+          label: '⚡ Add Trigger',
+          onClick: () => console.log('Add Trigger'),
+          hoverColor: 'rgba(168, 85, 247, 0.1)',
+          hoverBorder: 'rgba(168, 85, 247, 0.3)'
+        },
+        {
+          id: 'turn-based-config',
+          label: '🕐 Turn-Based Config',
+          onClick: () => console.log('Turn-Based Config'),
+          hoverColor: 'rgba(251, 191, 36, 0.1)',
+          hoverBorder: 'rgba(251, 191, 36, 0.3)'
+        },
+        {
+          id: 'test-encounter',
+          label: '▶️ Test Encounter',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('testEncounter'));
+          },
+          hoverColor: 'rgba(34, 197, 94, 0.1)',
+          hoverBorder: 'rgba(34, 197, 94, 0.3)'
+        },
+        {
+          id: 'quick-save-enc',
+          label: '💾 Quick Save',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('quickSave'));
+          },
+          hoverColor: 'rgba(59, 130, 246, 0.1)',
+          hoverBorder: 'rgba(59, 130, 246, 0.3)'
+        },
+        {
+          id: 'encounter-templates-divider',
+          type: 'divider',
+          label: 'Encounter Templates'
+        },
+        {
+          id: 'combat-encounter-template',
+          label: '⚔️ Combat Encounter',
+          onClick: () => console.log('Combat Encounter Template'),
+          hoverColor: 'rgba(239, 68, 68, 0.1)',
+          hoverBorder: 'rgba(239, 68, 68, 0.3)'
+        },
+        {
+          id: 'social-encounter-template',
+          label: '💬 Social Encounter',
+          onClick: () => console.log('Social Encounter Template'),
+          hoverColor: 'rgba(129, 140, 248, 0.1)',
+          hoverBorder: 'rgba(129, 140, 248, 0.3)'
+        },
+        {
+          id: 'exploration-encounter-template',
+          label: '🗺️ Exploration Encounter',
+          onClick: () => console.log('Exploration Encounter Template'),
+          hoverColor: 'rgba(52, 211, 153, 0.1)',
+          hoverBorder: 'rgba(52, 211, 153, 0.3)'
+        },
+        {
+          id: 'puzzle-encounter-template',
+          label: '🧩 Puzzle Encounter',
+          onClick: () => console.log('Puzzle Encounter Template'),
+          hoverColor: 'rgba(168, 85, 247, 0.1)',
+          hoverBorder: 'rgba(168, 85, 247, 0.3)'
+        },
+        {
+          id: 'environmental-encounter-template',
+          label: '🌪️ Environmental Encounter',
+          onClick: () => console.log('Environmental Encounter Template'),
+          hoverColor: 'rgba(251, 191, 36, 0.1)',
+          hoverBorder: 'rgba(251, 191, 36, 0.3)'
+        },
+        {
+          id: 'encounter-types-divider',
+          type: 'divider',
+          label: 'Encounter Types Guide'
+        },
+        {
+          id: 'encounter-types-info',
+          type: 'info',
+          content: [
+            { label: 'Combat', desc: 'Physical confrontations' },
+            { label: 'Social', desc: 'Diplomatic interactions' },
+            { label: 'Exploration', desc: 'Discovery & investigation' },
+            { label: 'Puzzle', desc: 'Mental challenges' },
+            { label: 'Environmental', desc: 'Natural hazards' }
+          ]
+        },
+        {
+          id: 'turn-based-divider',
+          type: 'divider',
+          label: 'Turn-Based Integration'
+        },
+        {
+          id: 'turn-based-info',
+          type: 'info',
+          content: [
+            { label: 'Duration', desc: 'Number of turns' },
+            { label: 'Initiative', desc: 'Turn order system' },
+            { label: 'Timing', desc: 'When effects occur' },
+            { label: 'Sequencing', desc: 'Action resolution' }
+          ]
+        }
+      ];
+    }
+
     return [];
   };
 
   // Check if a menu item is currently active
   const isActiveItem = (itemPath) => {
     if (!itemPath) return false;
-    
+
     // Handle exact matches and path prefixes
     if (itemPath === '/') {
       return location.pathname === '/';
     }
-    
+
     return location.pathname.startsWith(itemPath);
   };
 
@@ -361,6 +493,14 @@ const Sidebar = ({
       onClick: () => navigate('/editors/interactions'),
       hoverColor: 'rgba(239, 68, 68, 0.1)',
       hoverBorder: 'rgba(239, 68, 68, 0.3)'
+    },
+    {
+      id: 'encounter-editor',
+      label: '⚔️ Encounter Editor',
+      path: '/editors/encounters',
+      onClick: () => navigate('/editors/encounters'),
+      hoverColor: 'rgba(220, 38, 127, 0.1)',
+      hoverBorder: 'rgba(220, 38, 127, 0.3)'
     },
     {
       id: 'divider2',
@@ -436,18 +576,18 @@ const Sidebar = ({
         }}
       >
         {/* Sidebar Header */}
-        <div 
+        <div
           className="flex items-center justify-between mb-8"
-          style={{ 
+          style={{
             borderBottom: '1px solid rgba(71, 85, 105, 0.3)',
             paddingBottom: '1rem'
           }}
         >
           <div className="flex items-center space-x-3">
             <Globe className="w-6 h-6" style={{ color: '#818cf8' }} />
-            <span 
+            <span
               className="text-lg font-bold"
-              style={{ 
+              style={{
                 background: 'linear-gradient(to right, #818cf8, #34d399)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -461,7 +601,7 @@ const Sidebar = ({
           <button
             onClick={onClose}
             className="transition-colors p-2 hover:bg-gray-700 rounded-lg"
-            style={{ 
+            style={{
               color: '#cbd5e1',
               borderRadius: '0.5rem',
               border: '1px solid transparent'
@@ -481,103 +621,148 @@ const Sidebar = ({
           </button>
         </div>
 
-        {/* Sidebar Menu Items */}
-        <div className="space-y-2 flex-1 overflow-y-auto">
-          {allItems.map((item) => {
-            if (item.type === 'divider') {
-              return (
-                <div key={item.id} className="py-2">
-                  <div 
-                    style={{ 
-                      height: '1px',
-                      background: 'rgba(71, 85, 105, 0.5)',
-                      margin: '0.5rem 0'
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6 bg-slate-700/30 p-1 rounded-lg">
+          {[
+            { id: 'navigation', label: 'Navigation', icon: '🧭' },
+            { id: 'worlds', label: 'Worlds', icon: '🌍' },
+            { id: 'tools', label: 'Tools', icon: '🔧' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200
+                ${activeTab === tab.id
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'text-slate-400 hover:text-slate-300 hover:bg-slate-600/30'
+                }
+              `}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'navigation' && (
+            <EditorNavigation className="mb-4" />
+          )}
+          
+          {activeTab === 'worlds' && (
+            <WorldSelector 
+              className="mb-4"
+              onWorldSelected={(world) => {
+                console.log('World selected:', world);
+              }}
+              onCreateNew={() => {
+                navigate('/builder');
+                onClose();
+              }}
+            />
+          )}
+          
+          {activeTab === 'tools' && (
+            <div className="space-y-2">
+              {allItems.map((item) => {
+                if (item.type === 'divider') {
+                  return (
+                    <div key={item.id} className="py-2">
+                      <div
+                        style={{
+                          height: '1px',
+                          background: 'rgba(71, 85, 105, 0.5)',
+                          margin: '0.5rem 0'
+                        }}
+                      />
+                      <p
+                        style={{
+                          color: '#94a3b8',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '0.5rem'
+                        }}
+                      >
+                        {item.label}
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (item.type === 'info') {
+                  return (
+                    <div key={item.id} className="py-2">
+                      <div
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '0.5rem',
+                          background: 'rgba(71, 85, 105, 0.2)',
+                          border: '1px solid rgba(71, 85, 105, 0.3)'
+                        }}
+                      >
+                        {item.content.map((info, index) => (
+                          <div key={index} className="flex justify-between mb-1 text-xs">
+                            <span style={{ color: '#e2e8f0' }}>{info.label}</span>
+                            <span style={{ color: '#94a3b8' }}>{info.desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                const isActive = isActiveItem(item.path);
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={item.onClick}
+                    className="w-full text-left p-3 rounded-lg transition-all duration-200 font-medium"
+                    style={{
+                      color: isActive ? 'white' : '#e2e8f0',
+                      border: isActive ? `1px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.4)'}` : '1px solid transparent',
+                      fontSize: '0.95rem',
+                      background: isActive ? (item.hoverColor || 'rgba(129, 140, 248, 0.2)') : 'rgba(71, 85, 105, 0.1)',
+                      transform: isActive ? 'translateX(8px)' : 'translateX(0)',
+                      boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.15)' : 'none'
                     }}
-                  />
-                  <p 
-                    style={{ 
-                      color: '#94a3b8',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      marginBottom: '0.5rem'
+                    onMouseOver={(e) => {
+                      if (!isActive) {
+                        e.target.style.background = item.hoverColor || 'rgba(129, 140, 248, 0.2)';
+                        e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.4)';
+                        e.target.style.transform = 'translateX(8px)';
+                        e.target.style.color = 'white';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!isActive) {
+                        e.target.style.background = 'rgba(71, 85, 105, 0.1)';
+                        e.target.style.borderColor = 'transparent';
+                        e.target.style.transform = 'translateX(0)';
+                        e.target.style.color = '#e2e8f0';
+                      }
                     }}
                   >
                     {item.label}
-                  </p>
-                </div>
-              );
-            }
-
-            if (item.type === 'info') {
-              return (
-                <div key={item.id} className="py-2">
-                  <div 
-                    style={{ 
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      background: 'rgba(71, 85, 105, 0.2)',
-                      border: '1px solid rgba(71, 85, 105, 0.3)'
-                    }}
-                  >
-                    {item.content.map((info, index) => (
-                      <div key={index} className="flex justify-between mb-1 text-xs">
-                        <span style={{ color: '#e2e8f0' }}>{info.label}</span>
-                        <span style={{ color: '#94a3b8' }}>{info.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-
-            const isActive = isActiveItem(item.path);
-            
-            return (
-              <button
-                key={item.id}
-                onClick={item.onClick}
-                className="w-full text-left p-3 rounded-lg transition-all duration-200 font-medium"
-                style={{ 
-                  color: isActive ? 'white' : '#e2e8f0',
-                  border: isActive ? `1px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.4)'}` : '1px solid transparent',
-                  fontSize: '0.95rem',
-                  background: isActive ? (item.hoverColor || 'rgba(129, 140, 248, 0.2)') : 'rgba(71, 85, 105, 0.1)',
-                  transform: isActive ? 'translateX(8px)' : 'translateX(0)',
-                  boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.15)' : 'none'
-                }}
-                onMouseOver={(e) => {
-                  if (!isActive) {
-                    e.target.style.background = item.hoverColor || 'rgba(129, 140, 248, 0.2)';
-                    e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.4)';
-                    e.target.style.transform = 'translateX(8px)';
-                    e.target.style.color = 'white';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!isActive) {
-                    e.target.style.background = 'rgba(71, 85, 105, 0.1)';
-                    e.target.style.borderColor = 'transparent';
-                    e.target.style.transform = 'translateX(0)';
-                    e.target.style.color = '#e2e8f0';
-                  }
-                }}
-              >
-                {item.label}
-                {isActive && (
-                  <span className="ml-2 text-xs opacity-75">●</span>
-                )}
-              </button>
-            );
-          })}
+                    {isActive && (
+                      <span className="ml-2 text-xs opacity-75">●</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Sidebar Footer */}
         {showTip && (
           <div style={{ paddingTop: '2rem' }}>
-            <div 
-              style={{ 
+            <div
+              style={{
                 padding: '1rem',
                 borderRadius: '0.75rem',
                 background: 'rgba(71, 85, 105, 0.3)',
@@ -585,10 +770,14 @@ const Sidebar = ({
               }}
             >
               <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Quick Tip
+                {activeTab === 'navigation' && 'Navigation Help'}
+                {activeTab === 'worlds' && 'World Management'}
+                {activeTab === 'tools' && 'Editor Tools'}
               </p>
               <p style={{ color: '#cbd5e1', fontSize: '0.875rem', lineHeight: '1.4' }}>
-                Click the globe icon anytime to access your worlds and settings!
+                {activeTab === 'navigation' && 'Use the navigation panel to move between editors and track your progress.'}
+                {activeTab === 'worlds' && 'Select existing worlds or create new ones to start building.'}
+                {activeTab === 'tools' && 'Context-specific tools and templates for the current editor.'}
               </p>
             </div>
           </div>

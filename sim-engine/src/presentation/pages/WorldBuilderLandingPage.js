@@ -18,10 +18,10 @@ const WorldBuilderLandingPage = ({ onCreateWorld }) => {
     if (onCreateWorld) {
       onCreateWorld();
     } else {
-      // Direct users to Node Editor as a good starting point for world creation
-      navigate('/editors/nodes');
-    }
-  };
+    // Navigate to World Node Editor instead of nodes
+    navigate('/world-editor');
+  }
+};
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [cardsVisible, setCardsVisible] = useState([false, false, false]);

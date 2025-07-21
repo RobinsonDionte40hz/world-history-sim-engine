@@ -1,9 +1,5 @@
 /**
- * MainPage - Updated to use conditional interface with six-step progression
- * 
- * Updates MainPage to use conditional interface with six-step progression.
- * Integrates ConditionalSimulationInterface for world builder to simulation transitions.
- * Ensures no automatic simulation startup (only manual after world completion).
+
  * 
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */

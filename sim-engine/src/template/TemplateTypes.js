@@ -194,4 +194,30 @@ export const ItemTemplate = {
   properties: Object,
   requirements: Object,
   effects: Object
+};
+
+// Encounter template type
+export const EncounterTemplate = {
+  ...BaseTemplate,
+  type: String, // 'combat', 'social', 'exploration', 'puzzle', 'environmental'
+  difficulty: String, // 'trivial', 'easy', 'medium', 'hard', 'deadly'
+  challengeRating: Number,
+  turnBased: {
+    duration: Number,
+    initiative: String, // 'random', 'attribute', 'fixed'
+    timing: String, // 'immediate', 'delayed', 'conditional'
+    sequencing: String // 'simultaneous', 'sequential'
+  },
+  triggers: Array,
+  participants: Array,
+  outcomes: Array,
+  prerequisites: Array,
+  rewards: Array,
+  cooldown: Number,
+  nodeRestrictions: Array,
+  interactionIntegration: {
+    baseInteractionId: String,
+    generatedInteractions: Array,
+    effectMapping: Object
+  }
 }; 

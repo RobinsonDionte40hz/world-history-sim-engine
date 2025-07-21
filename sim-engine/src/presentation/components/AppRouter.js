@@ -10,7 +10,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { NavigationProvider } from '../contexts/NavigationContext';
 
 // Existing pages
-import MainPage from '../pages/MainPage';
 import HistoryPage from '../pages/HistoryPage';
 import WorldBuilderLandingPage from '../pages/WorldBuilderLandingPage';
 
@@ -23,6 +22,8 @@ import ExamplesPage from '../pages/ExamplesPage';
 import NodeEditorPage from '../pages/NodeEditorPage';
 import CharacterEditorPage from '../pages/CharacterEditorPage';
 import InteractionEditorPage from '../pages/InteractionEditorPage';
+import EncounterEditorPage from '../pages/EncounterEditorPage';
+import WorldNodeEditorPage from '../pages/WorldNodeEditorPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -48,6 +49,8 @@ const AppRouter = () => {
             <Route path="/editors/nodes" element={<NodeEditorPage />} />
             <Route path="/editors/characters" element={<CharacterEditorPage />} />
             <Route path="/editors/interactions" element={<InteractionEditorPage />} />
+            <Route path="/editors/encounters" element={<EncounterEditorPage />} />
+            <Route path="/world-editor" element={<WorldNodeEditorPage />} />
             
             {/* Simulation route - Optional, with prerequisites */}
             <Route path="/simulation" element={<HistoryPage />} />

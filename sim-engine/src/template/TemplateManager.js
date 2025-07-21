@@ -10,6 +10,7 @@ class TemplateManager {
       events: new Map(),
       groups: new Map(),
       items: new Map(),
+      encounters: new Map(),  // Added for encounter templates
       worlds: new Map(),      // Added for world templates
       composite: new Map()    // Added for composite templates (role sets, etc.)
     };

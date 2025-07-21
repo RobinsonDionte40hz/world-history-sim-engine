@@ -48,6 +48,11 @@ export {
   Drawer
 } from './Modal';
 
+// Navigation Components
+export { default as EditorNavigation } from './EditorNavigation';
+export { default as WorldSelector } from './WorldSelector';
+export { default as BreadcrumbNavigation } from './BreadcrumbNavigation';
+
 // Re-export existing components for consistency
 export { default as AppRouter } from './AppRouter';
 export { default as CharacterEditor } from './CharacterEditor';
