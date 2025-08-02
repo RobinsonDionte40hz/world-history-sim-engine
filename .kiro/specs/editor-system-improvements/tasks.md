@@ -11,6 +11,10 @@ Before implementing any tasks, **always review the steering documentation** in `
 ## Tasks
 
 - [ ] 1. Fix multiple navigation systems and layout alignment (PRIORITY)
+
+
+
+
   - Remove top navigation from all editor pages (NodeEditorPage, InteractionEditorPage, etc.)
   - Remove editor-specific navigation bars that appear above editor content
   - Fix "Editors" button to navigate to "/builder" (World Foundation) instead of non-functional page

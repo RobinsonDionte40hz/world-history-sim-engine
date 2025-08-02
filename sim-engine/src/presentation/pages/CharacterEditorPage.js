@@ -7,9 +7,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Eye, Settings, Plus, ArrowLeft, User, Download, Upload, Home, ChevronRight, Users } from 'lucide-react';
-import Navigation from '../UI/Navigation';
+import { Users, Dice6 } from 'lucide-react';
 import CharacterEditor from '../components/CharacterEditor';
+import EditorLayout from '../components/EditorLayout';
 
 const CharacterEditorPage = () => {
   const navigate = useNavigate();
@@ -185,274 +185,175 @@ const CharacterEditorPage = () => {
     }
   };
 
+  const rollAttributes = () => {
+    // Roll 4d6, drop lowest for each attribute
+    const rollAttribute = () => {
+      const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
+      rolls.sort((a, b) => b - a);
+      return rolls.slice(0, 3).reduce((sum, roll) => sum + roll, 0);
+    };
+
+    const rolledAttributes = {
+      strength: rollAttribute(),
+      dexterity: rollAttribute(),
+      constitution: rollAttribute(),
+      intelligence: rollAttribute(),
+      wisdom: rollAttribute(),
+      charisma: rollAttribute()
+    };
+
+    const newCharacter = {
+      ...currentCharacter,
+      attributes: rolledAttributes
+    };
+
+    setCurrentCharacter(newCharacter);
+    setHasUnsavedChanges(true);
+  };
+
+  // Custom header actions for character editor
+  const headerActions = [
+    // Character Archetypes
+    <div key="archetypes" className="flex items-center gap-2">
+      <button
+        onClick={() => loadArchetype('warrior')}
+        className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+      >
+        ⚔️ Warrior
+      </button>
+      <button
+        onClick={() => loadArchetype('scholar')}
+        className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+      >
+        📚 Scholar
+      </button>
+      <button
+        onClick={() => loadArchetype('merchant')}
+        className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+      >
+        💰 Merchant
+      </button>
+    </div>,
+    // Roll Attributes Button
+    <button
+      key="roll"
+      onClick={rollAttributes}
+      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+    >
+      <Dice6 className="w-4 h-4" />
+      Roll Attributes
+    </button>
+  ];
+
   return (
-    <div className="min-h-screen" style={{ 
-      background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
-    }}>
-      <Navigation 
-        title="Character Editor"
-        showBreadcrumbs={true}
-        showSidebar={false}
-      />
-      
-      {/* Breadcrumb Navigation */}
-      <div className="px-8 py-3 border-b border-slate-700/50 bg-slate-900/30">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <button 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 hover:text-slate-200 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <button 
-            onClick={() => navigate('/builder')}
-            className="hover:text-slate-200 transition-colors"
-          >
-            World Builder
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-slate-200">Character Editor</span>
-        </div>
-      </div>
-      
-      {/* Editor Header */}
-      <div className="px-8 py-4 border-b border-slate-700 bg-slate-800/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Builder
-            </button>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <h1 className="text-2xl font-bold text-white">
-              Character Editor
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              {isSaving && (
-                <span className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 rounded flex items-center gap-1">
-                  <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </span>
+    <EditorLayout
+      title="Character Editor"
+      editorType="characters"
+      onSave={handleSave}
+      onCancel={handleCancel}
+      hasUnsavedChanges={hasUnsavedChanges}
+      isSaving={isSaving}
+      validationErrors={Object.values(validationErrors)}
+      previewMode={previewMode}
+      onPreviewToggle={() => setPreviewMode(!previewMode)}
+      autoSaveEnabled={autoSaveEnabled}
+      onAutoSaveToggle={setAutoSaveEnabled}
+      saveStatus={lastSaved ? { status: 'saved', timestamp: lastSaved } : null}
+      headerActions={headerActions}
+      exportImportConfig={{
+        onExport: handleExportTemplate,
+        onImport: handleImportTemplate,
+        exportDisabled: !currentCharacter,
+        acceptedFileTypes: '.json'
+      }}
+    >
+      {previewMode ? (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+          <h2 className="text-xl font-semibold text-white mb-4">Character Preview</h2>
+          {currentCharacter ? (
+            <div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center">
+                  <Users className="w-8 h-8 text-slate-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{currentCharacter.name || 'Unnamed Character'}</h3>
+                  <p className="text-slate-300">{currentCharacter.description || 'No description provided'}</p>
+                </div>
+              </div>
+              
+              {/* Attributes Preview */}
+              {currentCharacter.attributes && (
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-white mb-3">D&D Attributes</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    {Object.entries(currentCharacter.attributes).map(([attr, value]) => (
+                      <div key={attr} className="bg-slate-700/50 p-3 rounded">
+                        <div className="text-sm text-slate-400 uppercase">{attr}</div>
+                        <div className="text-lg font-bold text-white">{value}</div>
+                        <div className="text-xs text-slate-500">
+                          Modifier: {Math.floor((value - 10) / 2) >= 0 ? '+' : ''}{Math.floor((value - 10) / 2)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
               
-              {hasUnsavedChanges && !isSaving && (
-                <span className="px-2 py-1 text-xs bg-yellow-600/20 text-yellow-400 border border-yellow-600/30 rounded">
-                  Unsaved Changes
-                </span>
+              {/* Goals Preview */}
+              {currentCharacter.goals && currentCharacter.goals.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-white mb-3">Goals</h4>
+                  <div className="space-y-2">
+                    {currentCharacter.goals.map((goal, index) => (
+                      <div key={index} className="bg-slate-700/50 p-3 rounded">
+                        <div className="text-white">{goal.description}</div>
+                        <div className="text-sm text-slate-400">
+                          Priority: {goal.priority} • Type: {goal.type}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-              
-              {Object.keys(validationErrors).length > 0 && (
-                <span className="px-2 py-1 text-xs bg-red-600/20 text-red-400 border border-red-600/30 rounded">
-                  {Object.keys(validationErrors).length} Error{Object.keys(validationErrors).length !== 1 ? 's' : ''}
-                </span>
-              )}
-              
-              {lastSaved && !hasUnsavedChanges && !isSaving && Object.keys(validationErrors).length === 0 && (
-                <span className="px-2 py-1 text-xs bg-green-600/20 text-green-400 border border-green-600/30 rounded">
-                  Saved {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
-              
-              <label className="flex items-center gap-2 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={autoSaveEnabled}
-                  onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                  className="rounded"
-                />
-                Auto-save
-              </label>
             </div>
+          ) : (
+            <p className="text-slate-300">
+              No character data to preview. Create or load a character to see the preview.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white">Character Configuration</h2>
+            
+            {/* Validation Errors Summary */}
+            {Object.keys(validationErrors).length > 0 && (
+              <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
+                <div className="text-red-400 text-sm font-medium mb-2">
+                  Please fix the following errors:
+                </div>
+                <ul className="text-red-300 text-xs space-y-1">
+                  {Object.entries(validationErrors).map(([field, error]) => (
+                    <li key={field}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center gap-3">
-            {/* Character Archetypes */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => loadArchetype('warrior')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                ⚔️ Warrior
-              </button>
-              <button
-                onClick={() => loadArchetype('scholar')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                📚 Scholar
-              </button>
-              <button
-                onClick={() => loadArchetype('merchant')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                💰 Merchant
-              </button>
-            </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            {/* Template Import/Export */}
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportTemplate}
-                className="hidden"
-                id="import-character-template"
-              />
-              <label
-                htmlFor="import-character-template"
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
-              >
-                <Upload className="w-4 h-4" />
-                Import
-              </label>
-              
-              <button
-                onClick={handleExportTemplate}
-                disabled={!currentCharacter}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <button
-              onClick={() => setPreviewMode(!previewMode)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                previewMode
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              {previewMode ? 'Edit Mode' : 'Preview'}
-            </button>
-            
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </button>
-            
-            <button
-              onClick={handleSave}
-              disabled={isSaving || Object.keys(validationErrors).length > 0}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Character
-            </button>
-          </div>
+          {/* Use existing CharacterEditor component */}
+          <CharacterEditor 
+            initialCharacter={currentCharacter}
+            onChange={handleChange}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            mode={currentCharacter ? 'edit' : 'create'}
+          />
         </div>
-      </div>
-
-      {/* Editor Content */}
-      <div className="flex-1 p-8">
-        {previewMode ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">Character Preview</h2>
-              {currentCharacter ? (
-                <div>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center">
-                      <Users className="w-8 h-8 text-slate-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{currentCharacter.name || 'Unnamed Character'}</h3>
-                      <p className="text-slate-300">{currentCharacter.description || 'No description provided'}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Attributes Preview */}
-                  {currentCharacter.attributes && (
-                    <div className="mb-6">
-                      <h4 className="text-md font-semibold text-white mb-3">D&D Attributes</h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        {Object.entries(currentCharacter.attributes).map(([attr, value]) => (
-                          <div key={attr} className="bg-slate-700/50 p-3 rounded">
-                            <div className="text-sm text-slate-400 uppercase">{attr}</div>
-                            <div className="text-lg font-bold text-white">{value}</div>
-                            <div className="text-xs text-slate-500">
-                              Modifier: {Math.floor((value - 10) / 2) >= 0 ? '+' : ''}{Math.floor((value - 10) / 2)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Goals Preview */}
-                  {currentCharacter.goals && currentCharacter.goals.length > 0 && (
-                    <div className="mb-6">
-                      <h4 className="text-md font-semibold text-white mb-3">Goals</h4>
-                      <div className="space-y-2">
-                        {currentCharacter.goals.map((goal, index) => (
-                          <div key={index} className="bg-slate-700/50 p-3 rounded">
-                            <div className="text-white">{goal.description}</div>
-                            <div className="text-sm text-slate-400">
-                              Priority: {goal.priority} • Type: {goal.type}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-slate-300">
-                  No character data to preview. Create or load a character to see the preview.
-                </p>
-              )}
-            </div>
-        ) : (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white">Character Configuration</h2>
-              
-              {/* Validation Errors Summary */}
-              {Object.keys(validationErrors).length > 0 && (
-                <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
-                  <div className="text-red-400 text-sm font-medium mb-2">
-                    Please fix the following errors:
-                  </div>
-                  <ul className="text-red-300 text-xs space-y-1">
-                    {Object.entries(validationErrors).map(([field, error]) => (
-                      <li key={field}>• {error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            
-            {/* Use existing CharacterEditor component */}
-            <CharacterEditor 
-              initialCharacter={currentCharacter}
-              onChange={handleChange}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              mode={currentCharacter ? 'edit' : 'create'}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </EditorLayout>
   );
 };
 

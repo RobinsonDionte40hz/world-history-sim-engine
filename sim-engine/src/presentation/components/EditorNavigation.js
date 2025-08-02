@@ -50,7 +50,7 @@ const EditorNavigation = ({ className = '' }) => {
       path: '/editors/nodes',
       icon: MapPin,
       description: 'Create locations',
-      requiresWorld: true,
+      requiresWorld: false,
       color: 'text-amber-400',
       hoverColor: 'hover:bg-amber-500/10'
     },
@@ -60,7 +60,7 @@ const EditorNavigation = ({ className = '' }) => {
       path: '/editors/characters',
       icon: Users,
       description: 'Create characters',
-      requiresWorld: true,
+      requiresWorld: false,
       color: 'text-purple-400',
       hoverColor: 'hover:bg-purple-500/10'
     },
@@ -70,7 +70,7 @@ const EditorNavigation = ({ className = '' }) => {
       path: '/editors/interactions',
       icon: MessageSquare,
       description: 'Define interactions',
-      requiresWorld: true,
+      requiresWorld: false,
       color: 'text-red-400',
       hoverColor: 'hover:bg-red-500/10'
     },
@@ -80,7 +80,7 @@ const EditorNavigation = ({ className = '' }) => {
       path: '/editors/encounters',
       icon: Sword,
       description: 'Create encounters',
-      requiresWorld: true,
+      requiresWorld: false,
       color: 'text-pink-400',
       hoverColor: 'hover:bg-pink-500/10'
     }
@@ -132,7 +132,7 @@ const EditorNavigation = ({ className = '' }) => {
   };
 
   return (
-    <div className={`bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 ${className}`}>
+    <div className={`${className}`}>
       {/* Breadcrumb Navigation */}
       <div className="mb-6">
         <div className="flex items-center space-x-2 text-sm text-slate-400">
@@ -152,19 +152,6 @@ const EditorNavigation = ({ className = '' }) => {
         </div>
       </div>
 
-      {/* World Foundation Status */}
-      {!worldComplete && (
-        <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <div className="flex items-center space-x-2 text-amber-400">
-            <AlertTriangle className="w-4 h-4" />
-            <span className="text-sm font-medium">World Foundation Required</span>
-          </div>
-          <p className="text-xs text-amber-300/80 mt-1">
-            Complete the World Foundation before accessing other editors
-          </p>
-        </div>
-      )}
-
       {/* Unsaved Changes Warning */}
       {hasUnsavedChanges && (
         <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
@@ -179,97 +166,140 @@ const EditorNavigation = ({ className = '' }) => {
       )}
 
       {/* Editor Navigation */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-300 mb-3">Editors</h3>
         
-        {editors.map((editor) => {
-          const isActive = isEditorActive(editor);
-          const isAvailable = isEditorAvailable(editor);
-          const status = getEditorStatus(editor);
-          const IconComponent = editor.icon;
+        {/* Top row - 3 editors */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {editors.slice(0, 3).map((editor) => {
+            const isActive = isEditorActive(editor);
+            const isAvailable = isEditorAvailable(editor);
+            const status = getEditorStatus(editor);
+            const IconComponent = editor.icon;
 
-          return (
-            <button
-              key={editor.id}
-              onClick={() => handleEditorClick(editor)}
-              disabled={!isAvailable}
-              className={`
-                w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200
-                ${isActive 
-                  ? `bg-slate-700/50 border border-slate-600 ${editor.color}` 
-                  : isAvailable
-                    ? `bg-slate-800/30 border border-slate-700/30 text-slate-300 ${editor.hoverColor} hover:border-slate-600`
-                    : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed'
-                }
-              `}
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`
-                  p-2 rounded-lg 
+            return (
+              <button
+                key={editor.id}
+                onClick={() => handleEditorClick(editor)}
+                disabled={!isAvailable}
+                className={`
+                  flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-h-[60px] group
                   ${isActive 
-                    ? `bg-current/10 ${editor.color}` 
+                    ? `bg-slate-700/50 border border-slate-500 ${editor.color} shadow-md` 
                     : isAvailable
-                      ? 'bg-slate-700/50 text-slate-400'
+                      ? `bg-slate-800/40 border border-slate-700/40 text-slate-300 ${editor.hoverColor} hover:border-slate-600 hover:shadow-md hover:scale-105`
+                      : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed opacity-60'
+                  }
+                `}
+              >
+                <div className={`
+                  p-1.5 rounded-md mb-1 transition-all duration-200
+                  ${isActive 
+                    ? `bg-current/20 ${editor.color}` 
+                    : isAvailable
+                      ? 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50'
                       : 'bg-slate-800/50 text-slate-600'
                   }
                 `}>
                   <IconComponent className="w-4 h-4" />
                 </div>
                 
-                <div className="text-left">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium text-sm">
-                      {editor.name}
-                    </span>
-                    {isActive && (
-                      <span className="text-xs bg-current/20 px-2 py-0.5 rounded-full">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs opacity-75">
-                    {editor.description}
-                  </p>
-                </div>
-              </div>
+                <span className="font-medium text-xs text-center leading-tight">
+                  {editor.name.replace(' Editor', '').replace(' Foundation', '')}
+                </span>
 
-              <div className="flex items-center space-x-2">
                 {status === 'locked' && (
-                  <Lock className="w-4 h-4 text-slate-500" />
+                  <Lock className="w-3 h-3 text-slate-500 mt-1" />
                 )}
                 {isActive && (
-                  <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+                  <div className="w-1 h-1 bg-current rounded-full animate-pulse mt-1" />
                 )}
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom row - 2 editors centered */}
+        <div className="flex justify-center">
+          <div className="grid grid-cols-2 gap-2 max-w-[180px]">
+            {editors.slice(3, 5).map((editor) => {
+              const isActive = isEditorActive(editor);
+              const isAvailable = isEditorAvailable(editor);
+              const status = getEditorStatus(editor);
+              const IconComponent = editor.icon;
+
+              return (
+                <button
+                  key={editor.id}
+                  onClick={() => handleEditorClick(editor)}
+                  disabled={!isAvailable}
+                  className={`
+                    flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-h-[60px] group
+                    ${isActive 
+                      ? `bg-slate-700/50 border border-slate-500 ${editor.color} shadow-md` 
+                      : isAvailable
+                        ? `bg-slate-800/40 border border-slate-700/40 text-slate-300 ${editor.hoverColor} hover:border-slate-600 hover:shadow-md hover:scale-105`
+                        : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed opacity-60'
+                    }
+                  `}
+                >
+                  <div className={`
+                    p-1.5 rounded-md mb-1 transition-all duration-200
+                    ${isActive 
+                      ? `bg-current/20 ${editor.color}` 
+                      : isAvailable
+                        ? 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50'
+                        : 'bg-slate-800/50 text-slate-600'
+                    }
+                  `}>
+                    <IconComponent className="w-4 h-4" />
+                  </div>
+                  
+                  <span className="font-medium text-xs text-center leading-tight">
+                    {editor.name.replace(' Editor', '')}
+                  </span>
+
+                  {status === 'locked' && (
+                    <Lock className="w-3 h-3 text-slate-500 mt-1" />
+                  )}
+                  {isActive && (
+                    <div className="w-1 h-1 bg-current rounded-full animate-pulse mt-1" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-6 pt-4 border-t border-slate-700/50">
+      <div className="mt-4 pt-3 border-t border-slate-700/50">
         <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">
           Quick Actions
         </h4>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => navigateToEditor('world', '/builder')}
-            className="p-2 text-xs bg-slate-800/30 hover:bg-slate-700/30 border border-slate-700/30 hover:border-slate-600 rounded-lg transition-colors text-slate-300"
+            className="p-2 text-xs bg-slate-800/40 hover:bg-slate-700/40 border border-slate-700/40 hover:border-slate-600 rounded-lg transition-all duration-200 text-slate-300 hover:text-white hover:scale-105 flex flex-col items-center space-y-1"
           >
-            New World
+            <Globe className="w-3 h-3" />
+            <span>New World</span>
           </button>
           <button
             onClick={() => window.location.href = '/simulation'}
             disabled={!worldComplete}
             className={`
-              p-2 text-xs rounded-lg transition-colors
+              p-2 text-xs rounded-lg transition-all duration-200 flex flex-col items-center space-y-1
               ${worldComplete
-                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/30 text-emerald-400'
-                : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed'
+                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/30 text-emerald-400 hover:scale-105'
+                : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed opacity-60'
               }
             `}
           >
-            Run Simulation
+            <div className="flex items-center space-x-1">
+              {!worldComplete && <Lock className="w-2 h-2" />}
+              <span>Simulation</span>
+            </div>
           </button>
         </div>
       </div>

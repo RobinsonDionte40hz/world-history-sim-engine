@@ -8,8 +8,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Eye, Settings, Plus, ArrowLeft, Download, Upload, Home, ChevronRight } from 'lucide-react';
-import Navigation from '../UI/Navigation';
 import NodeEditor from '../components/NodeEditor';
+import EditorLayout from '../components/EditorLayout';
 
 const NodeEditorPage = () => {
   const navigate = useNavigate();
@@ -110,157 +110,48 @@ const NodeEditorPage = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ 
-      background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
-    }}>
-      <Navigation 
-        title="Node Editor"
-        showBreadcrumbs={true}
-        showSidebar={false}
-      />
-      
-      {/* Editor Header */}
-      <div className="px-8 py-4 border-b border-slate-700 bg-slate-800/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Builder
-            </button>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <h1 className="text-2xl font-bold text-white">
-              Node Editor
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              {isSaving && (
-                <span className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 rounded flex items-center gap-1">
-                  <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </span>
-              )}
-              
-              {hasUnsavedChanges && !isSaving && (
-                <span className="px-2 py-1 text-xs bg-yellow-600/20 text-yellow-400 border border-yellow-600/30 rounded">
-                  Unsaved Changes
-                </span>
-              )}
-              
-              {lastSaved && !hasUnsavedChanges && !isSaving && (
-                <span className="px-2 py-1 text-xs bg-green-600/20 text-green-400 border border-green-600/30 rounded">
-                  Saved {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
-              
-              <label className="flex items-center gap-2 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={autoSaveEnabled}
-                  onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                  className="rounded"
-                />
-                Auto-save
-              </label>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Template Import/Export */}
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportTemplate}
-                className="hidden"
-                id="import-template"
-              />
-              <label
-                htmlFor="import-template"
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
-              >
-                <Upload className="w-4 h-4" />
-                Import
-              </label>
-              
-              <button
-                onClick={handleExportTemplate}
-                disabled={!currentNode}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <button
-              onClick={() => setPreviewMode(!previewMode)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                previewMode
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              {previewMode ? 'Edit Mode' : 'Preview'}
-            </button>
-            
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </button>
-            
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Node
-            </button>
-          </div>
+    <EditorLayout
+      title="Node Editor"
+      editorType="nodes"
+      onSave={handleSave}
+      onCancel={handleCancel}
+      hasUnsavedChanges={hasUnsavedChanges}
+      isSaving={isSaving}
+      previewMode={previewMode}
+      onPreviewToggle={() => setPreviewMode(!previewMode)}
+      autoSaveEnabled={autoSaveEnabled}
+      onAutoSaveToggle={setAutoSaveEnabled}
+      saveStatus={lastSaved ? { status: 'saved', timestamp: lastSaved } : null}
+      exportImportConfig={{
+        onExport: handleExportTemplate,
+        onImport: handleImportTemplate,
+        exportDisabled: !currentNode,
+        acceptedFileTypes: '.json'
+      }}
+    >
+      {previewMode ? (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+          <h2 className="text-xl font-semibold text-white mb-4">Node Preview</h2>
+          <p className="text-slate-300">
+            Preview mode will show how the node appears in the simulation.
+            This feature will be implemented with the actual node preview component.
+          </p>
         </div>
-      </div>
-
-      {/* Editor Content */}
-      <div className="flex-1 p-8">
-        {previewMode ? (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
-            <h2 className="text-xl font-semibold text-white mb-4">Node Preview</h2>
-            <p className="text-slate-300">
-              Preview mode will show how the node appears in the simulation.
-              This feature will be implemented with the actual node preview component.
-            </p>
-          </div>
-        ) : (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-white mb-6">Node Configuration</h2>
-            
-            {/* Use existing NodeEditor component */}
-            <NodeEditor 
-              initialNode={currentNode}
-              onChange={handleChange}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              mode={currentNode ? 'edit' : 'create'}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+      ) : (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-white mb-6">Node Configuration</h2>
+          
+          {/* Use existing NodeEditor component */}
+          <NodeEditor 
+            initialNode={currentNode}
+            onChange={handleChange}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            mode={currentNode ? 'edit' : 'create'}
+          />
+        </div>
+      )}
+    </EditorLayout>
   );
 };
 

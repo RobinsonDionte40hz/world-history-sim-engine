@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Eye, Download, Upload, Home, ChevronRight, TestTube, Swords, Users, Clock, Target } from 'lucide-react';
+import { Save, X, Eye, Download, Upload, Home, ChevronRight, TestTube, Swords, Users, Clock, Target, ArrowLeft } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import EncounterEditor from '../components/EncounterEditor';
 import Encounter from '../../domain/entities/Encounter';
@@ -421,40 +421,16 @@ const EncounterEditorPage = () => {
     <div className="min-h-screen" style={{ 
       background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
     }}>
-      <Navigation />
-      
-      {/* Breadcrumb Navigation */}
-      <div className="px-8 py-3 border-b border-slate-700/50 bg-slate-900/30">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <button 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 hover:text-slate-200 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <button 
-            onClick={() => navigate('/builder')}
-            className="hover:text-slate-200 transition-colors"
-          >
-            World Builder
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-slate-200">Encounter Editor</span>
-        </div>
-      </div>
-      
       {/* Editor Header */}
-      <div className="px-8 py-4 border-b border-slate-700 bg-slate-800/50">
+      <div className="w-full max-w-7xl mx-auto px-8 py-4 border-b border-slate-700 bg-slate-800/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={handleCancel}
               className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors"
             >
-              <X className="w-4 h-4" />
-              Back to Builder
+              <ArrowLeft className="w-4 h-4" />
+              Back to World Foundation
             </button>
             
             <div className="h-6 w-px bg-slate-600"></div>
@@ -594,7 +570,7 @@ const EncounterEditorPage = () => {
       </div>
 
       {/* Editor Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 w-full max-w-7xl mx-auto p-8">
         {testMode && testResults ? (
             <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
               <div className="flex items-center justify-between mb-6">

@@ -14,10 +14,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Globe, 
   Search, 
-  Bookmark, 
-  History, 
-  Menu, 
-  X, 
   ChevronRight,
   Home,
   Star,
@@ -26,7 +22,6 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useNavigation } from '../contexts/NavigationContext';
-import useSidebar from '../hooks/useSidebar';
 
 const Navigation = ({ 
   title = "World History Simulator",
@@ -38,9 +33,7 @@ const Navigation = ({
   showSearch = false,
   variant = 'default' // 'default', 'compact', 'landing'
 }) => {
-  const sidebar = useSidebar(false);
   const [logoSpinning, setLogoSpinning] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const searchRef = useRef(null);
@@ -65,14 +58,9 @@ const Navigation = ({
       onClick: () => navigate('/examples')
     },
     { 
-      label: 'World Builder', 
+      label: 'World Foundation', 
       path: '/builder',
       onClick: () => navigate('/builder')
-    },
-    { 
-      label: 'Editors', 
-      path: '/editors/nodes',
-      onClick: () => navigate('/editors/nodes')
     }
   ];
 
@@ -128,15 +116,6 @@ const Navigation = ({
     setSearchResults([]);
     setSearchFocused(false);
   };
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
-
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -336,94 +315,9 @@ const Navigation = ({
                 </button>
               )}
             </div>
-            
-            {/* Mobile Menu Button */}
-            <button
-              onClick={toggleMobileMenu}
-              className="md:hidden p-2 text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              aria-label="Toggle mobile menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
           </div>
-        </div>
-
-        {/* Mobile Search (when enabled) */}
-        {showSearch && (
-          <div className="lg:hidden mt-4">
-            <SearchComponent />
-          </div>
-        )}
-
-        {/* Mobile Breadcrumbs */}
-        <div className="lg:hidden mt-4">
-          <BreadcrumbNavigation />
         </div>
       </nav>
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={toggleMobileMenu}>
-          <div 
-            className="absolute top-0 right-0 w-64 h-full bg-gray-800 border-l border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b border-gray-700">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Menu</h3>
-                <button
-                  onClick={toggleMobileMenu}
-                  className="p-2 text-gray-400 hover:text-white transition-colors rounded-md"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-4 space-y-2">
-              {navItemsToShow.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    item.onClick();
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-md transition-colors ${
-                    isCurrentPath(item.path)
-                      ? 'text-white bg-indigo-600/30 border border-indigo-500/50'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-              
-              {/* Mobile Bookmarks and History */}
-              {navigation.bookmarks.length > 0 && (
-                <div className="pt-4 border-t border-gray-700">
-                  <h4 className="text-sm font-medium text-gray-400 mb-2">Bookmarks</h4>
-                  {navigation.bookmarks.slice(0, 5).map((bookmark, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        navigate(bookmark);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-md transition-colors"
-                    >
-                      {bookmark}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Sidebar */}
       {showSidebar && (

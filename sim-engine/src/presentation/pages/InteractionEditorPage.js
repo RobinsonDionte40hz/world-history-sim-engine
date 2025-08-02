@@ -7,9 +7,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Eye, Settings, Plus, ArrowLeft, GitBranch, Play, Download, Upload, Home, ChevronRight, MessageSquare, TestTube } from 'lucide-react';
-import Navigation from '../UI/Navigation';
+import { TestTube } from 'lucide-react';
 import InteractionEditor from '../components/InteractionEditor';
+import EditorLayout from '../components/EditorLayout';
 
 const InteractionEditorPage = () => {
   const navigate = useNavigate();
@@ -228,347 +228,214 @@ const InteractionEditorPage = () => {
     }
   };
 
+  // Custom header actions for interaction editor
+  const headerActions = [
+    // Interaction Templates
+    <div key="templates" className="flex items-center gap-2">
+      <button
+        onClick={() => loadTemplate('dialogue')}
+        className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+      >
+        💬 Dialogue
+      </button>
+      <button
+        onClick={() => loadTemplate('trade')}
+        className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+      >
+        🤝 Trade
+      </button>
+      <button
+        onClick={() => loadTemplate('quest')}
+        className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+      >
+        📜 Quest
+      </button>
+    </div>,
+    // Test Button
+    <button
+      key="test"
+      onClick={handleTest}
+      disabled={!currentInteraction || Object.keys(validationErrors).length > 0}
+      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <TestTube className="w-4 h-4" />
+      Test
+    </button>
+  ];
+
   return (
-    <div className="min-h-screen" style={{ 
-      background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
-    }}>
-      <Navigation 
-        title="Interaction Editor"
-        showBreadcrumbs={true}
-        showSidebar={false}
-      />
-      
-      {/* Breadcrumb Navigation */}
-      <div className="px-8 py-3 border-b border-slate-700/50 bg-slate-900/30">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <button 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 hover:text-slate-200 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <button 
-            onClick={() => navigate('/builder')}
-            className="hover:text-slate-200 transition-colors"
-          >
-            World Builder
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-slate-200">Interaction Editor</span>
-        </div>
-      </div>
-      
-      {/* Editor Header */}
-      <div className="px-8 py-4 border-b border-slate-700 bg-slate-800/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <EditorLayout
+      title="Interaction Editor"
+      editorType="interactions"
+      onSave={handleSave}
+      onCancel={handleCancel}
+      hasUnsavedChanges={hasUnsavedChanges}
+      isSaving={isSaving}
+      validationErrors={Object.values(validationErrors)}
+      previewMode={previewMode}
+      onPreviewToggle={() => setPreviewMode(!previewMode)}
+      autoSaveEnabled={autoSaveEnabled}
+      onAutoSaveToggle={setAutoSaveEnabled}
+      saveStatus={lastSaved ? { status: 'saved', timestamp: lastSaved } : null}
+      headerActions={headerActions}
+      exportImportConfig={{
+        onExport: handleExportTemplate,
+        onImport: handleImportTemplate,
+        exportDisabled: !currentInteraction,
+        acceptedFileTypes: '.json'
+      }}
+    >
+      {testMode && testResults ? (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white">Test Results</h2>
             <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors"
+              onClick={() => setTestMode(false)}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Builder
+              Back to Editor
             </button>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <h1 className="text-2xl font-bold text-white">
-              Interaction Editor
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              {isSaving && (
-                <span className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 rounded flex items-center gap-1">
-                  <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </span>
-              )}
-              
-              {hasUnsavedChanges && !isSaving && (
-                <span className="px-2 py-1 text-xs bg-yellow-600/20 text-yellow-400 border border-yellow-600/30 rounded">
-                  Unsaved Changes
-                </span>
-              )}
-              
-              {Object.keys(validationErrors).length > 0 && (
-                <span className="px-2 py-1 text-xs bg-red-600/20 text-red-400 border border-red-600/30 rounded">
-                  {Object.keys(validationErrors).length} Error{Object.keys(validationErrors).length !== 1 ? 's' : ''}
-                </span>
-              )}
-              
-              {lastSaved && !hasUnsavedChanges && !isSaving && Object.keys(validationErrors).length === 0 && (
-                <span className="px-2 py-1 text-xs bg-green-600/20 text-green-400 border border-green-600/30 rounded">
-                  Saved {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
-              
-              <label className="flex items-center gap-2 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={autoSaveEnabled}
-                  onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                  className="rounded"
-                />
-                Auto-save
-              </label>
-            </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            {/* Interaction Templates */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => loadTemplate('dialogue')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                💬 Dialogue
-              </button>
-              <button
-                onClick={() => loadTemplate('trade')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                🤝 Trade
-              </button>
-              <button
-                onClick={() => loadTemplate('quest')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                📜 Quest
-              </button>
-            </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            {/* Template Import/Export */}
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportTemplate}
-                className="hidden"
-                id="import-interaction-template"
-              />
-              <label
-                htmlFor="import-interaction-template"
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
-              >
-                <Upload className="w-4 h-4" />
-                Import
-              </label>
-              
-              <button
-                onClick={handleExportTemplate}
-                disabled={!currentInteraction}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <button
-              onClick={handleTest}
-              disabled={!currentInteraction || Object.keys(validationErrors).length > 0}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <TestTube className="w-4 h-4" />
-              Test
-            </button>
-            
-            <button
-              onClick={() => setPreviewMode(!previewMode)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                previewMode
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              {previewMode ? 'Edit Mode' : 'Preview'}
-            </button>
-            
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </button>
-            
-            <button
-              onClick={handleSave}
-              disabled={isSaving || Object.keys(validationErrors).length > 0}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Interaction
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Editor Content */}
-      <div className="flex-1 p-8">
-        {testMode && testResults ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">Test Results</h2>
-                <button
-                  onClick={() => setTestMode(false)}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
-                >
-                  Back to Editor
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                {/* Test Status */}
-                <div className={`p-4 rounded-lg border ${
-                  testResults.success 
-                    ? 'bg-green-600/10 border-green-600/30' 
-                    : 'bg-red-600/10 border-red-600/30'
-                }`}>
-                  <div className={`font-semibold ${
-                    testResults.success ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {testResults.success ? '✓ Test Passed' : '✗ Test Failed'}
-                  </div>
-                </div>
-                
-                {/* Branches Test */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Branch Validation</h3>
-                  <div className="space-y-2">
-                    {testResults.branches.map((branch, index) => (
-                      <div key={index} className="p-3 bg-slate-700/50 rounded border border-slate-600">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-200">Branch {index + 1}: {branch.text}</span>
-                          <span className={`text-sm ${
-                            branch.accessible ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            {branch.accessible ? '✓ Accessible' : '✗ Blocked'}
-                          </span>
-                        </div>
-                        {branch.effects.length > 0 && (
-                          <div className="mt-2 text-sm text-slate-400">
-                            Effects: {branch.effects.length}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Warnings */}
-                {testResults.warnings.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-yellow-400 mb-3">Warnings</h3>
-                    <div className="space-y-2">
-                      {testResults.warnings.map((warning, index) => (
-                        <div key={index} className="p-3 bg-yellow-600/10 border border-yellow-600/30 rounded">
-                          <span className="text-yellow-300">{warning}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Errors */}
-                {testResults.errors.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-red-400 mb-3">Errors</h3>
-                    <div className="space-y-2">
-                      {testResults.errors.map((error, index) => (
-                        <div key={index} className="p-3 bg-red-600/10 border border-red-600/30 rounded">
-                          <span className="text-red-300">{error}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          <div className="space-y-6">
+            {/* Test Status */}
+            <div className={`p-4 rounded-lg border ${
+              testResults.success 
+                ? 'bg-green-600/10 border-green-600/30' 
+                : 'bg-red-600/10 border-red-600/30'
+            }`}>
+              <div className={`font-semibold ${
+                testResults.success ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {testResults.success ? '✓ Test Passed' : '✗ Test Failed'}
               </div>
             </div>
-          ) : previewMode ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">Interaction Preview</h2>
-              {currentInteraction ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
-                    <h3 className="font-semibold text-white mb-2">
-                      Interaction: {currentInteraction.name || 'Unnamed Interaction'}
-                    </h3>
-                    <p className="text-slate-300 mb-4">
-                      {currentInteraction.description || 'No description provided'}
-                    </p>
-                    
-                    {currentInteraction.branches && currentInteraction.branches.length > 0 ? (
-                      <div className="space-y-2">
-                        <div className="text-sm text-slate-400 mb-2">Available responses:</div>
-                        {currentInteraction.branches.map((branch, index) => (
-                          <button 
-                            key={index}
-                            className="block w-full text-left p-3 bg-slate-600/50 hover:bg-slate-600 rounded border border-slate-500 text-slate-200 transition-colors"
-                          >
-                            → {branch.text || `Branch ${index + 1}`}
-                            {branch.effects && branch.effects.length > 0 && (
-                              <span className="text-xs text-slate-400 ml-2">
-                                ({branch.effects.length} effect{branch.effects.length !== 1 ? 's' : ''})
-                              </span>
-                            )}
-                          </button>
-                        ))}
+            
+            {/* Branches Test */}
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Branch Validation</h3>
+              <div className="space-y-2">
+                {testResults.branches.map((branch, index) => (
+                  <div key={index} className="p-3 bg-slate-700/50 rounded border border-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-200">Branch {index + 1}: {branch.text}</span>
+                      <span className={`text-sm ${
+                        branch.accessible ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {branch.accessible ? '✓ Accessible' : '✗ Blocked'}
+                      </span>
+                    </div>
+                    {branch.effects.length > 0 && (
+                      <div className="mt-2 text-sm text-slate-400">
+                        Effects: {branch.effects.length}
                       </div>
-                    ) : (
-                      <div className="text-slate-400 italic">No branches defined</div>
                     )}
                   </div>
-                </div>
-              ) : (
-                <p className="text-slate-300">
-                  No interaction data to preview. Create or load an interaction to see the preview.
-                </p>
-              )}
-            </div>
-        ) : (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white">Interaction Configuration</h2>
-              
-              {/* Validation Errors Summary */}
-              {Object.keys(validationErrors).length > 0 && (
-                <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
-                  <div className="text-red-400 text-sm font-medium mb-2">
-                    Please fix the following errors:
-                  </div>
-                  <ul className="text-red-300 text-xs space-y-1">
-                    {Object.entries(validationErrors).map(([field, error]) => (
-                      <li key={field}>• {error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
             
-            {/* Use existing InteractionEditor component */}
-            <InteractionEditor 
-              initialInteraction={currentInteraction}
-              onChange={handleChange}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              mode={currentInteraction ? 'edit' : 'create'}
-            />
+            {/* Warnings */}
+            {testResults.warnings.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-400 mb-3">Warnings</h3>
+                <div className="space-y-2">
+                  {testResults.warnings.map((warning, index) => (
+                    <div key={index} className="p-3 bg-yellow-600/10 border border-yellow-600/30 rounded">
+                      <span className="text-yellow-300">{warning}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Errors */}
+            {testResults.errors.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-red-400 mb-3">Errors</h3>
+                <div className="space-y-2">
+                  {testResults.errors.map((error, index) => (
+                    <div key={index} className="p-3 bg-red-600/10 border border-red-600/30 rounded">
+                      <span className="text-red-300">{error}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      ) : previewMode ? (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+          <h2 className="text-xl font-semibold text-white mb-4">Interaction Preview</h2>
+          {currentInteraction ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
+                <h3 className="font-semibold text-white mb-2">
+                  Interaction: {currentInteraction.name || 'Unnamed Interaction'}
+                </h3>
+                <p className="text-slate-300 mb-4">
+                  {currentInteraction.description || 'No description provided'}
+                </p>
+                
+                {currentInteraction.branches && currentInteraction.branches.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="text-sm text-slate-400 mb-2">Available responses:</div>
+                    {currentInteraction.branches.map((branch, index) => (
+                      <button 
+                        key={index}
+                        className="block w-full text-left p-3 bg-slate-600/50 hover:bg-slate-600 rounded border border-slate-500 text-slate-200 transition-colors"
+                      >
+                        → {branch.text || `Branch ${index + 1}`}
+                        {branch.effects && branch.effects.length > 0 && (
+                          <span className="text-xs text-slate-400 ml-2">
+                            ({branch.effects.length} effect{branch.effects.length !== 1 ? 's' : ''})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-slate-400 italic">No branches defined</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-slate-300">
+              No interaction data to preview. Create or load an interaction to see the preview.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white">Interaction Configuration</h2>
+            
+            {/* Validation Errors Summary */}
+            {Object.keys(validationErrors).length > 0 && (
+              <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
+                <div className="text-red-400 text-sm font-medium mb-2">
+                  Please fix the following errors:
+                </div>
+                <ul className="text-red-300 text-xs space-y-1">
+                  {Object.entries(validationErrors).map(([field, error]) => (
+                    <li key={field}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          {/* Use existing InteractionEditor component */}
+          <InteractionEditor 
+            initialInteraction={currentInteraction}
+            onChange={handleChange}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            mode={currentInteraction ? 'edit' : 'create'}
+          />
+        </div>
+      )}
+    </EditorLayout>
   );
 };
 

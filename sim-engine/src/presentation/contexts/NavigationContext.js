@@ -46,6 +46,7 @@ const routeToPageMap = {
   '/editors/nodes': 'Node Editor',
   '/editors/characters': 'Character Editor',
   '/editors/interactions': 'Interaction Editor',
+  '/editors/encounters': 'Encounter Editor',
   '/builder': 'World Builder',
   '/simulation': 'Simulation',
   '/history': 'History'
@@ -53,18 +54,28 @@ const routeToPageMap = {
 
 // Generate breadcrumbs from route
 const generateBreadcrumbs = (route) => {
-  const segments = route.split('/').filter(Boolean);
   const breadcrumbs = [{ label: 'Home', path: '/' }];
   
-  let currentPath = '';
-  segments.forEach((segment, index) => {
-    currentPath += `/${segment}`;
-    const label = segment.charAt(0).toUpperCase() + segment.slice(1);
+  // Special handling for editor routes - they should go through World Builder
+  if (route.startsWith('/editors/')) {
+    breadcrumbs.push({ label: 'World Builder', path: '/builder' });
     breadcrumbs.push({
-      label: routeToPageMap[currentPath] || label,
-      path: currentPath
+      label: routeToPageMap[route] || 'Editor',
+      path: route
     });
-  });
+  } else if (route !== '/') {
+    // For non-editor routes, use the normal generation
+    const segments = route.split('/').filter(Boolean);
+    let currentPath = '';
+    segments.forEach((segment, index) => {
+      currentPath += `/${segment}`;
+      const label = segment.charAt(0).toUpperCase() + segment.slice(1);
+      breadcrumbs.push({
+        label: routeToPageMap[currentPath] || label,
+        path: currentPath
+      });
+    });
+  }
   
   return breadcrumbs;
 };

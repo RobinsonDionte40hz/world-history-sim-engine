@@ -8,9 +8,8 @@
  */
 
 import React, { useState } from 'react';
-import { Globe, X, Settings } from 'lucide-react';
+import { Globe, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import EditorNavigation from '../components/EditorNavigation';
 import WorldSelector from '../components/WorldSelector';
 
 const Sidebar = ({
@@ -22,7 +21,7 @@ const Sidebar = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('navigation'); // 'navigation' | 'worlds' | 'tools'
+  const [activeTab, setActiveTab] = useState('tools'); // 'worlds' | 'tools'
 
   // Get context-specific menu items based on current page
   const getContextMenuItems = () => {
@@ -450,46 +449,102 @@ const Sidebar = ({
 
   const defaultMenuItems = [
     {
-      id: 'divider1',
+      id: 'divider-builders',
       type: 'divider',
-      label: 'Simulation'
+      label: '🌟 Create & Build'
+    },
+    {
+      id: 'world-builder',
+      label: '🌍 World Foundation',
+      path: '/builder',
+      onClick: () => navigate('/builder'),
+      description: 'Start with world basics',
+      hoverColor: 'rgba(59, 130, 246, 0.15)',
+      hoverBorder: 'rgba(59, 130, 246, 0.4)'
+    },
+    {
+      id: 'node-editor',
+      label: '📍 Node Editor',
+      path: '/editors/nodes',
+      onClick: () => navigate('/editors/nodes'),
+      description: 'Create locations & places',
+      hoverColor: 'rgba(34, 197, 94, 0.15)',
+      hoverBorder: 'rgba(34, 197, 94, 0.4)'
+    },
+    {
+      id: 'character-editor',
+      label: '👤 Character Editor',
+      path: '/editors/characters',
+      onClick: () => navigate('/editors/characters'),
+      description: 'Design people & NPCs',
+      hoverColor: 'rgba(168, 85, 247, 0.15)',
+      hoverBorder: 'rgba(168, 85, 247, 0.4)'
+    },
+    {
+      id: 'interaction-editor',
+      label: '💬 Interaction Editor',
+      path: '/editors/interactions',
+      onClick: () => navigate('/editors/interactions'),
+      description: 'Build conversations',
+      hoverColor: 'rgba(251, 191, 36, 0.15)',
+      hoverBorder: 'rgba(251, 191, 36, 0.4)'
+    },
+    {
+      id: 'encounter-editor',
+      label: '⚔️ Encounter Editor',
+      path: '/editors/encounters',
+      onClick: () => navigate('/editors/encounters'),
+      description: 'Design events & battles',
+      hoverColor: 'rgba(239, 68, 68, 0.15)',
+      hoverBorder: 'rgba(239, 68, 68, 0.4)'
+    },
+    {
+      id: 'divider-simulation',
+      type: 'divider',
+      label: '⚡ Simulation'
     },
     {
       id: 'simulation',
-      label: '⚡ Run Simulation',
+      label: '🚀 Run Simulation',
       path: '/simulation',
       onClick: () => navigate('/simulation'),
-      hoverColor: 'rgba(34, 197, 94, 0.1)',
-      hoverBorder: 'rgba(34, 197, 94, 0.3)'
+      description: 'Watch history unfold',
+      hoverColor: 'rgba(34, 197, 94, 0.15)',
+      hoverBorder: 'rgba(34, 197, 94, 0.4)',
+      disabled: true,
+      tooltip: 'Complete world foundation to unlock simulation'
     },
     {
-      id: 'divider2',
+      id: 'divider-resources',
       type: 'divider',
-      label: 'Resources'
+      label: '📚 Learn & Explore'
     },
     {
       id: 'features',
       label: '✨ Features',
       path: '/features',
       onClick: () => navigate('/features'),
-      hoverColor: 'rgba(129, 140, 248, 0.1)',
-      hoverBorder: 'rgba(129, 140, 248, 0.3)'
+      description: 'Discover capabilities',
+      hoverColor: 'rgba(129, 140, 248, 0.15)',
+      hoverBorder: 'rgba(129, 140, 248, 0.4)'
     },
     {
       id: 'docs',
-      label: '📚 Documentation',
+      label: '� Documentation',
       path: '/docs',
       onClick: () => navigate('/docs'),
-      hoverColor: 'rgba(251, 191, 36, 0.1)',
-      hoverBorder: 'rgba(251, 191, 36, 0.3)'
+      description: 'Guides & tutorials',
+      hoverColor: 'rgba(251, 191, 36, 0.15)',
+      hoverBorder: 'rgba(251, 191, 36, 0.4)'
     },
     {
       id: 'examples',
       label: '🎯 Examples',
       path: '/examples',
       onClick: () => navigate('/examples'),
-      hoverColor: 'rgba(168, 85, 247, 0.1)',
-      hoverBorder: 'rgba(168, 85, 247, 0.3)'
+      description: 'Sample worlds & ideas',
+      hoverColor: 'rgba(168, 85, 247, 0.15)',
+      hoverBorder: 'rgba(168, 85, 247, 0.4)'
     }
   ];
 
@@ -505,21 +560,22 @@ const Sidebar = ({
           position: 'fixed',
           top: '0',
           left: '0',
-          width: '320px',
+          width: '380px',
           height: '100vh',
           background: 'rgba(15, 23, 42, 0.98)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(71, 85, 105, 0.5)',
           borderLeft: 'none',
           borderRight: '3px solid rgba(129, 140, 248, 0.6)',
-          zIndex: '2000',
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          padding: '2rem',
-          display: 'flex',
+          zIndex: 2000,
+          padding: '1.5rem',
+          display: isOpen ? 'flex' : 'none',
           flexDirection: 'column',
           boxShadow: '8px 0 32px rgba(0, 0, 0, 0.4)',
-          overflow: 'hidden',
-          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          transform: 'none',
+          transition: 'none'
         }}
       >
         {/* Sidebar Header */}
@@ -571,9 +627,8 @@ const Sidebar = ({
         {/* Tab Navigation */}
         <div className="flex space-x-1 mb-6 bg-slate-700/30 p-1 rounded-lg">
           {[
-            { id: 'navigation', label: 'Navigation', icon: '🧭' },
-            { id: 'worlds', label: 'Worlds', icon: '🌍' },
-            { id: 'tools', label: 'Tools', icon: '🔧' }
+            { id: 'tools', label: 'Tools', icon: '🔧' },
+            { id: 'worlds', label: 'Worlds', icon: '🌍' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -594,10 +649,6 @@ const Sidebar = ({
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
-          {activeTab === 'navigation' && (
-            <EditorNavigation className="mb-4" />
-          )}
-          
           {activeTab === 'worlds' && (
             <WorldSelector 
               className="mb-4"
@@ -667,40 +718,73 @@ const Sidebar = ({
                 return (
                   <button
                     key={item.id}
-                    onClick={item.onClick}
-                    className="w-full text-left p-3 rounded-lg transition-all duration-200 font-medium"
+                    onClick={item.disabled ? undefined : item.onClick}
+                    disabled={item.disabled}
+                    title={item.disabled ? item.tooltip : undefined}
+                    className={`w-full text-left p-4 rounded-xl transition-all duration-300 font-medium group ${
+                      item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.02]'
+                    }`}
                     style={{
-                      color: isActive ? 'white' : '#e2e8f0',
-                      border: isActive ? `1px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.4)'}` : '1px solid transparent',
+                      color: item.disabled ? '#94a3b8' : (isActive ? 'white' : '#e2e8f0'),
+                      border: isActive && !item.disabled 
+                        ? `2px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.6)'}` 
+                        : '2px solid transparent',
                       fontSize: '0.95rem',
-                      background: isActive ? (item.hoverColor || 'rgba(129, 140, 248, 0.2)') : 'rgba(71, 85, 105, 0.1)',
-                      transform: isActive ? 'translateX(8px)' : 'translateX(0)',
-                      boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.15)' : 'none'
+                      background: item.disabled 
+                        ? 'rgba(71, 85, 105, 0.05)' 
+                        : (isActive 
+                          ? `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`
+                          : 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))'),
+                      transform: isActive && !item.disabled ? 'translateX(12px)' : 'translateX(0)',
+                      boxShadow: isActive && !item.disabled 
+                        ? `0 8px 25px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.05)` 
+                        : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                      backdropFilter: 'blur(12px)'
                     }}
                     onMouseOver={(e) => {
-                      if (!isActive) {
-                        e.target.style.background = item.hoverColor || 'rgba(129, 140, 248, 0.2)';
-                        e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.4)';
-                        e.target.style.transform = 'translateX(8px)';
+                      if (!isActive && !item.disabled) {
+                        e.target.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
+                        e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
+                        e.target.style.transform = 'translateX(12px) scale(1.02)';
                         e.target.style.color = 'white';
+                        e.target.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
                       }
                     }}
                     onMouseOut={(e) => {
-                      if (!isActive) {
-                        e.target.style.background = 'rgba(71, 85, 105, 0.1)';
+                      if (!isActive && !item.disabled) {
+                        e.target.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
                         e.target.style.borderColor = 'transparent';
-                        e.target.style.transform = 'translateX(0)';
+                        e.target.style.transform = 'translateX(0) scale(1)';
                         e.target.style.color = '#e2e8f0';
+                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                       }
                     }}
                   >
-                    {item.label}
-                    {isActive && (
-                      <span className="ml-2 text-xs opacity-75">●</span>
-                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm mb-1">
+                          {item.label}
+                        </div>
+                        {item.description && (
+                          <div className="text-xs opacity-75 leading-relaxed">
+                            {item.description}
+                          </div>
+                        )}
+                      </div>
+                      {item.disabled && (
+                        <div className="ml-2 text-gray-500 group-hover:animate-pulse">
+                          🔒
+                        </div>
+                      )}
+                      {isActive && !item.disabled && (
+                        <div className="ml-2 text-sm opacity-80">
+                          ✨
+                        </div>
+                      )}
+                    </div>
                   </button>
                 );
-              })}
+                })}
             </div>
           )}
         </div>
@@ -717,12 +801,10 @@ const Sidebar = ({
               }}
             >
               <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem', fontWeight: '600' }}>
-                {activeTab === 'navigation' && 'Navigation Help'}
                 {activeTab === 'worlds' && 'World Management'}
                 {activeTab === 'tools' && 'Editor Tools'}
               </p>
               <p style={{ color: '#cbd5e1', fontSize: '0.875rem', lineHeight: '1.4' }}>
-                {activeTab === 'navigation' && 'Use the navigation panel to move between editors and track your progress.'}
                 {activeTab === 'worlds' && 'Select existing worlds or create new ones to start building.'}
                 {activeTab === 'tools' && 'Context-specific tools and templates for the current editor.'}
               </p>
