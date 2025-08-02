@@ -65,9 +65,14 @@ const Navigation = ({
       onClick: () => navigate('/examples')
     },
     { 
-      label: 'Builder', 
+      label: 'World Builder', 
       path: '/builder',
       onClick: () => navigate('/builder')
+    },
+    { 
+      label: 'Editors', 
+      path: '/editors/nodes',
+      onClick: () => navigate('/editors/nodes')
     }
   ];
 
@@ -78,10 +83,12 @@ const Navigation = ({
     { title: 'Features', path: '/features', description: 'Explore system capabilities' },
     { title: 'Documentation', path: '/docs', description: 'Comprehensive guides and API reference' },
     { title: 'Examples', path: '/examples', description: 'Sample worlds and scenarios' },
+    { title: 'World Foundation', path: '/builder', description: 'Create world basics and foundation' },
     { title: 'Node Editor', path: '/editors/nodes', description: 'Create and edit world nodes' },
     { title: 'Character Editor', path: '/editors/characters', description: 'Design characters and NPCs' },
     { title: 'Interaction Editor', path: '/editors/interactions', description: 'Build character interactions' },
-    { title: 'World Builder', path: '/builder', description: 'Main world building interface' }
+    { title: 'Encounter Editor', path: '/editors/encounters', description: 'Create dynamic encounters' },
+    { title: 'Simulation', path: '/simulation', description: 'Run world history simulation' }
   ];
 
   // Check if current path matches nav item

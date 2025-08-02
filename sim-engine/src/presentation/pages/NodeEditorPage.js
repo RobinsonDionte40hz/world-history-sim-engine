@@ -113,29 +113,11 @@ const NodeEditorPage = () => {
     <div className="min-h-screen" style={{ 
       background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
     }}>
-      <Navigation />
-      
-      {/* Breadcrumb Navigation */}
-      <div className="px-8 py-3 border-b border-slate-700/50 bg-slate-900/30">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <button 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 hover:text-slate-200 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <button 
-            onClick={() => navigate('/builder')}
-            className="hover:text-slate-200 transition-colors"
-          >
-            World Builder
-          </button>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-slate-200">Node Editor</span>
-        </div>
-      </div>
+      <Navigation 
+        title="Node Editor"
+        showBreadcrumbs={true}
+        showSidebar={false}
+      />
       
       {/* Editor Header */}
       <div className="px-8 py-4 border-b border-slate-700 bg-slate-800/50">
@@ -255,32 +237,28 @@ const NodeEditorPage = () => {
 
       {/* Editor Content */}
       <div className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto">
-          {previewMode ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">Node Preview</h2>
-              <p className="text-slate-300">
-                Preview mode will show how the node appears in the simulation.
-                This feature will be implemented with the actual node preview component.
-              </p>
-            </div>
-          ) : (
-            <div className="max-w-5xl mx-auto">
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-white mb-6">Node Configuration</h2>
-                
-                {/* Use existing NodeEditor component */}
-                <NodeEditor 
-                  initialNode={currentNode}
-                  onChange={handleChange}
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                  mode={currentNode ? 'edit' : 'create'}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        {previewMode ? (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+            <h2 className="text-xl font-semibold text-white mb-4">Node Preview</h2>
+            <p className="text-slate-300">
+              Preview mode will show how the node appears in the simulation.
+              This feature will be implemented with the actual node preview component.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-white mb-6">Node Configuration</h2>
+            
+            {/* Use existing NodeEditor component */}
+            <NodeEditor 
+              initialNode={currentNode}
+              onChange={handleChange}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              mode={currentNode ? 'edit' : 'create'}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

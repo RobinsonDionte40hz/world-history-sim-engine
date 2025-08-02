@@ -595,8 +595,7 @@ const EncounterEditorPage = () => {
 
       {/* Editor Content */}
       <div className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto">
-          {testMode && testResults ? (
+        {testMode && testResults ? (
             <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-white">Encounter Test Results</h2>
@@ -804,39 +803,36 @@ const EncounterEditorPage = () => {
                 </p>
               )}
             </div>
-          ) : (
-            <div className="max-w-5xl mx-auto">
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-white">Encounter Configuration</h2>
-                  
-                  {/* Validation Errors Summary */}
-                  {Object.keys(validationErrors).length > 0 && (
-                    <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
-                      <div className="text-red-400 text-sm font-medium mb-2">
-                        Please fix the following errors:
-                      </div>
-                      <ul className="text-red-300 text-xs space-y-1">
-                        {Object.entries(validationErrors).map(([field, error]) => (
-                          <li key={field}>• {error}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+        ) : (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-white">Encounter Configuration</h2>
+              
+              {/* Validation Errors Summary */}
+              {Object.keys(validationErrors).length > 0 && (
+                <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
+                  <div className="text-red-400 text-sm font-medium mb-2">
+                    Please fix the following errors:
+                  </div>
+                  <ul className="text-red-300 text-xs space-y-1">
+                    {Object.entries(validationErrors).map(([field, error]) => (
+                      <li key={field}>• {error}</li>
+                    ))}
+                  </ul>
                 </div>
-                
-                {/* Use EncounterEditor component */}
-                <EncounterEditor 
-                  initialEncounter={currentEncounter}
-                  onChange={handleChange}
+              )}
+            </div>
+            
+            {/* Use EncounterEditor component */}
+            <EncounterEditor 
+              initialEncounter={currentEncounter}
+              onChange={handleChange}
                   onSave={handleSave}
                   onCancel={handleCancel}
                   mode={currentEncounter ? 'edit' : 'create'}
                 />
               </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

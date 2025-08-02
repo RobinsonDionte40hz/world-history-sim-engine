@@ -18,8 +18,8 @@ import { configureStore } from '@reduxjs/toolkit';
 // Import components to test
 import Button, { ButtonGroup, IconButton } from './Button';
 import Card, { CardHeader, CardContent, CardFooter, FeatureCard, StatsCard } from './Card';
-import { LoadingSpinner, ProgressBar, SkeletonLoader } from './LoadingComponents';
-import Modal, { ConfirmDialog, AlertDialog } from './Modal';
+import { LoadingSpinner, ProgressBar, SkeletonLoader } from '../components/LoadingComponents';
+import Modal, { ConfirmDialog, AlertDialog } from '../components/Modal';
 import PageLayout from './PageLayout';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import { Home, Settings } from 'lucide-react';

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design addresses critical usability issues in the World History Simulation Engine's editor system by implementing a cohesive navigation system, consistent UI patterns, proper data persistence, and missing functionality. The solution focuses on creating a seamless workflow that guides users through the world-building process while maintaining their work and providing clear feedback.
+This design addresses critical usability issues in the World History Simulation Engine's editor system by implementing a unified navigation system, fixing layout alignment issues, and eliminating redundant navigation elements. The solution focuses on creating a clean, single-navigation experience where editors display as full-width, center-aligned content with the global sidebar as the primary navigation method. Key fixes include removing multiple navigation systems, fixing left-aligned editor layouts, and ensuring the "Editors" button properly navigates to the World Foundation editor.
 
 ## Architecture
 
@@ -58,56 +58,65 @@ graph TD
 
 ## Components and Interfaces
 
-### 1. Enhanced Editor Navigation System
+### 1. Unified Single Navigation System
 
-#### EditorNavigation Component
+#### Navigation Architecture
+The system will use **only the global sidebar** for navigation, eliminating all other navigation elements:
+
 ```typescript
-interface EditorNavigationProps {
-  currentEditor: EditorType;
-  worldExists: boolean;
-  hasUnsavedChanges: boolean;
-  onNavigate: (editor: EditorType) => void;
-}
-
-interface EditorType {
-  id: 'world' | 'nodes' | 'characters' | 'interactions' | 'encounters';
-  name: string;
-  path: string;
-  requiresWorld: boolean;
-  icon: ReactNode;
+interface NavigationSystem {
+  globalSidebar: {
+    isAccessible: boolean; // Always accessible from all pages
+    contains: ['EditorNavigation', 'WorldSelector', 'ContextualTools'];
+  };
+  topNavigation: {
+    status: 'removed'; // No longer used in editor pages
+  };
+  editorSpecificNavigation: {
+    status: 'removed'; // No longer displayed above editor content
+  };
+  breadcrumbs: {
+    location: 'within_sidebar'; // Only in sidebar, not as separate element
+  };
 }
 ```
 
-#### Navigation Flow
-- World Foundation Editor → Node Editor → Character Editor → Interaction Editor → Encounter Editor
-- Each editor checks for world foundation completion before allowing access
-- Navigation warnings for unsaved changes
-- Breadcrumb navigation showing current position
+#### Single Navigation Flow
+- **Global Sidebar Only**: All navigation happens through the sidebar
+- **"Editors" Button Fix**: Routes to `/builder` (World Foundation)
+- **No Redundant Navigation**: Remove top nav and editor-specific nav from editor pages
+- **Sidebar Always Accessible**: Can be opened from any editor page
 
-### 2. Consistent Button Alignment System
+### 2. Full-Width Editor Layout System
 
-#### ButtonGroup Component
+#### Layout Architecture
+Fix the left-aligned sidebar appearance of editors by implementing full-width layouts:
+
 ```typescript
-interface ButtonGroupProps {
-  alignment: 'left' | 'center' | 'right';
-  buttons: ButtonConfig[];
-  variant: 'primary' | 'secondary' | 'danger';
-}
-
-interface ButtonConfig {
-  id: string;
-  label: string;
-  icon?: ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  loading?: boolean;
+interface EditorLayoutSystem {
+  editorContainer: {
+    width: '100%';
+    maxWidth: 'none'; // Remove sidebar-like constraints
+    margin: '0 auto'; // Center the content
+    padding: 'responsive'; // Proper spacing on all sides
+  };
+  contentAlignment: {
+    default: 'center'; // All editors center-aligned
+    interaction: 'left'; // Exception for interaction editor
+  };
+  navigationRemoval: {
+    topNav: 'hidden'; // Remove from editor pages
+    editorNav: 'hidden'; // Remove editor-specific nav bars
+    breadcrumbs: 'sidebar_only'; // Only show in sidebar
+  };
 }
 ```
 
-#### Alignment Rules
-- **World, Node, Character Editors**: Center-aligned buttons
-- **Interaction Editor**: Maintain current left alignment
-- **All Editors**: Consistent spacing, sizing, and hover states
+#### Layout Rules
+- **Full-Width Content**: Editors use entire available width
+- **Center Alignment**: Content centered, not left-aligned like sidebar
+- **No Navigation Overlap**: Remove redundant navigation elements
+- **Responsive Design**: Proper spacing and alignment on all screen sizes
 
 ### 3. Enhanced World and Node Persistence
 
@@ -294,13 +303,50 @@ interface SaveStatus {
 - **Performance Testing**: Large world handling and save times
 - **Accessibility Testing**: Keyboard navigation and screen readers
 
+### 6. Navigation Cleanup and "Editors" Button Fix
+
+#### Navigation Element Removal
+```typescript
+interface NavigationCleanup {
+  elementsToRemove: [
+    'topNavigationInEditors',
+    'editorSpecificNavBars', 
+    'redundantBreadcrumbs',
+    'mobileNavigationDuplicates'
+  ];
+  elementsToFix: {
+    editorsButton: {
+      currentPath: '/editors/nodes'; // Non-functional
+      newPath: '/builder'; // World Foundation
+      newLabel: 'World Foundation';
+    };
+  };
+  sidebarAccess: {
+    availability: 'all_editor_pages';
+    toggleMethod: 'logo_click_or_hamburger';
+  };
+}
+```
+
+#### Button Navigation Fixes
+- **"Editors" → "World Foundation"**: Clear naming and functional routing
+- **Remove Non-Functional Links**: Clean up broken navigation paths
+- **Sidebar-Only Navigation**: All editor navigation through sidebar
+- **Consistent Access**: Sidebar accessible from every editor page
+
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure
+### Phase 1: Navigation System Cleanup
+1. **Remove Redundant Navigation**: Eliminate top nav and editor-specific nav from editor pages
+2. **Fix "Editors" Button**: Update routing and labeling to go to World Foundation
+3. **Sidebar Access**: Ensure sidebar is accessible from all editor pages
+4. **Layout Fixes**: Remove left-alignment constraints from editor content
+
+### Phase 2: Core Infrastructure
 1. **EditorStateManager**: Central state management
 2. **WorldPersistenceService**: Enhanced save/load functionality
 3. **NavigationGuard**: Unsaved changes protection
-4. **EditorLayout**: Consistent layout wrapper
+4. **EditorLayout**: Full-width, center-aligned layout wrapper
 
 ### Phase 2: Navigation System
 1. **EditorNavigation**: Unified navigation component

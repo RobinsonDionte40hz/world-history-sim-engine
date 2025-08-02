@@ -1,6 +1,25 @@
 # Implementation Plan
 
-- [x] 1. Create core infrastructure components
+## Important: Review Steering Documentation First
+Before implementing any tasks, **always review the steering documentation** in `.kiro/steering/` to ensure alignment with:
+- World History Simulation Engine architecture and principles
+- Clean architecture patterns and domain-driven design
+- Existing system integration requirements (D&D attributes, quest system, consciousness framework)
+- Template system and mappless design principles
+- Turn-based simulation compatibility
+
+## Tasks
+
+- [ ] 1. Fix multiple navigation systems and layout alignment (PRIORITY)
+  - Remove top navigation from all editor pages (NodeEditorPage, InteractionEditorPage, etc.)
+  - Remove editor-specific navigation bars that appear above editor content
+  - Fix "Editors" button to navigate to "/builder" (World Foundation) instead of non-functional page
+  - Ensure global sidebar is accessible from all editor pages
+  - Fix left-aligned editor layouts to be full-width and center-aligned
+  - Remove redundant breadcrumb navigation outside of sidebar
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 2.1, 2.6, 9.1, 9.2, 9.3, 9.4_
+
+- [x] 2. Create core infrastructure components
 
 
 
@@ -14,7 +33,7 @@
   - Create EditorLayout wrapper component for consistent editor structure
   - _Requirements: 1.1, 1.2, 1.3, 5.1, 5.2, 8.1, 8.2, 8.3, 8.4_
 
-- [x] 2. Implement unified navigation system within the global sidebar
+- [x] 3. Implement unified navigation system within the global sidebar
 
 
 
@@ -25,38 +44,34 @@
   - Create useEditorNavigation and useUnsavedChanges custom hooks
   - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 3. Fix button alignment and UI consistency
+- [ ] 4. Fix editor layout alignment and button consistency
+  - Remove left-aligned sidebar-like constraints from editor pages
+  - Implement full-width, center-aligned layouts for all editors
+  - Fix editor content to use entire available width instead of appearing as left sidebar
   - Implement consistent button styling, spacing, and hover states across all editors
   - Create ButtonGroup component for standardized button layouts
-  - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 4. Implement node save functionality
+- [ ] 5. Implement node save functionality
   - Add save node functionality to NodeEditorPage that persists to world data
   - Integrate node saving with WorldPersistenceService
   - Add save confirmation feedback and error handling for node operations
   - Implement unsaved changes warning when leaving node editor
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 5. Create world and node selection interfaces
+- [ ] 6. Create world and node selection interfaces
   - Add world selection dropdown/modal to World Foundation Editor
   - Implement existing world loading functionality with data population
   - Create node selection interface in Node Editor for editing existing nodes
   - Add "Create New" options alongside selection interfaces
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 6. Enforce world foundation save requirement
+- [ ] 7. Enforce world foundation save requirement
   - Add validation to prevent navigation from World Foundation Editor without saving
   - Display blocking messages in other editors when world foundation is incomplete
   - Enable other editors only after world foundation is saved
   - Implement world foundation completion status tracking
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
-
-- [ ] 7. Clean up navigation elements
-  - Remove or replace non-functional navigation buttons with working alternatives
-  - Update sidebar navigation to only show functional editor links
-  - Fix "World Editor" and "Editors" buttons to navigate to actual pages
-  - Remove redundant navigation elements from editor pages
-  - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
 - [x] 8. Create encounter system and editor
 
@@ -84,7 +99,15 @@
   - Add user acceptance tests for complete world creation workflow
   - _Requirements: All requirements - validation and quality assurance_
 
-- [ ] 11. Update routing and app integration
+- [x] 11. Update routing and app integration
+
+
+
+
+
+
+
+
   - Update AppRouter with new encounter editor route
   - Fix existing route configurations for proper editor access
   - Ensure all navigation paths lead to functional pages
@@ -97,6 +120,14 @@
   - Optimize performance for large world data handling
   - Add accessibility improvements and screen reader support
   - _Requirements: 2.4, 8.1, 8.2, 8.3, 8.4_
+
+- [ ] 13. Verify navigation and layout fixes
+  - Test that only global sidebar navigation is present on editor pages
+  - Verify "Editors" button navigates to World Foundation (/builder)
+  - Confirm editor content is full-width and center-aligned, not left-aligned like sidebar
+  - Test sidebar accessibility from all editor pages
+  - Validate removal of redundant navigation elements
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 2.1, 2.6, 9.1, 9.2, 9.3, 9.4_
 - [ ] 13
 . Ensure turn-based simulation compatibility
   - Validate all editor outputs are compatible with turn-based simulation engine

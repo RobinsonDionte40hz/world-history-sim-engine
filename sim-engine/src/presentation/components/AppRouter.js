@@ -18,11 +18,13 @@ import FeaturesPage from '../pages/FeaturesPage';
 import DocumentationPage from '../pages/DocumentationPage';
 import ExamplesPage from '../pages/ExamplesPage';
 
-// Editor pages (will be created)
+// Editor pages (full-page editors with global navigation)
 import NodeEditorPage from '../pages/NodeEditorPage';
 import CharacterEditorPage from '../pages/CharacterEditorPage';
 import InteractionEditorPage from '../pages/InteractionEditorPage';
 import EncounterEditorPage from '../pages/EncounterEditorPage';
+
+// World foundation editor
 import WorldNodeEditorPage from '../pages/WorldNodeEditorPage';
 
 // Loading component
@@ -44,13 +46,17 @@ const AppRouter = () => {
             <Route path="/docs/*" element={<DocumentationPage />} />
             <Route path="/examples" element={<ExamplesPage />} />
             
-            {/* Creation/Editor routes - Always accessible */}
-            <Route path="/builder" element={<NodeEditorPage />} />
-            <Route path="/editors/nodes" element={<NodeEditorPage />} />
-            <Route path="/editors/characters" element={<CharacterEditorPage />} />
-            <Route path="/editors/interactions" element={<InteractionEditorPage />} />
-            <Route path="/editors/encounters" element={<EncounterEditorPage />} />
+            {/* World Foundation Editor (full-page) */}
+            <Route path="/builder" element={<WorldNodeEditorPage />} />
+            <Route path="/world-foundation" element={<WorldNodeEditorPage />} />
+            <Route path="/editors/world" element={<WorldNodeEditorPage />} />
             <Route path="/world-editor" element={<WorldNodeEditorPage />} />
+            
+            {/* Individual Editor Pages (full-page with global navigation) */}
+            <Route path="/editors/nodes" element={<NodeEditorPage />} />
+            <Route path="/editors/interactions" element={<InteractionEditorPage />} />
+            <Route path="/editors/characters" element={<CharacterEditorPage />} />
+            <Route path="/editors/encounters" element={<EncounterEditorPage />} />
             
             {/* Simulation route - Optional, with prerequisites */}
             <Route path="/simulation" element={<HistoryPage />} />

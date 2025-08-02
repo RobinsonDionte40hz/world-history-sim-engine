@@ -36,8 +36,7 @@ The codebase already includes robust systems that form the foundation for world 
 
 ## Core Principles
 
-- **Manual Control**: Users build worlds step-by-step, not through automated generation
-- **Dependency Chain**: Each step depends on previous steps being completed
+- **Manual Control**: Users build worlds
 - **Template Everything**: Every component can be saved and reused as a template
 - **Validation at Each Step**: Ensure requirements are met before proceeding
 - **Mappless Design**: No spatial coordinates - nodes are abstract contexts
@@ -55,7 +54,6 @@ The codebase already includes robust systems that form the foundation for world 
 
 **Note**: No dimensions or spatial properties - this is a mappless world
 **Validation**: World must be created before any other components
-**Next Step**: Cannot proceed until world exists
 
 ### Step 2: Create Nodes
 **Prerequisite**: World must exist
@@ -69,7 +67,7 @@ The codebase already includes robust systems that form the foundation for world 
 - Cultural/social context
 
 **No Spatial Data**: Nodes have no x,y coordinates or positions
-**Connections**: Nodes can be linked conceptually (trade routes, political ties, etc.)
+**Connections**: Nodes can be linked conceptually (trade routes, political ties, roads or directions etc.)
 **Validation**: World must contain at least one node before proceeding
 **Important**: Nodes are created empty - no characters yet
 

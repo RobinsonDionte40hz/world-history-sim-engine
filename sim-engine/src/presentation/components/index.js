@@ -5,13 +5,13 @@
  * making it easy to import and use components throughout the application.
  */
 
-// Layout Components
-export { default as PageLayout, GridContainer, FlexContainer, Section, Card as LayoutCard } from './PageLayout';
+// Layout Components (from UI folder)
+export { default as PageLayout, GridContainer, FlexContainer, Section, Card as LayoutCard } from '../UI/PageLayout';
 
-// Button Components
-export { default as Button, ButtonGroup, IconButton } from './Button';
+// Button Components (from UI folder)
+export { default as Button, ButtonGroup, IconButton } from '../UI/Button';
 
-// Card Components
+// Card Components (from UI folder)
 export { 
   default as Card, 
   CardHeader, 
@@ -21,7 +21,7 @@ export {
   StatsCard,
   InteractiveCard,
   CardGrid
-} from './Card';
+} from '../UI/Card';
 
 // Loading Components
 export { 

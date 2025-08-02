@@ -11,7 +11,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
-import Button from './Button';
+import Button from '../UI/Button';
 
 // Base Modal Component
 const Modal = ({

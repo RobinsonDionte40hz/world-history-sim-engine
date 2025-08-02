@@ -450,60 +450,7 @@ const Sidebar = ({
 
   const defaultMenuItems = [
     {
-      id: 'home',
-      label: '🏠 Home',
-      path: '/',
-      onClick: () => navigate('/'),
-      hoverColor: 'rgba(129, 140, 248, 0.1)',
-      hoverBorder: 'rgba(129, 140, 248, 0.3)'
-    },
-    {
       id: 'divider1',
-      type: 'divider',
-      label: 'Creation Tools'
-    },
-    {
-      id: 'world-builder',
-      label: '🌍 World Builder',
-      path: '/builder',
-      onClick: () => navigate('/builder'),
-      hoverColor: 'rgba(52, 211, 153, 0.1)',
-      hoverBorder: 'rgba(52, 211, 153, 0.3)'
-    },
-    {
-      id: 'node-editor',
-      label: '🏛️ Node Editor',
-      path: '/editors/nodes',
-      onClick: () => navigate('/editors/nodes'),
-      hoverColor: 'rgba(251, 191, 36, 0.1)',
-      hoverBorder: 'rgba(251, 191, 36, 0.3)'
-    },
-    {
-      id: 'character-editor',
-      label: '👥 Character Editor',
-      path: '/editors/characters',
-      onClick: () => navigate('/editors/characters'),
-      hoverColor: 'rgba(168, 85, 247, 0.1)',
-      hoverBorder: 'rgba(168, 85, 247, 0.3)'
-    },
-    {
-      id: 'interaction-editor',
-      label: '💬 Interaction Editor',
-      path: '/editors/interactions',
-      onClick: () => navigate('/editors/interactions'),
-      hoverColor: 'rgba(239, 68, 68, 0.1)',
-      hoverBorder: 'rgba(239, 68, 68, 0.3)'
-    },
-    {
-      id: 'encounter-editor',
-      label: '⚔️ Encounter Editor',
-      path: '/editors/encounters',
-      onClick: () => navigate('/editors/encounters'),
-      hoverColor: 'rgba(220, 38, 127, 0.1)',
-      hoverBorder: 'rgba(220, 38, 127, 0.3)'
-    },
-    {
-      id: 'divider2',
       type: 'divider',
       label: 'Simulation'
     },
@@ -516,7 +463,7 @@ const Sidebar = ({
       hoverBorder: 'rgba(34, 197, 94, 0.3)'
     },
     {
-      id: 'divider3',
+      id: 'divider2',
       type: 'divider',
       label: 'Resources'
     },

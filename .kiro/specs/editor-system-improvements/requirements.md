@@ -17,16 +17,18 @@ The World History Simulation Engine's editor system currently has several critic
 3. WHEN I navigate between editors THEN the system SHALL preserve any unsaved work with appropriate warnings
 4. WHEN I am on the world foundation editor THEN I SHALL see "Next Steps" buttons that lead to actual functional editor pages
 
-### Requirement 2: Button Alignment and UI Consistency
+### Requirement 2: Button Alignment and UI Consistency Fix
 
-**User Story:** As a user, I want consistent button alignment across all editors so that the interface feels polished and professional.
+**User Story:** As a user, I want consistent button alignment across all editors so that the interface feels polished and professional, and I want editors to not appear left-aligned like a sidebar.
 
 #### Acceptance Criteria
 
-1. WHEN I view any editor except the interaction editor THEN all action buttons SHALL be center-aligned
-2. WHEN I view the interaction editor THEN buttons SHALL maintain their current alignment (not center-aligned)
-3. WHEN I view any editor THEN the button styling SHALL be consistent across all editors
-4. WHEN I interact with buttons THEN they SHALL have consistent hover and active states
+1. WHEN I view any editor THEN the editor content SHALL be center-aligned and not appear as a left-aligned sidebar
+2. WHEN I view any editor except the interaction editor THEN all action buttons SHALL be center-aligned
+3. WHEN I view the interaction editor THEN buttons SHALL maintain their current alignment (not center-aligned)
+4. WHEN I view any editor THEN the button styling SHALL be consistent across all editors
+5. WHEN I interact with buttons THEN they SHALL have consistent hover and active states
+6. WHEN I view editor pages THEN the main content SHALL take up the full width and not be constrained to the left side
 
 ### Requirement 3: Node Save Functionality
 
@@ -62,16 +64,18 @@ The World History Simulation Engine's editor system currently has several critic
 3. WHEN I save the world foundation THEN other editors SHALL become accessible
 4. WHEN I save the world foundation THEN it SHALL be available for selection in future sessions
 
-### Requirement 6: Navigation Element Cleanup
+### Requirement 6: Navigation Element Cleanup and Multiple Navigation Fix
 
-**User Story:** As a user, I want a clean navigation experience without redundant or non-functional navigation elements so that I can focus on world building.
+**User Story:** As a user, I want a clean navigation experience with a single, consistent navigation system so that I can focus on world building without confusion.
 
 #### Acceptance Criteria
 
-1. WHEN I view any editor page THEN I SHALL see only functional navigation elements
+1. WHEN I view any editor page THEN I SHALL see only one primary navigation system (the global sidebar)
 2. WHEN I click on navigation buttons THEN they SHALL lead to actual working pages
-3. WHEN navigation elements are not functional THEN they SHALL be removed or replaced with working alternatives
-4. WHEN I use the sidebar navigation THEN it SHALL provide quick access to all functional editors
+3. WHEN I access editor pages THEN I SHALL NOT see redundant navigation elements (top nav, editor-specific nav, and sidebar)
+4. WHEN I use the sidebar navigation THEN it SHALL be accessible from all editor pages
+5. WHEN I click "Editors" button THEN it SHALL navigate to "World Foundation" editor (not a non-functional page)
+6. WHEN navigation elements are not functional THEN they SHALL be removed or replaced with working alternatives
 
 ### Requirement 7: Encounter System Integration
 
@@ -94,3 +98,14 @@ The World History Simulation Engine's editor system currently has several critic
 2. WHEN I have unsaved changes in any editor THEN I SHALL be warned before navigation
 3. WHEN I return to an editor THEN my previous state SHALL be restored
 4. WHEN I save in any editor THEN the save status SHALL be clearly communicated
+
+### Requirement 9: "Editors" Button Navigation Fix
+
+**User Story:** As a user, I want the "Editors" button to navigate to the World Foundation editor so that I can start the world building process.
+
+#### Acceptance Criteria
+
+1. WHEN I click the "Editors" button in the main navigation THEN I SHALL be taken to the World Foundation editor (/builder)
+2. WHEN I see "Editors" in navigation THEN it SHALL be renamed to "World Foundation" for clarity
+3. WHEN I access the World Foundation editor THEN it SHALL be the starting point for all world building activities
+4. WHEN I complete the World Foundation THEN other editors SHALL become accessible through the sidebar navigation
