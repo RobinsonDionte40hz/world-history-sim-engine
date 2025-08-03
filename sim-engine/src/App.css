@@ -115,7 +115,7 @@ body {
   background-color: transparent; /* Let global video background show through */
 }
 
-/* Utility Classes */
+/* Custom Utility Classes (that extend Tailwind) */
 .container {
   width: 100%;
   max-width: 1280px;
@@ -123,78 +123,7 @@ body {
   padding: 0 var(--spacing-md);
 }
 
-.flex {
-  display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.gap-sm {
-  gap: var(--spacing-sm);
-}
-
-.gap-md {
-  gap: var(--spacing-md);
-}
-
-.p-sm {
-  padding: var(--spacing-sm);
-}
-
-.p-md {
-  padding: var(--spacing-md);
-}
-
-.p-lg {
-  padding: var(--spacing-lg);
-}
-
-.m-sm {
-  margin: var(--spacing-sm);
-}
-
-.m-md {
-  margin: var(--spacing-md);
-}
-
-.m-lg {
-  margin: var(--spacing-lg);
-}
-
-.text-sm {
-  font-size: var(--font-size-sm);
-}
-
-.text-lg {
-  font-size: var(--font-size-lg);
-}
-
-.text-xl {
-  font-size: var(--font-size-xl);
-}
-
-.font-medium {
-  font-weight: var(--font-weight-medium);
-}
-
-.font-semibold {
-  font-weight: var(--font-weight-semibold);
-}
-
-.font-bold {
-  font-weight: var(--font-weight-bold);
-}
-
+/* Custom color utilities using CSS variables */
 .text-primary {
   color: var(--text-primary);
 }
@@ -215,43 +144,25 @@ body {
   background-color: var(--surface-hover);
 }
 
-.border {
-  border: 1px solid var(--border);
-}
-
-.rounded-sm {
-  border-radius: var(--radius-sm);
-}
-
-.rounded-md {
-  border-radius: var(--radius-md);
-}
-
-.rounded-lg {
-  border-radius: var(--radius-lg);
-}
-
-.shadow-sm {
+/* Custom shadow utilities using CSS variables */
+.shadow-custom-sm {
   box-shadow: var(--shadow-sm);
 }
 
-.shadow-md {
+.shadow-custom-md {
   box-shadow: var(--shadow-md);
 }
 
-.shadow-lg {
+.shadow-custom-lg {
   box-shadow: var(--shadow-lg);
 }
 
-.transition {
-  transition: all var(--transition-normal);
-}
-
+/* Custom hover and focus utilities */
 .hover\:bg-surface-hover:hover {
   background-color: var(--surface-hover);
 }
 
-.hover\:shadow-md:hover {
+.hover\:shadow-custom-md:hover {
   box-shadow: var(--shadow-md);
 }
 
@@ -259,7 +170,7 @@ body {
   outline: none;
 }
 
-.focus\:ring-2:focus {
+.focus\:ring-primary:focus {
   box-shadow: 0 0 0 2px var(--primary-light);
 }
 

@@ -1,9 +1,4 @@
-/* Tailwind CSS base styles */
-@import 'tailwindcss/base';
-/* Tailwind CSS components */
-@import 'tailwindcss/components';
-/* Tailwind CSS utilities */
-@import 'tailwindcss/utilities';
+/* Temporary - Tailwind imports removed until PostCSS issue is resolved */
 
 body {
   margin: 0;
