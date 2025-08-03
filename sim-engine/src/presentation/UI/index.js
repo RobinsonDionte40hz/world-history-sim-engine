@@ -17,7 +17,6 @@ export {
   InteractiveCard,
   CardGrid
 } from './Card';
-export { default as PageLayout, GridContainer, FlexContainer, Section } from './PageLayout';
 
 // Navigation Components
 export { default as Navigation } from './Navigation';

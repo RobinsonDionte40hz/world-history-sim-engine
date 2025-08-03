@@ -8,9 +8,9 @@
  * - Integration with interaction system
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Eye, Download, Upload, Home, ChevronRight, TestTube, Swords, Users, Clock, Target, ArrowLeft } from 'lucide-react';
+import { Save, Eye, Download, Upload, TestTube, Swords, Clock, ArrowLeft } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import EncounterEditor from '../components/EncounterEditor';
 import Encounter from '../../domain/entities/Encounter';
@@ -26,17 +26,6 @@ const EncounterEditorPage = () => {
   const [testMode, setTestMode] = useState(false);
   const [testResults, setTestResults] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
-
-  // Auto-save functionality
-  useEffect(() => {
-    if (autoSaveEnabled && hasUnsavedChanges && currentEncounter) {
-      const autoSaveTimer = setTimeout(() => {
-        handleAutoSave();
-      }, 30000); // Auto-save every 30 seconds
-
-      return () => clearTimeout(autoSaveTimer);
-    }
-  }, [hasUnsavedChanges, currentEncounter, autoSaveEnabled]);
 
   // Real-time validation
   useEffect(() => {
@@ -73,7 +62,7 @@ const EncounterEditorPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleAutoSave = async () => {
+  const handleAutoSave = useCallback(async () => {
     if (!hasUnsavedChanges || !validateEncounter(currentEncounter)) return;
     
     setIsSaving(true);
@@ -98,7 +87,18 @@ const EncounterEditorPage = () => {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [hasUnsavedChanges, currentEncounter]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (autoSaveEnabled && hasUnsavedChanges && currentEncounter) {
+      const autoSaveTimer = setTimeout(() => {
+        handleAutoSave();
+      }, 30000); // Auto-save every 30 seconds
+
+      return () => clearTimeout(autoSaveTimer);
+    }
+  }, [hasUnsavedChanges, currentEncounter, autoSaveEnabled, handleAutoSave]);
 
   const handleSave = async () => {
     if (!validateEncounter(currentEncounter)) {
@@ -421,6 +421,9 @@ const EncounterEditorPage = () => {
     <div className="min-h-screen" style={{ 
       background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
     }}>
+      {/* Navigation */}
+      <Navigation />
+      
       {/* Editor Header */}
       <div className="w-full max-w-7xl mx-auto px-8 py-4 border-b border-slate-700 bg-slate-800/50">
         <div className="flex items-center justify-between">
