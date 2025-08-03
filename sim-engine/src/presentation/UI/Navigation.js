@@ -1,9 +1,8 @@
 /**
- * Navigation Component - Enhanced navigation bar with routing support
+ * Navigation Component - Simple navigation bar with routing support
  * 
  * Features:
  * - Logo button that acts as a hamburger menu to open/close the sidebar
- * - Breadcrumb navigation with dynamic generation
  * - Search functionality in navigation bar
  * - Mobile-responsive hamburger menu with smooth animations
  * - Navigation highlighting for current page indication
@@ -14,8 +13,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Globe, 
   Search, 
-  ChevronRight,
-  Home,
   Star,
   Clock
 } from 'lucide-react';
@@ -29,7 +26,6 @@ const Navigation = ({
   navItems = [],
   onLogoClick,
   showSidebar = true,
-  showBreadcrumbs = true,
   showSearch = false,
   variant = 'default' // 'default', 'compact', 'landing'
 }) => {
@@ -129,43 +125,6 @@ const Navigation = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Enhanced breadcrumb component
-  const BreadcrumbNavigation = () => {
-    if (!showBreadcrumbs || navigation.breadcrumbs.length <= 1) return null;
-
-    return (
-      <nav className="flex items-center space-x-2 text-sm" aria-label="Breadcrumb">
-        {navigation.breadcrumbs.map((crumb, index) => (
-          <React.Fragment key={crumb.path}>
-            {index === 0 ? (
-              <button
-                onClick={() => navigate(crumb.path)}
-                className="flex items-center text-gray-400 hover:text-white transition-colors"
-                aria-label="Go to home"
-              >
-                <Home className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate(crumb.path)}
-                className={`transition-colors ${
-                  index === navigation.breadcrumbs.length - 1
-                    ? 'text-white font-medium'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {crumb.label}
-              </button>
-            )}
-            {index < navigation.breadcrumbs.length - 1 && (
-              <ChevronRight className="w-4 h-4 text-gray-500" />
-            )}
-          </React.Fragment>
-        ))}
-      </nav>
-    );
-  };
 
   // Enhanced search component
   const SearchComponent = () => {
@@ -267,19 +226,15 @@ const Navigation = ({
             </button>
           </div>
           
-          {/* Center Section - Search or Breadcrumbs */}
+          {/* Center Section - Search only */}
           <div className="hidden lg:flex flex-1 justify-center px-8">
-            {showSearch ? (
-              <SearchComponent />
-            ) : (
-              <BreadcrumbNavigation />
-            )}
+            {showSearch && <SearchComponent />}
           </div>
           
-          {/* Right Section - Navigation Items */}
+          {/* Right Section - Navigation Items moved to top right */}
           <div className="flex items-center space-x-2">
-            {/* Desktop Navigation Items */}
-            <div className="hidden md:flex items-center space-x-4">
+            {/* Desktop Navigation Items - moved to far right */}
+            <div className="flex items-center space-x-4">
               {navItemsToShow.map((item, index) => (
                 <button 
                   key={index}
@@ -296,7 +251,7 @@ const Navigation = ({
             </div>
 
             {/* Bookmarks and History (Desktop) */}
-            <div className="hidden md:flex items-center space-x-2">
+            <div className="hidden md:flex items-center space-x-2 ml-4">
               {navigation.bookmarks.length > 0 && (
                 <button
                   className="p-2 text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-700/50"
