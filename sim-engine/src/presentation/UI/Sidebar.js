@@ -7,7 +7,7 @@
  * Enhanced with unified navigation system including EditorNavigation and WorldSelector.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Globe, X, Users, MapPin, Zap } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import WorldSelector from '../components/WorldSelector';
@@ -32,13 +32,21 @@ const Sidebar = ({
     worldCharacters, 
     worldInteractions,
     isLoading: worldLoading,
-    hasWorld 
+    hasWorld,
+    refreshWorldContext // Add this
   } = useWorldContext();
   
   const { 
     navigateToEditor, 
     hasUnsavedChanges
   } = useWorldSave();
+
+  // Force refresh when sidebar opens
+  useEffect(() => {
+    if (isOpen && hasWorld) {
+      refreshWorldContext();
+    }
+  }, [isOpen, hasWorld, refreshWorldContext]);
 
   // Quick action handlers
   const handleQuickNavigate = async (editorType) => {
@@ -689,7 +697,14 @@ const Sidebar = ({
           {activeTab === 'worlds' && (
             <div className="space-y-4">
               {/* Current World Info */}
-              {currentWorld && (
+              {worldLoading ? (
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    <span className="ml-2 text-sm text-slate-400">Loading world...</span>
+                  </div>
+                </div>
+              ) : currentWorld ? (
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-white font-medium text-sm">{currentWorld.name}</h3>
@@ -755,6 +770,19 @@ const Sidebar = ({
                     Interactions
                   </button>
                 </div>
+              ) : null}
+              
+              {/* Manual Refresh Button */}
+              {hasWorld && !worldLoading && (
+                <button
+                  onClick={() => refreshWorldContext()}
+                  className="w-full flex items-center justify-center px-3 py-2 bg-slate-700/50 hover:bg-slate-700/70 text-slate-300 text-sm rounded-lg border border-slate-600/50 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh World Data
+                </button>
               )}
               
               {/* World Selector */}
@@ -765,6 +793,7 @@ const Sidebar = ({
                   navigate('/builder');
                   onClose();
                 }}
+                disabled={worldLoading}
               />
             </div>
           )}
@@ -798,27 +827,33 @@ const Sidebar = ({
                   
                   <button
                     onClick={() => handleQuickNavigate('nodes')}
+                    disabled={worldLoading}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
-                      background: 'rgba(59, 130, 246, 0.1)',
+                      background: worldLoading ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.1)',
                       border: '1px solid rgba(59, 130, 246, 0.3)',
-                      color: '#e2e8f0',
+                      color: worldLoading ? '#94a3b8' : '#e2e8f0',
                       fontSize: '0.875rem',
                       textAlign: 'left',
-                      cursor: 'pointer',
+                      cursor: worldLoading ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease',
                       display: 'flex',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      opacity: worldLoading ? 0.5 : 1
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.background = 'rgba(59, 130, 246, 0.2)';
-                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                      if (!worldLoading) {
+                        e.target.style.background = 'rgba(59, 130, 246, 0.2)';
+                        e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = 'rgba(59, 130, 246, 0.1)';
-                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                      if (!worldLoading) {
+                        e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                        e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                      }
                     }}
                   >
                     <MapPin className="w-4 h-4 mr-2" />
@@ -827,27 +862,33 @@ const Sidebar = ({
                   
                   <button
                     onClick={() => handleQuickNavigate('characters')}
+                    disabled={worldLoading}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
-                      background: 'rgba(34, 197, 94, 0.1)',
+                      background: worldLoading ? 'rgba(34, 197, 94, 0.05)' : 'rgba(34, 197, 94, 0.1)',
                       border: '1px solid rgba(34, 197, 94, 0.3)',
-                      color: '#e2e8f0',
+                      color: worldLoading ? '#94a3b8' : '#e2e8f0',
                       fontSize: '0.875rem',
                       textAlign: 'left',
-                      cursor: 'pointer',
+                      cursor: worldLoading ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease',
                       display: 'flex',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      opacity: worldLoading ? 0.5 : 1
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.background = 'rgba(34, 197, 94, 0.2)';
-                      e.target.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                      if (!worldLoading) {
+                        e.target.style.background = 'rgba(34, 197, 94, 0.2)';
+                        e.target.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = 'rgba(34, 197, 94, 0.1)';
-                      e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                      if (!worldLoading) {
+                        e.target.style.background = 'rgba(34, 197, 94, 0.1)';
+                        e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                      }
                     }}
                   >
                     <Users className="w-4 h-4 mr-2" />

@@ -532,4 +532,133 @@ describe('WorldSaveManager', () => {
       worldSaveManager.off('contextualNavigation', contextualNavigationSpy);
     });
   });
+
+  describe('Enhanced Save Functionality', () => {
+    test('should load complete world data back after saving', async () => {
+      // Setup world data
+      const initialWorldData = {
+        name: 'Test World',
+        description: 'A test world for complete data testing',
+        rules: { timeProgression: 'manual' },
+        initialConditions: { population: 1000 }
+      };
+      
+      editorStateManager.updateEditorData('world', null, initialWorldData);
+      editorStateManager.setUnsavedChanges(true);
+      
+      // Mock localStorage to simulate persistence with auto-generated fields
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === 'worldHistorySimulator_worlds') {
+          return '[]'; // Empty worlds list initially
+        }
+        if (key.startsWith('worldHistorySimulator_world_')) {
+          // Return saved world with additional fields
+          const worldId = key.replace('worldHistorySimulator_world_', '');
+          return JSON.stringify({
+            ...initialWorldData,
+            id: worldId,
+            version: '1.0.0',
+            lastModified: '2024-01-01T00:00:00.000Z',
+            currentStep: 'world',
+            nodes: [],
+            characters: [],
+            interactions: [],
+            encounters: [],
+            nodePopulations: {}
+          });
+        }
+        return null;
+      });
+      
+      // Execute save
+      const savedWorld = await worldSaveManager.saveWorld();
+      
+      // Verify complete world data is returned
+      expect(savedWorld).toHaveProperty('id');
+      expect(savedWorld).toHaveProperty('version', '1.0.0');
+      expect(savedWorld).toHaveProperty('lastModified');
+      expect(savedWorld).toHaveProperty('currentStep');
+      expect(savedWorld.name).toBe(initialWorldData.name);
+      expect(savedWorld.description).toBe(initialWorldData.description);
+      expect(savedWorld.rules).toEqual(initialWorldData.rules);
+      expect(savedWorld.initialConditions).toEqual(initialWorldData.initialConditions);
+      
+      // Verify editor state has complete world data
+      const editorState = editorStateManager.getState();
+      expect(editorState.currentWorld).toEqual(savedWorld);
+      expect(editorState.currentWorld).toHaveProperty('version');
+      expect(editorState.currentWorld).toHaveProperty('lastModified');
+      
+      // Verify world data in editor data is also complete
+      const worldEditorData = editorStateManager.getEditorData('world');
+      expect(worldEditorData).toHaveProperty('id');
+      expect(worldEditorData).toHaveProperty('version');
+      expect(worldEditorData).toHaveProperty('lastModified');
+      expect(worldEditorData).toHaveProperty('currentStep');
+      
+      // Verify unsaved changes is reset
+      expect(editorState.hasUnsavedChanges).toBe(false);
+      expect(editorState.saveStatus).toBe('saved');
+    });
+
+    test('should preserve existing world data fields during save', async () => {
+      // Setup world with existing ID and version
+      const existingWorldData = {
+        id: 'existing-world-123',
+        name: 'Existing World',
+        description: 'An existing world',
+        version: '1.0.0',
+        lastModified: '2023-12-01T00:00:00.000Z',
+        currentStep: 'nodes',
+        customField: 'custom value'
+      };
+      
+      // Set current world and editor data
+      editorStateManager.setCurrentWorld(existingWorldData);
+      editorStateManager.updateEditorData('world', null, existingWorldData);
+      editorStateManager.setUnsavedChanges(true);
+      
+      // Mock localStorage to return updated world data
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === 'worldHistorySimulator_worlds') {
+          return JSON.stringify([{
+            id: existingWorldData.id,
+            name: existingWorldData.name,
+            description: existingWorldData.description,
+            lastModified: existingWorldData.lastModified,
+            version: existingWorldData.version
+          }]);
+        }
+        if (key === `worldHistorySimulator_world_${existingWorldData.id}`) {
+          return JSON.stringify({
+            ...existingWorldData,
+            lastModified: '2024-01-01T12:00:00.000Z', // Updated timestamp
+            nodes: [],
+            characters: [],
+            interactions: [],
+            encounters: [],
+            nodePopulations: {}
+          });
+        }
+        return null;
+      });
+      
+      // Execute save
+      const savedWorld = await worldSaveManager.saveWorld();
+      
+      // Verify existing fields are preserved
+      expect(savedWorld.id).toBe(existingWorldData.id);
+      expect(savedWorld.version).toBe(existingWorldData.version);
+      expect(savedWorld.currentStep).toBe(existingWorldData.currentStep);
+      expect(savedWorld.customField).toBe(existingWorldData.customField);
+      
+      // Verify timestamp was updated
+      expect(savedWorld.lastModified).not.toBe(existingWorldData.lastModified);
+      
+      // Verify complete data is in editor state
+      const currentWorld = editorStateManager.getState().currentWorld;
+      expect(currentWorld.customField).toBe(existingWorldData.customField);
+      expect(currentWorld.currentStep).toBe(existingWorldData.currentStep);
+    });  }
+);
 });

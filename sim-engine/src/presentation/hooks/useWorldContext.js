@@ -6,7 +6,7 @@
  * across all editors and components.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import editorStateManager from '../../application/services/EditorStateManager';
 import worldPersistenceService from '../../application/services/WorldPersistenceService';
 
@@ -21,50 +21,96 @@ export const useWorldContext = () => {
   const [worldInteractions, setWorldInteractions] = useState([]);
   const [worldEncounters, setWorldEncounters] = useState([]);
 
-  // Load world context when world changes or on mount
-  useEffect(() => {
-    const loadWorldContext = async () => {
-      const editorState = editorStateManager.getState();
-      const worldId = editorState.currentWorld?.id;
+  // Use ref to store async unsubscribe function
+  const unsubscribeSaveManagerRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  // Manual refresh function
+  const refreshWorldContext = useCallback(async (forceWorldId = null) => {
+    const editorState = editorStateManager.getState();
+    const worldId = forceWorldId || editorState.currentWorld?.id;
+    
+    if (worldId) {
+      setIsLoading(true);
+      setError(null);
       
-      if (worldId && (!currentWorld || currentWorld.id !== worldId)) {
-        setIsLoading(true);
-        setError(null);
-        
-        try {
-          // Load complete world data
-          const world = await worldPersistenceService.loadWorld(worldId);
-          setCurrentWorld(world);
-          
-          // Set individual arrays for easy access
-          setWorldNodes(world.nodes || []);
-          setWorldCharacters(world.characters || []);
-          setWorldInteractions(world.interactions || []);
-          setWorldEncounters(world.encounters || []);
-          
-        } catch (loadError) {
-          console.error('Failed to load world context:', loadError);
-          setError(loadError.message);
-        }
-        
-        setIsLoading(false);
-      } else if (!worldId && currentWorld) {
-        // Clear world context if no world is selected
-        setCurrentWorld(null);
-        setWorldNodes([]);
-        setWorldCharacters([]);
-        setWorldInteractions([]);
-        setWorldEncounters([]);
+      try {
+        // Force reload from persistence
+        const world = await worldPersistenceService.loadWorld(worldId);
+        setCurrentWorld(world);
+        setWorldNodes(world.nodes || []);
+        setWorldCharacters(world.characters || []);
+        setWorldInteractions(world.interactions || []);
+        setWorldEncounters(world.encounters || []);
+      } catch (loadError) {
+        console.error('Failed to refresh world context:', loadError);
+        setError(loadError.message);
+      }
+      
+      setIsLoading(false);
+    } else if (!worldId && currentWorld) {
+      // Clear world context if no world is selected
+      setCurrentWorld(null);
+      setWorldNodes([]);
+      setWorldCharacters([]);
+      setWorldInteractions([]);
+      setWorldEncounters([]);
+    }
+  }, [currentWorld]);
+
+  // Listen for world changes AND save completion
+  useEffect(() => {
+    const unsubscribeWorldChanged = editorStateManager.subscribe('worldChanged', refreshWorldContext);
+    const unsubscribeEditorDataChanged = editorStateManager.subscribe('editorDataChanged', (event) => {
+      // Refresh context when world-level data changes
+      if (event.editorType === 'world') {
+        refreshWorldContext();
+      }
+    });
+    const unsubscribeSaveStatusChanged = editorStateManager.subscribe('saveStatusChanged', (event) => {
+      // Refresh context when save is completed
+      if (event.status === 'saved') {
+        refreshWorldContext();
+      }
+    });
+    
+    // Also listen to WorldSaveManager events
+    try {
+      // Import WorldSaveManager dynamically to avoid circular dependencies
+      import('../../application/services/WorldSaveManager')
+        .then(({ default: worldSaveManager }) => {
+          // Only set up listener if component is still mounted
+          if (isMountedRef.current && worldSaveManager && typeof worldSaveManager.on === 'function') {
+            const unsubscribe = worldSaveManager.on('saveCompleted', refreshWorldContext);
+            // Only set if it's actually a function and component is still mounted
+            if (typeof unsubscribe === 'function' && isMountedRef.current) {
+              unsubscribeSaveManagerRef.current = unsubscribe;
+            }
+          }
+        })
+        .catch(importError => {
+          console.warn('Could not import WorldSaveManager for event listening:', importError);
+        });
+    } catch (importError) {
+      console.warn('Could not setup WorldSaveManager event listening:', importError);
+    }
+    
+    // Initial load
+    refreshWorldContext();
+    
+    return () => {
+      // Mark as unmounted to prevent async operations
+      isMountedRef.current = false;
+      
+      if (unsubscribeWorldChanged) unsubscribeWorldChanged();
+      if (unsubscribeEditorDataChanged) unsubscribeEditorDataChanged();
+      if (unsubscribeSaveStatusChanged) unsubscribeSaveStatusChanged();
+      if (unsubscribeSaveManagerRef.current && typeof unsubscribeSaveManagerRef.current === 'function') {
+        unsubscribeSaveManagerRef.current();
+        unsubscribeSaveManagerRef.current = null; // Clear the ref
       }
     };
-
-    loadWorldContext();
-
-    // Listen for world changes from editor state
-    const unsubscribe = editorStateManager.subscribe('worldChanged', loadWorldContext);
-    
-    return unsubscribe;
-  }, [currentWorld]);
+  }, [refreshWorldContext]); // Remove currentWorld dependency to prevent loops
 
   // Node management functions
   const addNode = useCallback(async (nodeData) => {
@@ -354,27 +400,25 @@ export const useWorldContext = () => {
     }
   }, [currentWorld?.id]);
 
-  // Utility functions
-  const refreshWorldContext = useCallback(async () => {
-    if (!currentWorld?.id) return;
-
-    setIsLoading(true);
-    setError(null);
+  // Sync with editor state without reloading from persistence (more efficient)
+  const syncWithEditorState = useCallback(() => {
+    const editorState = editorStateManager.getState();
+    const worldData = editorState.editorData.world;
+    const nodesData = editorState.editorData.nodes || {};
+    const charactersData = editorState.editorData.characters || {};
+    const interactionsData = editorState.editorData.interactions || {};
+    const encountersData = editorState.editorData.encounters || {};
     
-    try {
-      const world = await worldPersistenceService.loadWorld(currentWorld.id);
-      setCurrentWorld(world);
-      setWorldNodes(world.nodes || []);
-      setWorldCharacters(world.characters || []);
-      setWorldInteractions(world.interactions || []);
-      setWorldEncounters(world.encounters || []);
-    } catch (refreshError) {
-      setError(refreshError.message);
+    if (worldData) {
+      setCurrentWorld(worldData);
+      setWorldNodes(Object.values(nodesData));
+      setWorldCharacters(Object.values(charactersData));
+      setWorldInteractions(Object.values(interactionsData));
+      setWorldEncounters(Object.values(encountersData));
     }
-    
-    setIsLoading(false);
-  }, [currentWorld?.id]);
+  }, []);
 
+  // Utility functions
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -431,7 +475,8 @@ export const useWorldContext = () => {
     getInteractionById,
     
     // Utilities
-    refreshWorldContext,
+    refreshWorldContext, // Export for manual refresh
+    syncWithEditorState, // Export for efficient sync with editor state
     clearError,
     
     // Computed values

@@ -3,6 +3,61 @@
 import { useState, useEffect, useCallback } from 'react';
 import SimulationService from '../../application/use-cases/services/SimulationService.js';
 
+/**
+ * Check if world is ready for simulation based on content completion
+ * @param {Object} worldBuilderState - World builder state
+ * @returns {boolean} Whether world is ready for simulation
+ */
+const isWorldReadyForSimulation = (worldBuilderState) => {
+  if (!worldBuilderState || !worldBuilderState.isValid) {
+    return false;
+  }
+
+  // Check for manual world building completion requirements
+  const config = worldBuilderState.worldConfig || worldBuilderState;
+  
+  // 1. World must exist with basic properties
+  if (!config.name || !config.description) {
+    return false;
+  }
+
+  // 2. At least one node must exist
+  if (!config.nodes || config.nodes.length === 0) {
+    return false;
+  }
+
+  // 3. At least one interaction must exist
+  if (!config.interactions || config.interactions.length === 0) {
+    return false;
+  }
+
+  // 4. At least one character must exist
+  if (!config.characters || config.characters.length === 0) {
+    return false;
+  }
+
+  // 5. All nodes must have at least one character assigned
+  const nodePopulations = config.nodePopulations || {};
+  const populatedNodes = Object.keys(nodePopulations).filter(
+    nodeId => nodePopulations[nodeId] && nodePopulations[nodeId].length > 0
+  );
+  
+  if (populatedNodes.length !== config.nodes.length) {
+    return false;
+  }
+
+  // 6. All characters must have at least one interaction capability
+  const charactersWithInteractions = config.characters.filter(
+    character => character.assignedInteractions && character.assignedInteractions.length > 0
+  );
+  
+  if (charactersWithInteractions.length !== config.characters.length) {
+    return false;
+  }
+
+  return true;
+};
+
 const useSimulation = (worldBuilderState = null) => {
   const [worldState, setWorldState] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -14,7 +69,7 @@ const useSimulation = (worldBuilderState = null) => {
 
   // Initialize simulation only when valid world builder state is provided
   useEffect(() => {
-    if (worldBuilderState && worldBuilderState.isValid && worldBuilderState.stepValidation && worldBuilderState.stepValidation[6]) {
+    if (worldBuilderState && worldBuilderState.isValid && isWorldReadyForSimulation(worldBuilderState)) {
       try {
         // Convert world builder state to simulation config
         const simulationConfig = worldBuilderState.toSimulationConfig();
@@ -97,6 +152,15 @@ const useSimulation = (worldBuilderState = null) => {
           setCurrentTurn(newTurn);
         }
         
+        // Save state after successful turn processing
+        try {
+          if (SimulationService.saveState) {
+            SimulationService.saveState(result.worldState);
+          }
+        } catch (saveError) {
+          console.warn('useSimulation: Could not save state after turn processing:', saveError);
+        }
+        
         // Update turn history
         try {
           const history = SimulationService.getTurnHistory(10); // Get last 10 turns
@@ -148,14 +212,19 @@ const useSimulation = (worldBuilderState = null) => {
 
   return {
     worldState,
+    isRunning: false, // Deprecated but kept for compatibility
     isInitialized,
     initializationError,
     historyAnalysis,
     currentTurn,
     turnSummary,
     turnHistory,
+    canStart: isInitialized && !!worldState, // Deprecated alias for canProcessTurn
     canProcessTurn: isInitialized && !!worldState,
+    startSimulation: processTurn, // Deprecated alias for processTurn
+    stopSimulation: resetSimulation, // Deprecated alias
     resetSimulation,
+    stepSimulation: processTurn, // Deprecated alias for processTurn
     processTurn,
     getTurnHistory,
     analyzeHistory,

@@ -64,19 +64,26 @@ class WorldSaveManager extends EventEmitter {
             editorStateManager.setSaveStatus('saving', 'Saving world data...');
             const savedWorld = await worldPersistenceService.saveWorld(worldData);
 
-            // 5. Update current world reference in editor state
-            editorStateManager.setCurrentWorld(savedWorld);
+            // 5. Load the complete world data back (including any auto-generated fields)
+            editorStateManager.setSaveStatus('saving', 'Loading complete world data...');
+            const completeWorld = await worldPersistenceService.loadWorld(savedWorld.id);
 
-            // 6. Reset unsaved changes flag
+            // 6. Update current world reference with COMPLETE data
+            editorStateManager.setCurrentWorld(completeWorld);
+
+            // 7. Force refresh of editor data with complete world data
+            editorStateManager.updateEditorData('world', null, completeWorld);
+
+            // 8. Reset unsaved changes flag
             editorStateManager.setUnsavedChanges(false);
 
-            // 7. Set save status to completed
+            // 9. Set save status to completed
             editorStateManager.setSaveStatus('saved', 'World saved successfully');
 
-            // 8. Emit success event
-            this.emit('saveCompleted', savedWorld);
+            // 10. Emit success event with complete world data
+            this.emit('saveCompleted', completeWorld);
 
-            return savedWorld;
+            return completeWorld;
 
         } catch (error) {
             // Handle save error
@@ -99,20 +106,23 @@ class WorldSaveManager extends EventEmitter {
             this.emit('loadStarted', worldId);
             editorStateManager.setSaveStatus('saving', 'Loading world...');
 
-            // 1. Load world from persistence service
+            // 1. Load complete world data from persistence service
             const worldData = await worldPersistenceService.loadWorld(worldId);
 
-            // 2. Update editor state with loaded world
+            // 2. Update editor state with complete loaded world data
             this._populateEditorState(worldData);
 
-            // 3. Set current world reference
+            // 3. Set current world reference with complete data
             editorStateManager.setCurrentWorld(worldData);
 
-            // 4. Reset unsaved changes
+            // 4. Ensure world data is also set in editor data
+            editorStateManager.updateEditorData('world', null, worldData);
+
+            // 5. Reset unsaved changes
             editorStateManager.setUnsavedChanges(false);
             editorStateManager.setSaveStatus('saved', 'World loaded successfully');
 
-            // 5. Emit success event
+            // 6. Emit success event with complete data
             this.emit('loadCompleted', worldData);
 
             return worldData;
@@ -437,30 +447,41 @@ class WorldSaveManager extends EventEmitter {
      * @returns {Object} Complete world data
      */
     _collectWorldData() {
-        const worldData = editorStateManager.getEditorData('world');
-        const nodesData = editorStateManager.getEditorData('nodes');
-        const charactersData = editorStateManager.getEditorData('characters');
-        const interactionsData = editorStateManager.getEditorData('interactions');
-        const encountersData = editorStateManager.getEditorData('encounters');
+        const worldData = editorStateManager.getEditorData('world') || {};
+        const nodesData = editorStateManager.getEditorData('nodes') || {};
+        const charactersData = editorStateManager.getEditorData('characters') || {};
+        const interactionsData = editorStateManager.getEditorData('interactions') || {};
+        const encountersData = editorStateManager.getEditorData('encounters') || {};
 
         // Convert object maps to arrays for persistence
-        const nodes = Object.values(nodesData || {});
-        const characters = Object.values(charactersData || {});
-        const interactions = Object.values(interactionsData || {});
-        const encounters = Object.values(encountersData || {});
+        const nodes = Object.values(nodesData);
+        const characters = Object.values(charactersData);
+        const interactions = Object.values(interactionsData);
+        const encounters = Object.values(encountersData);
 
         // Get node populations from WorldBuilder
         const worldBuilder = editorStateManager.worldBuilder;
-        const nodePopulations = worldBuilder.worldConfig.nodePopulations || {};
+        const nodePopulations = worldBuilder?.worldConfig?.nodePopulations || {};
 
+        // Get current world reference for additional data
+        const currentWorld = editorStateManager.getState().currentWorld || {};
+
+        // Merge all data sources, preserving existing fields
         return {
+            // Start with current world data (includes id, version, etc.)
+            ...currentWorld,
+            // Override with editor data
             ...worldData,
+            // Add component arrays
             nodes,
             characters,
             interactions,
             encounters,
             nodePopulations,
-            lastModified: new Date().toISOString()
+            // Update timestamp
+            lastModified: new Date().toISOString(),
+            // Preserve WorldBuilder state
+            currentStep: worldBuilder?.currentStep || worldData.currentStep
         };
     }
 
@@ -469,14 +490,25 @@ class WorldSaveManager extends EventEmitter {
      * @param {Object} worldData - World data to populate
      */
     _populateEditorState(worldData) {
-        // Set world data
+        // Set complete world data (preserve all fields from persistence)
         editorStateManager.updateEditorData('world', null, {
             id: worldData.id,
             name: worldData.name,
             description: worldData.description,
             rules: worldData.rules,
-            initialConditions: worldData.initialConditions
+            initialConditions: worldData.initialConditions,
+            lastModified: worldData.lastModified,
+            version: worldData.version,
+            currentStep: worldData.currentStep,
+            // Include any other fields that might be present
+            ...worldData
         });
+
+        // Clear existing data before populating
+        editorStateManager.updateEditorData('nodes', null, {});
+        editorStateManager.updateEditorData('characters', null, {});
+        editorStateManager.updateEditorData('interactions', null, {});
+        editorStateManager.updateEditorData('encounters', null, {});
 
         // Populate nodes
         if (worldData.nodes) {
@@ -511,6 +543,18 @@ class WorldSaveManager extends EventEmitter {
             Object.entries(worldData.nodePopulations).forEach(([nodeId, characterIds]) => {
                 editorStateManager.assignCharactersToNode(nodeId, characterIds);
             });
+        }
+
+        // Update WorldBuilder instance with complete world data
+        if (editorStateManager.worldBuilder) {
+            editorStateManager.worldBuilder.worldConfig = {
+                ...editorStateManager.worldBuilder.worldConfig,
+                ...worldData
+            };
+            
+            if (worldData.currentStep) {
+                editorStateManager.worldBuilder.currentStep = worldData.currentStep;
+            }
         }
     }
 

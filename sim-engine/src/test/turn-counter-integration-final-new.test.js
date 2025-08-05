@@ -67,15 +67,30 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
     SimulationService.getLatestTurnSummary = jest.fn(() => null);
     SimulationService.getHistoryAnalysis = jest.fn(() => ({}));
 
-    // Create mock world builder state
+    // Create mock world builder state with new content-based validation
     mockWorldBuilderState = {
       isValid: true,
-      stepValidation: [true, true, true, true, true, true, true],
+      worldConfig: {
+        name: 'Test World',
+        description: 'A test world',
+        nodes: [{ id: 'node1', name: 'Test Node', type: 'settlement' }],
+        characters: [{ 
+          id: 'char1', 
+          name: 'Test Character', 
+          assignedInteractions: ['int1'] 
+        }],
+        interactions: [{ id: 'int1', name: 'Test Interaction', type: 'dialogue' }],
+        nodePopulations: { 'node1': ['char1'] }
+      },
       toSimulationConfig: () => ({
         worldName: 'Test World',
-        nodes: [{ id: 'node1', name: 'Test Node' }],
-        characters: [{ id: 'char1', name: 'Test Character' }],
-        interactions: [{ id: 'int1', name: 'Test Interaction' }]
+        nodes: [{ id: 'node1', name: 'Test Node', type: 'settlement' }],
+        characters: [{ 
+          id: 'char1', 
+          name: 'Test Character', 
+          assignedInteractions: ['int1'] 
+        }],
+        interactions: [{ id: 'int1', name: 'Test Interaction', type: 'dialogue' }]
       })
     };
     
@@ -494,7 +509,14 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
     test('should prevent processing with invalid world builder state', async () => {
       const invalidWorldBuilderState = {
         isValid: false,
-        stepValidation: [false, true, false, true, false, true, false],
+        worldConfig: {
+          name: 'Test World',
+          description: 'A test world',
+          nodes: [],  // Missing nodes - makes it invalid
+          characters: [],
+          interactions: [],
+          nodePopulations: {}
+        },
         toSimulationConfig: () => null
       };
 
@@ -513,7 +535,18 @@ describe('Turn Counter Integration Tests - Final End-to-End (Turn-Based)', () =>
     test('should handle world builder configuration errors', async () => {
       const faultyWorldBuilderState = {
         isValid: true,
-        stepValidation: [true, true, true, true, true, true, true],
+        worldConfig: {
+          name: 'Test World',
+          description: 'A test world',
+          nodes: [{ id: 'node1', name: 'Test Node', type: 'settlement' }],
+          characters: [{ 
+            id: 'char1', 
+            name: 'Test Character', 
+            assignedInteractions: ['int1'] 
+          }],
+          interactions: [{ id: 'int1', name: 'Test Interaction', type: 'dialogue' }],
+          nodePopulations: { 'node1': ['char1'] }
+        },
         toSimulationConfig: () => {
           throw new Error('Config generation failed');
         }
