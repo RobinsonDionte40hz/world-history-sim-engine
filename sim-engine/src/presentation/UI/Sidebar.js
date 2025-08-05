@@ -8,9 +8,11 @@
  */
 
 import React, { useState } from 'react';
-import { Globe, X } from 'lucide-react';
+import { Globe, X, Users, MapPin, Zap } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import WorldSelector from '../components/WorldSelector';
+import { useWorldContext } from '../hooks/useWorldContext';
+import { useWorldSave } from '../hooks/useWorldSave';
 
 const Sidebar = ({
   isOpen,
@@ -21,7 +23,42 @@ const Sidebar = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('tools'); // 'worlds' | 'tools'
+  const [activeTab, setActiveTab] = useState('worlds'); // 'worlds' | 'tools'
+  
+  // World context integration
+  const { 
+    currentWorld, 
+    worldNodes, 
+    worldCharacters, 
+    worldInteractions,
+    isLoading: worldLoading,
+    hasWorld 
+  } = useWorldContext();
+  
+  const { 
+    navigateToEditor, 
+    hasUnsavedChanges
+  } = useWorldSave();
+
+  // Quick action handlers
+  const handleQuickNavigate = async (editorType) => {
+    try {
+      await navigateToEditor(editorType);
+      onClose(); // Close sidebar after navigation
+    } catch (error) {
+      console.error('Navigation failed:', error);
+    }
+  };
+
+  const handleWorldSelected = async (world) => {
+    try {
+      console.log('World selected:', world);
+      // World loading is handled by useWorldContext automatically
+      onClose();
+    } catch (error) {
+      console.error('World selection failed:', error);
+    }
+  };
 
   // Get context-specific menu items based on current page
   const getContextMenuItems = () => {
@@ -650,20 +687,204 @@ const Sidebar = ({
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'worlds' && (
-            <WorldSelector 
-              className="mb-4"
-              onWorldSelected={(world) => {
-                console.log('World selected:', world);
-              }}
-              onCreateNew={() => {
-                navigate('/builder');
-                onClose();
-              }}
-            />
+            <div className="space-y-4">
+              {/* Current World Info */}
+              {currentWorld && (
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-medium text-sm">{currentWorld.name}</h3>
+                    {hasUnsavedChanges && (
+                      <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
+                        Unsaved
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-slate-400 text-xs mb-3 line-clamp-2">
+                    {currentWorld.description}
+                  </p>
+                  
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="text-center">
+                      <div className="text-blue-400 text-xs font-medium">
+                        {worldNodes.length}
+                      </div>
+                      <div className="text-slate-500 text-xs">Nodes</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-green-400 text-xs font-medium">
+                        {worldCharacters.length}
+                      </div>
+                      <div className="text-slate-500 text-xs">Characters</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-purple-400 text-xs font-medium">
+                        {worldInteractions.length}
+                      </div>
+                      <div className="text-slate-500 text-xs">Interactions</div>
+                    </div>
+                  </div>
+                  
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleQuickNavigate('nodes')}
+                      disabled={worldLoading}
+                      className="flex items-center justify-center px-2 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-xs rounded border border-blue-600/30 transition-colors disabled:opacity-50"
+                    >
+                      <MapPin className="w-3 h-3 mr-1" />
+                      Nodes
+                    </button>
+                    <button
+                      onClick={() => handleQuickNavigate('characters')}
+                      disabled={worldLoading}
+                      className="flex items-center justify-center px-2 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs rounded border border-green-600/30 transition-colors disabled:opacity-50"
+                    >
+                      <Users className="w-3 h-3 mr-1" />
+                      Characters
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={() => handleQuickNavigate('interactions')}
+                    disabled={worldLoading}
+                    className="w-full mt-2 flex items-center justify-center px-2 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-xs rounded border border-purple-600/30 transition-colors disabled:opacity-50"
+                  >
+                    <Zap className="w-3 h-3 mr-1" />
+                    Interactions
+                  </button>
+                </div>
+              )}
+              
+              {/* World Selector */}
+              <WorldSelector 
+                className="mb-4"
+                onWorldSelected={handleWorldSelected}
+                onCreateNew={() => {
+                  navigate('/builder');
+                  onClose();
+                }}
+              />
+            </div>
           )}
           
           {activeTab === 'tools' && (
             <div className="space-y-2">
+              {/* World Context Quick Actions */}
+              {hasWorld && (
+                <>
+                  <div className="py-2">
+                    <div
+                      style={{
+                        height: '1px',
+                        background: 'rgba(71, 85, 105, 0.5)',
+                        margin: '0.5rem 0'
+                      }}
+                    />
+                    <p
+                      style={{
+                        color: '#94a3b8',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        marginBottom: '0.5rem'
+                      }}
+                    >
+                      Quick Actions
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => handleQuickNavigate('nodes')}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      color: '#e2e8f0',
+                      fontSize: '0.875rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(59, 130, 246, 0.2)';
+                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                    }}
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Add Node ({worldNodes.length})
+                  </button>
+                  
+                  <button
+                    onClick={() => handleQuickNavigate('characters')}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      color: '#e2e8f0',
+                      fontSize: '0.875rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(34, 197, 94, 0.2)';
+                      e.target.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(34, 197, 94, 0.1)';
+                      e.target.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                    }}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Add Character ({worldCharacters.length})
+                  </button>
+                  
+                  <button
+                    onClick={() => handleQuickNavigate('interactions')}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(168, 85, 247, 0.1)',
+                      border: '1px solid rgba(168, 85, 247, 0.3)',
+                      color: '#e2e8f0',
+                      fontSize: '0.875rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(168, 85, 247, 0.2)';
+                      e.target.style.borderColor = 'rgba(168, 85, 247, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(168, 85, 247, 0.1)';
+                      e.target.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                    }}
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    Add Interaction ({worldInteractions.length})
+                  </button>
+                </>
+              )}
+              
               {allItems.map((item) => {
                 if (item.type === 'divider') {
                   return (

@@ -17,6 +17,12 @@ class EditorStateManager extends EventEmitter {
     // Initialize WorldBuilder instance for managing world configuration
     this.worldBuilder = new WorldBuilder();
 
+    // Auto-save configuration
+    this.autoSaveInterval = null;
+    this.autoSaveDelay = 30000; // 30 seconds
+    this.autoSaveEnabled = false;
+    this.lastChangeTime = null;
+
     // Editor state tracking
     this.state = {
       currentEditor: null,
@@ -98,6 +104,12 @@ class EditorStateManager extends EventEmitter {
    */
   setUnsavedChanges(hasChanges) {
     this.state.hasUnsavedChanges = hasChanges;
+    
+    // Track change if we now have unsaved changes
+    if (hasChanges) {
+      this.trackChange();
+    }
+    
     this.emit('unsavedChangesChanged', hasChanges);
   }
 
@@ -163,6 +175,9 @@ class EditorStateManager extends EventEmitter {
       this._syncWithWorldBuilder(editorType, itemId, data);
     }
 
+    // Track change for auto-save
+    this.trackChange();
+    
     this.emit('editorDataChanged', { editorType, itemId, data });
   }
 
@@ -393,9 +408,153 @@ class EditorStateManager extends EventEmitter {
   }
 
   /**
+   * Enable auto-save functionality
+   * @param {number} delay - Auto-save delay in milliseconds
+   */
+  enableAutoSave(delay = this.autoSaveDelay) {
+    this.autoSaveDelay = delay;
+    this.autoSaveEnabled = true;
+    
+    // Clear existing interval if any
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+    }
+    
+    // Set up auto-save interval
+    this.autoSaveInterval = setInterval(async () => {
+      if (this.shouldAutoSave()) {
+        await this.performAutoSave();
+      }
+    }, this.autoSaveDelay);
+    
+    this.emit('autoSaveEnabled', { delay });
+  }
+
+  /**
+   * Disable auto-save functionality
+   */
+  disableAutoSave() {
+    this.autoSaveEnabled = false;
+    
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
+    
+    this.emit('autoSaveDisabled');
+  }
+
+  /**
+   * Check if auto-save should be performed
+   * @returns {boolean} Whether auto-save should run
+   */
+  shouldAutoSave() {
+    return (
+      this.autoSaveEnabled &&
+      this.state.hasUnsavedChanges &&
+      this.state.currentWorld &&
+      this.state.saveStatus !== 'saving' &&
+      this.canPerformAutoSave()
+    );
+  }
+
+  /**
+   * Check if auto-save can be performed (world has minimum required data)
+   * @returns {boolean} Whether auto-save is possible
+   */
+  canPerformAutoSave() {
+    const worldConfig = this.worldBuilder.worldConfig;
+    return !!(worldConfig && worldConfig.name && worldConfig.description);
+  }
+
+  /**
+   * Perform auto-save operation
+   */
+  async performAutoSave() {
+    try {
+      this.setSaveStatus('saving', 'Auto-saving...');
+      
+      // Get complete world data
+      const worldData = this.getCompleteWorldData();
+      
+      // Emit auto-save start event
+      this.emit('autoSaveStarted', worldData);
+      
+      // Import WorldPersistenceService dynamically to avoid circular dependency
+      const { default: worldPersistenceService } = await import('./WorldPersistenceService');
+      
+      // Save world data
+      const savedWorld = await worldPersistenceService.saveWorld(worldData);
+      
+      // Update state
+      this.setCurrentWorld(savedWorld);
+      this.setSaveStatus('saved', 'Auto-saved successfully');
+      this.setUnsavedChanges(false);
+      
+      // Emit auto-save complete event
+      this.emit('autoSaveCompleted', savedWorld);
+      
+    } catch (error) {
+      this.setSaveStatus('error', `Auto-save failed: ${error.message}`);
+      this.emit('autoSaveError', error);
+    }
+  }
+
+  /**
+   * Get complete world data for saving
+   * @returns {Object} Complete world data
+   */
+  getCompleteWorldData() {
+    const worldData = this.getEditorData('world');
+    const nodesData = this.getEditorData('nodes');
+    const charactersData = this.getEditorData('characters');
+    const interactionsData = this.getEditorData('interactions');
+    const encountersData = this.getEditorData('encounters');
+
+    // Convert object maps to arrays for persistence
+    const nodes = Object.values(nodesData || {});
+    const characters = Object.values(charactersData || {});
+    const interactions = Object.values(interactionsData || {});
+    const encounters = Object.values(encountersData || {});
+
+    // Get node populations from WorldBuilder
+    const nodePopulations = this.worldBuilder.worldConfig.nodePopulations || {};
+
+    return {
+      ...worldData,
+      nodes,
+      characters,
+      interactions,
+      encounters,
+      nodePopulations,
+      lastModified: new Date().toISOString(),
+      autoSaved: true
+    };
+  }
+
+  /**
+   * Trigger change tracking for auto-save
+   */
+  trackChange() {
+    this.lastChangeTime = new Date();
+    
+    // Emit change event for external listeners
+    this.emit('dataChanged', {
+      timestamp: this.lastChangeTime,
+      hasUnsavedChanges: this.state.hasUnsavedChanges
+    });
+  }
+
+  /**
    * Reset all state to initial values
    */
   reset() {
+    // Disable auto-save
+    this.disableAutoSave();
+    
+    // Reset auto-save properties
+    this.lastChangeTime = null;
+    
     // Reset WorldBuilder to initial state
     this.worldBuilder = new WorldBuilder();
 

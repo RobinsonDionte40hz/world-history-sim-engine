@@ -10,6 +10,7 @@
 
 import editorStateManager, { EditorStateManager } from '../application/services/EditorStateManager';
 import worldPersistenceService, { WorldPersistenceService } from '../application/services/WorldPersistenceService';
+import worldSaveManager from '../application/services/WorldSaveManager';
 
 describe('Core Infrastructure Components', () => {
   
@@ -132,6 +133,68 @@ describe('Core Infrastructure Components', () => {
       });
       
       editorStateManager.setCurrentEditor('nodes');
+    });
+
+    test('should enable and disable auto-save', () => {
+      // Initially disabled
+      expect(editorStateManager.autoSaveEnabled).toBe(false);
+      
+      // Enable auto-save
+      editorStateManager.enableAutoSave(5000);
+      expect(editorStateManager.autoSaveEnabled).toBe(true);
+      expect(editorStateManager.autoSaveDelay).toBe(5000);
+      
+      // Disable auto-save
+      editorStateManager.disableAutoSave();
+      expect(editorStateManager.autoSaveEnabled).toBe(false);
+    });
+
+    test('should track changes for auto-save', () => {
+      const dataChangedSpy = jest.fn();
+      editorStateManager.on('dataChanged', dataChangedSpy);
+      
+      // Update editor data should trigger change tracking
+      editorStateManager.updateEditorData('world', null, {
+        name: 'Test World',
+        description: 'A test world'
+      });
+      
+      expect(dataChangedSpy).toHaveBeenCalled();
+      expect(editorStateManager.lastChangeTime).toBeTruthy();
+      
+      editorStateManager.off('dataChanged', dataChangedSpy);
+    });
+
+    test('should check if auto-save can be performed', () => {
+      // Initially cannot auto-save (no world data)
+      expect(editorStateManager.canPerformAutoSave()).toBe(false);
+      
+      // Add world data
+      editorStateManager.updateEditorData('world', null, {
+        name: 'Test World',
+        description: 'A test world'
+      });
+      
+      // Now should be able to auto-save
+      expect(editorStateManager.canPerformAutoSave()).toBe(true);
+    });
+
+    test('should determine when auto-save should run', () => {
+      // Setup conditions for auto-save
+      editorStateManager.enableAutoSave();
+      editorStateManager.setCurrentWorld({ id: 'test-world' });
+      editorStateManager.updateEditorData('world', null, {
+        name: 'Test World',
+        description: 'A test world'
+      });
+      editorStateManager.setUnsavedChanges(true);
+      
+      // Should auto-save
+      expect(editorStateManager.shouldAutoSave()).toBe(true);
+      
+      // Disable auto-save
+      editorStateManager.disableAutoSave();
+      expect(editorStateManager.shouldAutoSave()).toBe(false);
     });
   });
 
@@ -307,6 +370,7 @@ describe('Core Infrastructure Components', () => {
   describe('Integration Tests', () => {
     beforeEach(() => {
       editorStateManager.reset();
+      worldSaveManager.disableAutoSave();
       localStorage.clear();
     });
 
@@ -337,6 +401,34 @@ describe('Core Infrastructure Components', () => {
       expect(state.hasUnsavedChanges).toBe(false);
       expect(state.saveStatus).toBe('saved');
       expect(editorStateManager.isWorldFoundationComplete()).toBe(true);
+    });
+
+    test('should integrate all services through WorldSaveManager', async () => {
+      // Create world data in editor state
+      const worldData = {
+        name: 'Integrated Save Test World',
+        description: 'A world for testing integrated saving',
+        rules: { timeProgression: 'manual' }
+      };
+      
+      editorStateManager.setCurrentEditor('world');
+      editorStateManager.updateEditorData('world', null, worldData);
+      editorStateManager.setUnsavedChanges(true);
+      
+      // Use WorldSaveManager for integrated save flow
+      const savedWorld = await worldSaveManager.saveWorld();
+      
+      // Verify complete integration
+      const state = editorStateManager.getState();
+      expect(state.currentWorld.id).toBe(savedWorld.id);
+      expect(state.hasUnsavedChanges).toBe(false);
+      expect(state.saveStatus).toBe('saved');
+      expect(worldSaveManager.canSaveWorld()).toBe(true);
+      
+      // Verify persistence
+      const loadedWorld = await worldPersistenceService.loadWorld(savedWorld.id);
+      expect(loadedWorld.name).toBe(worldData.name);
+      expect(loadedWorld.description).toBe(worldData.description);
     });
 
     test('should handle editor navigation flow', async () => {

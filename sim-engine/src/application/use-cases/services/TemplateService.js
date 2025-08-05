@@ -1,9 +1,9 @@
 // src/application/services/TemplateService.js
 
-import Character from '../domain/entities/Character.js';
-import Interaction from '../domain/entities/Interaction.js';
-import Position from '../domain/entities/Position.js';
-import Attributes from '../domain/entities/Attributes.js';
+import Character from '../../../domain/entities/Character.js';
+import Interaction from '../../../domain/entities/Interaction.js';
+import Position from '../../../domain/value-objects/Positions.js';
+import Attributes from '../../../domain/value-objects/Attributes.js';
 
 class TemplateService {
   constructor() {

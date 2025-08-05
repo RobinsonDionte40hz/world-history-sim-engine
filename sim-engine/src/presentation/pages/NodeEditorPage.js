@@ -5,9 +5,8 @@
  * with visual relationship mapping and template integration.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, Eye, Settings, Plus, ArrowLeft, Download, Upload, Home, ChevronRight } from 'lucide-react';
 import NodeEditor from '../components/NodeEditor';
 import EditorLayout from '../components/EditorLayout';
 
@@ -20,6 +19,21 @@ const NodeEditorPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [currentNode, setCurrentNode] = useState(null);
 
+  const handleAutoSave = useCallback(async () => {
+    if (!hasUnsavedChanges || !currentNode) return;
+    
+    setIsSaving(true);
+    try {
+      // Auto-save is handled by the NodeEditor component
+      // For now, we'll skip auto-save to avoid conflicts
+      console.log('Auto-save skipped - manual save required');
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [hasUnsavedChanges, currentNode]);
+
   // Auto-save functionality
   useEffect(() => {
     if (autoSaveEnabled && hasUnsavedChanges && currentNode) {
@@ -29,35 +43,19 @@ const NodeEditorPage = () => {
 
       return () => clearTimeout(autoSaveTimer);
     }
-  }, [hasUnsavedChanges, currentNode, autoSaveEnabled]);
-
-  const handleAutoSave = async () => {
-    if (!hasUnsavedChanges) return;
-    
-    setIsSaving(true);
-    try {
-      // TODO: Implement actual save functionality
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate save
-      setHasUnsavedChanges(false);
-      setLastSaved(new Date());
-      console.log('Auto-saved node...');
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  }, [hasUnsavedChanges, currentNode, autoSaveEnabled, handleAutoSave]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // TODO: Implement save functionality
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate save
+      // The actual save is handled by NodeEditor component
+      // This is called when NodeEditor completes its save operation
       setHasUnsavedChanges(false);
       setLastSaved(new Date());
-      console.log('Saving node...');
+      console.log('Node saved successfully');
     } catch (error) {
       console.error('Save failed:', error);
+      alert('Failed to save node: ' + error.message);
     } finally {
       setIsSaving(false);
     }
