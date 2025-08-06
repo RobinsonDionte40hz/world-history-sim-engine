@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import WorldSelector from '../components/WorldSelector';
 import { useWorldContext } from '../hooks/useWorldContext';
 import { useWorldSave } from '../hooks/useWorldSave';
+import editorStateManager from '../../application/services/EditorStateManager';
 
 const Sidebar = ({
   isOpen,
@@ -708,11 +709,26 @@ const Sidebar = ({
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-white font-medium text-sm">{currentWorld.name}</h3>
-                    {hasUnsavedChanges && (
-                      <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
-                        Unsaved
-                      </span>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {/* Refresh Button for Testing */}
+                      {currentWorld && (
+                        <button
+                          onClick={() => {
+                            refreshWorldContext();
+                            console.log('Manually refreshed world context');
+                          }}
+                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          title="Refresh world data"
+                        >
+                          🔄 Refresh
+                        </button>
+                      )}
+                      {hasUnsavedChanges && (
+                        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
+                          Unsaved
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   <p className="text-slate-400 text-xs mb-3 line-clamp-2">
@@ -771,6 +787,89 @@ const Sidebar = ({
                   </button>
                 </div>
               ) : null}
+              
+              {/* Debug Storage Button - Always Visible */}
+              <button
+                onClick={(e) => {
+                  console.log('🚨 DEBUG BUTTON CLICKED!'); // Immediate test
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  try {
+                    // Use the comprehensive naming debug utility
+                    if (window.debugNamingIssue) {
+                      console.log('Using window.debugNamingIssue');
+                      window.debugNamingIssue();
+                    } else {
+                      // Fallback debug
+                      console.log('🔍 DEBUGGING WORLD PERSISTENCE (Fallback):');
+                      
+                      const worlds = localStorage.getItem('worldHistorySimulator_worlds');
+                      const worldsList = worlds ? JSON.parse(worlds) : [];
+                      console.log('Worlds list:', worldsList);
+                      
+                      const allKeys = Object.keys(localStorage);
+                      const worldKeys = allKeys.filter(key => key.startsWith('worldHistorySimulator_'));
+                      console.log('All world keys:', worldKeys);
+                      
+                      const editorState = editorStateManager.getState();
+                      console.log('Editor state:', editorState);
+                    }
+                    
+                    // Also refresh context
+                    console.log('Calling refreshWorldContext...');
+                    refreshWorldContext();
+                    console.log('Debug button execution completed');
+                  } catch (error) {
+                    console.error('Error in debug button:', error);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                  border: '1px solid rgba(220, 38, 38, 0.3)',
+                  borderRadius: '4px',
+                  color: '#f87171',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => {
+                  console.log('Debug button hovered');
+                  e.target.style.backgroundColor = 'rgba(220, 38, 38, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(220, 38, 38, 0.2)';
+                }}
+              >
+                🔍 Debug Naming Issue
+              </button>
+              
+              {/* Simple Test Button */}
+              <button
+                onClick={() => {
+                  alert('Test button works!');
+                  console.log('Simple test button clicked');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '4px',
+                  color: '#4ade80',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  marginTop: '8px'
+                }}
+              >
+                ✅ Test Button
+              </button>
               
               {/* Manual Refresh Button */}
               {hasWorld && !worldLoading && (
@@ -922,6 +1021,49 @@ const Sidebar = ({
                   >
                     <Zap className="w-4 h-4 mr-2" />
                     Add Interaction ({worldInteractions.length})
+                  </button>
+                  
+                  {/* Refresh Button for Testing */}
+                  <button
+                    onClick={() => {
+                      refreshWorldContext();
+                      console.log('Manually refreshed world context from tools tab');
+                    }}
+                    disabled={worldLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      borderRadius: '0.5rem',
+                      background: worldLoading ? 'rgba(71, 85, 105, 0.05)' : 'rgba(71, 85, 105, 0.1)',
+                      border: '1px solid rgba(71, 85, 105, 0.3)',
+                      color: worldLoading ? '#94a3b8' : '#cbd5e1',
+                      fontSize: '0.75rem',
+                      textAlign: 'center',
+                      cursor: worldLoading ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: worldLoading ? 0.5 : 1,
+                      marginTop: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!worldLoading) {
+                        e.target.style.background = 'rgba(71, 85, 105, 0.2)';
+                        e.target.style.borderColor = 'rgba(71, 85, 105, 0.5)';
+                        e.target.style.color = '#e2e8f0';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!worldLoading) {
+                        e.target.style.background = 'rgba(71, 85, 105, 0.1)';
+                        e.target.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                        e.target.style.color = '#cbd5e1';
+                      }
+                    }}
+                    title="Refresh world context data"
+                  >
+                    🔄 Refresh Context
                   </button>
                 </>
               )}

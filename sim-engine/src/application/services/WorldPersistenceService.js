@@ -36,6 +36,37 @@ class WorldPersistenceService extends EventEmitter {
   }
 
   /**
+   * Ensure world data has complete structure with all required fields
+   * @param {Object} worldData - World data to complete
+   * @returns {Object} Complete world data structure
+   */
+  ensureCompleteWorldStructure(worldData) {
+    return {
+      // Preserve all existing data
+      ...worldData,
+      // Ensure core properties exist
+      id: worldData.id || this.generateId(),
+      name: worldData.name || 'Untitled World',
+      description: worldData.description || 'A world created with the World History Simulator',
+      version: worldData.version || this.currentVersion,
+      lastModified: worldData.lastModified || new Date().toISOString(),
+      // Ensure arrays exist even if empty
+      nodes: Array.isArray(worldData.nodes) ? worldData.nodes : [],
+      characters: Array.isArray(worldData.characters) ? worldData.characters : [],
+      interactions: Array.isArray(worldData.interactions) ? worldData.interactions : [],
+      encounters: Array.isArray(worldData.encounters) ? worldData.encounters : [],
+      // Ensure objects exist with defaults
+      rules: (worldData.rules && typeof worldData.rules === 'object') ? worldData.rules : {},
+      initialConditions: (worldData.initialConditions && typeof worldData.initialConditions === 'object') ? worldData.initialConditions : {},
+      nodePopulations: (worldData.nodePopulations && typeof worldData.nodePopulations === 'object') ? worldData.nodePopulations : {},
+      // Preserve WorldBuilder-specific fields if they exist
+      currentStep: worldData.currentStep || 'world',
+      isComplete: worldData.isComplete || false,
+      isValid: worldData.isValid || false
+    };
+  }
+
+  /**
    * Validate world data structure (compatible with WorldBuilder)
    * @param {Object} worldData - World data to validate
    * @returns {Object} Validation result
@@ -65,7 +96,7 @@ class WorldPersistenceService extends EventEmitter {
       warnings.push('Last modified timestamp will be set to current time');
     }
 
-    // Validate WorldBuilder-specific structure
+    // Validate WorldBuilder-specific structure (arrays)
     if (worldData.nodes && !Array.isArray(worldData.nodes)) {
       errors.push('Nodes must be an array');
     }
@@ -76,6 +107,32 @@ class WorldPersistenceService extends EventEmitter {
 
     if (worldData.interactions && !Array.isArray(worldData.interactions)) {
       errors.push('Interactions must be an array');
+    }
+
+    if (worldData.encounters && !Array.isArray(worldData.encounters)) {
+      errors.push('Encounters must be an array');
+    }
+
+    // Validate object structures
+    if (worldData.rules && typeof worldData.rules !== 'object') {
+      errors.push('Rules must be an object');
+    }
+
+    if (worldData.initialConditions && typeof worldData.initialConditions !== 'object') {
+      errors.push('Initial conditions must be an object');
+    }
+
+    if (worldData.nodePopulations && typeof worldData.nodePopulations !== 'object') {
+      errors.push('Node populations must be an object');
+    }
+
+    // Validate version and metadata
+    if (worldData.version && typeof worldData.version !== 'string') {
+      warnings.push('Version should be a string');
+    }
+
+    if (worldData.currentStep && typeof worldData.currentStep !== 'string') {
+      warnings.push('Current step should be a string');
     }
 
     return {
@@ -140,13 +197,8 @@ class WorldPersistenceService extends EventEmitter {
         throw new Error(`World validation failed: ${validation.errors.join(', ')}`);
       }
 
-      // Prepare world data for saving
-      const worldToSave = {
-        ...dataToSave,
-        id: dataToSave.id || this.generateId(),
-        lastModified: new Date().toISOString(),
-        version: this.currentVersion
-      };
+      // Ensure complete data structure with all required fields
+      const worldToSave = this.ensureCompleteWorldStructure(dataToSave);
 
       // Get existing worlds list
       const existingWorlds = await this.getAllWorlds();
@@ -208,14 +260,17 @@ class WorldPersistenceService extends EventEmitter {
 
       const parsedWorld = JSON.parse(worldData);
       
+      // Ensure complete data structure when loading
+      const completeWorld = this.ensureCompleteWorldStructure(parsedWorld);
+      
       // Validate loaded data
-      const validation = this.validateWorldData(parsedWorld);
+      const validation = this.validateWorldData(completeWorld);
       if (!validation.isValid) {
         console.warn('Loaded world data has validation issues:', validation.errors);
       }
 
-      this.emit('worldLoaded', parsedWorld);
-      return parsedWorld;
+      this.emit('worldLoaded', completeWorld);
+      return completeWorld;
 
     } catch (error) {
       this.emit('loadError', { type: 'world', worldId, error: error.message });
