@@ -4,9 +4,8 @@ A sophisticated React-based simulation engine for generating dynamic historical 
 
 ## 🚀 Quick Start
 
-### Installation & Launch
 ```bash
-# Clone/download the project
+# Navigate to the project directory
 cd world-history-sim-engine/sim-engine
 
 # Install dependencies
@@ -16,328 +15,220 @@ npm install
 npm start
 ```
 
-The app will open at `http://localhost:3000`
+The application will open at `http://localhost:3000`
 
-### Your First Simulation
-1. Click **"Generate World"** to create a new historical world
-2. View the **"History Timeline"** to see generated events
-3. Examine **"Characters"** to see NPCs with personalities and relationships
-4. Use **"Simulation Control"** to advance time and watch history unfold
+## 🎮 Getting Started with Your First World
 
-## 📋 What This Engine Can Do
+### Free Building Approach
+The World History Simulation Engine uses a **free building** system - you have complete creative freedom to build your world in any order you prefer. The only requirement is meeting the minimum criteria before starting the simulation.
 
-### Core Features
-- **Dynamic World Generation** - Create living, breathing historical worlds
-- **Complex Character Systems** - NPCs with consciousness, personalities, and racial traits
-- **Historical Event Generation** - Emergent storytelling through procedural events
-- **Settlement Evolution** - Cities and towns that grow and change over time
-- **Quantum Simulation** - Advanced probability systems for realistic outcomes
-- **Memory & Influence Systems** - Characters remember interactions and build relationships
-- **Template-Based Content** - Flexible system for creating custom content
+### Minimum Requirements for Simulation
+Before you can start the simulation, ensure your world has:
+- ✅ **World Properties**: Name and description
+- ✅ **At least one Node**: Abstract locations or contexts (no map coordinates)
+- ✅ **At least one Character**: NPCs with consciousness and attributes
+- ✅ **At least one Interaction**: Actions characters can perform
+- ✅ **Character Assignments**: All nodes must have assigned characters
+- ✅ **Interaction Assignments**: All characters must have assigned interactions
 
-### Perfect For
-- **Game Developers** - Procedural world generation and dynamic storytelling
-- **Writers & Worldbuilders** - Historical fiction and fantasy world creation
-- **Educators** - Historical simulation and interactive learning
-- **Researchers** - Social dynamics and civilization modeling
+### Building Your World
+1. **Start Anywhere**: Begin with any component - characters, nodes, or interactions
+2. **Use Templates**: Save and reuse any component as a template for rapid building
+3. **Free Form Creation**: No prescribed order or steps to follow
+4. **Validation Feedback**: The system shows what's still needed before simulation
+5. **Turn-Based Simulation**: Once requirements are met, advance time turn by turn
 
-## 🎯 System Architecture
+## 🌟 Core Features
 
-### Clean Architecture Design
-The simulation engine follows clean architecture principles:
+### Turn-Based Simulation
+- **Manual Time Control**: Advance world history one turn at a time
+- **Event Resolution**: Each turn processes character actions and world events
+- **Historical Recording**: Every turn generates permanent historical records
+- **Analysis Tools**: Review and analyze historical patterns
 
-```
-src/
-├── application/         # Use cases and business logic
-│   ├── use-cases/      # Application-specific business rules
-│   └── ports/          # Interface definitions
-├── domain/             # Core business entities and rules
-│   ├── entities/       # Core domain objects
-│   ├── events/         # Domain events
-│   ├── services/       # Domain services
-│   └── value-objects/  # Immutable value objects
-├── infrastructure/     # External services and persistence
-│   ├── external/       # External API integrations
-│   └── persistence/    # Data storage implementations
-├── presentation/       # UI components and user interactions
-│   ├── components/     # Reusable UI components
-│   ├── features/       # Feature-specific components
-│   └── hooks/          # Custom React hooks
-└── shared/            # Shared utilities and constants
-    ├── constants/      # Application constants
-    ├── types/          # TypeScript type definitions
-    └── utils/          # Utility functions
-```
+### Mapless Design
+- **Abstract Nodes**: Locations are conceptual contexts, not map positions
+- **Relationship-Based**: Nodes connect through relationships, not geography
+- **Flexible Connections**: Trade routes, political ties, cultural bonds
+- **Context-Driven**: Environmental and cultural properties affect behavior
 
-### Key Systems
+### Character Consciousness System
+- **Quantum-Inspired Modeling**: Consciousness frequency and coherence mechanics
+- **D&D Attributes**: Full STR, DEX, CON, INT, WIS, CHA implementation
+- **Personality Traits**: Dynamic traits that evolve over time
+- **Memory Service**: Characters remember interactions and form relationships
+- **Goal-Driven Behavior**: Autonomous decision-making based on objectives
 
-#### Character System
-- **Consciousness System** - Simulates awareness and decision-making
-- **Personality System** - Traits that influence behavior
-- **Race System** - Different species with unique characteristics
-- **Memory Service** - Characters remember interactions and events
-
-#### World Generation
-- **Settlement Evolution** - Cities grow and change over time
-- **Historical Event Generation** - Emergent storytelling through events
-- **Quantum Simulation** - Probabilistic outcomes for realism
-- **Template System** - Flexible content creation
-
-#### Interaction Systems
-- **Influence Tracking** - Characters build relationships
-- **Prestige System** - Social standing and reputation
-- **Alignment System** - Moral and ethical positioning
-- **Prerequisite System** - Conditional content and events
-3. Add options that lead back to other interactions or end the conversation
-
-### Step 4: Link Everything Together (3 minutes)
-
-1. **Edit your first interaction** ("Meeting the Merchant")
-2. **Set "Next Interaction ID"** for each option:
-   - `buy_supplies` → Select "Buying Supplies"
-   - `browse_shop` → Select "Browsing the Shop"
-3. **Save**
-## 🚀 Getting Started
-
-### Quick Start Guide
-
-1. **Initialize World Generation**
-   ```javascript
-   const worldGenerator = new GenerateWorld();
-   const world = await worldGenerator.execute();
-   ```
-
-2. **Create Characters**
-   ```javascript
-   const characterService = new GenerateBehavior();
-   const characters = await characterService.generateFor(world);
-   ```
-
-3. **Run Historical Simulation**
-   ```javascript
-   const simulator = new RunTick();
-   const timeline = await simulator.execute(world, characters);
-   ```
-
-### Project Structure
-
-```
-sim-engine/
-├── src/
-│   ├── application/         # Use cases and business logic
-│   │   ├── use-cases/      # Core application operations
-│   │   └── services/       # Application services
-│   ├── domain/             # Core business entities
-│   │   ├── entities/       # Domain objects
-│   │   ├── events/         # Domain events
-│   │   └── services/       # Domain services
-│   ├── infrastructure/     # External integrations
-│   │   ├── external/       # External services
-│   │   └── persistence/    # Data storage
-│   ├── presentation/       # React UI components
-│   │   ├── components/     # Reusable components
-│   │   ├── features/       # Feature components
-│   │   └── hooks/          # Custom hooks
-│   └── shared/            # Shared utilities
-│       ├── constants/      # Application constants
-│       ├── types/          # TypeScript definitions
-│       └── utils/          # Utility functions
-├── package.json
-├── tailwind.config.js
-└── tsconfig.json
-```
-
-## 🎮 Features
-
-### World Generation
-- **Procedural Settlements** - Dynamically generated cities and towns
-- **Geographical Features** - Mountains, rivers, forests, and more
-- **Resource Distribution** - Strategic placement of valuable resources
-- **Climate Systems** - Weather patterns affecting civilization
-
-### Character Systems
-- **Personality Traits** - Big Five personality model implementation
-- **Consciousness Levels** - Varying degrees of self-awareness
-- **Racial Diversity** - Multiple species with unique characteristics
-- **Social Hierarchies** - Complex relationship networks
+### Template System
+- **Save Everything**: Any component can become a reusable template
+- **Template Library**: Build collections of characters, nodes, and interactions
+- **Rapid Prototyping**: Quickly create variations from base templates
+- **Share and Import**: Exchange templates with other users
 
 ### Historical Simulation
-- **Event Generation** - Emergent historical events
-- **Cause and Effect** - Actions have lasting consequences
-- **Cultural Evolution** - Societies change over time
-- **Technological Progress** - Innovation and discovery systems
+- **Emergent Events**: History unfolds from character interactions
+- **Settlement Evolution**: Populations grow and change dynamically
+- **Political Systems**: Wars, alliances, succession, and diplomacy
+- **Economic Simulation**: Trade, resources, and wealth accumulation
+- **Cultural Development**: Societies evolve distinct characteristics
 
-## 🔧 Configuration
+## 🏗️ Architecture
 
-### Environment Setup
+### Clean Architecture Design
+```
+src/
+├── domain/              # Core business logic
+│   ├── entities/        # Character, Node, Interaction, etc.
+│   ├── services/        # WorldBuilder, HistoryGenerator
+│   └── value-objects/   # Attributes, Position, etc.
+├── application/         # Use cases and services
+│   ├── use-cases/       # Business operations
+│   └── services/        # SimulationService, TemplateService
+├── infrastructure/      # External interfaces
+│   └── persistence/     # LocalStorage repositories
+├── presentation/        # React UI
+│   ├── components/      # UI components
+│   ├── contexts/        # SimulationContext
+│   ├── hooks/           # useWorldBuilder, useSimulation
+│   └── pages/           # Application pages
+└── shared/              # Shared utilities
+```
+
+### Key Technologies
+- **React 18.2**: Modern UI framework
+- **Redux Toolkit**: State management (prepared for future use)
+- **LocalStorage**: Persistent data storage
+- **Jest**: Testing framework
+- **Tailwind CSS**: Styling with dark mode support
+
+## 📚 Core Concepts
+
+### Nodes (Mapless Locations)
+Nodes represent abstract contexts rather than physical locations:
+- **Types**: Settlement, wilderness, market, temple, etc.
+- **Properties**: Environmental, cultural, resource availability
+- **Connections**: Conceptual links (trade, political, cultural)
+- **No Coordinates**: Position-independent design
+
+### Characters (Capability-Driven NPCs)
+Characters are defined by their capabilities and interactions:
+- **Consciousness**: Frequency and coherence affecting decisions
+- **Attributes**: D&D-style stats with modifiers
+- **Personality**: Traits that influence behavior
+- **Capabilities**: What they can DO (assigned interactions)
+- **Memory**: Past interactions affect future behavior
+
+### Interactions (Character Actions)
+Define what characters can do in your world:
+- **Types**: Dialogue, combat, trade, exploration, etc.
+- **Requirements**: Prerequisites for availability
+- **Effects**: Consequences on characters and world
+- **Branching**: Multiple outcomes based on attributes
+
+### Templates (Reusable Components)
+Everything can be saved as a template:
+- **World Templates**: Complete world configurations
+- **Node Templates**: Location archetypes
+- **Character Templates**: Character archetypes
+- **Interaction Templates**: Action patterns
+- **Composite Templates**: Combined elements
+
+## 🎯 Use Cases
+
+### Game Development
+- Procedural world generation for RPGs
+- Dynamic NPC behavior systems
+- Emergent quest generation
+- Living world backgrounds
+
+### Creative Writing
+- Generate historical backstories
+- Create character relationship webs
+- Develop cultural histories
+- Plot generation assistance
+
+### Education
+- Historical simulation exercises
+- Social dynamics modeling
+- Cause-and-effect demonstrations
+- Interactive history lessons
+
+### Research
+- Social system modeling
+- Emergent behavior studies
+- Network dynamics analysis
+- Cultural evolution patterns
+
+## 🛠️ Development
+
+### Running Tests
 ```bash
-# Install dependencies
-npm install
+# Run all tests
+npm test
 
-# Development server
-npm start
+# Run with coverage
+npm test -- --coverage
 
-# Build for production
+# Run specific test file
+npm test -- --testPathPattern=SimulationService
+```
+
+### Building for Production
+```bash
+# Create optimized build
 npm run build
 
-# Run tests
-npm test
+# Serve production build
+npx serve -s build
 ```
 
-### Customization Options
-- **World Size** - Adjust simulation scale
-- **Time Progression** - Control simulation speed
-- **Character Density** - Population parameters
-- **Event Frequency** - Historical event rates
+### Project Structure
+The codebase follows Domain-Driven Design principles with clear separation of concerns. Each layer has distinct responsibilities and dependencies flow inward toward the domain layer.
 
-## 📊 Data Models
+## 📖 Documentation
 
-### Character Entity
-```javascript
-{
-  id: string,
-  name: string,
-  race: RaceType,
-  personality: PersonalityTraits,
-  consciousness: ConsciousnessLevel,
-  attributes: AttributeSet,
-  relationships: RelationshipMap,
-  history: HistoricalRecord[]
-}
-```
+### API Reference
+- `SimulationService`: Core simulation engine
+- `WorldBuilder`: World construction service
+- `TemplateManager`: Template management system
+- `HistoryGenerator`: Historical event generation
 
-### Settlement Entity
-```javascript
-{
-  id: string,
-  name: string,
-  position: Coordinates,
-  population: number,
-  resources: ResourceMap,
-  culture: CulturalTraits,
-  government: GovernmentType,
-  history: HistoricalRecord[]
-}
-```
+### Hooks
+- `useSimulation`: Simulation state and controls
+- `useWorldBuilder`: World building operations
+- `useTemplates`: Template management
 
-### Historical Event
-```javascript
-{
-  id: string,
-  timestamp: number,
-  type: EventType,
-  participants: CharacterReference[],
-  location: SettlementReference,
-  description: string,
-  consequences: Effect[]
-}
-```
-
-## 🧪 Testing
-
-### Integration Tests
-```bash
-# Run simulation integration tests
-npm test -- --testPathPattern=simulation-integration-test
-```
-
-### Unit Tests
-```bash
-# Run all unit tests
-npm test
-
-# Run specific test suites
-npm test -- --testPathPattern=domain/entities
-npm test -- --testPathPattern=application/use-cases
-```
-
-## 🎨 Styling
-
-### Tailwind CSS
-The project uses Tailwind CSS for styling:
-- **Responsive Design** - Mobile-first approach
-- **Dark Mode Support** - Automatic theme switching
-- **Custom Components** - Reusable UI elements
-- **Utility Classes** - Rapid development
-
-### Custom Themes
-```javascript
-// tailwind.config.js
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        'sim-primary': '#3B82F6',
-        'sim-secondary': '#10B981',
-        'sim-accent': '#F59E0B'
-      }
-    }
-  }
-}
-```
-
-## 🔍 API Reference
-
-### Core Services
-
-#### WorldGenerator
-```javascript
-class GenerateWorld {
-  async execute(parameters: WorldGenParams): Promise<World>
-}
-```
-
-#### CharacterService  
-```javascript
-class GenerateBehavior {
-  async generateFor(world: World): Promise<Character[]>
-}
-```
-
-#### SimulationEngine
-```javascript
-class RunTick {
-  async execute(world: World, characters: Character[]): Promise<Timeline>
-}
-```
-
-## 📈 Performance
-
-### Optimization Strategies
-- **Lazy Loading** - Components load on demand
-- **Memoization** - Cache expensive calculations
-- **Virtual Scrolling** - Handle large datasets efficiently
-- **Web Workers** - Background processing for simulations
-
-### Performance Monitoring
-```javascript
-// Performance metrics
-const metrics = {
-  simulationSpeed: 'ticks per second',
-  memoryUsage: 'MB allocated',
-  renderTime: 'milliseconds'
-};
-```
+### Context
+- `SimulationContext`: Global simulation state
 
 ## 🤝 Contributing
 
-### Development Guidelines
-1. **Follow Clean Architecture** - Maintain separation of concerns
-2. **Write Tests** - Cover new functionality with tests
-3. **Document Changes** - Update relevant documentation
-4. **Code Style** - Follow ESLint and Prettier configurations
+We welcome contributions! The architecture is designed for extensibility:
 
-### Submitting Changes
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+1. **Domain Layer**: Add new entities or value objects
+2. **Application Layer**: Create new use cases
+3. **Presentation Layer**: Build new UI components
+4. **Templates**: Share your world templates
+
+### Key Areas for Contribution
+- Additional node types and properties
+- New interaction patterns
+- Enhanced consciousness algorithms
+- Historical analysis tools
+- UI/UX improvements
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is open source. See LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+Built with modern web technologies and inspired by:
+- Complex systems theory
+- Emergent behavior research
+- Narrative generation systems
+- Historical simulation games
 
 ---
 
-**Ready to simulate history?** Start by generating your first world and watch civilizations emerge! �✨
+**Note**: This is a living project under active development. Features and APIs may evolve as we refine the simulation engine.

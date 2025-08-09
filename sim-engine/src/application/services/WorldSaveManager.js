@@ -39,60 +39,68 @@ class WorldSaveManager extends EventEmitter {
      * @param {Object} options - Save options
      * @returns {Promise<Object>} Saved world data
      */
-    async saveWorld(options = {}) {
-        if (this.saveInProgress) {
-            throw new Error('Save already in progress');
-        }
-
+    async saveWorld(worldData) {
         try {
-            this.saveInProgress = true;
-
-            // 1. Set saving status
-            editorStateManager.setSaveStatus('saving', 'Preparing world data...');
-            this.emit('saveStarted');
-
-            // 2. Get world data from EditorStateManager
-            const worldData = this._collectWorldData();
-
-            // 3. Validate world data before saving
-            const validation = worldPersistenceService.validateWorldData(worldData);
-            if (!validation.isValid) {
-                throw new Error(`World validation failed: ${validation.errors.join(', ')}`);
+            // Ensure complete data structure
+            const worldToSave = {
+                // Core fields
+                id: worldData.id || this.generateId(),
+                name: worldData.name,
+                description: worldData.description,
+                lastModified: new Date().toISOString(),
+                version: this.currentVersion,
+                
+                // Content arrays - ensure they exist
+                nodes: worldData.nodes || [],
+                characters: worldData.characters || [],
+                interactions: worldData.interactions || [],
+                encounters: worldData.encounters || [],
+                
+                // Additional data
+                rules: worldData.rules || {},
+                initialConditions: worldData.initialConditions || {},
+                nodePopulations: worldData.nodePopulations || {},
+                
+                // World builder state
+                currentStep: worldData.currentStep || 1,
+                isComplete: worldData.isComplete || false,
+                isValid: worldData.isValid || false,
+                
+                // Preserve any custom fields
+                ...worldData
+            };
+            
+            // Update worlds list
+            const existingWorlds = await this.getAllWorlds();
+            const worldIndex = existingWorlds.findIndex(w => w.id === worldToSave.id);
+            
+            const worldMetadata = {
+                id: worldToSave.id,
+                name: worldToSave.name,
+                description: worldToSave.description,
+                lastModified: worldToSave.lastModified,
+                version: worldToSave.version
+            };
+            
+            if (worldIndex >= 0) {
+                existingWorlds[worldIndex] = worldMetadata;
+            } else {
+                existingWorlds.push(worldMetadata);
             }
-
-            // 4. Save to persistence service
-            editorStateManager.setSaveStatus('saving', 'Saving world data...');
-            const savedWorld = await worldPersistenceService.saveWorld(worldData);
-
-            // 5. Load the complete world data back (including any auto-generated fields)
-            editorStateManager.setSaveStatus('saving', 'Loading complete world data...');
-            const completeWorld = await worldPersistenceService.loadWorld(savedWorld.id);
-
-            // 6. Update current world reference with COMPLETE data
-            editorStateManager.setCurrentWorld(completeWorld);
-
-            // 7. Force refresh of editor data with complete world data
-            editorStateManager.updateEditorData('world', null, completeWorld);
-
-            // 8. Reset unsaved changes flag
-            editorStateManager.setUnsavedChanges(false);
-
-            // 9. Set save status to completed
-            editorStateManager.setSaveStatus('saved', 'World saved successfully');
-
-            // 10. Emit success event with complete world data
-            this.emit('saveCompleted', completeWorld);
-
-            return completeWorld;
-
+            
+            // Save both list and full world data
+            localStorage.setItem(this.storageKeys.WORLDS, JSON.stringify(existingWorlds));
+            localStorage.setItem(
+                `${this.storageKeys.WORLD_PREFIX}${worldToSave.id}`,
+                JSON.stringify(worldToSave)
+            );
+            
+            this.emit('worldSaved', worldToSave);
+            return worldToSave;
+            
         } catch (error) {
-            // Handle save error
-            editorStateManager.setSaveStatus('error', error.message);
-            this.emit('saveError', error);
+            this.emit('saveError', { type: 'world', error: error.message });
             throw error;
-
-        } finally {
-            this.saveInProgress = false;
         }
     }
 

@@ -1,76 +1,280 @@
 # Project Structure
 
-## Clean Architecture Organization
+## Overview
 
-The project follows clean architecture principles with clear separation of concerns:
+The World History Simulation Engine follows **Clean Architecture** principles with clear separation between domain, application, infrastructure, and presentation layers. The system is **turn-based**, **mapless**, and supports **free-form building**.
+
+## Directory Structure
 
 ```
-sim-engine/
-├── src/
-│   ├── application/         # Use cases and business logic
-│   │   └── use-cases/      # Application-specific business rules
-│   ├── domain/             # Core business entities and rules
-│   │   ├── entities/       # Core domain objects
-│   │   ├── events/         # Domain events
-│   │   ├── services/       # Domain services
-│   │   └── value-objects/  # Immutable value objects
-│   ├── infrastructure/     # External services and persistence
-│   │   ├── external/       # External API integrations
-│   │   └── Persistance/    # Data storage implementations
-│   ├── presentation/       # UI components and user interactions
-│   │   ├── components/     # Reusable UI components
-│   │   ├── contexts/       # React context providers
-│   │   ├── features/       # Feature-specific components
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── pages/          # Page-level components
-│   ├── shared/            # Shared utilities and constants
-│   │   ├── constants/      # Application constants
-│   │   ├── types/          # TypeScript type definitions
-│   │   └── utils/          # Utility functions
-│   ├── template/          # Template system for content generation
-│   └── test/              # Integration and test utilities
-├── public/                # Static assets
-├── build/                 # Production build output
-└── node_modules/          # Dependencies
+world-history-sim-engine/
+├── sim-engine/                 # Main application
+│   ├── public/                 # Static assets
+│   │   ├── index.html
+│   │   └── favicon.ico
+│   ├── src/                    # Source code
+│   │   ├── domain/             # Core business logic (innermost layer)
+│   │   ├── application/        # Use cases and services
+│   │   ├── infrastructure/     # External interfaces
+│   │   ├── presentation/       # React UI layer
+│   │   ├── shared/             # Shared utilities
+│   │   ├── template/           # Template system
+│   │   ├── test/               # Test utilities and fixtures
+│   │   ├── App.js              # Root React component
+│   │   ├── App.css             # Global styles
+│   │   └── index.js            # Application entry point
+│   ├── package.json            # Dependencies and scripts
+│   └── README.md               # Project documentation
+└── .kiro/                      # Project configuration
+    ├── steering/               # System documentation
+    └── specs/                  # Feature specifications
 ```
 
-## Architecture Principles
+## Layer Architecture
+
+### Domain Layer (`src/domain/`)
+**The innermost layer - pure business logic with no external dependencies**
+
+```
+domain/
+├── entities/                   # Core business objects
+│   ├── Character.js            # NPC with consciousness and attributes
+│   ├── Node.js                 # Abstract location/context
+│   ├── Interaction.js          # Character actions
+│   ├── Quest.js                # Goal-driven objectives
+│   └── Race.js                 # Character species/types
+├── services/                   # Domain services
+│   ├── ConsciousnessService.js # Consciousness calculations
+│   ├── EvolutionService.js     # Character/world evolution
+│   ├── HistoryGenerator.js     # Historical event creation
+│   ├── InteractionResolver.js  # Action resolution
+│   ├── MemoryService.js        # Character memory
+│   └── WorldBuilder.js         # World construction service
+├── value-objects/              # Immutable values
+│   ├── Attributes.js           # D&D-style attributes
+│   ├── Personality.js          # Character traits
+│   ├── Position.js             # Abstract positioning (not used in mapless)
+│   └── Prerequisites.js        # Requirement definitions
+└── events/                     # Domain events
+    └── HistoricalEvent.js      # Event records
+```
+
+### Application Layer (`src/application/`)
+**Use cases and application services - orchestrates domain logic**
+
+```
+application/
+├── use-cases/                  # Business operations
+│   ├── character/              # Character-related use cases
+│   │   └── CreateCharacter.js
+│   ├── npc/                    # NPC behavior
+│   │   └── GenerateBehavior.js
+│   ├── simulation/             # Simulation operations
+│   │   └── RunTick.js
+│   ├── history/                # Historical analysis
+│   │   └── AnalyzeHistory.js
+│   └── world-builder/          # World construction
+│       └── WorldBuilder.js
+├── services/                   # Application services
+│   ├── SimulationService.js    # Turn-based simulation engine
+│   ├── TemplateService.js      # Template management
+│   └── ValidationService.js    # Requirement validation
+└── ports/                      # Interface definitions
+    └── repositories/           # Repository interfaces
+```
+
+### Infrastructure Layer (`src/infrastructure/`)
+**External interfaces and implementations**
+
+```
+infrastructure/
+├── persistence/                # Data storage
+│   ├── LocalStorageRepository.js        # Generic localStorage
+│   ├── LocalStorageWorldRepository.js   # World state persistence
+│   └── TemplateRepository.js            # Template storage
+└── external/                   # External service integrations
+    └── (future: API clients, file I/O, etc.)
+```
+
+### Presentation Layer (`src/presentation/`)
+**React UI components and user interaction**
+
+```
+presentation/
+├── components/                 # Reusable UI components
+│   ├── CharacterCreator.js    # Character building UI
+│   ├── ConditionalSimulationInterface.js # Adaptive main UI
+│   ├── InteractionEditor.js   # Interaction design UI
+│   ├── NodeEditor.js           # Node creation UI
+│   ├── SimulationDisplay.js   # Simulation view
+│   ├── TurnCounter.js          # Turn display
+│   └── WorldHistorySimInterface.js # History interface
+├── contexts/                   # React contexts
+│   └── SimulationContext.js   # Global state management
+├── hooks/                      # Custom React hooks
+│   ├── useSimulation.js        # Simulation control hook
+│   ├── useTemplates.js         # Template management hook
+│   └── useWorldBuilder.js      # World building hook
+├── pages/                      # Application pages
+│   ├── MainPage.js            # Primary application page
+│   ├── HomePage.js            # Landing page
+│   ├── FeaturesPage.js        # Feature showcase
+│   └── WorldBuilderLandingPage.js # Builder introduction
+└── UI/                        # UI utilities
+    ├── Navigation.js          # App navigation
+    └── Layout.js              # Page layouts
+```
+
+### Template System (`src/template/`)
+**Template management for all component types**
+
+```
+template/
+├── TemplateManager.js          # Core template operations
+├── TemplateTypes.js            # Template type definitions
+└── templates/                  # Pre-built templates
+    ├── characters/             # Character archetypes
+    ├── nodes/                  # Location templates
+    ├── interactions/           # Action templates
+    └── worlds/                 # Complete world templates
+```
+
+### Shared (`src/shared/`)
+**Cross-cutting concerns and utilities**
+
+```
+shared/
+├── constants/                  # Application constants
+│   └── GameConstants.js       # Game-specific values
+├── types/                      # TypeScript/JSDoc types
+│   └── index.js               # Type definitions
+└── utils/                      # Utility functions
+    ├── validation.js          # Validation helpers
+    └── random.js              # Random generation
+```
+
+### Test (`src/test/`)
+**Testing utilities and integration tests**
+
+```
+test/
+├── fixtures/                   # Test data
+│   ├── characters.js
+│   ├── nodes.js
+│   └── worlds.js
+├── integration/                # Integration tests
+│   └── turn-counter-integration-working.test.js
+└── utils/                      # Test helpers
+    └── testHelpers.js
+```
+
+## Key Files
+
+### Core Application Files
+- `App.js` - Root React component, sets up routing
+- `index.js` - Application entry point, renders React app
+- `SimulationContext.js` - Global state management
+- `SimulationService.js` - Turn-based simulation engine
+- `WorldBuilder.js` - World construction service
+
+### Configuration Files
+- `package.json` - Dependencies and scripts
+- `jest.config.js` - Test configuration
+- `tailwind.config.js` - Styling configuration
+
+## Data Flow
+
+### Building Flow (Free-Form)
+1. User creates components in any order via UI
+2. Components saved to `WorldBuilder` service
+3. Templates can be saved via `TemplateManager`
+4. State persisted to `LocalStorage`
+5. Validation shows missing requirements
+
+### Simulation Flow (Turn-Based)
+1. User initiates turn via UI
+2. `SimulationService.processTurn()` executes
+3. Characters perform interactions
+4. Events resolved by domain services
+5. History recorded by `HistoryGenerator`
+6. State updated and persisted
+7. UI reflects new world state
+
+## Design Patterns
+
+### Clean Architecture
+- **Dependency Rule**: Dependencies point inward
+- **Layer Isolation**: Each layer only knows about inner layers
+- **Interface Segregation**: Narrow, focused interfaces
+- **Dependency Injection**: Services injected, not instantiated
 
 ### Domain-Driven Design
-- **Domain Layer** - Core business logic independent of external concerns
-- **Application Layer** - Orchestrates domain objects to fulfill use cases
-- **Infrastructure Layer** - Handles external dependencies and persistence
-- **Presentation Layer** - User interface and interaction handling
+- **Entities**: Core business objects with identity
+- **Value Objects**: Immutable values
+- **Domain Services**: Business logic operations
+- **Aggregates**: Consistency boundaries
 
-### Key Conventions
-- **Entities** - Core business objects with identity
-- **Value Objects** - Immutable objects representing concepts
-- **Services** - Domain logic that doesn't belong to entities
-- **Use Cases** - Application-specific business rules
-- **Events** - Domain events for decoupled communication
+### React Patterns
+- **Hooks**: Custom hooks for state logic
+- **Context**: Global state management
+- **Component Composition**: Building complex UIs from simple parts
+- **Conditional Rendering**: Adaptive interfaces
 
-### Import Path Aliases
-```typescript
-@/*              // Root src directory
-@/components/*   // Reusable UI components
-@/systems/*      // System-level modules
-@/hooks/*        // Custom React hooks
-@/utils/*        // Utility functions
-@/context/*      // React contexts
-@/styles/*       // Styling files
-@/assets/*       // Static assets
-```
+## Testing Strategy
 
-## File Naming Conventions
-- **Components** - PascalCase (e.g., `CharacterCard.js`)
-- **Hooks** - camelCase with 'use' prefix (e.g., `useSimulation.js`)
-- **Services** - PascalCase (e.g., `CharacterService.js`)
-- **Types** - PascalCase interfaces/types (e.g., `Character.ts`)
-- **Constants** - UPPER_SNAKE_CASE (e.g., `SIMULATION_CONSTANTS.js`)
+### Unit Tests
+- Domain entities and value objects
+- Domain services
+- Application use cases
+- Utility functions
 
-## Template System
-The `/template` directory contains the flexible content generation system:
-- **TemplateManager** - Orchestrates template operations
-- **TemplateGenerator** - Creates content from templates
-- **TemplateValidator** - Ensures template integrity
-- **TemplateTypes** - Type definitions for templates
+### Integration Tests
+- Turn processing flow
+- World building operations
+- Template management
+- Persistence operations
+
+### UI Tests
+- Component rendering
+- User interactions
+- State updates
+- Navigation flow
+
+## Performance Considerations
+
+### Optimization Points
+- **Turn Processing**: Batch updates, efficient algorithms
+- **History Storage**: Pruning old records, compression
+- **Template Loading**: Lazy loading, caching
+- **React Rendering**: Memoization, virtual DOM efficiency
+
+### Scalability
+- **Character Limits**: Manageable NPC populations
+- **Node Complexity**: Balanced interaction density
+- **History Depth**: Configurable retention periods
+- **Template Library**: Indexed for fast retrieval
+
+## Future Architecture Considerations
+
+### Planned Enhancements
+- **Web Workers**: Background turn processing
+- **IndexedDB**: Larger storage capacity
+- **API Layer**: REST/GraphQL endpoints
+- **Plugin System**: Extensibility framework
+
+### Potential Integrations
+- **AI Services**: LLM narrative generation
+- **Export Systems**: Various output formats
+- **Collaboration**: Multi-user support
+- **Analytics**: Advanced history analysis
+
+## Conclusion
+
+The architecture is designed for:
+- **Maintainability**: Clean separation of concerns
+- **Extensibility**: Easy to add new features
+- **Testability**: Comprehensive test coverage
+- **Performance**: Optimized for simulation scale
+- **Flexibility**: Supports diverse use cases
+
+The turn-based, mapless, free-building design provides maximum creative freedom while maintaining architectural integrity and simulation depth.
