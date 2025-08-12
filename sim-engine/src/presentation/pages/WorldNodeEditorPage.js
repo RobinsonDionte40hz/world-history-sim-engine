@@ -117,6 +117,7 @@ const WorldNodeEditorPageNew = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
   const [previewMode, setPreviewMode] = useState(false);
+  const [showNextSteps, setShowNextSteps] = useState(false);
 
   // Validation
   const validateWorld = useCallback(() => {
@@ -187,6 +188,69 @@ const WorldNodeEditorPageNew = () => {
     return error ? error.message : null;
   };
 
+  // Next Steps functionality
+  const getNextStepsContent = () => {
+    const steps = [];
+    
+    if (!worldData.name?.trim()) {
+      steps.push({
+        title: "Name Your World",
+        description: "Give your world a memorable name",
+        action: "Fill in the world name in the Basic tab",
+        completed: false
+      });
+      return steps;
+    }
+
+    // Check if world is saved
+    const isSaved = !hasUnsavedChanges;
+    steps.push({
+      title: "Save Your World Foundation",
+      description: "Save your world configuration to make it available for building",
+      action: isSaved ? "✓ World foundation saved successfully" : "Click the 'Save World' button above",
+      completed: isSaved
+    });
+
+    if (isSaved) {
+      steps.push({
+        title: "Create Nodes",
+        description: "Define locations and contexts within your world",
+        action: "Use the 'Create Nodes' button below or navigate to Node Editor",
+        completed: false
+      });
+
+      steps.push({
+        title: "Design Characters",
+        description: "Create NPCs with personalities and attributes",
+        action: "Use the 'Create Characters' button below or navigate to Character Editor",
+        completed: false
+      });
+
+      steps.push({
+        title: "Define Interactions",
+        description: "Create actions and capabilities for your world",
+        action: "Use the 'Create Interactions' button below or navigate to Interaction Editor",
+        completed: false
+      });
+
+      steps.push({
+        title: "Create Encounters",
+        description: "Design dynamic encounters with turn-based mechanics",
+        action: "Navigate to Encounter Editor to create engaging encounters",
+        completed: false
+      });
+
+      steps.push({
+        title: "Start Simulation",
+        description: "Run the turn-based simulation to see your world come alive",
+        action: "Once you have nodes, characters, and interactions, start the simulation",
+        completed: false
+      });
+    }
+
+    return steps;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Navigation />
@@ -245,6 +309,14 @@ const WorldNodeEditorPageNew = () => {
                 }`}
             >
               {isSaving ? 'Saving...' : (hasUnsavedChanges ? 'Save World' : 'Saved')}
+            </button>
+
+            <button
+              onClick={() => setShowNextSteps(true)}
+              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Next Steps
             </button>
           </div>
 
@@ -515,6 +587,91 @@ const WorldNodeEditorPageNew = () => {
 
         </div>
       </div>
+
+      {/* Next Steps Modal */}
+      {showNextSteps && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <ArrowRight className="w-6 h-6 text-emerald-400" />
+                  <h2 className="text-2xl font-bold text-white">Next Steps</h2>
+                </div>
+                <button
+                  onClick={() => setShowNextSteps(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {getNextStepsContent().map((step, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border ${
+                      step.completed
+                        ? 'bg-emerald-600/10 border-emerald-600/30'
+                        : 'bg-white/10 border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-1 ${step.completed ? 'text-emerald-400' : 'text-gray-400'}`}>
+                        {step.completed ? (
+                          <CheckCircle className="w-5 h-5" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center">
+                            <span className="text-xs font-bold">{index + 1}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className={`font-semibold mb-2 ${
+                          step.completed ? 'text-emerald-400' : 'text-white'
+                        }`}>
+                          {step.title}
+                        </h3>
+                        <p className="text-gray-300 text-sm mb-2">
+                          {step.description}
+                        </p>
+                        <p className={`text-sm ${
+                          step.completed ? 'text-emerald-300' : 'text-indigo-300'
+                        }`}>
+                          {step.action}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-gray-400">
+                  Follow these steps to build your complete world
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowNextSteps(false);
+                      handleNavigate('/editors/nodes');
+                    }}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                  >
+                    Create Nodes
+                  </button>
+                  <button
+                    onClick={() => setShowNextSteps(false)}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -13,7 +13,10 @@ import {
   AlertCircle,
   AlertTriangle,
   Download,
-  Upload
+  Upload,
+  ArrowRight,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import NodeEditor from '../components/NodeEditor';
@@ -27,6 +30,7 @@ const NodeEditorPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [currentNode, setCurrentNode] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
+  const [showNextSteps, setShowNextSteps] = useState(false);
 
   // Validation
   const validateNode = useCallback(() => {
@@ -230,6 +234,14 @@ const NodeEditorPage = () => {
                 }`}
             >
               {isSaving ? 'Saving...' : (hasUnsavedChanges ? 'Save Node' : 'Saved')}
+            </button>
+
+            <button
+              onClick={() => setShowNextSteps(true)}
+              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Next Steps
             </button>
           </div>
 
