@@ -12,7 +12,10 @@ import {
   Settings,
   Clock,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import useWorldBuilder from '../hooks/useWorldBuilder';
