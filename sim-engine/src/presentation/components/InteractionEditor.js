@@ -117,7 +117,7 @@ const PrerequisiteEditor = ({ prerequisites, onChange }) => {
       {/* Existing prerequisites */}
       {prerequisites.length > 0 && (
         <div className="space-y-2">
-          <h4 className="font-medium">Current Prerequisites</h4>
+          <h4 className="font-medium text-white">Current Prerequisites</h4>
           {prerequisites.map(prereq => (
             <PrerequisiteCard
               key={prereq.id}
@@ -129,8 +129,8 @@ const PrerequisiteEditor = ({ prerequisites, onChange }) => {
       )}
 
       {/* Add new prerequisite */}
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-        <h4 className="font-medium mb-3">Add Prerequisite</h4>
+      <div className="border-2 border-dashed border-white/20 rounded-lg p-4">
+        <h4 className="font-medium text-white mb-3">Add Prerequisite</h4>
         
         {/* Type selector */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -142,7 +142,7 @@ const PrerequisiteEditor = ({ prerequisites, onChange }) => {
                 px-3 py-1 rounded-lg text-sm font-medium transition-colors
                 ${activeType === type.id
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  : 'bg-white/10 hover:bg-white/20 text-gray-300'
                 }
               `}
             >
@@ -158,570 +158,6 @@ const PrerequisiteEditor = ({ prerequisites, onChange }) => {
   );
 };
 
-// Prerequisite card component
-const PrerequisiteCard = ({ prerequisite, onRemove }) => {
-  const getPrerequisiteDescription = () => {
-    switch (prerequisite.type) {
-      case 'attribute':
-        return `${prerequisite.attribute} check DC ${prerequisite.difficulty}`;
-      case 'skill':
-        return `Skill: ${prerequisite.skill} ≥ ${prerequisite.minLevel}`;
-      case 'quest':
-        return `Quest "${prerequisite.questId}" ${prerequisite.state}`;
-      case 'relationship':
-        return `Relationship with ${prerequisite.targetId} ${prerequisite.operator} ${prerequisite.value}`;
-      case 'item':
-        return `${prerequisite.quantity}× ${prerequisite.itemId}`;
-      case 'influence':
-        return `${prerequisite.faction} influence ≥ ${prerequisite.minValue}`;
-      case 'alignment':
-        return `Alignment: ${prerequisite.axis} ${prerequisite.min}-${prerequisite.max}`;
-      case 'personality':
-        return `Personality: ${prerequisite.trait} ${prerequisite.operator} ${prerequisite.value}`;
-      default:
-        return 'Unknown prerequisite';
-    }
-  };
-
-  return (
-    <div className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-      <span className="text-sm">{getPrerequisiteDescription()}</span>
-      <button
-        onClick={onRemove}
-        className="text-red-600 hover:text-red-800 ml-2"
-      >
-        ×
-      </button>
-    </div>
-  );
-};
-
-// Attribute check form
-const AttributeCheckForm = ({ onAdd }) => {
-  const [data, setData] = useState({
-    attribute: 'strength',
-    difficulty: 10,
-    advantage: false,
-    disadvantage: false
-  });
-
-  const handleSubmit = () => {
-    onAdd(data);
-    setData({ attribute: 'strength', difficulty: 10, advantage: false, disadvantage: false });
-  };
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <label className="text-sm font-medium">Attribute</label>
-        <select
-          value={data.attribute}
-          onChange={(e) => setData({...data, attribute: e.target.value})}
-          className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-        >
-          {DND_ATTRIBUTES.map(attr => (
-            <option key={attr.id} value={attr.id}>
-              {attr.label} ({attr.abbr})
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="text-sm font-medium">DC</label>
-        <input
-          type="number"
-          min="1"
-          max="30"
-          value={data.difficulty}
-          onChange={(e) => setData({...data, difficulty: parseInt(e.target.value) || 10})}
-          className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-        />
-      </div>
-      <div className="col-span-2 flex gap-4">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={data.advantage}
-            onChange={(e) => setData({...data, advantage: e.target.checked, disadvantage: false})}
-            className="mr-2"
-          />
-          Advantage
-        </label>
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={data.disadvantage}
-            onChange={(e) => setData({...data, disadvantage: e.target.checked, advantage: false})}
-            className="mr-2"
-          />
-          Disadvantage
-        </label>
-      </div>
-      <button
-        onClick={handleSubmit}
-        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Attribute Check
-      </button>
-    </div>
-  );
-};
-
-// Other prerequisite forms (simplified for brevity)
-const SkillRequirementForm = ({ onAdd }) => {
-  const [data, setData] = useState({ skill: '', minLevel: 1 });
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <input
-        type="text"
-        placeholder="Skill name"
-        value={data.skill}
-        onChange={(e) => setData({...data, skill: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <input
-        type="number"
-        placeholder="Min level"
-        min="1"
-        value={data.minLevel}
-        onChange={(e) => setData({...data, minLevel: parseInt(e.target.value) || 1})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <button
-        onClick={() => data.skill && onAdd(data)}
-        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Skill Requirement
-      </button>
-    </div>
-  );
-};
-
-const QuestStateForm = ({ onAdd }) => {
-  const [data, setData] = useState({ questId: '', state: 'completed' });
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <input
-        type="text"
-        placeholder="Quest ID"
-        value={data.questId}
-        onChange={(e) => setData({...data, questId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <select
-        value={data.state}
-        onChange={(e) => setData({...data, state: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option value="not_started">Not Started</option>
-        <option value="active">Active</option>
-        <option value="completed">Completed</option>
-        <option value="failed">Failed</option>
-      </select>
-      <button
-        onClick={() => data.questId && onAdd(data)}
-        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Quest Requirement
-      </button>
-    </div>
-  );
-};
-
-const RelationshipForm = ({ onAdd }) => {
-  const [data, setData] = useState({ targetId: '', operator: '≥', value: 50 });
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      <input
-        type="text"
-        placeholder="Character ID"
-        value={data.targetId}
-        onChange={(e) => setData({...data, targetId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <select
-        value={data.operator}
-        onChange={(e) => setData({...data, operator: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option value="≥">≥</option>
-        <option value="≤">≤</option>
-        <option value="=">=</option>
-      </select>
-      <input
-        type="number"
-        min="-100"
-        max="100"
-        value={data.value}
-        onChange={(e) => setData({...data, value: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <button
-        onClick={() => data.targetId && onAdd(data)}
-        className="col-span-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Relationship Requirement
-      </button>
-    </div>
-  );
-};
-
-const ItemRequirementForm = ({ onAdd }) => {
-  const [data, setData] = useState({ itemId: '', quantity: 1 });
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <input
-        type="text"
-        placeholder="Item ID"
-        value={data.itemId}
-        onChange={(e) => setData({...data, itemId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <input
-        type="number"
-        placeholder="Quantity"
-        min="1"
-        value={data.quantity}
-        onChange={(e) => setData({...data, quantity: parseInt(e.target.value) || 1})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <button
-        onClick={() => data.itemId && onAdd(data)}
-        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Item Requirement
-      </button>
-    </div>
-  );
-};
-
-const InfluenceForm = ({ onAdd }) => {
-  const [data, setData] = useState({ faction: '', minValue: 0 });
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <input
-        type="text"
-        placeholder="Faction name"
-        value={data.faction}
-        onChange={(e) => setData({...data, faction: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <input
-        type="number"
-        placeholder="Min influence"
-        min="0"
-        value={data.minValue}
-        onChange={(e) => setData({...data, minValue: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <button
-        onClick={() => data.faction && onAdd(data)}
-        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Influence Requirement
-      </button>
-    </div>
-  );
-};
-
-const AlignmentForm = ({ onAdd }) => {
-  const [data, setData] = useState({ axis: 'lawChaos', min: -100, max: 100 });
-  return (
-    <div className="space-y-3">
-      <select
-        value={data.axis}
-        onChange={(e) => setData({...data, axis: e.target.value})}
-        className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option value="lawChaos">Law-Chaos</option>
-        <option value="goodEvil">Good-Evil</option>
-      </select>
-      <div className="grid grid-cols-2 gap-3">
-        <input
-          type="number"
-          placeholder="Min"
-          min="-100"
-          max="100"
-          value={data.min}
-          onChange={(e) => setData({...data, min: parseInt(e.target.value) || -100})}
-          className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-        />
-        <input
-          type="number"
-          placeholder="Max"
-          min="-100"
-          max="100"
-          value={data.max}
-          onChange={(e) => setData({...data, max: parseInt(e.target.value) || 100})}
-          className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-        />
-      </div>
-      <button
-        onClick={() => onAdd(data)}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Alignment Requirement
-      </button>
-    </div>
-  );
-};
-
-const PersonalityForm = ({ onAdd }) => {
-  const [data, setData] = useState({ trait: '', operator: '≥', value: 0.5 });
-  const personalityTraits = [
-    'openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism',
-    'courage', 'loyalty', 'honesty', 'ambition', 'compassion'
-  ];
-  
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      <select
-        value={data.trait}
-        onChange={(e) => setData({...data, trait: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option value="">Select trait</option>
-        {personalityTraits.map(trait => (
-          <option key={trait} value={trait}>{trait}</option>
-        ))}
-      </select>
-      <select
-        value={data.operator}
-        onChange={(e) => setData({...data, operator: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      >
-        <option value="≥">≥</option>
-        <option value="≤">≤</option>
-      </select>
-      <input
-        type="number"
-        step="0.1"
-        min="0"
-        max="1"
-        value={data.value}
-        onChange={(e) => setData({...data, value: parseFloat(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <button
-        onClick={() => data.trait && onAdd(data)}
-        className="col-span-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        Add Personality Requirement
-      </button>
-    </div>
-  );
-};
-
-// Effect editor component
-const EffectEditor = ({ effects, onChange }) => {
-  const [activeType, setActiveType] = useState('attribute');
-
-  const handleAddEffect = (type, data) => {
-    const newEffect = {
-      id: Date.now(),
-      type,
-      ...data
-    };
-    onChange([...effects, newEffect]);
-  };
-
-  const handleRemoveEffect = (id) => {
-    onChange(effects.filter(e => e.id !== id));
-  };
-
-  const renderEffectForm = () => {
-    switch (activeType) {
-      case 'attribute':
-        return <AttributeEffectForm onAdd={(data) => handleAddEffect('attribute', data)} />;
-      case 'relationship':
-        return <RelationshipEffectForm onAdd={(data) => handleAddEffect('relationship', data)} />;
-      case 'quest':
-        return <QuestEffectForm onAdd={(data) => handleAddEffect('quest', data)} />;
-      case 'item':
-        return <ItemEffectForm onAdd={(data) => handleAddEffect('item', data)} />;
-      case 'influence':
-        return <InfluenceEffectForm onAdd={(data) => handleAddEffect('influence', data)} />;
-      case 'prestige':
-        return <PrestigeEffectForm onAdd={(data) => handleAddEffect('prestige', data)} />;
-      case 'alignment':
-        return <AlignmentEffectForm onAdd={(data) => handleAddEffect('alignment', data)} />;
-      case 'consciousness':
-        return <ConsciousnessEffectForm onAdd={(data) => handleAddEffect('consciousness', data)} />;
-      case 'memory':
-        return <MemoryEffectForm onAdd={(data) => handleAddEffect('memory', data)} />;
-      case 'trigger':
-        return <TriggerEffectForm onAdd={(data) => handleAddEffect('trigger', data)} />;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Existing effects */}
-      {effects.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="font-medium">Current Effects</h4>
-          {effects.map(effect => (
-            <EffectCard
-              key={effect.id}
-              effect={effect}
-              onRemove={() => handleRemoveEffect(effect.id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Add new effect */}
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-        <h4 className="font-medium mb-3">Add Effect</h4>
-        
-        {/* Type selector */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {EFFECT_TYPES.map(type => (
-            <button
-              key={type.id}
-              onClick={() => setActiveType(type.id)}
-              className={`
-                px-3 py-1 rounded-lg text-sm font-medium transition-colors
-                ${activeType === type.id
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }
-              `}
-            >
-              <span className="mr-1">{type.icon}</span>
-              {type.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Type-specific form */}
-        {renderEffectForm()}
-      </div>
-    </div>
-  );
-};
-
-// Effect card component
-const EffectCard = ({ effect, onRemove }) => {
-  const getEffectDescription = () => {
-    switch (effect.type) {
-      case 'attribute':
-        return `${effect.attribute} ${effect.modifier >= 0 ? '+' : ''}${effect.modifier}`;
-      case 'relationship':
-        return `Relationship with ${effect.targetId} ${effect.change >= 0 ? '+' : ''}${effect.change}`;
-      case 'quest':
-        return `Quest "${effect.questId}" → ${effect.action}`;
-      case 'item':
-        return `${effect.action} ${effect.quantity}× ${effect.itemId}`;
-      case 'influence':
-        return `${effect.faction} influence ${effect.change >= 0 ? '+' : ''}${effect.change}`;
-      case 'prestige':
-        return `Prestige ${effect.change >= 0 ? '+' : ''}${effect.change}`;
-      case 'alignment':
-        return `${effect.axis}: ${effect.shift >= 0 ? '+' : ''}${effect.shift}`;
-      case 'consciousness':
-        return `Consciousness: ${effect.aspect} ${effect.change}`;
-      case 'memory':
-        return `Create memory: "${effect.description}"`;
-      case 'trigger':
-        return `Trigger: ${effect.eventId}`;
-      default:
-        return 'Unknown effect';
-    }
-  };
-
-  const effectType = EFFECT_TYPES.find(t => t.id === effect.type);
-
-  return (
-    <div className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{effectType?.icon}</span>
-        <span className="text-sm">{getEffectDescription()}</span>
-      </div>
-      <button
-        onClick={onRemove}
-        className="text-red-600 hover:text-red-800 ml-2"
-      >
-        ×
-      </button>
-    </div>
-  );
-};
-
-// Effect forms (simplified for brevity)
-const AttributeEffectForm = ({ onAdd }) => {
-  const [data, setData] = useState({ attribute: 'strength', modifier: 1, permanent: false });
-  
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <select
-        value={data.attribute}
-        onChange={(e) => setData({...data, attribute: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      >
-        {DND_ATTRIBUTES.map(attr => (
-          <option key={attr.id} value={attr.id}>{attr.label}</option>
-        ))}
-      </select>
-      <input
-        type="number"
-        placeholder="Modifier"
-        value={data.modifier}
-        onChange={(e) => setData({...data, modifier: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <label className="col-span-2 flex items-center">
-        <input
-          type="checkbox"
-          checked={data.permanent}
-          onChange={(e) => setData({...data, permanent: e.target.checked})}
-          className="mr-2"
-        />
-        Permanent change
-      </label>
-      <button
-        onClick={() => onAdd(data)}
-        className="col-span-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-      >
-        Add Attribute Effect
-      </button>
-    </div>
-  );
-};
-
-const RelationshipEffectForm = ({ onAdd }) => {
-  const [data, setData] = useState({ targetId: '', change: 10 });
-  
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <input
-        type="text"
-        placeholder="Character ID"
-        value={data.targetId}
-        onChange={(e) => setData({...data, targetId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <input
-        type="number"
-        placeholder="Change"
-        min="-100"
-        max="100"
-        value={data.change}
-        onChange={(e) => setData({...data, change: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-      />
-      <button
-        onClick={() => data.targetId && onAdd(data)}
-        className="col-span-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-      >
-        Add Relationship Effect
-      </button>
-    </div>
-  );
-};
-
 const QuestEffectForm = ({ onAdd }) => {
   const [data, setData] = useState({ questId: '', action: 'progress' });
   
@@ -732,17 +168,17 @@ const QuestEffectForm = ({ onAdd }) => {
         placeholder="Quest ID"
         value={data.questId}
         onChange={(e) => setData({...data, questId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <select
         value={data.action}
         onChange={(e) => setData({...data, action: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
       >
-        <option value="start">Start</option>
-        <option value="progress">Progress</option>
-        <option value="complete">Complete</option>
-        <option value="fail">Fail</option>
+        <option value="start" className="bg-gray-800">Start</option>
+        <option value="progress" className="bg-gray-800">Progress</option>
+        <option value="complete" className="bg-gray-800">Complete</option>
+        <option value="fail" className="bg-gray-800">Fail</option>
       </select>
       <button
         onClick={() => data.questId && onAdd(data)}
@@ -764,7 +200,7 @@ const ItemEffectForm = ({ onAdd }) => {
         placeholder="Item ID"
         value={data.itemId}
         onChange={(e) => setData({...data, itemId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <input
         type="number"
@@ -772,15 +208,15 @@ const ItemEffectForm = ({ onAdd }) => {
         min="1"
         value={data.quantity}
         onChange={(e) => setData({...data, quantity: parseInt(e.target.value) || 1})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <select
         value={data.action}
         onChange={(e) => setData({...data, action: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
       >
-        <option value="give">Give</option>
-        <option value="take">Take</option>
+        <option value="give" className="bg-gray-800">Give</option>
+        <option value="take" className="bg-gray-800">Take</option>
       </select>
       <button
         onClick={() => data.itemId && onAdd(data)}
@@ -802,14 +238,14 @@ const InfluenceEffectForm = ({ onAdd }) => {
         placeholder="Faction"
         value={data.faction}
         onChange={(e) => setData({...data, faction: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <input
         type="number"
         placeholder="Change"
         value={data.change}
         onChange={(e) => setData({...data, change: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <button
         onClick={() => data.faction && onAdd(data)}
@@ -831,16 +267,16 @@ const PrestigeEffectForm = ({ onAdd }) => {
         placeholder="Change"
         value={data.change}
         onChange={(e) => setData({...data, change: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <select
         value={data.scope}
         onChange={(e) => setData({...data, scope: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
       >
-        <option value="local">Local</option>
-        <option value="regional">Regional</option>
-        <option value="global">Global</option>
+        <option value="local" className="bg-gray-800">Local</option>
+        <option value="regional" className="bg-gray-800">Regional</option>
+        <option value="global" className="bg-gray-800">Global</option>
       </select>
       <button
         onClick={() => onAdd(data)}
@@ -860,10 +296,10 @@ const AlignmentEffectForm = ({ onAdd }) => {
       <select
         value={data.axis}
         onChange={(e) => setData({...data, axis: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
       >
-        <option value="lawChaos">Law-Chaos</option>
-        <option value="goodEvil">Good-Evil</option>
+        <option value="lawChaos" className="bg-gray-800">Law-Chaos</option>
+        <option value="goodEvil" className="bg-gray-800">Good-Evil</option>
       </select>
       <input
         type="number"
@@ -872,7 +308,7 @@ const AlignmentEffectForm = ({ onAdd }) => {
         max="100"
         value={data.shift}
         onChange={(e) => setData({...data, shift: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <button
         onClick={() => onAdd(data)}
@@ -893,10 +329,10 @@ const ConsciousnessEffectForm = ({ onAdd }) => {
       <select
         value={data.aspect}
         onChange={(e) => setData({...data, aspect: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
       >
         {aspects.map(aspect => (
-          <option key={aspect} value={aspect}>{aspect}</option>
+          <option key={aspect} value={aspect} className="bg-gray-800">{aspect}</option>
         ))}
       </select>
       <input
@@ -905,7 +341,7 @@ const ConsciousnessEffectForm = ({ onAdd }) => {
         placeholder="Change"
         value={data.change}
         onChange={(e) => setData({...data, change: parseFloat(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <button
         onClick={() => onAdd(data)}
@@ -927,28 +363,28 @@ const MemoryEffectForm = ({ onAdd }) => {
         value={data.description}
         onChange={(e) => setData({...data, description: e.target.value})}
         rows={2}
-        className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <div className="grid grid-cols-2 gap-3">
         <select
           value={data.importance}
           onChange={(e) => setData({...data, importance: e.target.value})}
-          className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
         >
-          <option value="trivial">Trivial</option>
-          <option value="normal">Normal</option>
-          <option value="important">Important</option>
-          <option value="core">Core</option>
+          <option value="trivial" className="bg-gray-800">Trivial</option>
+          <option value="normal" className="bg-gray-800">Normal</option>
+          <option value="important" className="bg-gray-800">Important</option>
+          <option value="core" className="bg-gray-800">Core</option>
         </select>
         <select
           value={data.emotion}
           onChange={(e) => setData({...data, emotion: e.target.value})}
-          className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
         >
-          <option value="neutral">Neutral</option>
-          <option value="positive">Positive</option>
-          <option value="negative">Negative</option>
-          <option value="mixed">Mixed</option>
+          <option value="neutral" className="bg-gray-800">Neutral</option>
+          <option value="positive" className="bg-gray-800">Positive</option>
+          <option value="negative" className="bg-gray-800">Negative</option>
+          <option value="mixed" className="bg-gray-800">Mixed</option>
         </select>
       </div>
       <button
@@ -971,7 +407,7 @@ const TriggerEffectForm = ({ onAdd }) => {
         placeholder="Event ID"
         value={data.eventId}
         onChange={(e) => setData({...data, eventId: e.target.value})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <input
         type="number"
@@ -979,7 +415,7 @@ const TriggerEffectForm = ({ onAdd }) => {
         min="0"
         value={data.delay}
         onChange={(e) => setData({...data, delay: parseInt(e.target.value) || 0})}
-        className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
       />
       <button
         onClick={() => data.eventId && onAdd(data)}
@@ -1028,16 +464,16 @@ const ChoiceEditor = ({ choices, onChange }) => {
             className={`
               p-4 border-2 rounded-lg cursor-pointer transition-all
               ${editingChoice === choice.id
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                ? 'border-blue-500 bg-blue-500/10'
+                : 'border-white/20 hover:border-white/40 bg-white/5'
               }
             `}
             onClick={() => setEditingChoice(choice.id)}
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <h4 className="font-medium">Choice {index + 1}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <h4 className="font-medium text-white">Choice {index + 1}</h4>
+                <p className="text-sm text-gray-400 mt-1">
                   {choice.text}
                 </p>
                 <div className="flex gap-4 mt-2 text-xs text-gray-500">
@@ -1051,7 +487,7 @@ const ChoiceEditor = ({ choices, onChange }) => {
                   e.stopPropagation();
                   handleRemoveChoice(choice.id);
                 }}
-                className="text-red-600 hover:text-red-800"
+                className="text-red-400 hover:text-red-300"
               >
                 Remove
               </button>
@@ -1063,14 +499,14 @@ const ChoiceEditor = ({ choices, onChange }) => {
       {/* Add choice button */}
       <button
         onClick={handleAddChoice}
-        className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-gray-400 transition-colors"
+        className="w-full p-4 border-2 border-dashed border-white/20 rounded-lg hover:border-white/40 transition-colors text-gray-400"
       >
         + Add Choice
       </button>
 
       {/* Choice editor */}
       {editingChoice && (
-        <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
           <ChoiceDetailEditor
             choice={choices.find(c => c.id === editingChoice)}
             onUpdate={(updates) => handleUpdateChoice(editingChoice, updates)}
@@ -1086,28 +522,28 @@ const ChoiceDetailEditor = ({ choice, onUpdate }) => {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Choice Text</label>
+        <label className="block text-sm font-medium text-white mb-2">Choice Text</label>
         <input
           type="text"
           value={choice.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
-          className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Next Node ID (optional)</label>
+        <label className="block text-sm font-medium text-white mb-2">Next Node ID (optional)</label>
         <input
           type="text"
           value={choice.nextNodeId || ''}
           onChange={(e) => onUpdate({ nextNodeId: e.target.value || null })}
           placeholder="Leave empty to stay at current node"
-          className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
       </div>
 
       <div>
-        <h4 className="font-medium mb-2">Prerequisites</h4>
+        <h4 className="font-medium text-white mb-2">Prerequisites</h4>
         <PrerequisiteEditor
           prerequisites={choice.prerequisites}
           onChange={(prerequisites) => onUpdate({ prerequisites })}
@@ -1115,7 +551,7 @@ const ChoiceDetailEditor = ({ choice, onUpdate }) => {
       </div>
 
       <div>
-        <h4 className="font-medium mb-2">Effects</h4>
+        <h4 className="font-medium text-white mb-2">Effects</h4>
         <EffectEditor
           effects={choice.effects}
           onChange={(effects) => onUpdate({ effects })}
@@ -1204,10 +640,10 @@ const InteractionEditor = ({
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-2xl font-bold text-white">
           {mode === 'create' ? 'Create Interaction Template' : 'Edit Interaction Template'}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-gray-400 mt-1">
           Define interactive encounters and decision points
         </p>
       </div>
@@ -1222,7 +658,7 @@ const InteractionEditor = ({
               px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors
               ${activeTab === tab.id
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300'
               }
             `}
           >
@@ -1233,25 +669,25 @@ const InteractionEditor = ({
       </div>
 
       {/* Tab content */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Interaction ID
                 </label>
                 <input
                   type="text"
                   value={interactionData.id}
                   disabled
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700"
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Node ID
                 </label>
                 <input
@@ -1259,13 +695,13 @@ const InteractionEditor = ({
                   value={interactionData.nodeId}
                   onChange={(e) => setInteractionData({...interactionData, nodeId: e.target.value})}
                   placeholder="Node where this interaction occurs"
-                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -1273,8 +709,8 @@ const InteractionEditor = ({
                 value={interactionData.name}
                 onChange={(e) => setInteractionData({...interactionData, name: e.target.value})}
                 className={`
-                  w-full px-4 py-2 border rounded-lg dark:bg-gray-800
-                  ${errors.name ? 'border-red-500' : 'dark:border-gray-600'}
+                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                  ${errors.name ? 'border-red-500' : 'border-white/20'}
                 `}
                 placeholder="Enter interaction name..."
               />
@@ -1284,7 +720,7 @@ const InteractionEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Description <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -1292,8 +728,8 @@ const InteractionEditor = ({
                 onChange={(e) => setInteractionData({...interactionData, description: e.target.value})}
                 rows={4}
                 className={`
-                  w-full px-4 py-2 border rounded-lg dark:bg-gray-800
-                  ${errors.description ? 'border-red-500' : 'dark:border-gray-600'}
+                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                  ${errors.description ? 'border-red-500' : 'border-white/20'}
                 `}
                 placeholder="Describe what happens in this interaction..."
               />
@@ -1303,7 +739,7 @@ const InteractionEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Category
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1312,23 +748,23 @@ const InteractionEditor = ({
                   const getColorClasses = (color) => {
                     switch (color) {
                       case 'blue':
-                        return 'border-blue-500 bg-blue-50 dark:bg-blue-950';
+                        return 'border-blue-500 bg-blue-500/20';
                       case 'green':
-                        return 'border-green-500 bg-green-50 dark:bg-green-950';
+                        return 'border-green-500 bg-green-500/20';
                       case 'red':
-                        return 'border-red-500 bg-red-50 dark:bg-red-950';
+                        return 'border-red-500 bg-red-500/20';
                       case 'purple':
-                        return 'border-purple-500 bg-purple-50 dark:bg-purple-950';
+                        return 'border-purple-500 bg-purple-500/20';
                       case 'yellow':
-                        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950';
+                        return 'border-yellow-500 bg-yellow-500/20';
                       case 'orange':
-                        return 'border-orange-500 bg-orange-50 dark:bg-orange-950';
+                        return 'border-orange-500 bg-orange-500/20';
                       case 'indigo':
-                        return 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950';
+                        return 'border-indigo-500 bg-indigo-500/20';
                       case 'pink':
-                        return 'border-pink-500 bg-pink-50 dark:bg-pink-950';
+                        return 'border-pink-500 bg-pink-500/20';
                       default:
-                        return 'border-gray-500 bg-gray-50 dark:bg-gray-950';
+                        return 'border-gray-500 bg-gray-500/20';
                     }
                   };
 
@@ -1340,12 +776,12 @@ const InteractionEditor = ({
                         p-3 rounded-lg border-2 transition-all
                         ${interactionData.category === cat.id
                           ? getColorClasses(cat.color)
-                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                          : 'border-white/20 hover:border-white/40 bg-white/5'
                         }
                       `}
                     >
                       <div className="text-2xl mb-1">{cat.icon}</div>
-                      <div className="text-sm font-medium">{cat.label}</div>
+                      <div className="text-sm font-medium text-white">{cat.label}</div>
                     </button>
                   );
                 })}
@@ -1353,7 +789,7 @@ const InteractionEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Tags
               </label>
               <input
@@ -1364,7 +800,7 @@ const InteractionEditor = ({
                   ...interactionData, 
                   tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                 })}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
               />
             </div>
           </div>
@@ -1373,7 +809,7 @@ const InteractionEditor = ({
         {/* Prerequisites Tab */}
         {activeTab === 'prerequisites' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define conditions that must be met for this interaction to be available
             </p>
             <PrerequisiteEditor
@@ -1386,7 +822,7 @@ const InteractionEditor = ({
         {/* Choices Tab */}
         {activeTab === 'choices' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define the choices available to characters in this interaction
             </p>
             {errors.choices && (
@@ -1402,7 +838,7 @@ const InteractionEditor = ({
         {/* Global Effects Tab */}
         {activeTab === 'effects' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define effects that apply when this interaction is triggered (before any choice is made)
             </p>
             <EffectEditor
@@ -1417,7 +853,7 @@ const InteractionEditor = ({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Priority (0-100)
                 </label>
                 <input
@@ -1426,15 +862,15 @@ const InteractionEditor = ({
                   max="100"
                   value={interactionData.priority}
                   onChange={(e) => setInteractionData({...interactionData, priority: parseInt(e.target.value) || 50})}
-                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Higher priority interactions are selected first by NPCs
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Cooldown (ticks)
                 </label>
                 <input
@@ -1442,16 +878,16 @@ const InteractionEditor = ({
                   min="0"
                   value={interactionData.cooldown}
                   onChange={(e) => setInteractionData({...interactionData, cooldown: parseInt(e.target.value) || 0})}
-                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   Time before this interaction can be triggered again
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="flex items-center">
+              <label className="flex items-center text-white">
                 <input
                   type="checkbox"
                   checked={interactionData.repeatable}
@@ -1460,13 +896,13 @@ const InteractionEditor = ({
                 />
                 <span className="font-medium">Repeatable</span>
               </label>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-400 mt-1">
                 Can this interaction be triggered multiple times?
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Custom Metadata (JSON)
               </label>
               <textarea
@@ -1480,7 +916,7 @@ const InteractionEditor = ({
                   }
                 }}
                 rows={6}
-                className="w-full px-4 py-2 border rounded-lg font-mono text-sm dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg font-mono text-sm text-white"
               />
             </div>
           </div>
@@ -1488,26 +924,32 @@ const InteractionEditor = ({
       </div>
 
       {/* Preview Panel */}
-      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <h3 className="font-semibold mb-3">Preview</h3>
+      <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
+        <h3 className="font-semibold text-white mb-3">Preview</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="font-medium">Category:</span> {interactionData.category}
+            <span className="font-medium text-gray-300">Category:</span>{' '}
+            <span className="text-white">{interactionData.category}</span>
           </div>
           <div>
-            <span className="font-medium">Priority:</span> {interactionData.priority}
+            <span className="font-medium text-gray-300">Priority:</span>{' '}
+            <span className="text-white">{interactionData.priority}</span>
           </div>
           <div>
-            <span className="font-medium">Prerequisites:</span> {interactionData.prerequisites.length}
+            <span className="font-medium text-gray-300">Prerequisites:</span>{' '}
+            <span className="text-white">{interactionData.prerequisites.length}</span>
           </div>
           <div>
-            <span className="font-medium">Choices:</span> {interactionData.choices.length}
+            <span className="font-medium text-gray-300">Choices:</span>{' '}
+            <span className="text-white">{interactionData.choices.length}</span>
           </div>
           <div>
-            <span className="font-medium">Global Effects:</span> {interactionData.effects.length}
+            <span className="font-medium text-gray-300">Global Effects:</span>{' '}
+            <span className="text-white">{interactionData.effects.length}</span>
           </div>
           <div>
-            <span className="font-medium">Repeatable:</span> {interactionData.repeatable ? 'Yes' : 'No'}
+            <span className="font-medium text-gray-300">Repeatable:</span>{' '}
+            <span className="text-white">{interactionData.repeatable ? 'Yes' : 'No'}</span>
           </div>
         </div>
       </div>
@@ -1516,7 +958,7 @@ const InteractionEditor = ({
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onCancel}
-          className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
         >
           Cancel
         </button>
@@ -1527,6 +969,570 @@ const InteractionEditor = ({
           {mode === 'create' ? 'Create Interaction' : 'Save Changes'}
         </button>
       </div>
+    </div>
+  );
+};
+
+// Prerequisite card component
+const PrerequisiteCard = ({ prerequisite, onRemove }) => {
+  const getPrerequisiteDescription = () => {
+    switch (prerequisite.type) {
+      case 'attribute':
+        return `${prerequisite.attribute} check DC ${prerequisite.difficulty}`;
+      case 'skill':
+        return `Skill: ${prerequisite.skill} ≥ ${prerequisite.minLevel}`;
+      case 'quest':
+        return `Quest "${prerequisite.questId}" ${prerequisite.state}`;
+      case 'relationship':
+        return `Relationship with ${prerequisite.targetId} ${prerequisite.operator} ${prerequisite.value}`;
+      case 'item':
+        return `${prerequisite.quantity}× ${prerequisite.itemId}`;
+      case 'influence':
+        return `${prerequisite.faction} influence ≥ ${prerequisite.minValue}`;
+      case 'alignment':
+        return `Alignment: ${prerequisite.axis} ${prerequisite.min}-${prerequisite.max}`;
+      case 'personality':
+        return `Personality: ${prerequisite.trait} ${prerequisite.operator} ${prerequisite.value}`;
+      default:
+        return 'Unknown prerequisite';
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20">
+      <span className="text-sm text-white">{getPrerequisiteDescription()}</span>
+      <button
+        onClick={onRemove}
+        className="text-red-400 hover:text-red-300 ml-2"
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
+// Attribute check form
+const AttributeCheckForm = ({ onAdd }) => {
+  const [data, setData] = useState({
+    attribute: 'strength',
+    difficulty: 10,
+    advantage: false,
+    disadvantage: false
+  });
+
+  const handleSubmit = () => {
+    onAdd(data);
+    setData({ attribute: 'strength', difficulty: 10, advantage: false, disadvantage: false });
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="text-sm font-medium text-white">Attribute</label>
+        <select
+          value={data.attribute}
+          onChange={(e) => setData({...data, attribute: e.target.value})}
+          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+        >
+          {DND_ATTRIBUTES.map(attr => (
+            <option key={attr.id} value={attr.id} className="bg-gray-800">
+              {attr.label} ({attr.abbr})
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="text-sm font-medium text-white">DC</label>
+        <input
+          type="number"
+          min="1"
+          max="30"
+          value={data.difficulty}
+          onChange={(e) => setData({...data, difficulty: parseInt(e.target.value) || 10})}
+          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+        />
+      </div>
+      <div className="col-span-2 flex gap-4">
+        <label className="flex items-center text-white">
+          <input
+            type="checkbox"
+            checked={data.advantage}
+            onChange={(e) => setData({...data, advantage: e.target.checked, disadvantage: false})}
+            className="mr-2"
+          />
+          Advantage
+        </label>
+        <label className="flex items-center text-white">
+          <input
+            type="checkbox"
+            checked={data.disadvantage}
+            onChange={(e) => setData({...data, disadvantage: e.target.checked, advantage: false})}
+            className="mr-2"
+          />
+          Disadvantage
+        </label>
+      </div>
+      <button
+        onClick={handleSubmit}
+        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Attribute Check
+      </button>
+    </div>
+  );
+};
+
+// Other prerequisite forms (simplified for brevity)
+const SkillRequirementForm = ({ onAdd }) => {
+  const [data, setData] = useState({ skill: '', minLevel: 1 });
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <input
+        type="text"
+        placeholder="Skill name"
+        value={data.skill}
+        onChange={(e) => setData({...data, skill: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <input
+        type="number"
+        placeholder="Min level"
+        min="1"
+        value={data.minLevel}
+        onChange={(e) => setData({...data, minLevel: parseInt(e.target.value) || 1})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <button
+        onClick={() => data.skill && onAdd(data)}
+        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Skill Requirement
+      </button>
+    </div>
+  );
+};
+
+const QuestStateForm = ({ onAdd }) => {
+  const [data, setData] = useState({ questId: '', state: 'completed' });
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <input
+        type="text"
+        placeholder="Quest ID"
+        value={data.questId}
+        onChange={(e) => setData({...data, questId: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <select
+        value={data.state}
+        onChange={(e) => setData({...data, state: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+      >
+        <option value="not_started" className="bg-gray-800">Not Started</option>
+        <option value="active" className="bg-gray-800">Active</option>
+        <option value="completed" className="bg-gray-800">Completed</option>
+        <option value="failed" className="bg-gray-800">Failed</option>
+      </select>
+      <button
+        onClick={() => data.questId && onAdd(data)}
+        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Quest Requirement
+      </button>
+    </div>
+  );
+};
+
+const RelationshipForm = ({ onAdd }) => {
+  const [data, setData] = useState({ targetId: '', operator: '≥', value: 50 });
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <input
+        type="text"
+        placeholder="Character ID"
+        value={data.targetId}
+        onChange={(e) => setData({...data, targetId: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <select
+        value={data.operator}
+        onChange={(e) => setData({...data, operator: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+      >
+        <option value="≥" className="bg-gray-800">≥</option>
+        <option value="≤" className="bg-gray-800">≤</option>
+        <option value="=" className="bg-gray-800">=</option>
+      </select>
+      <input
+        type="number"
+        min="-100"
+        max="100"
+        value={data.value}
+        onChange={(e) => setData({...data, value: parseInt(e.target.value) || 0})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <button
+        onClick={() => data.targetId && onAdd(data)}
+        className="col-span-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Relationship Requirement
+      </button>
+    </div>
+  );
+};
+
+const ItemRequirementForm = ({ onAdd }) => {
+  const [data, setData] = useState({ itemId: '', quantity: 1 });
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <input
+        type="text"
+        placeholder="Item ID"
+        value={data.itemId}
+        onChange={(e) => setData({...data, itemId: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <input
+        type="number"
+        placeholder="Quantity"
+        min="1"
+        value={data.quantity}
+        onChange={(e) => setData({...data, quantity: parseInt(e.target.value) || 1})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <button
+        onClick={() => data.itemId && onAdd(data)}
+        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Item Requirement
+      </button>
+    </div>
+  );
+};
+
+const InfluenceForm = ({ onAdd }) => {
+  const [data, setData] = useState({ faction: '', minValue: 0 });
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <input
+        type="text"
+        placeholder="Faction name"
+        value={data.faction}
+        onChange={(e) => setData({...data, faction: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <input
+        type="number"
+        placeholder="Min influence"
+        min="0"
+        value={data.minValue}
+        onChange={(e) => setData({...data, minValue: parseInt(e.target.value) || 0})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <button
+        onClick={() => data.faction && onAdd(data)}
+        className="col-span-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Influence Requirement
+      </button>
+    </div>
+  );
+};
+
+const AlignmentForm = ({ onAdd }) => {
+  const [data, setData] = useState({ axis: 'lawChaos', min: -100, max: 100 });
+  return (
+    <div className="space-y-3">
+      <select
+        value={data.axis}
+        onChange={(e) => setData({...data, axis: e.target.value})}
+        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+      >
+        <option value="lawChaos" className="bg-gray-800">Law-Chaos</option>
+        <option value="goodEvil" className="bg-gray-800">Good-Evil</option>
+      </select>
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="number"
+          placeholder="Min"
+          min="-100"
+          max="100"
+          value={data.min}
+          onChange={(e) => setData({...data, min: parseInt(e.target.value) || -100})}
+          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+        />
+        <input
+          type="number"
+          placeholder="Max"
+          min="-100"
+          max="100"
+          value={data.max}
+          onChange={(e) => setData({...data, max: parseInt(e.target.value) || 100})}
+          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+        />
+      </div>
+      <button
+        onClick={() => onAdd(data)}
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Alignment Requirement
+      </button>
+    </div>
+  );
+};
+
+const PersonalityForm = ({ onAdd }) => {
+  const [data, setData] = useState({ trait: '', operator: '≥', value: 0.5 });
+  const personalityTraits = [
+    'openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism',
+    'courage', 'loyalty', 'honesty', 'ambition', 'compassion'
+  ];
+  
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <select
+        value={data.trait}
+        onChange={(e) => setData({...data, trait: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+      >
+        <option value="" className="bg-gray-800">Select trait</option>
+        {personalityTraits.map(trait => (
+          <option key={trait} value={trait} className="bg-gray-800">{trait}</option>
+        ))}
+      </select>
+      <select
+        value={data.operator}
+        onChange={(e) => setData({...data, operator: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+      >
+        <option value="≥" className="bg-gray-800">≥</option>
+        <option value="≤" className="bg-gray-800">≤</option>
+      </select>
+      <input
+        type="number"
+        step="0.1"
+        min="0"
+        max="1"
+        value={data.value}
+        onChange={(e) => setData({...data, value: parseFloat(e.target.value) || 0})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <button
+        onClick={() => data.trait && onAdd(data)}
+        className="col-span-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        Add Personality Requirement
+      </button>
+    </div>
+  );
+};
+
+// Effect editor component
+const EffectEditor = ({ effects, onChange }) => {
+  const [activeType, setActiveType] = useState('attribute');
+
+  const handleAddEffect = (type, data) => {
+    const newEffect = {
+      id: Date.now(),
+      type,
+      ...data
+    };
+    onChange([...effects, newEffect]);
+  };
+
+  const handleRemoveEffect = (id) => {
+    onChange(effects.filter(e => e.id !== id));
+  };
+
+  const renderEffectForm = () => {
+    switch (activeType) {
+      case 'attribute':
+        return <AttributeEffectForm onAdd={(data) => handleAddEffect('attribute', data)} />;
+      case 'relationship':
+        return <RelationshipEffectForm onAdd={(data) => handleAddEffect('relationship', data)} />;
+      case 'quest':
+        return <QuestEffectForm onAdd={(data) => handleAddEffect('quest', data)} />;
+      case 'item':
+        return <ItemEffectForm onAdd={(data) => handleAddEffect('item', data)} />;
+      case 'influence':
+        return <InfluenceEffectForm onAdd={(data) => handleAddEffect('influence', data)} />;
+      case 'prestige':
+        return <PrestigeEffectForm onAdd={(data) => handleAddEffect('prestige', data)} />;
+      case 'alignment':
+        return <AlignmentEffectForm onAdd={(data) => handleAddEffect('alignment', data)} />;
+      case 'consciousness':
+        return <ConsciousnessEffectForm onAdd={(data) => handleAddEffect('consciousness', data)} />;
+      case 'memory':
+        return <MemoryEffectForm onAdd={(data) => handleAddEffect('memory', data)} />;
+      case 'trigger':
+        return <TriggerEffectForm onAdd={(data) => handleAddEffect('trigger', data)} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Existing effects */}
+      {effects.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-medium text-white">Current Effects</h4>
+          {effects.map(effect => (
+            <EffectCard
+              key={effect.id}
+              effect={effect}
+              onRemove={() => handleRemoveEffect(effect.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Add new effect */}
+      <div className="border-2 border-dashed border-white/20 rounded-lg p-4">
+        <h4 className="font-medium text-white mb-3">Add Effect</h4>
+        
+        {/* Type selector */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {EFFECT_TYPES.map(type => (
+            <button
+              key={type.id}
+              onClick={() => setActiveType(type.id)}
+              className={`
+                px-3 py-1 rounded-lg text-sm font-medium transition-colors
+                ${activeType === type.id
+                  ? 'bg-green-600 text-white'
+                  : 'bg-white/10 hover:bg-white/20 text-gray-300'
+                }
+              `}
+            >
+              <span className="mr-1">{type.icon}</span>
+              {type.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Type-specific form */}
+        {renderEffectForm()}
+      </div>
+    </div>
+  );
+};
+
+// Effect card component
+const EffectCard = ({ effect, onRemove }) => {
+  const getEffectDescription = () => {
+    switch (effect.type) {
+      case 'attribute':
+        return `${effect.attribute} ${effect.modifier >= 0 ? '+' : ''}${effect.modifier}`;
+      case 'relationship':
+        return `Relationship with ${effect.targetId} ${effect.change >= 0 ? '+' : ''}${effect.change}`;
+      case 'quest':
+        return `Quest "${effect.questId}" → ${effect.action}`;
+      case 'item':
+        return `${effect.action} ${effect.quantity}× ${effect.itemId}`;
+      case 'influence':
+        return `${effect.faction} influence ${effect.change >= 0 ? '+' : ''}${effect.change}`;
+      case 'prestige':
+        return `Prestige ${effect.change >= 0 ? '+' : ''}${effect.change}`;
+      case 'alignment':
+        return `${effect.axis}: ${effect.shift >= 0 ? '+' : ''}${effect.shift}`;
+      case 'consciousness':
+        return `Consciousness: ${effect.aspect} ${effect.change}`;
+      case 'memory':
+        return `Create memory: "${effect.description}"`;
+      case 'trigger':
+        return `Trigger: ${effect.eventId}`;
+      default:
+        return 'Unknown effect';
+    }
+  };
+
+  const effectType = EFFECT_TYPES.find(t => t.id === effect.type);
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20">
+      <div className="flex items-center gap-2">
+        <span className="text-lg">{effectType?.icon}</span>
+        <span className="text-sm text-white">{getEffectDescription()}</span>
+      </div>
+      <button
+        onClick={onRemove}
+        className="text-red-400 hover:text-red-300 ml-2"
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
+// Effect forms (simplified for brevity)
+const AttributeEffectForm = ({ onAdd }) => {
+  const [data, setData] = useState({ attribute: 'strength', modifier: 1, permanent: false });
+  
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <select
+        value={data.attribute}
+        onChange={(e) => setData({...data, attribute: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+      >
+        {DND_ATTRIBUTES.map(attr => (
+          <option key={attr.id} value={attr.id} className="bg-gray-800">{attr.label}</option>
+        ))}
+      </select>
+      <input
+        type="number"
+        placeholder="Modifier"
+        value={data.modifier}
+        onChange={(e) => setData({...data, modifier: parseInt(e.target.value) || 0})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <label className="col-span-2 flex items-center text-white">
+        <input
+          type="checkbox"
+          checked={data.permanent}
+          onChange={(e) => setData({...data, permanent: e.target.checked})}
+          className="mr-2"
+        />
+        Permanent change
+      </label>
+      <button
+        onClick={() => onAdd(data)}
+        className="col-span-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+      >
+        Add Attribute Effect
+      </button>
+    </div>
+  );
+};
+
+const RelationshipEffectForm = ({ onAdd }) => {
+  const [data, setData] = useState({ targetId: '', change: 10 });
+  
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <input
+        type="text"
+        placeholder="Character ID"
+        value={data.targetId}
+        onChange={(e) => setData({...data, targetId: e.target.value})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <input
+        type="number"
+        placeholder="Change"
+        min="-100"
+        max="100"
+        value={data.change}
+        onChange={(e) => setData({...data, change: parseInt(e.target.value) || 0})}
+        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <button
+        onClick={() => data.targetId && onAdd(data)}
+        className="col-span-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+      >
+        Add Relationship Effect
+      </button>
     </div>
   );
 };

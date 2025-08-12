@@ -10,7 +10,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Eye, Download, Upload, TestTube, Swords, Clock, ArrowLeft } from 'lucide-react';
+import { 
+  Save, 
+  Eye, 
+  Download, 
+  Upload, 
+  TestTube, 
+  Swords, 
+  Clock, 
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle,
+  X
+} from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import EncounterEditor from '../components/EncounterEditor';
 import Encounter from '../../domain/entities/Encounter';
@@ -25,45 +37,46 @@ const EncounterEditorPage = () => {
   const [currentEncounter, setCurrentEncounter] = useState(null);
   const [testMode, setTestMode] = useState(false);
   const [testResults, setTestResults] = useState(null);
-  const [validationErrors, setValidationErrors] = useState({});
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [showNextSteps, setShowNextSteps] = useState(false);
+
+  const validateEncounter = useCallback(() => {
+    const errors = [];
+    
+    if (!currentEncounter?.name?.trim()) {
+      errors.push({ field: 'name', message: 'Encounter name is required' });
+    }
+    
+    if (!currentEncounter?.description?.trim()) {
+      errors.push({ field: 'description', message: 'Description is required' });
+    }
+    
+    if (!currentEncounter?.outcomes || currentEncounter.outcomes.length === 0) {
+      errors.push({ field: 'outcomes', message: 'At least one outcome is required' });
+    }
+    
+    if (currentEncounter?.challengeRating < 1 || currentEncounter?.challengeRating > 30) {
+      errors.push({ field: 'challengeRating', message: 'Challenge rating must be between 1 and 30' });
+    }
+    
+    // Validate turn-based configuration
+    if (currentEncounter?.turnBased?.duration < 1) {
+      errors.push({ field: 'turnBasedDuration', message: 'Turn duration must be at least 1' });
+    }
+    
+    setValidationErrors(errors);
+    return errors.length === 0;
+  }, [currentEncounter]);
 
   // Real-time validation
   useEffect(() => {
     if (currentEncounter) {
-      validateEncounter(currentEncounter);
+      validateEncounter();
     }
-  }, [currentEncounter]);
-
-  const validateEncounter = (encounter) => {
-    const errors = {};
-    
-    if (!encounter.name?.trim()) {
-      errors.name = 'Encounter name is required';
-    }
-    
-    if (!encounter.description?.trim()) {
-      errors.description = 'Description is required';
-    }
-    
-    if (!encounter.outcomes || encounter.outcomes.length === 0) {
-      errors.outcomes = 'At least one outcome is required';
-    }
-    
-    if (encounter.challengeRating < 1 || encounter.challengeRating > 30) {
-      errors.challengeRating = 'Challenge rating must be between 1 and 30';
-    }
-    
-    // Validate turn-based configuration
-    if (encounter.turnBased?.duration < 1) {
-      errors.turnBasedDuration = 'Turn duration must be at least 1';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  }, [currentEncounter, validateEncounter]);
 
   const handleAutoSave = useCallback(async () => {
-    if (!hasUnsavedChanges || !validateEncounter(currentEncounter)) return;
+    if (!hasUnsavedChanges || !validateEncounter()) return;
     
     setIsSaving(true);
     try {
@@ -87,7 +100,7 @@ const EncounterEditorPage = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, currentEncounter]);
+  }, [hasUnsavedChanges, validateEncounter, currentEncounter]);
 
   // Auto-save functionality
   useEffect(() => {
@@ -101,8 +114,7 @@ const EncounterEditorPage = () => {
   }, [hasUnsavedChanges, currentEncounter, autoSaveEnabled, handleAutoSave]);
 
   const handleSave = async () => {
-    if (!validateEncounter(currentEncounter)) {
-      alert('Please fix validation errors before saving.');
+    if (!validateEncounter()) {
       return;
     }
     
@@ -154,7 +166,7 @@ const EncounterEditorPage = () => {
       const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
       if (!confirmLeave) return;
     }
-    navigate('/builder');
+    navigate('/editors/world');
   };
 
   const handleChange = (encounterData) => {
@@ -168,7 +180,7 @@ const EncounterEditorPage = () => {
       return;
     }
     
-    if (!validateEncounter(currentEncounter)) {
+    if (!validateEncounter()) {
       alert('Please fix validation errors before testing.');
       return;
     }
@@ -417,96 +429,145 @@ const EncounterEditorPage = () => {
     }
   };
 
+  const handleNextSteps = () => {
+    setShowNextSteps(true);
+  };
+
+  const getNextStepsContent = () => {
+    const steps = [];
+    
+    if (!currentEncounter) {
+      steps.push({
+        title: "Create Your First Encounter",
+        description: "Start by creating an encounter using one of the templates or build from scratch",
+        action: "Use the template buttons above to get started quickly",
+        completed: false
+      });
+      return steps;
+    }
+
+    // Check if encounter is saved
+    const isSaved = !hasUnsavedChanges;
+    steps.push({
+      title: "Save Your Encounter",
+      description: "Save your encounter to make it available in the simulation",
+      action: isSaved ? "✓ Encounter saved successfully" : "Click the 'Save Encounter' button above",
+      completed: isSaved
+    });
+
+    if (isSaved) {
+      steps.push({
+        title: "Assign to Nodes",
+        description: "Add this encounter to specific nodes in your world",
+        action: "Go to Node Editor → Select a node → Add this encounter to its available encounters",
+        completed: false
+      });
+
+      steps.push({
+        title: "Test in Simulation",
+        description: "Run the turn-based simulation to see your encounter in action",
+        action: "Navigate to World Foundation → Start Simulation → Watch for encounter triggers",
+        completed: false
+      });
+
+      steps.push({
+        title: "Create More Encounters",
+        description: "Build a diverse set of encounters for rich gameplay",
+        action: "Create different types: combat, social, exploration, puzzle encounters",
+        completed: false
+      });
+
+      steps.push({
+        title: "Advanced Integration",
+        description: "Connect encounters with quests and character progression",
+        action: "Use prerequisites and rewards to create meaningful progression paths",
+        completed: false
+      });
+    }
+
+    return steps;
+  };
+
   return (
-    <div className="min-h-screen" style={{ 
-      background: 'linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))'
-    }}>
-      {/* Navigation */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Navigation />
-      
-      {/* Editor Header */}
-      <div className="w-full max-w-7xl mx-auto px-8 py-4 border-b border-slate-700 bg-slate-800/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to World Foundation
-            </button>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Swords className="w-6 h-6 text-indigo-400" />
-              Encounter Editor
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              {isSaving && (
-                <span className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/30 rounded flex items-center gap-1">
-                  <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </span>
-              )}
-              
-              {hasUnsavedChanges && !isSaving && (
-                <span className="px-2 py-1 text-xs bg-yellow-600/20 text-yellow-400 border border-yellow-600/30 rounded">
-                  Unsaved Changes
-                </span>
-              )}
-              
-              {Object.keys(validationErrors).length > 0 && (
-                <span className="px-2 py-1 text-xs bg-red-600/20 text-red-400 border border-red-600/30 rounded">
-                  {Object.keys(validationErrors).length} Error{Object.keys(validationErrors).length !== 1 ? 's' : ''}
-                </span>
-              )}
-              
-              {lastSaved && !hasUnsavedChanges && !isSaving && Object.keys(validationErrors).length === 0 && (
-                <span className="px-2 py-1 text-xs bg-green-600/20 text-green-400 border border-green-600/30 rounded">
-                  Saved {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
-              
-              <label className="flex items-center gap-2 text-xs text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={autoSaveEnabled}
-                  onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-                  className="rounded"
-                />
-                Auto-save
-              </label>
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="bg-red-600/10 border-b border-red-600/30 px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5" />
+            <div>
+              <div className="text-red-400 text-sm font-medium mb-2">
+                Please fix the following errors before saving:
+              </div>
+              <ul className="text-red-300 text-xs space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>• {error.message || error}</li>
+                ))}
+              </ul>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
+        </div>
+      )}
+
+      {/* Main Content - Full width responsive container */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto">
+
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Swords className="w-10 h-10 text-indigo-400" />
+              <h1 className="text-3xl sm:text-4xl font-bold text-white">
+                Encounter Editor
+              </h1>
+            </div>
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+              Create dynamic encounters with turn-based mechanics
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+            <button
+              onClick={() => setPreviewMode(!previewMode)}
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              {previewMode ? 'Edit Mode' : 'Preview'}
+            </button>
+
             {/* Encounter Templates */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => loadTemplate('combat')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+                className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
               >
                 ⚔️ Combat
               </button>
               <button
                 onClick={() => loadTemplate('social')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+                className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
               >
                 💬 Social
               </button>
               <button
                 onClick={() => loadTemplate('exploration')}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+                className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
               >
                 🗺️ Exploration
               </button>
             </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            {/* Template Import/Export */}
+
+            <button
+              onClick={handleTest}
+              disabled={!currentEncounter || validationErrors.length > 0}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <TestTube className="w-4 h-4" />
+              Test
+            </button>
+
             <div className="flex items-center gap-2">
               <input
                 type="file"
@@ -517,7 +578,7 @@ const EncounterEditorPage = () => {
               />
               <label
                 htmlFor="import-encounter-template"
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
                 Import
@@ -526,61 +587,42 @@ const EncounterEditorPage = () => {
               <button
                 onClick={handleExportTemplate}
                 disabled={!currentEncounter}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 Export
               </button>
             </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            <button
-              onClick={handleTest}
-              disabled={!currentEncounter || Object.keys(validationErrors).length > 0}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <TestTube className="w-4 h-4" />
-              Test
-            </button>
-            
-            <button
-              onClick={() => setPreviewMode(!previewMode)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                previewMode
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              {previewMode ? 'Edit Mode' : 'Preview'}
-            </button>
-            
+
             <button
               onClick={handleSave}
-              disabled={isSaving || Object.keys(validationErrors).length > 0}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${hasUnsavedChanges && !isSaving && validationErrors.length === 0
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                }`}
             >
-              {isSaving ? (
-                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Encounter
+              {isSaving ? 'Saving...' : (hasUnsavedChanges ? 'Save Encounter' : 'Saved')}
+            </button>
+
+            <button
+              onClick={handleNextSteps}
+              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Next Steps
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* Editor Content */}
-      <div className="flex-1 w-full max-w-7xl mx-auto p-8">
+          {/* Main Content Area */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
         {testMode && testResults ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+            <div className="p-6 sm:p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-white">Encounter Test Results</h2>
                 <button
                   onClick={() => setTestMode(false)}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors"
                 >
                   Back to Editor
                 </button>
@@ -598,7 +640,7 @@ const EncounterEditorPage = () => {
                   }`}>
                     {testResults.success ? '✓ Encounter Test Passed' : '✗ Encounter Test Failed'}
                   </div>
-                  <div className="text-sm text-slate-300 mt-1">
+                  <div className="text-sm text-gray-300 mt-1">
                     Can Trigger: {testResults.canTrigger ? 'Yes' : 'No'}
                   </div>
                 </div>
@@ -610,20 +652,20 @@ const EncounterEditorPage = () => {
                     Turn-Based Integration
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
-                      <div className="text-sm text-slate-400">Duration</div>
+                    <div className="p-3 bg-white/10 rounded border border-white/20">
+                      <div className="text-sm text-gray-400">Duration</div>
                       <div className="text-white font-medium">{testResults.turnBasedIntegration.duration} turns</div>
                     </div>
-                    <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
-                      <div className="text-sm text-slate-400">Initiative</div>
+                    <div className="p-3 bg-white/10 rounded border border-white/20">
+                      <div className="text-sm text-gray-400">Initiative</div>
                       <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.initiative}</div>
                     </div>
-                    <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
-                      <div className="text-sm text-slate-400">Timing</div>
+                    <div className="p-3 bg-white/10 rounded border border-white/20">
+                      <div className="text-sm text-gray-400">Timing</div>
                       <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.timing}</div>
                     </div>
-                    <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
-                      <div className="text-sm text-slate-400">Sequencing</div>
+                    <div className="p-3 bg-white/10 rounded border border-white/20">
+                      <div className="text-sm text-gray-400">Sequencing</div>
                       <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.sequencing}</div>
                     </div>
                   </div>
@@ -632,10 +674,10 @@ const EncounterEditorPage = () => {
                 {/* Generated Interactions */}
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-3">Interaction System Integration</h3>
-                  <div className="p-3 bg-slate-700/50 rounded border border-slate-600">
-                    <div className="text-sm text-slate-400">Generated Interactions</div>
+                  <div className="p-3 bg-white/10 rounded border border-white/20">
+                    <div className="text-sm text-gray-400">Generated Interactions</div>
                     <div className="text-white font-medium">{testResults.generatedInteractions} interaction(s) created</div>
-                    <div className="text-xs text-slate-400 mt-1">
+                    <div className="text-xs text-gray-400 mt-1">
                       These interactions will be automatically created when the encounter is saved
                     </div>
                   </div>
@@ -645,14 +687,14 @@ const EncounterEditorPage = () => {
                 {testResults.outcome && (
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-3">Sample Outcome</h3>
-                    <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
+                    <div className="p-4 bg-white/10 rounded border border-white/20">
                       <div className="text-white font-medium mb-2">{testResults.outcome.description}</div>
-                      <div className="text-sm text-slate-400">
+                      <div className="text-sm text-gray-400">
                         Turn Duration: {testResults.outcome.turnDuration} | 
                         Timing: {testResults.outcome.timing}
                       </div>
                       {testResults.outcome.effects && testResults.outcome.effects.length > 0 && (
-                        <div className="mt-2 text-sm text-slate-300">
+                        <div className="mt-2 text-sm text-gray-300">
                           Effects: {testResults.outcome.effects.length} effect(s)
                         </div>
                       )}
@@ -690,47 +732,47 @@ const EncounterEditorPage = () => {
               </div>
             </div>
           ) : previewMode ? (
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8">
+            <div className="p-6 sm:p-8">
               <h2 className="text-xl font-semibold text-white mb-4">Encounter Preview</h2>
               {currentEncounter ? (
                 <div className="space-y-6">
                   {/* Basic Info */}
-                  <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
+                  <div className="p-4 bg-white/10 rounded border border-white/20">
                     <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
                       <Swords className="w-5 h-5 text-indigo-400" />
                       {currentEncounter.name || 'Unnamed Encounter'}
                     </h3>
-                    <p className="text-slate-300 mb-3">
+                    <p className="text-gray-300 mb-3">
                       {currentEncounter.description || 'No description provided'}
                     </p>
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="text-slate-400">Type: <span className="text-white capitalize">{currentEncounter.type}</span></span>
-                      <span className="text-slate-400">Difficulty: <span className="text-white capitalize">{currentEncounter.difficulty}</span></span>
-                      <span className="text-slate-400">CR: <span className="text-white">{currentEncounter.challengeRating}</span></span>
+                      <span className="text-gray-400">Type: <span className="text-white capitalize">{currentEncounter.type}</span></span>
+                      <span className="text-gray-400">Difficulty: <span className="text-white capitalize">{currentEncounter.difficulty}</span></span>
+                      <span className="text-gray-400">CR: <span className="text-white">{currentEncounter.challengeRating}</span></span>
                     </div>
                   </div>
                   
                   {/* Turn-Based Info */}
-                  <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
+                  <div className="p-4 bg-white/10 rounded border border-white/20">
                     <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
                       <Clock className="w-4 h-4 text-indigo-400" />
                       Turn-Based Configuration
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
-                        <span className="text-slate-400">Duration:</span>
+                        <span className="text-gray-400">Duration:</span>
                         <span className="text-white ml-1">{currentEncounter.turnBased?.duration || 1} turns</span>
                       </div>
                       <div>
-                        <span className="text-slate-400">Initiative:</span>
+                        <span className="text-gray-400">Initiative:</span>
                         <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.initiative || 'random'}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400">Timing:</span>
+                        <span className="text-gray-400">Timing:</span>
                         <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.timing || 'immediate'}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400">Sequencing:</span>
+                        <span className="text-gray-400">Sequencing:</span>
                         <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.sequencing || 'simultaneous'}</span>
                       </div>
                     </div>
@@ -738,19 +780,19 @@ const EncounterEditorPage = () => {
                   
                   {/* Outcomes */}
                   {currentEncounter.outcomes && currentEncounter.outcomes.length > 0 && (
-                    <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
+                    <div className="p-4 bg-white/10 rounded border border-white/20">
                       <h4 className="font-semibold text-white mb-3">Possible Outcomes</h4>
                       <div className="space-y-2">
                         {currentEncounter.outcomes.map((outcome, index) => (
-                          <div key={outcome.id || index} className="p-3 bg-slate-600/50 rounded border border-slate-500">
+                          <div key={outcome.id || index} className="p-3 bg-white/10 rounded border border-white/20">
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-200">{outcome.description || `Outcome ${index + 1}`}</span>
-                              <span className="text-xs text-slate-400">
+                              <span className="text-white">{outcome.description || `Outcome ${index + 1}`}</span>
+                              <span className="text-xs text-gray-400">
                                 {Math.round((outcome.probability || 1.0) * 100)}% chance
                               </span>
                             </div>
                             {outcome.effects && outcome.effects.length > 0 && (
-                              <div className="text-xs text-slate-400 mt-1">
+                              <div className="text-xs text-gray-400 mt-1">
                                 {outcome.effects.length} effect(s) | Duration: {outcome.turnDuration || 1} turn(s)
                               </div>
                             )}
@@ -762,11 +804,11 @@ const EncounterEditorPage = () => {
                   
                   {/* Prerequisites */}
                   {currentEncounter.prerequisites && currentEncounter.prerequisites.length > 0 && (
-                    <div className="p-4 bg-slate-700/50 rounded border border-slate-600">
+                    <div className="p-4 bg-white/10 rounded border border-white/20">
                       <h4 className="font-semibold text-white mb-3">Prerequisites</h4>
                       <div className="space-y-1">
                         {currentEncounter.prerequisites.map((prereq, index) => (
-                          <div key={prereq.id || index} className="text-sm text-slate-300">
+                          <div key={prereq.id || index} className="text-sm text-gray-300">
                             • {prereq.type === 'attribute' ? `${prereq.attribute} ≥ ${prereq.value}` : 
                                prereq.type === 'level' ? `Level ≥ ${prereq.value}` :
                                `${prereq.type} requirement`}
@@ -777,42 +819,150 @@ const EncounterEditorPage = () => {
                   )}
                 </div>
               ) : (
-                <p className="text-slate-300">
+                  <p className="text-gray-300">
                   No encounter data to preview. Create or load an encounter to see the preview.
                 </p>
               )}
             </div>
-        ) : (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white">Encounter Configuration</h2>
+          ) : (
+            /* Edit Mode */
+            <div className="p-6 sm:p-8">
+              <h2 className="text-2xl font-semibold text-white mb-6">Encounter Configuration</h2>
               
-              {/* Validation Errors Summary */}
-              {Object.keys(validationErrors).length > 0 && (
-                <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-3">
-                  <div className="text-red-400 text-sm font-medium mb-2">
-                    Please fix the following errors:
-                  </div>
-                  <ul className="text-red-300 text-xs space-y-1">
-                    {Object.entries(validationErrors).map(([field, error]) => (
-                      <li key={field}>• {error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Use EncounterEditor component */}
+              <EncounterEditor 
+                initialEncounter={currentEncounter}
+                onChange={handleChange}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                mode={currentEncounter ? 'edit' : 'create'}
+              />
             </div>
-            
-            {/* Use EncounterEditor component */}
-            <EncounterEditor 
-              initialEncounter={currentEncounter}
-              onChange={handleChange}
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                  mode={currentEncounter ? 'edit' : 'create'}
-                />
-              </div>
-        )}
+          )}
+          </div>
+
+          {/* Next Steps */}
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-white text-center mb-8">
+              Next Steps
+            </h2>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 max-w-5xl mx-auto">
+              <button
+                onClick={() => navigate('/editors/nodes')}
+                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
+                    <Swords className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white">Create Nodes</h3>
+                </div>
+                <p className="text-gray-300 text-left">
+                  Define locations and contexts within your world
+                </p>
+              </button>
+
+              <button
+                onClick={() => navigate('/editors/characters')}
+                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
+                    <Swords className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white">Create Characters</h3>
+                </div>
+                <p className="text-gray-300 text-left">
+                  Design NPCs with personalities and attributes
+                </p>
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {/* Next Steps Modal */}
+      {showNextSteps && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <ArrowRight className="w-6 h-6 text-emerald-400" />
+                  <h2 className="text-2xl font-bold text-white">Next Steps</h2>
+                </div>
+                <button
+                  onClick={() => setShowNextSteps(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {getNextStepsContent().map((step, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border ${
+                      step.completed
+                        ? 'bg-emerald-600/10 border-emerald-600/30'
+                        : 'bg-white/10 border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-1 ${step.completed ? 'text-emerald-400' : 'text-gray-400'}`}>
+                        {step.completed ? (
+                          <CheckCircle className="w-5 h-5" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center">
+                            <span className="text-xs font-bold">{index + 1}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className={`font-semibold mb-2 ${
+                          step.completed ? 'text-emerald-400' : 'text-white'
+                        }`}>
+                          {step.title}
+                        </h3>
+                        <p className="text-gray-300 text-sm mb-2">
+                          {step.description}
+                        </p>
+                        <p className={`text-sm ${
+                          step.completed ? 'text-emerald-300' : 'text-indigo-300'
+                        }`}>
+                          {step.action}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-gray-400">
+                  Complete these steps to integrate your encounter into the simulation
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => navigate('/editors/world')}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                  >
+                    Go to World Editor
+                  </button>
+                  <button
+                    onClick={() => setShowNextSteps(false)}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

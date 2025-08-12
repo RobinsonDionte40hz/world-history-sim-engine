@@ -217,14 +217,14 @@ const EncounterEditor = ({
       {/* Name and Description */}
       <div className="grid grid-cols-1 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Encounter Name *
           </label>
           <input
             type="text"
             value={encounter.name}
             onChange={(e) => updateEncounter({ name: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Enter encounter name..."
           />
           {validationErrors.name && (
@@ -233,14 +233,14 @@ const EncounterEditor = ({
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Description *
           </label>
           <textarea
             value={encounter.description}
             onChange={(e) => updateEncounter({ description: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Describe what happens in this encounter..."
           />
           {validationErrors.description && (
@@ -266,7 +266,7 @@ const EncounterEditor = ({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-gray-400">
             {encounterTypes.find(t => t.value === encounter.type)?.description}
           </p>
         </div>
@@ -319,8 +319,8 @@ const EncounterEditor = ({
             onChange={(e) => updateEncounter({ cooldown: parseInt(e.target.value) || 0 })}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-          <p className="mt-1 text-xs text-slate-400">
-            0 = Can only happen once, >0 = Can repeat after cooldown
+          <p className="mt-1 text-xs text-gray-400">
+            0 = Can only happen once, &gt;0 = Can repeat after cooldown
           </p>
         </div>
       </div>
@@ -329,18 +329,18 @@ const EncounterEditor = ({
 
   const renderTurnBasedTab = () => (
     <div className="space-y-6">
-      <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+      <div className="bg-white/10 border border-white/20 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="w-5 h-5 text-indigo-400" />
           <h3 className="text-lg font-semibold text-white">Turn-Based Configuration</h3>
         </div>
-        <p className="text-sm text-slate-400 mb-4">
+        <p className="text-sm text-gray-400 mb-4">
           Configure how this encounter integrates with the turn-based simulation system.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
               Duration (turns)
             </label>
             <input
@@ -353,7 +353,7 @@ const EncounterEditor = ({
                   duration: parseInt(e.target.value) || 1
                 }
               })}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           
@@ -377,7 +377,7 @@ const EncounterEditor = ({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-gray-400">
               {initiativeTypes.find(t => t.value === encounter.turnBased.initiative)?.description}
             </p>
           </div>
@@ -402,13 +402,13 @@ const EncounterEditor = ({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-gray-400">
               {timingOptions.find(t => t.value === encounter.turnBased.timing)?.description}
             </p>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
               Sequencing
             </label>
             <select
@@ -419,7 +419,7 @@ const EncounterEditor = ({
                   sequencing: e.target.value
                 }
               })}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {sequencingOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -441,7 +441,7 @@ const EncounterEditor = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white">Trigger Conditions</h3>
-          <p className="text-sm text-slate-400">Define when this encounter can occur</p>
+          <p className="text-sm text-gray-400">Define when this encounter can occur</p>
         </div>
         <button
           onClick={addTrigger}
@@ -453,7 +453,7 @@ const EncounterEditor = ({
       </div>
       
       {encounter.triggers.length === 0 ? (
-        <div className="text-center py-8 text-slate-400">
+        <div className="text-center py-8 text-gray-400">
           <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No triggers defined. This encounter will never occur automatically.</p>
           <p className="text-sm">Add triggers to define when this encounter can happen.</p>
@@ -461,7 +461,7 @@ const EncounterEditor = ({
       ) : (
         <div className="space-y-4">
           {encounter.triggers.map((trigger, index) => (
-            <div key={trigger.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+            <div key={trigger.id} className="bg-white/10 border border-white/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-white">Trigger {index + 1}</h4>
                 <button
@@ -474,13 +474,13 @@ const EncounterEditor = ({
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Trigger Type
                   </label>
                   <select
                     value={trigger.type}
                     onChange={(e) => updateTrigger(index, { type: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="probability">Probability</option>
                     <option value="time">Time-based</option>
@@ -534,7 +534,7 @@ const EncounterEditor = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white">Encounter Outcomes</h3>
-          <p className="text-sm text-slate-400">Define possible results of this encounter</p>
+          <p className="text-sm text-gray-400">Define possible results of this encounter</p>
         </div>
         <button
           onClick={addOutcome}
@@ -546,7 +546,7 @@ const EncounterEditor = ({
       </div>
       
       {encounter.outcomes.length === 0 ? (
-        <div className="text-center py-8 text-slate-400">
+        <div className="text-center py-8 text-gray-400">
           <Dice6 className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No outcomes defined.</p>
           <p className="text-sm">Add at least one outcome to complete the encounter.</p>
@@ -554,7 +554,7 @@ const EncounterEditor = ({
       ) : (
         <div className="space-y-4">
           {encounter.outcomes.map((outcome, index) => (
-            <div key={outcome.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+            <div key={outcome.id} className="bg-white/10 border border-white/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-white">Outcome {index + 1}</h4>
                 <button
@@ -567,14 +567,14 @@ const EncounterEditor = ({
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Description
                   </label>
                   <textarea
                     value={outcome.description}
                     onChange={(e) => updateOutcome(index, { description: e.target.value })}
                     rows={2}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Describe what happens with this outcome..."
                   />
                 </div>
@@ -640,7 +640,7 @@ const EncounterEditor = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white">Prerequisites</h3>
-          <p className="text-sm text-slate-400">Requirements that must be met for this encounter</p>
+          <p className="text-sm text-gray-400">Requirements that must be met for this encounter</p>
         </div>
         <button
           onClick={addPrerequisite}
@@ -652,7 +652,7 @@ const EncounterEditor = ({
       </div>
       
       {encounter.prerequisites.length === 0 ? (
-        <div className="text-center py-8 text-slate-400">
+        <div className="text-center py-8 text-gray-400">
           <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No prerequisites defined.</p>
           <p className="text-sm">This encounter can happen to any character.</p>
@@ -660,7 +660,7 @@ const EncounterEditor = ({
       ) : (
         <div className="space-y-4">
           {encounter.prerequisites.map((prereq, index) => (
-            <div key={prereq.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+            <div key={prereq.id} className="bg-white/10 border border-white/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-white">Prerequisite {index + 1}</h4>
                 <button
@@ -751,7 +751,7 @@ const EncounterEditor = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white">Rewards</h3>
-          <p className="text-sm text-slate-400">What characters gain from this encounter</p>
+          <p className="text-sm text-gray-400">What characters gain from this encounter</p>
         </div>
         <button
           onClick={addReward}
@@ -763,7 +763,7 @@ const EncounterEditor = ({
       </div>
       
       {encounter.rewards.length === 0 ? (
-        <div className="text-center py-8 text-slate-400">
+        <div className="text-center py-8 text-gray-400">
           <Gift className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No rewards defined.</p>
           <p className="text-sm">Add rewards to motivate character participation.</p>
@@ -771,7 +771,7 @@ const EncounterEditor = ({
       ) : (
         <div className="space-y-4">
           {encounter.rewards.map((reward, index) => (
-            <div key={reward.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+            <div key={reward.id} className="bg-white/10 border border-white/20 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-white">Reward {index + 1}</h4>
                 <button
@@ -821,7 +821,7 @@ const EncounterEditor = ({
                     type="text"
                     value={reward.description || ''}
                     onChange={(e) => updateReward(index, { description: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Optional description..."
                   />
                 </div>
@@ -845,7 +845,7 @@ const EncounterEditor = ({
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="border-b border-slate-600">
+      <div className="border-b border-white/20">
         <nav className="flex space-x-8">
           {tabs.map(tab => {
             const Icon = tab.icon;
@@ -856,7 +856,7 @@ const EncounterEditor = ({
                 className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
                     ? 'border-indigo-500 text-indigo-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -878,10 +878,10 @@ const EncounterEditor = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-600">
+      <div className="flex items-center justify-end gap-3 pt-6 border-t border-white/20">
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+          className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
         >
           Cancel
         </button>

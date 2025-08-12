@@ -1,102 +1,181 @@
 import React, { useState, useCallback } from 'react';
-import TemplateService from '../../application/use-cases/services/TemplateService.js';
-// import { useDispatch } from '../../store/selectors/templateSelectors.js'; // TODO: Use when Redux actions are needed
 
-// Environment type constants
-const ENVIRONMENT_TYPES = [
-  { id: 'forest', label: 'Forest', icon: '🌲' },
-  { id: 'plains', label: 'Plains', icon: '🌾' },
-  { id: 'mountains', label: 'Mountains', icon: '⛰️' },
-  { id: 'desert', label: 'Desert', icon: '🏜️' },
-  { id: 'tundra', label: 'Tundra', icon: '❄️' },
-  { id: 'swamp', label: 'Swamp', icon: '🌿' },
-  { id: 'coastal', label: 'Coastal', icon: '🏖️' },
-  { id: 'urban', label: 'Urban', icon: '🏛️' },
-  { id: 'underground', label: 'Underground', icon: '⛏️' },
-  { id: 'magical', label: 'Magical', icon: '✨' }
+// Node types with their characteristics
+const NODE_TYPES = [
+  {
+    id: 'settlement',
+    label: 'Settlement',
+    icon: '🏘️',
+    description: 'Towns, cities, villages',
+    defaultCapacity: 1000
+  },
+  {
+    id: 'wilderness',
+    label: 'Wilderness',
+    icon: '🌲',
+    description: 'Forests, mountains, deserts',
+    defaultCapacity: 100
+  },
+  {
+    id: 'dungeon',
+    label: 'Dungeon',
+    icon: '⚔️',
+    description: 'Caves, ruins, dangerous areas',
+    defaultCapacity: 50
+  },
+  {
+    id: 'landmark',
+    label: 'Landmark',
+    icon: '🗿',
+    description: 'Important locations, monuments',
+    defaultCapacity: 200
+  },
+  {
+    id: 'resource',
+    label: 'Resource',
+    icon: '💎',
+    description: 'Mines, farms, production sites',
+    defaultCapacity: 150
+  },
+  {
+    id: 'sacred',
+    label: 'Sacred',
+    icon: '⛪',
+    description: 'Temples, shrines, holy sites',
+    defaultCapacity: 100
+  }
 ];
 
-// Resource categories
-const RESOURCE_CATEGORIES = {
-  natural: {
-    label: 'Natural Resources',
-    icon: '🌿',
-    examples: ['Wood', 'Stone', 'Iron Ore', 'Gold', 'Fresh Water', 'Fertile Soil']
+// Environment types
+const ENVIRONMENT_TYPES = [
+  { id: 'temperate', label: 'Temperate', icon: '🌳', color: 'green' },
+  { id: 'desert', label: 'Desert', icon: '🏜️', color: 'yellow' },
+  { id: 'arctic', label: 'Arctic', icon: '❄️', color: 'blue' },
+  { id: 'tropical', label: 'Tropical', icon: '🌴', color: 'lime' },
+  { id: 'mountain', label: 'Mountain', icon: '⛰️', color: 'gray' },
+  { id: 'coastal', label: 'Coastal', icon: '🏖️', color: 'cyan' },
+  { id: 'underground', label: 'Underground', icon: '⛏️', color: 'stone' },
+  { id: 'magical', label: 'Magical', icon: '✨', color: 'purple' }
+];
+
+// Node features
+const NODE_FEATURES = [
+  {
+    id: 'trade_hub',
+    label: 'Trade Hub',
+    icon: '💰',
+    modifiers: { economy: 2, population_growth: 1.5 }
   },
-  agricultural: {
+  {
+    id: 'fortified',
+    label: 'Fortified',
+    icon: '🛡️',
+    modifiers: { defense: 3, military_strength: 2 }
+  },
+  {
+    id: 'cultural_center',
+    label: 'Cultural Center',
+    icon: '🎭',
+    modifiers: { culture: 2, happiness: 1.5 }
+  },
+  {
+    id: 'industrial',
+    label: 'Industrial',
+    icon: '🏭',
+    modifiers: { production: 3, pollution: 1.5 }
+  },
+  {
+    id: 'agricultural',
     label: 'Agricultural',
     icon: '🌾',
-    examples: ['Wheat', 'Livestock', 'Fruits', 'Vegetables', 'Herbs', 'Spices']
+    modifiers: { food_production: 3, population_capacity: 1.5 }
   },
-  trade: {
-    label: 'Trade Goods',
-    icon: '💎',
-    examples: ['Silk', 'Gems', 'Pottery', 'Textiles', 'Wine', 'Salt']
+  {
+    id: 'mystical',
+    label: 'Mystical',
+    icon: '🔮',
+    modifiers: { magic: 2, consciousness: 1.5 }
   },
-  strategic: {
-    label: 'Strategic',
-    icon: '⚔️',
-    examples: ['Weapons', 'Armor', 'Horses', 'Ships', 'Fortifications']
+  {
+    id: 'lawless',
+    label: 'Lawless',
+    icon: '🏴‍☠️',
+    modifiers: { crime: 2, freedom: 1.5, law: -2 }
+  },
+  {
+    id: 'educational',
+    label: 'Educational',
+    icon: '📚',
+    modifiers: { education: 3, research: 2 }
   }
-};
-
-// Feature types
-const FEATURE_TYPES = [
-  { id: 'river', label: 'River', modifiers: { movementSpeed: 1.2, trade: 1.3 } },
-  { id: 'road', label: 'Road', modifiers: { movementSpeed: 1.5, trade: 1.2 } },
-  { id: 'harbor', label: 'Harbor', modifiers: { trade: 1.5, naval: 2.0 } },
-  { id: 'ruins', label: 'Ancient Ruins', modifiers: { exploration: 1.5, danger: 1.2 } },
-  { id: 'fortress', label: 'Fortress', modifiers: { defense: 2.0, control: 1.5 } },
-  { id: 'market', label: 'Market', modifiers: { trade: 1.4, prosperity: 1.3 } },
-  { id: 'temple', label: 'Temple', modifiers: { faith: 1.5, culture: 1.2 } },
-  { id: 'mine', label: 'Mine', modifiers: { resources: 1.5, prosperity: 1.2 } }
 ];
 
-// Modifier input component
-const ModifierInput = ({ modifiers, onChange, onRemove }) => {
+// Resource types
+const RESOURCE_TYPES = [
+  'Gold', 'Iron', 'Wood', 'Stone', 'Food', 'Water',
+  'Gems', 'Herbs', 'Magic Crystals', 'Oil', 'Coal', 'Rare Metals'
+];
+
+// Custom modifier editor
+const CustomModifierEditor = ({ modifiers, onChange }) => {
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
 
   const handleAdd = () => {
     if (newKey && newValue) {
-      onChange({ ...modifiers, [newKey]: parseFloat(newValue) || newValue });
+      onChange({
+        ...modifiers,
+        [newKey]: parseFloat(newValue) || 0
+      });
       setNewKey('');
       setNewValue('');
     }
   };
 
+  const handleRemove = (key) => {
+    const updated = { ...modifiers };
+    delete updated[key];
+    onChange(updated);
+  };
+
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(modifiers).map(([key, value]) => (
-          <div
-            key={key}
-            className="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-900 rounded-full"
-          >
-            <span className="text-sm font-medium">{key}: {value}</span>
-            <button
-              onClick={() => onRemove(key)}
-              className="text-red-600 dark:text-red-400 hover:text-red-800"
+    <div className="space-y-3">
+      {/* Existing modifiers */}
+      {Object.keys(modifiers).length > 0 && (
+        <div className="space-y-2">
+          {Object.entries(modifiers).map(([key, value]) => (
+            <div
+              key={key}
+              className="flex items-center gap-2 px-3 py-1 bg-purple-500/20 rounded-full"
             >
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
+              <span className="text-sm text-white">{key}: {value}</span>
+              <button
+                onClick={() => handleRemove(key)}
+                className="text-red-400 hover:text-red-300"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new modifier */}
       <div className="flex gap-2">
         <input
           type="text"
           placeholder="Modifier name"
           value={newKey}
           onChange={(e) => setNewKey(e.target.value)}
-          className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
         <input
-          type="text"
+          type="number"
+          step="0.1"
           placeholder="Value"
           value={newValue}
           onChange={(e) => setNewValue(e.target.value)}
-          className="w-24 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="w-24 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
         <button
           onClick={handleAdd}
@@ -109,16 +188,16 @@ const ModifierInput = ({ modifiers, onChange, onRemove }) => {
   );
 };
 
-// Resource selector component
+// Resource selector
 const ResourceSelector = ({ resources, onChange }) => {
-  const [selectedCategory, setSelectedCategory] = useState('natural');
   const [customResource, setCustomResource] = useState('');
 
   const handleToggleResource = (resource) => {
-    const updated = resources.includes(resource)
-      ? resources.filter(r => r !== resource)
-      : [...resources, resource];
-    onChange(updated);
+    if (resources.includes(resource)) {
+      onChange(resources.filter(r => r !== resource));
+    } else {
+      onChange([...resources, resource]);
+    }
   };
 
   const handleAddCustom = () => {
@@ -130,37 +209,17 @@ const ResourceSelector = ({ resources, onChange }) => {
 
   return (
     <div className="space-y-4">
-      {/* Category tabs */}
-      <div className="flex gap-2 overflow-x-auto">
-        {Object.entries(RESOURCE_CATEGORIES).map(([key, category]) => (
-          <button
-            key={key}
-            onClick={() => setSelectedCategory(key)}
-            className={`
-              px-3 py-2 rounded-lg font-medium whitespace-nowrap
-              ${selectedCategory === key
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
-              }
-            `}
-          >
-            <span className="mr-2">{category.icon}</span>
-            {category.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Resource examples */}
-      <div className="flex flex-wrap gap-2">
-        {RESOURCE_CATEGORIES[selectedCategory].examples.map(resource => (
+      {/* Predefined resources */}
+      <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+        {RESOURCE_TYPES.map(resource => (
           <button
             key={resource}
             onClick={() => handleToggleResource(resource)}
             className={`
-              px-3 py-1 rounded-full text-sm transition-colors
+              px-3 py-2 rounded-lg text-sm transition-colors
               ${resources.includes(resource)
                 ? 'bg-green-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300'
               }
             `}
           >
@@ -169,33 +228,33 @@ const ResourceSelector = ({ resources, onChange }) => {
         ))}
       </div>
 
-      {/* Custom resource input */}
+      {/* Custom resource */}
       <div className="flex gap-2">
         <input
           type="text"
-          placeholder="Add custom resource..."
+          placeholder="Custom resource..."
           value={customResource}
           onChange={(e) => setCustomResource(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
-          className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
         <button
           onClick={handleAddCustom}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
-          Add
+          Add Custom
         </button>
       </div>
 
-      {/* Selected resources */}
+      {/* Selected resources summary */}
       {resources.length > 0 && (
-        <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-          <p className="text-sm font-medium mb-2">Selected Resources:</p>
+        <div className="p-3 bg-white/10 rounded-lg border border-white/20">
+          <p className="text-sm font-medium text-white mb-2">Selected Resources:</p>
           <div className="flex flex-wrap gap-2">
             {resources.map(resource => (
               <span
                 key={resource}
-                className="px-2 py-1 bg-green-100 dark:bg-green-900 rounded text-sm"
+                className="px-2 py-1 bg-green-500/20 rounded text-sm text-white"
               >
                 {resource}
               </span>
@@ -207,13 +266,13 @@ const ResourceSelector = ({ resources, onChange }) => {
   );
 };
 
-// Connection editor component
-const ConnectionEditor = ({ connections, onChange }) => {
+// Connection editor
+const ConnectionEditor = ({ connections, onChange, availableNodes = [] }) => {
   const [newConnection, setNewConnection] = useState({
     targetNodeId: '',
     type: 'road',
-    difficulty: 1,
-    distance: 1
+    distance: 1,
+    difficulty: 1
   });
 
   const connectionTypes = [
@@ -221,7 +280,8 @@ const ConnectionEditor = ({ connections, onChange }) => {
     { id: 'river', label: 'River', icon: '🌊' },
     { id: 'mountain_pass', label: 'Mountain Pass', icon: '⛰️' },
     { id: 'sea_route', label: 'Sea Route', icon: '⛵' },
-    { id: 'portal', label: 'Portal', icon: '🌀' }
+    { id: 'tunnel', label: 'Tunnel', icon: '🚇' },
+    { id: 'teleport', label: 'Teleport', icon: '✨' }
   ];
 
   const handleAddConnection = () => {
@@ -230,14 +290,14 @@ const ConnectionEditor = ({ connections, onChange }) => {
       setNewConnection({
         targetNodeId: '',
         type: 'road',
-        difficulty: 1,
-        distance: 1
+        distance: 1,
+        difficulty: 1
       });
     }
   };
 
   const handleRemoveConnection = (id) => {
-    onChange(connections.filter(conn => conn.id !== id));
+    onChange(connections.filter(c => c.id !== id));
   };
 
   return (
@@ -248,22 +308,17 @@ const ConnectionEditor = ({ connections, onChange }) => {
           {connections.map(conn => (
             <div
               key={conn.id}
-              className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg"
+              className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">
-                  {connectionTypes.find(t => t.id === conn.type)?.icon || '🛤️'}
-                </span>
-                <div>
-                  <p className="font-medium">To: {conn.targetNodeId}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {conn.type} • Distance: {conn.distance} • Difficulty: {conn.difficulty}
-                  </p>
-                </div>
+              <div>
+                <p className="font-medium text-white">To: {conn.targetNodeId}</p>
+                <p className="text-sm text-gray-400">
+                  {conn.type} • Distance: {conn.distance} • Difficulty: {conn.difficulty}
+                </p>
               </div>
               <button
                 onClick={() => handleRemoveConnection(conn.id)}
-                className="text-red-600 hover:text-red-800"
+                className="text-red-400 hover:text-red-300"
               >
                 Remove
               </button>
@@ -273,49 +328,54 @@ const ConnectionEditor = ({ connections, onChange }) => {
       )}
 
       {/* Add new connection */}
-      <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-        <h4 className="font-medium mb-3">Add Connection</h4>
+      <div className="p-4 border-2 border-dashed border-white/20 rounded-lg">
+        <h4 className="font-medium text-white mb-3">Add Connection</h4>
+
         <div className="grid grid-cols-2 gap-3">
           <input
             type="text"
             placeholder="Target Node ID"
             value={newConnection.targetNodeId}
             onChange={(e) => setNewConnection({ ...newConnection, targetNodeId: e.target.value })}
-            className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+            className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
           />
+
           <select
             value={newConnection.type}
             onChange={(e) => setNewConnection({ ...newConnection, type: e.target.value })}
-            className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+            className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
           >
             {connectionTypes.map(type => (
-              <option key={type.id} value={type.id}>
+              <option key={type.id} value={type.id} className="bg-gray-800">
                 {type.label}
               </option>
             ))}
           </select>
+
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400">Distance</label>
+            <label className="text-sm text-gray-400">Distance</label>
             <input
               type="number"
               min="1"
               value={newConnection.distance}
               onChange={(e) => setNewConnection({ ...newConnection, distance: parseInt(e.target.value) || 1 })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
             />
           </div>
+
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400">Difficulty</label>
+            <label className="text-sm text-gray-400">Difficulty</label>
             <input
               type="number"
               min="1"
               max="10"
               value={newConnection.difficulty}
               onChange={(e) => setNewConnection({ ...newConnection, difficulty: parseInt(e.target.value) || 1 })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
             />
           </div>
         </div>
+
         <button
           onClick={handleAddConnection}
           className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -327,27 +387,34 @@ const ConnectionEditor = ({ connections, onChange }) => {
   );
 };
 
-// Main NodeEditor component
+/**
+ * NodeEditor - Comprehensive node template editor component
+ * 
+ * @param {Object} initialNode - Existing node data for editing (optional)
+ * @param {Function} onSave - Callback when node is saved (required)
+ * @param {Function} onCancel - Callback when editing is cancelled (optional)
+ * @param {string} mode - 'create' or 'edit' mode (default: 'create')
+ */
 const NodeEditor = ({
   initialNode = null,
   onSave,
   onCancel,
-  mode = 'create' // 'create' or 'edit'
+  mode = 'create'
 }) => {
-  // const dispatch = useDispatch(); // TODO: Use when Redux actions are needed
-
   // Form state
   const [nodeData, setNodeData] = useState({
     id: initialNode?.id || `node_${Date.now()}`,
     name: initialNode?.name || '',
     description: initialNode?.description || '',
-    environment: initialNode?.environment || 'plains',
-    resources: initialNode?.resources || [],
+    type: initialNode?.type || 'settlement',
+    environment: initialNode?.environment || 'temperate',
+    populationCapacity: initialNode?.populationCapacity || 1000,
+    currentPopulation: initialNode?.currentPopulation || 0,
+    developmentLevel: initialNode?.developmentLevel || 1,
     features: initialNode?.features || [],
+    resources: initialNode?.resources || [],
     modifiers: initialNode?.modifiers || {},
     connections: initialNode?.connections || [],
-    populationCapacity: initialNode?.populationCapacity || 100,
-    developmentLevel: initialNode?.developmentLevel || 0,
     tags: initialNode?.tags || [],
     metadata: initialNode?.metadata || {}
   });
@@ -376,109 +443,46 @@ const NodeEditor = ({
   }, [nodeData]);
 
   // Handle save
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (!validateNode()) {
       return;
     }
 
-    try {
-      let savedNode;
-
-      if (mode === 'create') {
-        // Create new node template using TemplateService
-        savedNode = TemplateService.createNodeTemplate({
-          name: nodeData.name,
-          description: nodeData.description,
-          environment: {
-            type: nodeData.environment,
-            density: 0.5 // Default density
-          },
-          resources: nodeData.resources,
-          features: nodeData.features,
-          modifiers: nodeData.modifiers,
-          connections: nodeData.connections,
-          populationCapacity: nodeData.populationCapacity,
-          developmentLevel: nodeData.developmentLevel,
-          tags: nodeData.tags,
-          metadata: nodeData.metadata
-        });
-
-        console.log('Created node template:', savedNode);
-      } else {
-        // Update existing node template
-        // For now, create a new template since TemplateService doesn't have update method
-        savedNode = TemplateService.createNodeTemplate({
-          ...nodeData,
-          name: nodeData.name + ' (Updated)',
-        });
-
-        console.log('Updated node template:', savedNode);
-      }
-
-      // Show success feedback
-      alert(`Node template ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-
-      if (onSave) {
-        onSave(savedNode);
-      }
-
-    } catch (error) {
-      console.error('Error saving node:', error);
-      alert(`Failed to ${mode === 'create' ? 'create' : 'update'} node template: ${error.message}`);
+    if (onSave) {
+      onSave(nodeData);
     }
-  }, [nodeData, mode, onSave, validateNode]);
+  }, [nodeData, onSave, validateNode]);
 
-  // Handle feature toggle
-  const handleToggleFeature = (featureId) => {
-    const feature = FEATURE_TYPES.find(f => f.id === featureId);
-    const updatedFeatures = nodeData.features.some(f => f.id === featureId)
-      ? nodeData.features.filter(f => f.id !== featureId)
-      : [...nodeData.features, feature];
-
-    // Update modifiers based on features
-    const newModifiers = { ...nodeData.modifiers };
-    if (!nodeData.features.some(f => f.id === featureId)) {
-      // Adding feature - merge modifiers
-      Object.entries(feature.modifiers).forEach(([key, value]) => {
-        newModifiers[key] = (newModifiers[key] || 1) * value;
-      });
-    } else {
-      // Removing feature - divide out modifiers
-      Object.entries(feature.modifiers).forEach(([key, value]) => {
-        if (newModifiers[key]) {
-          newModifiers[key] = newModifiers[key] / value;
-          if (Math.abs(newModifiers[key] - 1) < 0.01) {
-            delete newModifiers[key];
-          }
-        }
+  // Handle type selection
+  const handleTypeSelect = (typeId) => {
+    const type = NODE_TYPES.find(t => t.id === typeId);
+    if (type) {
+      setNodeData({
+        ...nodeData,
+        type: typeId,
+        populationCapacity: type.defaultCapacity
       });
     }
-
-    setNodeData({
-      ...nodeData,
-      features: updatedFeatures,
-      modifiers: newModifiers
-    });
   };
 
   // Tabs configuration
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: '📝' },
-    { id: 'environment', label: 'Environment', icon: '🌍' },
+    { id: 'features', label: 'Features', icon: '⭐' },
     { id: 'resources', label: 'Resources', icon: '💎' },
-    { id: 'features', label: 'Features', icon: '🏛️' },
+    { id: 'modifiers', label: 'Modifiers', icon: '⚙️' },
     { id: 'connections', label: 'Connections', icon: '🔗' },
-    { id: 'modifiers', label: 'Modifiers', icon: '⚡' }
+    { id: 'advanced', label: 'Advanced', icon: '🔧' }
   ];
 
   return (
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-2xl font-bold text-white">
           {mode === 'create' ? 'Create Node Template' : 'Edit Node Template'}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-gray-400 mt-1">
           Define a location template for world generation
         </p>
       </div>
@@ -493,7 +497,7 @@ const NodeEditor = ({
               px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors
               ${activeTab === tab.id
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300'
               }
             `}
           >
@@ -504,24 +508,24 @@ const NodeEditor = ({
       </div>
 
       {/* Tab content */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Node ID
               </label>
               <input
                 type="text"
                 value={nodeData.id}
                 disabled
-                className="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -529,8 +533,8 @@ const NodeEditor = ({
                 value={nodeData.name}
                 onChange={(e) => setNodeData({ ...nodeData, name: e.target.value })}
                 className={`
-                  w-full px-4 py-2 border rounded-lg dark:bg-gray-800
-                  ${errors.name ? 'border-red-500' : 'dark:border-gray-600'}
+                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                  ${errors.name ? 'border-red-500' : 'border-white/20'}
                 `}
                 placeholder="Enter node name..."
               />
@@ -540,7 +544,7 @@ const NodeEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Description <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -548,8 +552,8 @@ const NodeEditor = ({
                 onChange={(e) => setNodeData({ ...nodeData, description: e.target.value })}
                 rows={4}
                 className={`
-                  w-full px-4 py-2 border rounded-lg dark:bg-gray-800
-                  ${errors.description ? 'border-red-500' : 'dark:border-gray-600'}
+                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                  ${errors.description ? 'border-red-500' : 'border-white/20'}
                 `}
                 placeholder="Describe this location..."
               />
@@ -558,9 +562,34 @@ const NodeEditor = ({
               )}
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Node Type
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {NODE_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => handleTypeSelect(type.id)}
+                    className={`
+                      p-3 rounded-lg border-2 transition-all
+                      ${nodeData.type === type.id
+                        ? 'border-blue-500 bg-blue-500/20'
+                        : 'border-white/20 hover:border-white/40 bg-white/5'
+                      }
+                    `}
+                  >
+                    <div className="text-2xl mb-1">{type.icon}</div>
+                    <div className="text-sm font-medium text-white">{type.label}</div>
+                    <div className="text-xs text-gray-400">{type.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Population Capacity
                 </label>
                 <input
@@ -568,35 +597,30 @@ const NodeEditor = ({
                   min="0"
                   value={nodeData.populationCapacity}
                   onChange={(e) => setNodeData({ ...nodeData, populationCapacity: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Development Level (0-10)
+                <label className="block text-sm font-medium text-white mb-2">
+                  Development Level
                 </label>
                 <input
                   type="number"
-                  min="0"
+                  min="1"
                   max="10"
                   value={nodeData.developmentLevel}
                   onChange={(e) => setNodeData({ ...nodeData, developmentLevel: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 />
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Environment Tab */}
-        {activeTab === 'environment' && (
-          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Environment Type
+              <label className="block text-sm font-medium text-white mb-2">
+                Environment
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {ENVIRONMENT_TYPES.map(env => (
                   <button
                     key={env.id}
@@ -604,21 +628,21 @@ const NodeEditor = ({
                     className={`
                       p-3 rounded-lg border-2 transition-all
                       ${nodeData.environment === env.id
-                        ? 'border-green-500 bg-green-50 dark:bg-green-950'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                        ? 'border-green-500 bg-green-500/20'
+                        : 'border-white/20 hover:border-white/40 bg-white/5'
                       }
                     `}
                   >
                     <div className="text-2xl mb-1">{env.icon}</div>
-                    <div className="text-sm font-medium">{env.label}</div>
+                    <div className="text-sm font-medium text-white">{env.label}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Environmental Tags
+              <label className="block text-sm font-medium text-white mb-2">
+                Tags
               </label>
               <input
                 type="text"
@@ -628,43 +652,50 @@ const NodeEditor = ({
                   ...nodeData,
                   tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                 })}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
               />
             </div>
           </div>
         )}
 
-        {/* Resources Tab */}
-        {activeTab === 'resources' && (
-          <ResourceSelector
-            resources={nodeData.resources}
-            onChange={(resources) => setNodeData({ ...nodeData, resources })}
-          />
-        )}
-
         {/* Features Tab */}
         {activeTab === 'features' && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-400">
               Select features that define this location's special characteristics
             </p>
+
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {FEATURE_TYPES.map(feature => (
+              {NODE_FEATURES.map(feature => (
                 <button
                   key={feature.id}
-                  onClick={() => handleToggleFeature(feature.id)}
+                  onClick={() => {
+                    const hasFeature = nodeData.features.some(f => f.id === feature.id);
+                    if (hasFeature) {
+                      setNodeData({
+                        ...nodeData,
+                        features: nodeData.features.filter(f => f.id !== feature.id)
+                      });
+                    } else {
+                      setNodeData({
+                        ...nodeData,
+                        features: [...nodeData.features, feature]
+                      });
+                    }
+                  }}
                   className={`
-                    p-3 rounded-lg border-2 transition-all
+                    p-4 rounded-lg border-2 transition-all
                     ${nodeData.features.some(f => f.id === feature.id)
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                      ? 'border-blue-500 bg-blue-500/20'
+                      : 'border-white/20 hover:border-white/40 bg-white/5'
                     }
                   `}
                 >
-                  <div className="font-medium mb-1">{feature.label}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-2xl mb-2">{feature.icon}</div>
+                  <div className="font-medium text-white mb-1">{feature.label}</div>
+                  <div className="text-xs text-gray-400">
                     {Object.entries(feature.modifiers)
-                      .map(([k, v]) => `${k}: ×${v}`)
+                      .map(([key, value]) => `${key}: ${value > 0 ? '+' : ''}${value}`)
                       .join(', ')}
                   </div>
                 </button>
@@ -673,54 +704,112 @@ const NodeEditor = ({
           </div>
         )}
 
-        {/* Connections Tab */}
-        {activeTab === 'connections' && (
-          <ConnectionEditor
-            connections={nodeData.connections}
-            onChange={(connections) => setNodeData({ ...nodeData, connections })}
-          />
+        {/* Resources Tab */}
+        {activeTab === 'resources' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Select or add resources available at this location
+            </p>
+            <ResourceSelector
+              resources={nodeData.resources}
+              onChange={(resources) => setNodeData({ ...nodeData, resources })}
+            />
+          </div>
         )}
 
         {/* Modifiers Tab */}
         {activeTab === 'modifiers' && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-400">
               Define custom modifiers that affect characters and interactions at this location
             </p>
-            <ModifierInput
+            <CustomModifierEditor
               modifiers={nodeData.modifiers}
               onChange={(modifiers) => setNodeData({ ...nodeData, modifiers })}
-              onRemove={(key) => {
-                const newModifiers = { ...nodeData.modifiers };
-                delete newModifiers[key];
-                setNodeData({ ...nodeData, modifiers: newModifiers });
-              }}
             />
+          </div>
+        )}
+
+        {/* Connections Tab */}
+        {activeTab === 'connections' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Define connections to other nodes
+            </p>
+            <ConnectionEditor
+              connections={nodeData.connections}
+              onChange={(connections) => setNodeData({ ...nodeData, connections })}
+            />
+          </div>
+        )}
+
+        {/* Advanced Tab */}
+        {activeTab === 'advanced' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Custom Metadata (JSON)
+              </label>
+              <textarea
+                value={JSON.stringify(nodeData.metadata, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const metadata = JSON.parse(e.target.value);
+                    setNodeData({ ...nodeData, metadata });
+                  } catch (err) {
+                    // Invalid JSON, don't update
+                  }
+                }}
+                rows={8}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg font-mono text-sm text-white"
+              />
+            </div>
+
+            <div className="p-4 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+              <h4 className="font-medium text-white mb-2">Node Usage Notes</h4>
+              <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
+                <li>Nodes represent locations in your world</li>
+                <li>Population capacity determines maximum NPCs</li>
+                <li>Features and modifiers affect interactions</li>
+                <li>Resources enable economic systems</li>
+                <li>Connections define travel between nodes</li>
+              </ul>
+            </div>
           </div>
         )}
       </div>
 
       {/* Preview Panel */}
-      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <h3 className="font-semibold mb-3">Preview</h3>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
+        <h3 className="font-semibold text-white mb-3">Preview</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium">Environment:</span> {nodeData.environment}
+            <span className="font-medium text-gray-300">Type:</span>{' '}
+            <span className="text-white">
+              {NODE_TYPES.find(t => t.id === nodeData.type)?.label}
+            </span>
           </div>
           <div>
-            <span className="font-medium">Capacity:</span> {nodeData.populationCapacity}
+            <span className="font-medium text-gray-300">Environment:</span>{' '}
+            <span className="text-white">
+              {ENVIRONMENT_TYPES.find(e => e.id === nodeData.environment)?.label}
+            </span>
           </div>
           <div>
-            <span className="font-medium">Resources:</span> {nodeData.resources.length}
+            <span className="font-medium text-gray-300">Capacity:</span>{' '}
+            <span className="text-white">{nodeData.populationCapacity}</span>
           </div>
           <div>
-            <span className="font-medium">Features:</span> {nodeData.features.length}
+            <span className="font-medium text-gray-300">Features:</span>{' '}
+            <span className="text-white">{nodeData.features.length}</span>
           </div>
           <div>
-            <span className="font-medium">Connections:</span> {nodeData.connections.length}
+            <span className="font-medium text-gray-300">Resources:</span>{' '}
+            <span className="text-white">{nodeData.resources.length}</span>
           </div>
           <div>
-            <span className="font-medium">Modifiers:</span> {Object.keys(nodeData.modifiers).length}
+            <span className="font-medium text-gray-300">Connections:</span>{' '}
+            <span className="text-white">{nodeData.connections.length}</span>
           </div>
         </div>
       </div>
@@ -729,7 +818,7 @@ const NodeEditor = ({
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onCancel}
-          className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
         >
           Cancel
         </button>

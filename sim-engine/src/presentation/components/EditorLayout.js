@@ -65,7 +65,7 @@ const EditorLayout = ({
 
       {/* Validation Errors Panel */}
       {validationErrors.length > 0 && (
-        <div className="px-8 py-3 bg-red-600/10 border-b border-red-600/30">
+        <div className="px-4 sm:px-8 py-3 bg-red-600/10 border-b border-red-600/30">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5" />
             <div>
@@ -83,8 +83,8 @@ const EditorLayout = ({
       )}
 
       {/* Editor Content */}
-      <div className="flex-1 p-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="w-full">
           {children}
         </div>
       </div>

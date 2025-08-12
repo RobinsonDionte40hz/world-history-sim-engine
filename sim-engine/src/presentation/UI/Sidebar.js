@@ -351,6 +351,102 @@ const Sidebar = ({
       ];
     }
 
+    if (path.includes('/builder') || path.includes('/editors/world') || path.includes('/world-foundation') || path.includes('/world-editor')) {
+      return [
+        {
+          id: 'world-divider',
+          type: 'divider',
+          label: 'World Foundation Tools'
+        },
+        {
+          id: 'new-world',
+          label: '🌍 New World',
+          onClick: () => {
+            if (window.confirm('This will clear the current world data. Continue?')) {
+              window.location.reload();
+            }
+          },
+          hoverColor: 'rgba(34, 197, 94, 0.1)',
+          hoverBorder: 'rgba(34, 197, 94, 0.3)'
+        },
+        {
+          id: 'validate-world',
+          label: '✅ Validate World',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('validateWorld'));
+          },
+          hoverColor: 'rgba(59, 130, 246, 0.1)',
+          hoverBorder: 'rgba(59, 130, 246, 0.3)'
+        },
+        {
+          id: 'preview-world',
+          label: '👁️ Preview World',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('togglePreviewMode'));
+          },
+          hoverColor: 'rgba(168, 85, 247, 0.1)',
+          hoverBorder: 'rgba(168, 85, 247, 0.3)'
+        },
+        {
+          id: 'quick-save-world',
+          label: '💾 Quick Save',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('quickSave'));
+          },
+          hoverColor: 'rgba(59, 130, 246, 0.1)',
+          hoverBorder: 'rgba(59, 130, 246, 0.3)'
+        },
+        {
+          id: 'world-templates-divider',
+          type: 'divider',
+          label: 'World Templates'
+        },
+        {
+          id: 'fantasy-template',
+          label: '🏰 Fantasy World',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('loadTemplate', { detail: { type: 'fantasy' } }));
+          },
+          hoverColor: 'rgba(251, 191, 36, 0.1)',
+          hoverBorder: 'rgba(251, 191, 36, 0.3)'
+        },
+        {
+          id: 'scifi-template',
+          label: '🚀 Sci-Fi World',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('loadTemplate', { detail: { type: 'scifi' } }));
+          },
+          hoverColor: 'rgba(251, 191, 36, 0.1)',
+          hoverBorder: 'rgba(251, 191, 36, 0.3)'
+        },
+        {
+          id: 'historical-template',
+          label: '📜 Historical World',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('loadTemplate', { detail: { type: 'historical' } }));
+          },
+          hoverColor: 'rgba(251, 191, 36, 0.1)',
+          hoverBorder: 'rgba(251, 191, 36, 0.3)'
+        },
+        {
+          id: 'world-guide-divider',
+          type: 'divider',
+          label: 'World Building Guide'
+        },
+        {
+          id: 'time-progression-info',
+          type: 'info',
+          content: [
+            { label: 'Real-time', desc: '1 sec = 1 sec' },
+            { label: 'Fast', desc: '1 sec = 10 min' },
+            { label: 'Daily', desc: '1 sec = 1 hour' },
+            { label: 'Weekly', desc: '1 sec = 1 day' },
+            { label: 'Monthly', desc: '1 sec = 1 month' }
+          ]
+        }
+      ];
+    }
+
     if (path.includes('/editors/encounters')) {
       return [
         {

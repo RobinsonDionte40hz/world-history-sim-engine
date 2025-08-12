@@ -1,4 +1,6 @@
-/* Temporary - Tailwind imports removed until PostCSS issue is resolved */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
   margin: 0;

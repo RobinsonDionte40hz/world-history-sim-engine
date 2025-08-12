@@ -136,12 +136,12 @@ const AttributeEditor = ({ attributes, onChange }) => {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {DND_ATTRIBUTES.map(attr => (
-          <div key={attr.id} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <div key={attr.id} className="p-3 bg-white/10 rounded-lg border border-white/20">
             <div className="flex items-center justify-between mb-2">
-              <label className="font-medium text-sm">
+              <label className="font-medium text-sm text-white">
                 {attr.label} ({attr.abbr})
               </label>
-              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-lg font-bold text-blue-400">
                 {calculateModifier(attributes[attr.id] || 10) >= 0 ? '+' : ''}
                 {calculateModifier(attributes[attr.id] || 10)}
               </span>
@@ -152,17 +152,17 @@ const AttributeEditor = ({ attributes, onChange }) => {
               max="20"
               value={attributes[attr.id] || 10}
               onChange={(e) => handleAttributeChange(attr.id, e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-center"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-center"
             />
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               {attr.description}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-        <p className="text-sm">
+      <div className="p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+        <p className="text-sm text-white">
           <strong>Total Points:</strong> {Object.values(attributes).reduce((sum, val) => sum + (val || 10), 0)}
           {' '}(Average: {(Object.values(attributes).reduce((sum, val) => sum + (val || 10), 0) / 6).toFixed(1)})
         </p>
@@ -206,7 +206,7 @@ const PersonalityEditor = ({ personality, onChange }) => {
                 px-3 py-1 rounded-lg text-sm font-medium transition-colors
                 ${activeCategory === key
                   ? 'bg-purple-600 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  : 'bg-white/10 hover:bg-white/20 text-gray-300'
                 }
               `}
             >
@@ -227,8 +227,8 @@ const PersonalityEditor = ({ personality, onChange }) => {
         {PERSONALITY_TRAITS[activeCategory].traits.map(trait => (
           <div key={trait.id} className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">{trait.label}</label>
-              <span className="text-sm font-mono">
+              <label className="text-sm font-medium text-white">{trait.label}</label>
+              <span className="text-sm font-mono text-gray-300">
                 {(personality.traits?.[trait.id] || 0.5).toFixed(1)}
               </span>
             </div>
@@ -241,7 +241,7 @@ const PersonalityEditor = ({ personality, onChange }) => {
               onChange={(e) => handleTraitChange(trait.id, e.target.value)}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-gray-500">
+            <div className="flex justify-between text-xs text-gray-400">
               <span>Low</span>
               <span>High</span>
             </div>
@@ -251,19 +251,19 @@ const PersonalityEditor = ({ personality, onChange }) => {
 
       {/* Core beliefs */}
       <div className="mt-6">
-        <label className="block text-sm font-medium mb-2">Core Beliefs</label>
+        <label className="block text-sm font-medium text-white mb-2">Core Beliefs</label>
         <textarea
           value={personality.beliefs || ''}
           onChange={(e) => onChange({ ...personality, beliefs: e.target.value })}
           placeholder="What does this character believe in? What drives them?"
           rows={3}
-          className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
       </div>
 
       {/* Fears */}
       <div>
-        <label className="block text-sm font-medium mb-2">Fears</label>
+        <label className="block text-sm font-medium text-white mb-2">Fears</label>
         <input
           type="text"
           value={personality.fears?.join(', ') || ''}
@@ -272,7 +272,7 @@ const PersonalityEditor = ({ personality, onChange }) => {
             fears: e.target.value.split(',').map(f => f.trim()).filter(Boolean)
           })}
           placeholder="List fears separated by commas..."
-          className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
       </div>
     </div>
@@ -309,7 +309,7 @@ const SkillEditor = ({ skills, onChange }) => {
               px-3 py-2 rounded-lg font-medium whitespace-nowrap
               ${activeCategory === key
                 ? 'bg-green-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300'
               }
             `}
           >
@@ -322,19 +322,19 @@ const SkillEditor = ({ skills, onChange }) => {
       {/* Skills grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {SKILL_CATEGORIES[activeCategory].skills.map(skill => (
-          <div key={skill} className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <span className="font-medium text-sm">{skill}</span>
+          <div key={skill} className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20">
+            <span className="font-medium text-sm text-white">{skill}</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleSkillLevel(skill, Math.max(0, getSkillLevel(skill) - 1))}
-                className="w-8 h-8 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"
+                className="w-8 h-8 rounded bg-white/10 hover:bg-white/20 text-white border border-white/20"
               >
                 -
               </button>
-              <span className="w-8 text-center font-mono">{getSkillLevel(skill)}</span>
+              <span className="w-8 text-center font-mono text-white">{getSkillLevel(skill)}</span>
               <button
                 onClick={() => handleSkillLevel(skill, Math.min(10, getSkillLevel(skill) + 1))}
-                className="w-8 h-8 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"
+                className="w-8 h-8 rounded bg-white/10 hover:bg-white/20 text-white border border-white/20"
               >
                 +
               </button>
@@ -345,11 +345,11 @@ const SkillEditor = ({ skills, onChange }) => {
 
       {/* Skill summary */}
       {Object.keys(skills).length > 0 && (
-        <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-          <p className="text-sm font-medium mb-2">Active Skills:</p>
+        <div className="p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+          <p className="text-sm font-medium mb-2 text-white">Active Skills:</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(skills).map(([skill, level]) => (
-              <span key={skill} className="px-2 py-1 bg-green-200 dark:bg-green-800 rounded text-sm">
+              <span key={skill} className="px-2 py-1 bg-green-500/30 rounded text-sm text-white">
                 {skill}: {level}
               </span>
             ))}
@@ -406,20 +406,20 @@ const GoalEditor = ({ goals, onChange }) => {
             return (
               <div
                 key={goal.id}
-                className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg"
+                className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xl">{type?.icon}</span>
                   <div>
-                    <p className="font-medium">{goal.description}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="font-medium text-white">{goal.description}</p>
+                    <p className="text-sm text-gray-400">
                       {type?.label} • Priority: {priority?.label}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleRemoveGoal(goal.id)}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-red-400 hover:text-red-300"
                 >
                   Remove
                 </button>
@@ -430,8 +430,8 @@ const GoalEditor = ({ goals, onChange }) => {
       )}
 
       {/* Add new goal */}
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-        <h4 className="font-medium mb-3">Add Goal</h4>
+      <div className="border-2 border-dashed border-white/20 rounded-lg p-4">
+        <h4 className="font-medium text-white mb-3">Add Goal</h4>
         
         <div className="space-y-3">
           <textarea
@@ -439,19 +439,19 @@ const GoalEditor = ({ goals, onChange }) => {
             onChange={(e) => setNewGoal({...newGoal, description: e.target.value})}
             placeholder="Describe the character's goal..."
             rows={2}
-            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
           />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium mb-1 block">Type</label>
+              <label className="text-sm font-medium text-white mb-1 block">Type</label>
               <select
                 value={newGoal.type}
                 onChange={(e) => setNewGoal({...newGoal, type: e.target.value})}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
               >
                 {goalTypes.map(type => (
-                  <option key={type.id} value={type.id}>
+                  <option key={type.id} value={type.id} className="bg-gray-800">
                     {type.label}
                   </option>
                 ))}
@@ -459,14 +459,14 @@ const GoalEditor = ({ goals, onChange }) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block">Priority</label>
+              <label className="text-sm font-medium text-white mb-1 block">Priority</label>
               <select
                 value={newGoal.priority}
                 onChange={(e) => setNewGoal({...newGoal, priority: e.target.value})}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
               >
                 {priorities.map(priority => (
-                  <option key={priority.id} value={priority.id}>
+                  <option key={priority.id} value={priority.id} className="bg-gray-800">
                     {priority.label}
                   </option>
                 ))}
@@ -527,10 +527,10 @@ const EquipmentEditor = ({ equipment, onChange }) => {
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
         >
           {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>
+            <option key={cat.id} value={cat.id} className="bg-gray-800">
               {cat.icon} {cat.label}
             </option>
           ))}
@@ -541,7 +541,7 @@ const EquipmentEditor = ({ equipment, onChange }) => {
           onChange={(e) => setNewItem(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleAddItem()}
           placeholder="Item name..."
-          className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
         />
         <button
           onClick={handleAddItem}
@@ -558,8 +558,8 @@ const EquipmentEditor = ({ equipment, onChange }) => {
           if (items.length === 0) return null;
 
           return (
-            <div key={cat.id} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
+            <div key={cat.id} className="p-3 bg-white/10 rounded-lg border border-white/20">
+              <h4 className="font-medium text-white mb-2 flex items-center gap-2">
                 <span>{cat.icon}</span>
                 {cat.label}
               </h4>
@@ -567,12 +567,12 @@ const EquipmentEditor = ({ equipment, onChange }) => {
                 {items.map((item, index) => (
                   <span
                     key={index}
-                    className="px-3 py-1 bg-white dark:bg-gray-700 rounded-full text-sm flex items-center gap-2"
+                    className="px-3 py-1 bg-white/20 rounded-full text-sm text-white flex items-center gap-2"
                   >
                     {item}
                     <button
                       onClick={() => handleRemoveItem(cat.id, index)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-400 hover:text-red-300"
                     >
                       ×
                     </button>
@@ -620,18 +620,18 @@ const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
           {relationshipTemplates.map(template => (
             <div
               key={template.id}
-              className="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded-lg"
+              className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20"
             >
               <div>
-                <p className="font-medium">{template.type}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="font-medium text-white">{template.type}</p>
+                <p className="text-sm text-gray-400">
                   Range: {template.minValue} to {template.maxValue}
                   {template.tags.length > 0 && ` • Tags: ${template.tags.join(', ')}`}
                 </p>
               </div>
               <button
                 onClick={() => handleRemoveTemplate(template.id)}
-                className="text-red-600 hover:text-red-800"
+                className="text-red-400 hover:text-red-300"
               >
                 Remove
               </button>
@@ -641,40 +641,40 @@ const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
       )}
 
       {/* Add new template */}
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-        <h4 className="font-medium mb-3">Add Relationship Template</h4>
+      <div className="border-2 border-dashed border-white/20 rounded-lg p-4">
+        <h4 className="font-medium text-white mb-3">Add Relationship Template</h4>
         
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <select
               value={newTemplate.type}
               onChange={(e) => setNewTemplate({...newTemplate, type: e.target.value})}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
             >
-              <option value="">Select type...</option>
+              <option value="" className="bg-gray-800">Select type...</option>
               {relationshipTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+                <option key={type} value={type} className="bg-gray-800">{type}</option>
               ))}
             </select>
           </div>
           
           <div>
-            <label className="text-sm">Min Value</label>
+            <label className="text-sm text-gray-400">Min Value</label>
             <input
               type="number"
               value={newTemplate.minValue}
               onChange={(e) => setNewTemplate({...newTemplate, minValue: parseInt(e.target.value) || -100})}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
             />
           </div>
           
           <div>
-            <label className="text-sm">Max Value</label>
+            <label className="text-sm text-gray-400">Max Value</label>
             <input
               type="number"
               value={newTemplate.maxValue}
               onChange={(e) => setNewTemplate({...newTemplate, maxValue: parseInt(e.target.value) || 100})}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
             />
           </div>
 
@@ -687,7 +687,7 @@ const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
                 ...newTemplate,
                 tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
               })}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
             />
           </div>
         </div>
@@ -827,10 +827,10 @@ const CharacterEditor = ({
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-2xl font-bold text-white">
           {mode === 'create' ? 'Create Character Template' : 'Edit Character Template'}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-gray-400 mt-1">
           Define templates for NPC generation in your world
         </p>
       </div>
@@ -845,7 +845,7 @@ const CharacterEditor = ({
               px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors
               ${activeTab === tab.id
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300'
               }
             `}
           >
@@ -856,24 +856,24 @@ const CharacterEditor = ({
       </div>
 
       {/* Tab content */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Character ID
               </label>
               <input
                 type="text"
                 value={characterData.id}
                 disabled
-                className="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -881,8 +881,8 @@ const CharacterEditor = ({
                 value={characterData.name}
                 onChange={(e) => setCharacterData({...characterData, name: e.target.value})}
                 className={`
-                  w-full px-4 py-2 border rounded-lg dark:bg-gray-800
-                  ${errors.name ? 'border-red-500' : 'dark:border-gray-600'}
+                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                  ${errors.name ? 'border-red-500' : 'border-white/20'}
                 `}
                 placeholder="Enter character template name..."
               />
@@ -892,7 +892,7 @@ const CharacterEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Description <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -900,8 +900,8 @@ const CharacterEditor = ({
                 onChange={(e) => setCharacterData({...characterData, description: e.target.value})}
                 rows={4}
                 className={`
-                  w-full px-4 py-2 border rounded-lg dark:bg-gray-800
-                  ${errors.description ? 'border-red-500' : 'dark:border-gray-600'}
+                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                  ${errors.description ? 'border-red-500' : 'border-white/20'}
                 `}
                 placeholder="Describe this character template..."
               />
@@ -911,7 +911,7 @@ const CharacterEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Archetype
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -922,46 +922,46 @@ const CharacterEditor = ({
                     className={`
                       p-3 rounded-lg border-2 transition-all
                       ${characterData.archetype === archetype.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                        ? 'border-blue-500 bg-blue-500/20'
+                        : 'border-white/20 hover:border-white/40 bg-white/5'
                       }
                     `}
                   >
                     <div className="text-2xl mb-1">{archetype.icon}</div>
-                    <div className="text-sm font-medium">{archetype.label}</div>
+                    <div className="text-sm font-medium text-white">{archetype.label}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Background
               </label>
               <textarea
                 value={characterData.background}
                 onChange={(e) => setCharacterData({...characterData, background: e.target.value})}
                 rows={3}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
                 placeholder="Character's background story..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Appearance
               </label>
               <textarea
                 value={characterData.appearance}
                 onChange={(e) => setCharacterData({...characterData, appearance: e.target.value})}
                 rows={2}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
                 placeholder="Physical appearance description..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Tags
               </label>
               <input
@@ -972,7 +972,7 @@ const CharacterEditor = ({
                   ...characterData, 
                   tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                 })}
-                className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
               />
             </div>
           </div>
@@ -981,7 +981,7 @@ const CharacterEditor = ({
         {/* Attributes Tab */}
         {activeTab === 'attributes' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Set the D&D-style attributes for this character template
             </p>
             <AttributeEditor
@@ -994,7 +994,7 @@ const CharacterEditor = ({
         {/* Personality Tab */}
         {activeTab === 'personality' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define the personality traits and consciousness parameters
             </p>
             <PersonalityEditor
@@ -1003,11 +1003,11 @@ const CharacterEditor = ({
             />
             
             {/* Consciousness parameters */}
-            <div className="mt-6 p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
-              <h4 className="font-medium mb-3">Consciousness Parameters</h4>
+            <div className="mt-6 p-4 bg-purple-500/20 rounded-lg border border-purple-500/30">
+              <h4 className="font-medium text-white mb-3">Consciousness Parameters</h4>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm">Base Frequency (Hz)</label>
+                  <label className="text-sm text-gray-300">Base Frequency (Hz)</label>
                   <input
                     type="number"
                     value={characterData.consciousness.baseFrequency}
@@ -1018,11 +1018,11 @@ const CharacterEditor = ({
                         baseFrequency: parseFloat(e.target.value) || 40
                       }
                     })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                   />
                 </div>
                 <div>
-                  <label className="text-sm">Coherence (0-1)</label>
+                  <label className="text-sm text-gray-300">Coherence (0-1)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -1036,11 +1036,11 @@ const CharacterEditor = ({
                         coherence: parseFloat(e.target.value) || 0.7
                       }
                     })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                   />
                 </div>
                 <div>
-                  <label className="text-sm">Awareness (0-1)</label>
+                  <label className="text-sm text-gray-300">Awareness (0-1)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -1054,7 +1054,7 @@ const CharacterEditor = ({
                         awareness: parseFloat(e.target.value) || 0.5
                       }
                     })}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                   />
                 </div>
               </div>
@@ -1065,7 +1065,7 @@ const CharacterEditor = ({
         {/* Skills Tab */}
         {activeTab === 'skills' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Set skill levels for this character template (0-10 scale)
             </p>
             <SkillEditor
@@ -1078,7 +1078,7 @@ const CharacterEditor = ({
         {/* Goals Tab */}
         {activeTab === 'goals' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define the goals and motivations for this character
             </p>
             {errors.goals && (
@@ -1094,7 +1094,7 @@ const CharacterEditor = ({
         {/* Equipment Tab */}
         {activeTab === 'equipment' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define starting equipment for this character template
             </p>
             <EquipmentEditor
@@ -1107,7 +1107,7 @@ const CharacterEditor = ({
         {/* Relationships Tab */}
         {activeTab === 'relationships' && (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Define potential relationship templates for this character
             </p>
             <RelationshipTemplateEditor
@@ -1121,7 +1121,7 @@ const CharacterEditor = ({
         {activeTab === 'advanced' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Custom Metadata (JSON)
               </label>
               <textarea
@@ -1135,13 +1135,13 @@ const CharacterEditor = ({
                   }
                 }}
                 rows={8}
-                className="w-full px-4 py-2 border rounded-lg font-mono text-sm dark:bg-gray-800 dark:border-gray-600"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg font-mono text-sm text-white"
               />
             </div>
 
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-              <h4 className="font-medium mb-2">Template Usage Notes</h4>
-              <ul className="text-sm space-y-1 list-disc list-inside">
+            <div className="p-4 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+              <h4 className="font-medium text-white mb-2">Template Usage Notes</h4>
+              <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
                 <li>This template will be used to generate NPCs during world simulation</li>
                 <li>Attributes and skills may vary ±20% from template values</li>
                 <li>Personality traits influence NPC decision-making</li>
@@ -1154,32 +1154,32 @@ const CharacterEditor = ({
       </div>
 
       {/* Preview Panel */}
-      <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <h3 className="font-semibold mb-3">Template Summary</h3>
+      <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
+        <h3 className="font-semibold text-white mb-3">Template Summary</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="font-medium">Archetype:</span> {
+            <span className="font-medium text-gray-300">Archetype:</span> <span className="text-white">{
               CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype)?.label
-            }
+            }</span>
           </div>
           <div>
-            <span className="font-medium">Avg. Attributes:</span> {
+            <span className="font-medium text-gray-300">Avg. Attributes:</span> <span className="text-white">{
               (Object.values(characterData.attributes).reduce((sum, val) => sum + val, 0) / 6).toFixed(1)
-            }
+            }</span>
           </div>
           <div>
-            <span className="font-medium">Skills:</span> {Object.keys(characterData.skills).length}
+            <span className="font-medium text-gray-300">Skills:</span> <span className="text-white">{Object.keys(characterData.skills).length}</span>
           </div>
           <div>
-            <span className="font-medium">Goals:</span> {characterData.goals.length}
+            <span className="font-medium text-gray-300">Goals:</span> <span className="text-white">{characterData.goals.length}</span>
           </div>
           <div>
-            <span className="font-medium">Equipment:</span> {
+            <span className="font-medium text-gray-300">Equipment:</span> <span className="text-white">{
               Object.values(characterData.equipment).flat().length
-            } items
+            } items</span>
           </div>
           <div>
-            <span className="font-medium">Relationships:</span> {characterData.relationshipTemplates.length}
+            <span className="font-medium text-gray-300">Relationships:</span> <span className="text-white">{characterData.relationshipTemplates.length}</span>
           </div>
         </div>
       </div>
@@ -1188,7 +1188,7 @@ const CharacterEditor = ({
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onCancel}
-          className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
         >
           Cancel
         </button>
