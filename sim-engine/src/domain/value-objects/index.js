@@ -5,6 +5,7 @@ export { BaseValueObject } from './BaseValueObject';
 
 // Export new value objects
 export { Alignment } from './Alignment';
+export { CharacterType } from './CharacterType';
 
 // Re-export existing value objects for compatibility
 export { default as PersonalitySystem } from './PersonalitySystem';

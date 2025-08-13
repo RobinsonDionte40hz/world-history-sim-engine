@@ -5,10 +5,12 @@ import { Influence } from '../value-objects/Influence.js';
 import { Prestige } from '../value-objects/Prestige.js';
 import PersonalityProfile from '../value-objects/PersonalityProfile.js';
 import { RacialTraits } from '../value-objects/RacialTraits.js';
+import { CharacterType } from '../value-objects/CharacterType.js';
 import AlignmentService from '../services/AlignmentService.js';
 import InfluenceService from '../services/InfluenceService.js';
 import PrestigeService from '../services/PrestigeService.js';
 import { PrerequisiteValidator } from '../services/PrerequisiteValidator.js';
+import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 class Character {
   constructor(config = {}) {
@@ -17,6 +19,20 @@ class Character {
     this.name = config.name || 'Unnamed Character';
     this.age = config.age || 25;
     this.level = config.level || 1;
+
+    // Character type for validation and field requirements
+    this.characterType = config.characterType instanceof CharacterType
+      ? config.characterType
+      : (config.characterTypeId ? this._createCharacterTypeFromId(config.characterTypeId) : this._getDefaultCharacterType());
+
+    // Assignment tracking - tracks what this character is assigned to
+    this.assignments = config.assignments || {
+      nodes: new Set(config.assignedNodeIds || []),
+      interactions: new Set(config.assignedInteractionIds || []),
+      quests: new Set(config.assignedQuestIds || []),
+      settlements: new Set(config.assignedSettlementIds || []),
+      factions: new Set(config.assignedFactionIds || [])
+    };
 
     // Initialize racial traits first (affects other systems)
     this.racialTraits = config.racialTraits instanceof RacialTraits
@@ -87,6 +103,9 @@ class Character {
     // Ensure goals array exists
     this.goals = Array.isArray(config.goals) ? config.goals : [];
 
+    // Validate character data against type requirements
+    this._validateAgainstType();
+
     // Freeze the character to maintain immutability at the entity level
     Object.freeze(this);
   }
@@ -119,8 +138,430 @@ class Character {
       racialTraits: this.racialTraits.getFeatures(),
       inventory: this.inventory,
       quests: this.quests,
-      location: this.location
+      location: this.location,
+      characterType: this.characterType.typeId,
+      assignments: this.getAssignmentSummary()
     };
+  }
+
+  /**
+   * Validate character data against the character type requirements
+   * @returns {object} - Validation result with success flag and errors
+   */
+  validateAgainstType() {
+    return this.characterType.validateCharacterData({
+      name: this.name,
+      age: this.age,
+      attributes: this.attributes,
+      skills: this.skills,
+      personality: this.personality,
+      alignment: this.alignment,
+      influence: this.influence,
+      prestige: this.prestige,
+      racialTraits: this.racialTraits,
+      inventory: this.inventory,
+      quests: this.quests,
+      relationships: this.relationships,
+      memories: this.memories,
+      location: this.location,
+      energy: this.energy,
+      health: this.health,
+      mood: this.mood,
+      goals: this.goals
+    });
+  }
+
+  /**
+   * Check if this character can be assigned to a specific assignment type
+   * @param {string} assignmentType - Type of assignment to check
+   * @returns {boolean}
+   */
+  canBeAssignedTo(assignmentType) {
+    return this.characterType.canBeAssignedTo(assignmentType);
+  }
+
+  /**
+   * Get all assignments for this character
+   * @returns {object} - Object containing all assignment sets
+   */
+  getAssignments() {
+    return {
+      nodes: new Set(this.assignments.nodes),
+      interactions: new Set(this.assignments.interactions),
+      quests: new Set(this.assignments.quests),
+      settlements: new Set(this.assignments.settlements),
+      factions: new Set(this.assignments.factions)
+    };
+  }
+
+  /**
+   * Get assignment summary with counts
+   * @returns {object} - Summary of assignments with counts
+   */
+  getAssignmentSummary() {
+    return {
+      totalAssignments: this.getTotalAssignmentCount(),
+      byType: {
+        nodes: this.assignments.nodes.size,
+        interactions: this.assignments.interactions.size,
+        quests: this.assignments.quests.size,
+        settlements: this.assignments.settlements.size,
+        factions: this.assignments.factions.size
+      },
+      nodeIds: Array.from(this.assignments.nodes),
+      interactionIds: Array.from(this.assignments.interactions),
+      questIds: Array.from(this.assignments.quests),
+      settlementIds: Array.from(this.assignments.settlements),
+      factionIds: Array.from(this.assignments.factions)
+    };
+  }
+
+  /**
+   * Get total number of assignments
+   * @returns {number}
+   */
+  getTotalAssignmentCount() {
+    return this.assignments.nodes.size + 
+           this.assignments.interactions.size + 
+           this.assignments.quests.size + 
+           this.assignments.settlements.size + 
+           this.assignments.factions.size;
+  }
+
+  /**
+   * Check if character is assigned to a specific item
+   * @param {string} assignmentType - Type of assignment (nodes, interactions, etc.)
+   * @param {string} itemId - ID of the item to check
+   * @returns {boolean}
+   */
+  isAssignedTo(assignmentType, itemId) {
+    if (!this.assignments[assignmentType]) {
+      return false;
+    }
+    return this.assignments[assignmentType].has(itemId);
+  }
+
+  /**
+   * Check if character has any assignments of a specific type
+   * @param {string} assignmentType - Type of assignment to check
+   * @returns {boolean}
+   */
+  hasAssignmentsOfType(assignmentType) {
+    return this.assignments[assignmentType] && this.assignments[assignmentType].size > 0;
+  }
+
+  /**
+   * Assign character to a node
+   * @param {string} nodeId - ID of the node to assign to
+   * @returns {Character} - New Character instance with the assignment
+   */
+  assignToNode(nodeId) {
+    if (!this.canBeAssignedTo('node')) {
+      throw new ValidationError('assignment', nodeId, `Character type '${this.characterType.name}' cannot be assigned to nodes`);
+    }
+    
+    if (this.assignments.nodes.has(nodeId)) {
+      return this; // Already assigned, return same instance
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      nodes: new Set([...this.assignments.nodes, nodeId])
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Unassign character from a node
+   * @param {string} nodeId - ID of the node to unassign from
+   * @returns {Character} - New Character instance without the assignment
+   */
+  unassignFromNode(nodeId) {
+    if (!this.assignments.nodes.has(nodeId)) {
+      return this; // Not assigned, return same instance
+    }
+
+    const newNodes = new Set(this.assignments.nodes);
+    newNodes.delete(nodeId);
+    
+    const newAssignments = {
+      ...this.assignments,
+      nodes: newNodes
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Assign character to an interaction
+   * @param {string} interactionId - ID of the interaction to assign to
+   * @returns {Character} - New Character instance with the assignment
+   */
+  assignToInteraction(interactionId) {
+    if (!this.canBeAssignedTo('interaction')) {
+      throw new ValidationError('assignment', interactionId, `Character type '${this.characterType.name}' cannot be assigned to interactions`);
+    }
+    
+    if (this.assignments.interactions.has(interactionId)) {
+      return this; // Already assigned
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      interactions: new Set([...this.assignments.interactions, interactionId])
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Unassign character from an interaction
+   * @param {string} interactionId - ID of the interaction to unassign from
+   * @returns {Character} - New Character instance without the assignment
+   */
+  unassignFromInteraction(interactionId) {
+    if (!this.assignments.interactions.has(interactionId)) {
+      return this; // Not assigned
+    }
+
+    const newInteractions = new Set(this.assignments.interactions);
+    newInteractions.delete(interactionId);
+    
+    const newAssignments = {
+      ...this.assignments,
+      interactions: newInteractions
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Assign character to a quest
+   * @param {string} questId - ID of the quest to assign to
+   * @returns {Character} - New Character instance with the assignment
+   */
+  assignToQuest(questId) {
+    if (!this.canBeAssignedTo('quest')) {
+      throw new ValidationError('assignment', questId, `Character type '${this.characterType.name}' cannot be assigned to quests`);
+    }
+    
+    if (this.assignments.quests.has(questId)) {
+      return this; // Already assigned
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      quests: new Set([...this.assignments.quests, questId])
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Unassign character from a quest
+   * @param {string} questId - ID of the quest to unassign from
+   * @returns {Character} - New Character instance without the assignment
+   */
+  unassignFromQuest(questId) {
+    if (!this.assignments.quests.has(questId)) {
+      return this; // Not assigned
+    }
+
+    const newQuests = new Set(this.assignments.quests);
+    newQuests.delete(questId);
+    
+    const newAssignments = {
+      ...this.assignments,
+      quests: newQuests
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Assign character to a settlement
+   * @param {string} settlementId - ID of the settlement to assign to
+   * @returns {Character} - New Character instance with the assignment
+   */
+  assignToSettlement(settlementId) {
+    if (!this.canBeAssignedTo('settlement')) {
+      throw new ValidationError('assignment', settlementId, `Character type '${this.characterType.name}' cannot be assigned to settlements`);
+    }
+    
+    if (this.assignments.settlements.has(settlementId)) {
+      return this; // Already assigned
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      settlements: new Set([...this.assignments.settlements, settlementId])
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Unassign character from a settlement
+   * @param {string} settlementId - ID of the settlement to unassign from
+   * @returns {Character} - New Character instance without the assignment
+   */
+  unassignFromSettlement(settlementId) {
+    if (!this.assignments.settlements.has(settlementId)) {
+      return this; // Not assigned
+    }
+
+    const newSettlements = new Set(this.assignments.settlements);
+    newSettlements.delete(settlementId);
+    
+    const newAssignments = {
+      ...this.assignments,
+      settlements: newSettlements
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Assign character to a faction
+   * @param {string} factionId - ID of the faction to assign to
+   * @returns {Character} - New Character instance with the assignment
+   */
+  assignToFaction(factionId) {
+    if (!this.canBeAssignedTo('faction')) {
+      throw new ValidationError('assignment', factionId, `Character type '${this.characterType.name}' cannot be assigned to factions`);
+    }
+    
+    if (this.assignments.factions.has(factionId)) {
+      return this; // Already assigned
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      factions: new Set([...this.assignments.factions, factionId])
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Unassign character from a faction
+   * @param {string} factionId - ID of the faction to unassign from
+   * @returns {Character} - New Character instance without the assignment
+   */
+  unassignFromFaction(factionId) {
+    if (!this.assignments.factions.has(factionId)) {
+      return this; // Not assigned
+    }
+
+    const newFactions = new Set(this.assignments.factions);
+    newFactions.delete(factionId);
+    
+    const newAssignments = {
+      ...this.assignments,
+      factions: newFactions
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Clear all assignments of a specific type
+   * @param {string} assignmentType - Type of assignments to clear
+   * @returns {Character} - New Character instance with cleared assignments
+   */
+  clearAssignmentsOfType(assignmentType) {
+    if (!this.assignments[assignmentType] || this.assignments[assignmentType].size === 0) {
+      return this; // No assignments to clear
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      [assignmentType]: new Set()
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Clear all assignments
+   * @returns {Character} - New Character instance with no assignments
+   */
+  clearAllAssignments() {
+    if (this.getTotalAssignmentCount() === 0) {
+      return this; // No assignments to clear
+    }
+
+    const newAssignments = {
+      nodes: new Set(),
+      interactions: new Set(),
+      quests: new Set(),
+      settlements: new Set(),
+      factions: new Set()
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Update character type and revalidate
+   * @param {CharacterType} newCharacterType - New character type
+   * @returns {Character} - New Character instance with updated type
+   */
+  withCharacterType(newCharacterType) {
+    if (!(newCharacterType instanceof CharacterType)) {
+      throw new ValidationError('characterType', newCharacterType, 'Character type must be an instance of CharacterType');
+    }
+
+    const newCharacter = new Character({
+      ...this._getSerializableConfig(),
+      characterType: newCharacterType
+    });
+
+    // Validate against new type
+    const validation = newCharacter.validateAgainstType();
+    if (!validation.success) {
+      const errorMessages = validation.errors.map(err => err.message).join('; ');
+      throw new ValidationError('characterType', newCharacterType, `Character data does not meet requirements for type '${newCharacterType.name}': ${errorMessages}`);
+    }
+
+    return newCharacter;
   }
 
   /**
@@ -503,6 +944,16 @@ class Character {
       age: this.age,
       level: this.level,
 
+      // Character type and assignments
+      characterType: this.characterType.toJSON(),
+      assignments: {
+        nodes: Array.from(this.assignments.nodes),
+        interactions: Array.from(this.assignments.interactions),
+        quests: Array.from(this.assignments.quests),
+        settlements: Array.from(this.assignments.settlements),
+        factions: Array.from(this.assignments.factions)
+      },
+
       // Value objects
       alignment: this.alignment.toJSON(),
       influence: this.influence.toJSON(),
@@ -547,6 +998,14 @@ class Character {
       name: data.name,
       age: data.age,
       level: data.level,
+
+      // Reconstruct character type and assignments
+      characterType: data.characterType ? CharacterType.fromJSON(data.characterType) : undefined,
+      assignedNodeIds: data.assignments?.nodes || [],
+      assignedInteractionIds: data.assignments?.interactions || [],
+      assignedQuestIds: data.assignments?.quests || [],
+      assignedSettlementIds: data.assignments?.settlements || [],
+      assignedFactionIds: data.assignments?.factions || [],
 
       // Reconstruct value objects
       alignment: data.alignment ? Alignment.fromJSON(data.alignment) : undefined,
@@ -597,6 +1056,8 @@ class Character {
       name: this.name,
       age: this.age,
       level: this.level,
+      characterType: this.characterType,
+      assignments: this.assignments,
       alignment: this.alignment,
       influence: this.influence,
       prestige: this.prestige,
@@ -608,8 +1069,64 @@ class Character {
       quests: this.quests,
       relationships: this.relationships,
       memories: this.memories,
-      location: this.location
+      location: this.location,
+      energy: this.energy,
+      health: this.health,
+      mood: this.mood,
+      currentNodeId: this.currentNodeId,
+      lastInteractionType: this.lastInteractionType,
+      consciousness: this.consciousness,
+      goals: this.goals
     };
+  }
+
+  /**
+   * Validate character against its type requirements (internal)
+   * @private
+   */
+  _validateAgainstType() {
+    const validation = this.validateAgainstType();
+    if (!validation.success) {
+      // For now, just log warnings for failed validation
+      // In production, you might want to be more strict
+      console.warn(`Character '${this.name}' (${this.id}) does not fully meet requirements for type '${this.characterType.name}':`, validation.errors);
+      
+      // Throw error only for critical validation failures
+      const criticalErrors = validation.errors.filter(error => error.type === 'required');
+      if (criticalErrors.length > 0) {
+        const errorMessages = criticalErrors.map(err => err.message).join('; ');
+        throw new ValidationError('characterValidation', this, `Character validation failed: ${errorMessages}`);
+      }
+    }
+  }
+
+  /**
+   * Create character type from type ID
+   * @param {string} typeId - The character type ID
+   * @returns {CharacterType} - The character type instance
+   * @private
+   */
+  _createCharacterTypeFromId(typeId) {
+    const predefinedTypes = CharacterType.createPredefinedTypes();
+    if (predefinedTypes[typeId]) {
+      return predefinedTypes[typeId];
+    }
+    
+    // If not found in predefined types, create a generic type with the given ID
+    return new CharacterType({
+      typeId: typeId,
+      name: `Custom ${typeId.charAt(0).toUpperCase()}${typeId.slice(1)}`,
+      description: `Custom character type: ${typeId}`
+    });
+  }
+
+  /**
+   * Get default character type
+   * @returns {CharacterType} - Default generic character type
+   * @private
+   */
+  _getDefaultCharacterType() {
+    return CharacterType.createPredefinedTypes().generic;
   }
 
   /**
