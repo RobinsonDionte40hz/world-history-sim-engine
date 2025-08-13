@@ -6,7 +6,6 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import useWorldBuilder from '../hooks/useWorldBuilder';
 import TemplateManager from '../../template/TemplateManager';
 
 const WorldContext = createContext();
@@ -21,8 +20,7 @@ export const WorldProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Initialize world builder for current world
-    const worldBuilderState = useWorldBuilder(templateManager);
+    // Template manager for world operations
 
     // Load worlds from localStorage on mount
     useEffect(() => {
@@ -64,36 +62,43 @@ export const WorldProvider = ({ children }) => {
         loadWorlds();
     }, []); // Empty dependency array is correct for mount-only effect
 
-    // Save worlds to localStorage whenever worlds change
+    // Optimized persistence with debouncing to reduce localStorage writes
     useEffect(() => {
         if (worlds.size > 0) { // Only save if we have worlds to avoid saving empty state on mount
-            try {
-                const worldsData = {};
-                worlds.forEach((world, id) => {
-                    worldsData[id] = {
-                        ...world,
-                        lastModified: world.lastModified.toISOString()
-                    };
-                });
+            // Debounce persistence to avoid excessive localStorage writes
+            const timeoutId = setTimeout(() => {
+                try {
+                    const worldsData = {};
+                    worlds.forEach((world, id) => {
+                        worldsData[id] = {
+                            ...world,
+                            lastModified: world.lastModified.toISOString()
+                        };
+                    });
 
-                localStorage.setItem('worlds', JSON.stringify(worldsData));
+                    // Batch localStorage operations
+                    localStorage.setItem('worlds', JSON.stringify(worldsData));
+                    if (currentWorldId) {
+                        localStorage.setItem('currentWorldId', currentWorldId);
+                    }
 
-                if (currentWorldId) {
-                    localStorage.setItem('currentWorldId', currentWorldId);
+                    console.log('Worlds persisted to localStorage');
+                } catch (err) {
+                    console.error('Error saving worlds:', err);
+                    setError(`Failed to save worlds: ${err.message}`);
                 }
-            } catch (err) {
-                console.error('Error saving worlds:', err);
-                setError(`Failed to save worlds: ${err.message}`);
-            }
+            }, 100); // 100ms debounce
+
+            return () => clearTimeout(timeoutId);
         }
-    }, [worlds, currentWorldId]); // Include currentWorldId as it's used in the effect
+    }, [worlds, currentWorldId]);
 
 
 
 
 
-    // Create a new world
-    const createWorld = useCallback((name, description) => {
+    // Create a new world with optimistic updates
+    const createWorld = useCallback(async (name, description) => {
         try {
             const worldId = `world_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
             const newWorld = {
@@ -124,9 +129,13 @@ export const WorldProvider = ({ children }) => {
                 }
             };
 
+            // Optimistic update - immediately update UI state
             setWorlds(prev => new Map(prev).set(worldId, newWorld));
             setCurrentWorldId(worldId);
             setError(null);
+
+            // Async persistence happens in background via useEffect
+            // No need to await here - the UI is already updated
 
             return worldId;
         } catch (err) {
@@ -199,21 +208,14 @@ export const WorldProvider = ({ children }) => {
         );
     }, [worlds]);
 
-    // Sync world builder state with current world
+    // Simple sync - no world builder, just direct world management
     useEffect(() => {
-        const currentWorld = getCurrentWorld();
-        if (currentWorld && worldBuilderState && worldBuilderState.worldConfig) {
-            // Update world config when world builder state changes
-            const currentConfigStr = JSON.stringify(currentWorld.worldConfig);
-            const builderConfigStr = JSON.stringify(worldBuilderState.worldConfig);
+        // Any additional sync logic would go here if needed
+        // Currently just managing worlds directly through WorldContext
+    }, [currentWorldId]);
 
-            if (currentConfigStr !== builderConfigStr) {
-                updateWorldConfig(worldBuilderState.worldConfig);
-            }
-        }
-    }, [worldBuilderState, getCurrentWorld, updateWorldConfig]); // Include worldBuilderState as dependency
-
-    const contextValue = {
+    // Memoize context value to prevent unnecessary re-renders
+    const contextValue = React.useMemo(() => ({
         // World management
         currentWorldId,
         worlds: getAllWorlds(),
@@ -227,14 +229,25 @@ export const WorldProvider = ({ children }) => {
         deleteWorld,
         updateWorldConfig,
 
-        // World builder integration
-        worldBuilder: worldBuilderState,
+        // Template management
         templateManager,
 
         // Computed properties
         hasWorlds: worlds.size > 0,
         worldCount: worlds.size
-    };
+    }), [
+        currentWorldId,
+        getAllWorlds,
+        getCurrentWorld,
+        isLoading,
+        error,
+        createWorld,
+        switchToWorld,
+        deleteWorld,
+        updateWorldConfig,
+        templateManager,
+        worlds.size
+    ]);
 
     return (
         <WorldContext.Provider value={contextValue}>

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import useWorldBuilder from '../hooks/useWorldBuilder';
+import { useWorldContext } from '../contexts/WorldContext';
 
 // Time progression presets
 const TIME_PROGRESSION_PRESETS = {
@@ -94,6 +95,14 @@ const SIMULATION_PRESETS = {
 const WorldNodeEditorPageNew = () => {
   const navigate = useNavigate();
   const worldBuilder = useWorldBuilder();
+  
+  // Add WorldContext integration
+  const { 
+    createWorld, 
+    updateWorldConfig, 
+    currentWorldId, 
+    currentWorld 
+  } = useWorldContext();
 
   // Form state
   const [worldData, setWorldData] = useState({
@@ -118,6 +127,7 @@ const WorldNodeEditorPageNew = () => {
   const [activeTab, setActiveTab] = useState('basic');
   const [previewMode, setPreviewMode] = useState(false);
   const [showNextSteps, setShowNextSteps] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Validation
   const validateWorld = useCallback(() => {
@@ -139,7 +149,7 @@ const WorldNodeEditorPageNew = () => {
     return errors.length === 0;
   }, [worldData]);
 
-  // Handle save
+  // Handle save with WorldContext integration
   const handleSave = useCallback(async () => {
     if (!validateWorld()) {
       return;
@@ -148,7 +158,29 @@ const WorldNodeEditorPageNew = () => {
     try {
       setIsSaving(true);
 
-      // Update world builder
+      // Create or update world in WorldContext for persistence
+      let worldId = currentWorldId;
+      
+      if (!worldId) {
+        // Create new world in WorldContext
+        worldId = await createWorld(worldData.name, worldData.description);
+        console.log('Created new world in WorldContext:', worldId);
+      } else {
+        // Update existing world
+        console.log('Updating existing world in WorldContext:', worldId);
+      }
+
+      // Update world configuration in WorldContext
+      if (worldId) {
+        await updateWorldConfig({
+          name: worldData.name,
+          description: worldData.description,
+          rules: worldData.rules,
+          initialConditions: worldData.initialConditions
+        });
+      }
+
+      // Also update local WorldBuilder for consistency
       if (worldBuilder) {
         worldBuilder.setWorldProperties(worldData.name, worldData.description);
         worldBuilder.setRules(worldData.rules);
@@ -156,13 +188,17 @@ const WorldNodeEditorPageNew = () => {
       }
 
       setHasUnsavedChanges(false);
-      console.log('World saved successfully!');
+      setSaveSuccess(true);
+      console.log('World saved successfully to both systems!');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving world:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [worldData, worldBuilder, validateWorld]);
+  }, [worldData, worldBuilder, validateWorld, currentWorldId, createWorld, updateWorldConfig]);
 
   // Handle navigation
   const handleNavigate = useCallback((path) => {
@@ -202,8 +238,8 @@ const WorldNodeEditorPageNew = () => {
       return steps;
     }
 
-    // Check if world is saved
-    const isSaved = !hasUnsavedChanges;
+    // Check if world is saved (both locally and in WorldContext)
+    const isSaved = !hasUnsavedChanges && (currentWorldId || saveSuccess);
     steps.push({
       title: "Save Your World Foundation",
       description: "Save your world configuration to make it available for building",
@@ -274,6 +310,18 @@ const WorldNodeEditorPageNew = () => {
         </div>
       )}
 
+      {/* Success Message */}
+      {saveSuccess && (
+        <div className="bg-green-600/10 border-b border-green-600/30 px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            <div className="text-green-400 text-sm font-medium">
+              World foundation saved successfully! Ready to proceed to next steps.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Full width responsive container */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
@@ -308,7 +356,7 @@ const WorldNodeEditorPageNew = () => {
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
             >
-              {isSaving ? 'Saving...' : (hasUnsavedChanges ? 'Save World' : 'Saved')}
+              {isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : (hasUnsavedChanges ? 'Save World' : 'Saved'))}
             </button>
 
             <button
@@ -537,49 +585,64 @@ const WorldNodeEditorPageNew = () => {
             <h2 className="text-2xl font-bold text-white text-center mb-8">
               Next Steps
             </h2>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               <button
                 onClick={() => handleNavigate('/editors/nodes')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Settings className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Nodes</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Nodes</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Define locations and contexts within your world
                 </p>
               </button>
 
               <button
                 onClick={() => handleNavigate('/editors/characters')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Settings className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Characters</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Characters</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Design NPCs with personalities and attributes
                 </p>
               </button>
 
               <button
                 onClick={() => handleNavigate('/editors/interactions')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Settings className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Interactions</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Interactions</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Define actions and capabilities for your world
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('/editors/encounters')}
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Create Encounters</h3>
+                </div>
+                <p className="text-gray-300 text-sm text-left">
+                  Design dynamic encounters with turn-based mechanics
                 </p>
               </button>
             </div>

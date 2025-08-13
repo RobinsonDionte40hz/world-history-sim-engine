@@ -28,17 +28,10 @@ const NodeEditorPage = () => {
   const navigate = useNavigate();
   const { 
     currentWorldId,
-    worldBuilder,
+    currentWorld,
+    updateWorldConfig,
     error: worldError
   } = useWorldContext();
-
-  // Extract world builder methods and state
-  const {
-    addNode,
-    worldConfig,
-    error: builderError,
-    canProceedToStep
-  } = worldBuilder || {};
   
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
@@ -47,14 +40,14 @@ const NodeEditorPage = () => {
   const [validationErrors, setValidationErrors] = useState([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Auto-save functionality
-  const autoSaveFunction = useCallback(async (nodeData) => {
-    if (!currentWorldId || !canProceedToStep || !canProceedToStep(2) || !addNode) {
-      return; // Don't auto-save if prerequisites aren't met
+  // Simple addNode function that works with WorldContext
+  const addNode = useCallback((nodeData) => {
+    if (!currentWorld) {
+      throw new Error('No current world selected');
     }
 
-    // Transform NodeEditor data to WorldBuilder format
-    const worldBuilderNodeData = {
+    // Transform NodeEditor data to world config format
+    const worldNodeData = {
       id: nodeData.id,
       name: nodeData.name,
       type: nodeData.type,
@@ -78,17 +71,33 @@ const NodeEditorPage = () => {
       metadata: nodeData.metadata || {}
     };
 
+    // Add node to current world's config
+    const updatedNodes = [...(currentWorld.worldConfig.nodes || []), worldNodeData];
+    updateWorldConfig({
+      ...currentWorld.worldConfig,
+      nodes: updatedNodes
+    });
+
+    console.log('Added node to world:', nodeData.name);
+  }, [currentWorld, updateWorldConfig]);
+
+  // Auto-save functionality
+  const autoSaveFunction = useCallback(async (nodeData) => {
+    if (!currentWorldId || !currentWorld) {
+      return; // Don't auto-save if no world selected
+    }
+
     // Validate before auto-saving
-    const validation = WorldValidator.validateSingleNode(worldBuilderNodeData);
+    const validation = WorldValidator.validateSingleNode(nodeData);
     if (!validation.isValid) {
       console.warn('Auto-save skipped due to validation errors:', validation.errors);
       return;
     }
 
-    // Save using WorldBuilder
-    addNode(worldBuilderNodeData);
+    // Save using our addNode function
+    addNode(nodeData);
     console.log('Auto-saved node:', nodeData.name);
-  }, [currentWorldId, canProceedToStep, addNode]);
+  }, [currentWorldId, currentWorld, addNode]);
 
   // Auto-save hook - saves every 30 seconds, only if node is valid
   const {
@@ -101,7 +110,7 @@ const NodeEditorPage = () => {
     currentNode, 
     autoSaveFunction, 
     30000, // 30 seconds
-    currentNode && currentWorldId && canProceedToStep && canProceedToStep(2) // Only enable if ready
+    currentNode && currentWorldId && currentWorld // Only enable if world is selected
   );
 
   // Validation using centralized domain validator
@@ -113,9 +122,8 @@ const NodeEditorPage = () => {
       errors.push({ field: 'world', message: 'No world selected. Please create or select a world first.' });
     }
 
-    // Add builder error if present
-    if (builderError) {
-      errors.push({ field: 'builder', message: builderError });
+    if (!currentWorld) {
+      errors.push({ field: 'world', message: 'Current world not found.' });
     }
 
     // Add world error if present
@@ -140,7 +148,7 @@ const NodeEditorPage = () => {
 
     setValidationErrors(errors);
     return errors.length === 0;
-  }, [currentNode, builderError, worldError, currentWorldId]);
+  }, [currentNode, worldError, currentWorldId, currentWorld]);
 
 
 
@@ -152,7 +160,7 @@ const NodeEditorPage = () => {
     }
 
     // Check if we have a current world
-    if (!currentWorldId) {
+    if (!currentWorldId || !currentWorld) {
       setValidationErrors([{ 
         field: 'world', 
         message: 'No world selected. Please create or select a world first.' 
@@ -160,57 +168,19 @@ const NodeEditorPage = () => {
       return;
     }
 
-    // Check if we can proceed to step 2 (node creation)
-    if (!canProceedToStep || !canProceedToStep(2)) {
-      setValidationErrors([{ 
-        field: 'world', 
-        message: 'World properties must be set before creating nodes. Please complete Step 1 first.' 
-      }]);
-      return;
-    }
-
     setIsSaving(true);
     try {
-      // Transform NodeEditor data to WorldBuilder format
-      const worldBuilderNodeData = {
-        id: nodeData.id,
-        name: nodeData.name,
-        type: nodeData.type,
-        description: nodeData.description,
-        environmentalProperties: {
-          environment: nodeData.environment,
-          features: nodeData.features,
-          developmentLevel: nodeData.developmentLevel,
-          ...nodeData.modifiers
-        },
-        resourceAvailability: nodeData.resources.reduce((acc, resource) => {
-          acc[resource] = 'available';
-          return acc;
-        }, {}),
-        culturalContext: {
-          populationCapacity: nodeData.populationCapacity,
-          currentPopulation: nodeData.currentPopulation,
-          tags: nodeData.tags
-        },
-        connections: nodeData.connections || [],
-        metadata: nodeData.metadata || {}
-      };
+      // Save using our addNode function
+      addNode(nodeData);
+      
+      // Force auto-save to update its state
+      await saveNowAuto();
+      
+      setSaveSuccess(true);
+      console.log('Node saved manually to world:', currentWorldId, nodeData);
 
-      // Save using the WorldBuilder hook
-      if (addNode) {
-        addNode(worldBuilderNodeData);
-        
-        // Force auto-save to update its state
-        await saveNowAuto();
-        
-        setSaveSuccess(true);
-        console.log('Node saved manually to world:', currentWorldId, worldBuilderNodeData);
-
-        // Clear success message after 3 seconds
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        throw new Error('World builder not available');
-      }
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
       
     } catch (error) {
       console.error('Save failed:', error);
@@ -328,41 +298,100 @@ const NodeEditorPage = () => {
               Create abstract locations and contexts for your world
             </p>
             
-            {/* World Selector */}
-            <div className="mt-6 max-w-md mx-auto">
-              <WorldSelector compact={true} />
+            {/* World Selection Section */}
+            <div className="mt-6 max-w-2xl mx-auto">
+              <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-3 text-center">
+                  Select Target World
+                </h3>
+                <p className="text-gray-300 text-sm text-center mb-4">
+                  Choose which world this node will be added to
+                </p>
+                <WorldSelector compact={true} />
+              </div>
             </div>
             
-            {/* World readiness status */}
-            {!currentWorldId && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg max-w-2xl mx-auto">
-                <div className="flex items-center gap-2 justify-center">
-                  <AlertTriangle className="w-5 h-5 text-red-400" />
-                  <p className="text-red-300 text-sm">
-                    No world selected. Please create or select a world first.
-                  </p>
+            {/* World Selection Status */}
+            <div className="mt-4 max-w-2xl mx-auto">
+              {!currentWorldId ? (
+                <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    <div className="text-center">
+                      <p className="text-red-300 text-sm mb-2">
+                        No world selected. Please create or select a world first.
+                      </p>
+                      <button
+                        onClick={() => navigate('/editors/world')}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
+                      >
+                        Create World
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 justify-center">
+                    <CheckCircle className="w-5 h-5 text-blue-400" />
+                    <div className="text-center">
+                      <p className="text-blue-300 text-sm mb-1">
+                        <strong>Target World:</strong> {currentWorld?.name || 'Unknown'}
+                      </p>
+                      <p className="text-blue-200 text-xs">
+                        Nodes will be added to this world
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             
-            {currentWorldId && canProceedToStep && !canProceedToStep(2) && (
+            {currentWorldId && currentWorld && (!currentWorld.worldConfig.name || !currentWorld.worldConfig.description) && (
               <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg max-w-2xl mx-auto">
                 <div className="flex items-center gap-2 justify-center">
                   <AlertTriangle className="w-5 h-5 text-yellow-400" />
                   <p className="text-yellow-300 text-sm">
-                    World properties must be set before creating nodes. Please complete Step 1 first.
+                    World properties must be set before creating nodes. Please complete world setup first.
                   </p>
                 </div>
               </div>
             )}
             
-            {currentWorldId && canProceedToStep && canProceedToStep(2) && worldConfig && worldConfig.nodes.length === 0 && (
+            {currentWorldId && currentWorld && currentWorld.worldConfig.name && currentWorld.worldConfig.description && (!currentWorld.worldConfig.nodes || currentWorld.worldConfig.nodes.length === 0) && (
               <div className="mt-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg max-w-2xl mx-auto">
                 <div className="flex items-center gap-2 justify-center">
                   <CheckCircle className="w-5 h-5 text-green-400" />
                   <p className="text-green-300 text-sm">
                     Ready to create nodes! Your world is properly configured.
                   </p>
+                </div>
+              </div>
+            )}
+            
+            {/* World Details Panel */}
+            {currentWorldId && currentWorld && (
+              <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg max-w-2xl mx-auto">
+                <h4 className="text-white font-medium mb-2 text-center">World Details</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-gray-400">Nodes</div>
+                    <div className="text-white font-medium">
+                      {currentWorld.worldConfig?.nodes?.length || 0}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-400">Characters</div>
+                    <div className="text-white font-medium">
+                      {currentWorld.worldConfig?.characters?.length || 0}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 text-center">
+                  <div className="text-gray-400 text-xs">Description</div>
+                  <div className="text-gray-300 text-xs mt-1">
+                    {currentWorld.description || currentWorld.worldConfig?.description || 'No description'}
+                  </div>
                 </div>
               </div>
             )}
@@ -406,9 +435,9 @@ const NodeEditorPage = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => currentNode && handleSave(currentNode)}
-                disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0 || !currentNode || !currentWorldId || (canProceedToStep && !canProceedToStep(2))}
+                disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0 || !currentNode || !currentWorldId || !currentWorld}
                 className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                  hasUnsavedChanges && !isSaving && validationErrors.length === 0 && currentNode && currentWorldId && canProceedToStep && canProceedToStep(2)
+                  hasUnsavedChanges && !isSaving && validationErrors.length === 0 && currentNode && currentWorldId && currentWorld
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   }`}
@@ -416,7 +445,7 @@ const NodeEditorPage = () => {
                 {isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : (hasUnsavedChanges ? 'Save Node' : 'Save Node'))}
               </button>
 
-              {hasUnsavedChanges && !isSaving && currentNode && currentWorldId && canProceedToStep && canProceedToStep(2) && (
+              {hasUnsavedChanges && !isSaving && currentNode && currentWorldId && currentWorld && (
                 <button
                   onClick={() => saveNowAuto()}
                   disabled={isAutoSaving}
@@ -517,13 +546,13 @@ const NodeEditorPage = () => {
           </div>
 
           {/* Current World Nodes */}
-          {worldConfig && worldConfig.nodes && worldConfig.nodes.length > 0 && (
+          {currentWorld && currentWorld.worldConfig && currentWorld.worldConfig.nodes && currentWorld.worldConfig.nodes.length > 0 && (
             <div className="mt-12">
               <h2 className="text-2xl font-bold text-white text-center mb-8">
-                Current World Nodes ({worldConfig.nodes.length})
+                Current World Nodes ({currentWorld.worldConfig.nodes.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {worldConfig.nodes.map((node) => (
+                {currentWorld.worldConfig.nodes.map((node) => (
                   <div
                     key={node.id}
                     className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl"
@@ -568,34 +597,49 @@ const NodeEditorPage = () => {
             <h2 className="text-2xl font-bold text-white text-center mb-8">
               Next Steps
             </h2>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
               <button
                 onClick={() => navigate('/editors/characters')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Settings className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Characters</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Characters</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Design NPCs with personalities and attributes
                 </p>
               </button>
 
               <button
                 onClick={() => navigate('/editors/interactions')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Settings className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Interactions</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Interactions</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Define actions and capabilities for your world
+                </p>
+              </button>
+
+              <button
+                onClick={() => navigate('/editors/encounters')}
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Create Encounters</h3>
+                </div>
+                <p className="text-gray-300 text-sm text-left">
+                  Design dynamic encounters with turn-based mechanics
                 </p>
               </button>
             </div>

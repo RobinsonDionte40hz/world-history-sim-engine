@@ -21,14 +21,26 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle,
-  X
+  X,
+  Settings
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import EncounterEditor from '../components/EncounterEditor';
+import WorldSelector from '../components/WorldSelector';
+import { useWorldContext } from '../contexts/WorldContext';
 import Encounter from '../../domain/entities/Encounter';
 
 const EncounterEditorPage = () => {
   const navigate = useNavigate();
+  
+  // WorldContext integration
+  const { 
+    currentWorldId,
+    currentWorld,
+    updateWorldConfig,
+    error: worldError
+  } = useWorldContext();
+  
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
@@ -39,10 +51,25 @@ const EncounterEditorPage = () => {
   const [testResults, setTestResults] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
   const [showNextSteps, setShowNextSteps] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const validateEncounter = useCallback(() => {
     const errors = [];
     
+    // World validation
+    if (!currentWorldId) {
+      errors.push({ field: 'world', message: 'No world selected. Please create or select a world first.' });
+    }
+    
+    if (!currentWorld) {
+      errors.push({ field: 'world', message: 'Current world not found.' });
+    }
+    
+    if (worldError) {
+      errors.push({ field: 'world', message: worldError });
+    }
+    
+    // Encounter validation
     if (!currentEncounter?.name?.trim()) {
       errors.push({ field: 'name', message: 'Encounter name is required' });
     }
@@ -66,7 +93,7 @@ const EncounterEditorPage = () => {
     
     setValidationErrors(errors);
     return errors.length === 0;
-  }, [currentEncounter]);
+  }, [currentEncounter, currentWorldId, currentWorld, worldError]);
 
   // Real-time validation
   useEffect(() => {
@@ -150,8 +177,30 @@ const EncounterEditorPage = () => {
       
       localStorage.setItem('interactions', JSON.stringify(interactions));
       
+      // Update world config with encounter reference if world is selected
+      if (currentWorldId && currentWorld) {
+        const updatedEncounters = [...(currentWorld.worldConfig.encounters || [])];
+        const existingEncounterIndex = updatedEncounters.findIndex(e => e.id === encounterEntity.id);
+        
+        if (existingEncounterIndex >= 0) {
+          updatedEncounters[existingEncounterIndex] = encounterEntity.toJSON();
+        } else {
+          updatedEncounters.push(encounterEntity.toJSON());
+        }
+        
+        updateWorldConfig({
+          ...currentWorld.worldConfig,
+          encounters: updatedEncounters
+        });
+      }
+      
       setHasUnsavedChanges(false);
       setLastSaved(new Date());
+      setSaveSuccess(true);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
+      
       console.log('Saved encounter and generated interactions:', generatedInteractions);
     } catch (error) {
       console.error('Save failed:', error);
@@ -457,16 +506,16 @@ const EncounterEditorPage = () => {
 
     if (isSaved) {
       steps.push({
-        title: "Assign to Nodes",
-        description: "Add this encounter to specific nodes in your world",
-        action: "Go to Node Editor → Select a node → Add this encounter to its available encounters",
+        title: "Create Supporting Elements",
+        description: "Ensure your world has nodes and characters for encounters",
+        action: "Use the 'Next Steps' buttons below to create nodes and characters",
         completed: false
       });
 
       steps.push({
         title: "Test in Simulation",
         description: "Run the turn-based simulation to see your encounter in action",
-        action: "Navigate to World Foundation → Start Simulation → Watch for encounter triggers",
+        action: "Navigate to Simulation → Start turn-based simulation → Watch for encounter triggers",
         completed: false
       });
 
@@ -511,6 +560,18 @@ const EncounterEditorPage = () => {
         </div>
       )}
 
+      {/* Success Message */}
+      {saveSuccess && (
+        <div className="bg-green-600/10 border-b border-green-600/30 px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            <div className="text-green-400 text-sm font-medium">
+              Encounter saved successfully to your world!
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Full width responsive container */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
@@ -526,6 +587,55 @@ const EncounterEditorPage = () => {
             <p className="text-lg text-gray-300 max-w-2xl mx-auto">
               Create dynamic encounters with turn-based mechanics
             </p>
+            
+            {/* World Selection Section */}
+            <div className="mt-6 max-w-2xl mx-auto">
+              <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-3 text-center">
+                  Select Target World
+                </h3>
+                <p className="text-gray-300 text-sm text-center mb-4">
+                  Choose which world this encounter will be added to
+                </p>
+                <WorldSelector compact={true} />
+              </div>
+            </div>
+            
+            {/* World Selection Status */}
+            <div className="mt-4 max-w-2xl mx-auto">
+              {!currentWorldId ? (
+                <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    <div className="text-center">
+                      <p className="text-red-300 text-sm mb-2">
+                        No world selected. Please create or select a world first.
+                      </p>
+                      <button
+                        onClick={() => navigate('/editors/world')}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
+                      >
+                        Create World
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 justify-center">
+                    <CheckCircle className="w-5 h-5 text-blue-400" />
+                    <div className="text-center">
+                      <p className="text-blue-300 text-sm mb-1">
+                        <strong>Target World:</strong> {currentWorld?.name || 'Unknown'}
+                      </p>
+                      <p className="text-blue-200 text-xs">
+                        Encounters will be added to this world
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -596,13 +706,13 @@ const EncounterEditorPage = () => {
 
             <button
               onClick={handleSave}
-              disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0}
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${hasUnsavedChanges && !isSaving && validationErrors.length === 0
+              disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0 || !currentEncounter || !currentWorldId || !currentWorld}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${hasUnsavedChanges && !isSaving && validationErrors.length === 0 && currentEncounter && currentWorldId && currentWorld
                 ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
             >
-              {isSaving ? 'Saving...' : (hasUnsavedChanges ? 'Save Encounter' : 'Saved')}
+              {isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : (hasUnsavedChanges ? 'Save Encounter' : 'Save Encounter'))}
             </button>
 
             <button
@@ -846,34 +956,49 @@ const EncounterEditorPage = () => {
             <h2 className="text-2xl font-bold text-white text-center mb-8">
               Next Steps
             </h2>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
               <button
                 onClick={() => navigate('/editors/nodes')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Swords className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Nodes</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Nodes</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Define locations and contexts within your world
                 </p>
               </button>
 
               <button
                 onClick={() => navigate('/editors/characters')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Swords className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Characters</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Characters</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Design NPCs with personalities and attributes
+                </p>
+              </button>
+
+              <button
+                onClick={() => navigate('/simulation')}
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-emerald-400 hover:bg-white/20 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-emerald-500/20 rounded-lg group-hover:bg-emerald-500/30 transition-colors">
+                    <Settings className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Start Simulation</h3>
+                </div>
+                <p className="text-gray-300 text-sm text-left">
+                  Run the turn-based simulation to see encounters in action
                 </p>
               </button>
             </div>

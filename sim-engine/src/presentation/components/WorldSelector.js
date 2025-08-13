@@ -31,11 +31,14 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
 
     setIsCreating(true);
     try {
-      const worldId = createWorld(newWorldName.trim(), newWorldDescription.trim());
+      // createWorld is now async and returns immediately with optimistic update
+      const worldId = await createWorld(newWorldName.trim(), newWorldDescription.trim());
+
+      // UI updates immediately due to optimistic update
       setNewWorldName('');
       setNewWorldDescription('');
       setShowCreateForm(false);
-      
+
       if (onWorldSelected) {
         onWorldSelected(worldId);
       }
@@ -48,6 +51,20 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
 
   const handleSelectWorld = (worldId) => {
     try {
+      const selectedWorld = worlds.find(w => w.id === worldId);
+      const currentWorldName = worlds.find(w => w.id === currentWorldId)?.name;
+      
+      // Show confirmation if switching between different worlds
+      if (currentWorldId && currentWorldId !== worldId && selectedWorld) {
+        const confirmSwitch = window.confirm(
+          `Switch from "${currentWorldName}" to "${selectedWorld.name}"?\n\n` +
+          `This will change which world new nodes are added to.`
+        );
+        if (!confirmSwitch) {
+          return;
+        }
+      }
+      
       switchToWorld(worldId);
       if (onWorldSelected) {
         onWorldSelected(worldId);
@@ -84,9 +101,20 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
           <div className="p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-blue-400" />
-              <span className="text-blue-300 text-sm font-medium">
-                {worlds.find(w => w.id === currentWorldId)?.name || 'Unknown World'}
-              </span>
+              <div className="flex-1">
+                <span className="text-blue-300 text-sm font-medium">
+                  {worlds.find(w => w.id === currentWorldId)?.name || 'Unknown World'}
+                </span>
+                <div className="text-blue-200 text-xs mt-1">
+                  {(() => {
+                    const world = worlds.find(w => w.id === currentWorldId);
+                    if (!world) return 'Unknown world';
+                    const nodeCount = world.worldConfig?.nodes?.length || 0;
+                    const charCount = world.worldConfig?.characters?.length || 0;
+                    return `${nodeCount} nodes, ${charCount} characters`;
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -102,20 +130,36 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
               New World
             </button>
           )}
-          
-          {worlds.length > 1 && (
-            <select
-              value={currentWorldId || ''}
-              onChange={(e) => e.target.value && handleSelectWorld(e.target.value)}
-              className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
-            >
-              <option value="">Select World</option>
-              {worlds.map(world => (
-                <option key={world.id} value={world.id} className="bg-gray-800">
-                  {world.name}
-                </option>
-              ))}
-            </select>
+
+          {worlds.length > 0 && (
+            <div className="flex-1">
+              <select
+                value={currentWorldId || ''}
+                onChange={(e) => e.target.value && handleSelectWorld(e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                title={worlds.length === 1 ? "Only one world available" : "Select a world"}
+              >
+                <option value="">Select World</option>
+                {worlds.map(world => (
+                  <option key={world.id} value={world.id} className="bg-gray-800">
+                    {world.name} ({world.worldConfig?.nodes?.length || 0} nodes)
+                  </option>
+                ))}
+              </select>
+              
+              {/* World Selection Hint */}
+              {worlds.length === 1 && currentWorldId && (
+                <div className="mt-1 text-xs text-gray-400 text-center">
+                  Only one world available - automatically selected
+                </div>
+              )}
+              
+              {worlds.length > 1 && (
+                <div className="mt-1 text-xs text-gray-400 text-center">
+                  {worlds.length} worlds available - choose target for new nodes
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -135,7 +179,7 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
       {showCreateForm && (
         <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
           <h3 className="text-xl font-semibold text-white mb-4">Create New World</h3>
-          
+
           <form onSubmit={handleCreateWorld} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -174,7 +218,7 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
               >
                 {isCreating ? 'Creating...' : 'Create World'}
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => {
@@ -198,7 +242,7 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
           <h3 className="text-xl font-semibold text-white">
             Your Worlds ({worlds.length})
           </h3>
-          
+
           {showCreateButton && !showCreateForm && (
             <button
               onClick={() => setShowCreateForm(true)}
@@ -243,7 +287,7 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
                     <Globe className={`w-5 h-5 ${world.id === currentWorldId ? 'text-blue-400' : 'text-gray-400'}`} />
                     <h4 className="font-semibold text-white">{world.name}</h4>
                   </div>
-                  
+
                   <button
                     onClick={(e) => handleDeleteWorld(world.id, e)}
                     className="p-1 text-gray-400 hover:text-red-400 transition-colors"
@@ -262,7 +306,7 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
                     <Calendar className="w-3 h-3" />
                     <span>Modified {new Date(world.lastModified).toLocaleDateString()}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Users className="w-3 h-3" />
                     <span>

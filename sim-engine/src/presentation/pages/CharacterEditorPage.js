@@ -426,34 +426,49 @@ const CharacterEditorPage = () => {
             <h2 className="text-2xl font-bold text-white text-center mb-8">
               Next Steps
             </h2>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
               <button
                 onClick={() => navigate('/editors/nodes')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Users className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Users className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Nodes</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Nodes</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Define locations and contexts within your world
                 </p>
               </button>
 
               <button
                 onClick={() => navigate('/editors/interactions')}
-                className="w-full sm:w-80 p-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
-                    <Users className="w-6 h-6 text-indigo-400" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Users className="w-5 h-5 text-indigo-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Create Interactions</h3>
+                  <h3 className="text-lg font-semibold text-white">Create Interactions</h3>
                 </div>
-                <p className="text-gray-300 text-left">
+                <p className="text-gray-300 text-sm text-left">
                   Define actions and capabilities for your world
+                </p>
+              </button>
+
+              <button
+                onClick={() => navigate('/editors/encounters')}
+                className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:border-indigo-400 hover:bg-white/20 transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:bg-indigo-500/30 transition-colors">
+                    <Users className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Create Encounters</h3>
+                </div>
+                <p className="text-gray-300 text-sm text-left">
+                  Design dynamic encounters with turn-based mechanics
                 </p>
               </button>
             </div>
