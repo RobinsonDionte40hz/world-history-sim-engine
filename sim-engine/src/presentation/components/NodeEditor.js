@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import WorldValidator from '../../domain/services/WorldValidator';
 
 // Node types with their characteristics
 const NODE_TYPES = [
@@ -393,12 +394,14 @@ const ConnectionEditor = ({ connections, onChange, availableNodes = [] }) => {
  * @param {Object} initialNode - Existing node data for editing (optional)
  * @param {Function} onSave - Callback when node is saved (required)
  * @param {Function} onCancel - Callback when editing is cancelled (optional)
+ * @param {Function} onChange - Callback when node data changes (optional)
  * @param {string} mode - 'create' or 'edit' mode (default: 'create')
  */
 const NodeEditor = ({
   initialNode = null,
   onSave,
   onCancel,
+  onChange,
   mode = 'create'
 }) => {
   // Form state
@@ -422,24 +425,30 @@ const NodeEditor = ({
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
 
-  // Validation
+  // Notify parent of changes
+  useEffect(() => {
+    if (onChange) {
+      onChange(nodeData);
+    }
+  }, [nodeData, onChange]);
+
+  // Validation using centralized domain validator
   const validateNode = useCallback(() => {
+    const validation = WorldValidator.validateSingleNode(nodeData);
+    
+    // Convert validation errors to component error format
     const newErrors = {};
+    validation.errors.forEach(error => {
+      newErrors[error.field] = error.message;
+    });
 
-    if (!nodeData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!nodeData.description.trim()) {
-      newErrors.description = 'Description is required';
-    }
-
-    if (nodeData.populationCapacity < 0) {
-      newErrors.populationCapacity = 'Population capacity must be positive';
+    // Log warnings to console
+    if (validation.warnings.length > 0) {
+      console.warn('Node validation warnings:', validation.warnings);
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return validation.isValid;
   }, [nodeData]);
 
   // Handle save

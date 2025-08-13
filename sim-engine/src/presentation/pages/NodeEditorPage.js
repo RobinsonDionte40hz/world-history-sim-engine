@@ -5,94 +5,219 @@
  * with visual relationship mapping and template integration.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
   Settings,
-  AlertCircle,
   AlertTriangle,
   Download,
   Upload,
   ArrowRight,
-  CheckCircle,
-  X
+  CheckCircle
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import NodeEditor from '../components/NodeEditor';
+import WorldStateViewer from '../components/WorldStateViewer';
+import WorldSelector from '../components/WorldSelector';
+import { useWorldContext } from '../contexts/WorldContext';
+import WorldValidator from '../../domain/services/WorldValidator';
+import useAutoSave from '../hooks/useAutoSave';
 
 const NodeEditorPage = () => {
   const navigate = useNavigate();
+  const { 
+    currentWorldId,
+    worldBuilder,
+    error: worldError
+  } = useWorldContext();
+
+  // Extract world builder methods and state
+  const {
+    addNode,
+    worldConfig,
+    error: builderError,
+    canProceedToStep
+  } = worldBuilder || {};
+  
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [lastSaved, setLastSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [currentNode, setCurrentNode] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
-  const [showNextSteps, setShowNextSteps] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Validation
+  // Auto-save functionality
+  const autoSaveFunction = useCallback(async (nodeData) => {
+    if (!currentWorldId || !canProceedToStep || !canProceedToStep(2) || !addNode) {
+      return; // Don't auto-save if prerequisites aren't met
+    }
+
+    // Transform NodeEditor data to WorldBuilder format
+    const worldBuilderNodeData = {
+      id: nodeData.id,
+      name: nodeData.name,
+      type: nodeData.type,
+      description: nodeData.description,
+      environmentalProperties: {
+        environment: nodeData.environment,
+        features: nodeData.features,
+        developmentLevel: nodeData.developmentLevel,
+        ...nodeData.modifiers
+      },
+      resourceAvailability: nodeData.resources?.reduce((acc, resource) => {
+        acc[resource] = 'available';
+        return acc;
+      }, {}) || {},
+      culturalContext: {
+        populationCapacity: nodeData.populationCapacity,
+        currentPopulation: nodeData.currentPopulation,
+        tags: nodeData.tags
+      },
+      connections: nodeData.connections || [],
+      metadata: nodeData.metadata || {}
+    };
+
+    // Validate before auto-saving
+    const validation = WorldValidator.validateSingleNode(worldBuilderNodeData);
+    if (!validation.isValid) {
+      console.warn('Auto-save skipped due to validation errors:', validation.errors);
+      return;
+    }
+
+    // Save using WorldBuilder
+    addNode(worldBuilderNodeData);
+    console.log('Auto-saved node:', nodeData.name);
+  }, [currentWorldId, canProceedToStep, addNode]);
+
+  // Auto-save hook - saves every 30 seconds, only if node is valid
+  const {
+    isSaving: isAutoSaving,
+    lastSaved,
+    saveError: autoSaveError,
+    hasUnsavedChanges: hasAutoSaveChanges,
+    saveNow: saveNowAuto
+  } = useAutoSave(
+    currentNode, 
+    autoSaveFunction, 
+    30000, // 30 seconds
+    currentNode && currentWorldId && canProceedToStep && canProceedToStep(2) // Only enable if ready
+  );
+
+  // Validation using centralized domain validator
   const validateNode = useCallback(() => {
     const errors = [];
 
-    if (!currentNode?.name?.trim()) {
-      errors.push({ field: 'name', message: 'Node name is required' });
-    } else if (currentNode.name.length < 3) {
-      errors.push({ field: 'name', message: 'Node name must be at least 3 characters' });
+    // Check world-level prerequisites first
+    if (!currentWorldId) {
+      errors.push({ field: 'world', message: 'No world selected. Please create or select a world first.' });
     }
 
-    if (!currentNode?.description?.trim()) {
-      errors.push({ field: 'description', message: 'Node description is required' });
-    } else if (currentNode.description.length < 10) {
-      errors.push({ field: 'description', message: 'Node description must be at least 10 characters' });
+    // Add builder error if present
+    if (builderError) {
+      errors.push({ field: 'builder', message: builderError });
+    }
+
+    // Add world error if present
+    if (worldError) {
+      errors.push({ field: 'world', message: worldError });
+    }
+
+    // Use centralized domain validation for node data
+    if (currentNode) {
+      const nodeValidation = WorldValidator.validateSingleNode(currentNode);
+      if (!nodeValidation.isValid) {
+        errors.push(...nodeValidation.errors);
+      }
+      
+      // Log warnings to console but don't block saving
+      if (nodeValidation.warnings.length > 0) {
+        console.warn('Node validation warnings:', nodeValidation.warnings);
+      }
+    } else {
+      errors.push({ field: 'node', message: 'Node data is required' });
     }
 
     setValidationErrors(errors);
     return errors.length === 0;
-  }, [currentNode]);
+  }, [currentNode, builderError, worldError, currentWorldId]);
 
-  const handleAutoSave = useCallback(async () => {
-    if (!hasUnsavedChanges || !currentNode || !validateNode()) return;
-    
-    setIsSaving(true);
-    try {
-      // Auto-save is handled by the NodeEditor component
-      // For now, we'll skip auto-save to avoid conflicts
-      console.log('Auto-save skipped - manual save required');
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [hasUnsavedChanges, currentNode, validateNode]);
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (autoSaveEnabled && hasUnsavedChanges && currentNode) {
-      const autoSaveTimer = setTimeout(() => {
-        handleAutoSave();
-      }, 30000); // Auto-save every 30 seconds
 
-      return () => clearTimeout(autoSaveTimer);
-    }
-  }, [hasUnsavedChanges, currentNode, autoSaveEnabled, handleAutoSave]);
 
-  const handleSave = async () => {
+
+  const handleSave = async (nodeData) => {
     if (!validateNode()) {
+      return;
+    }
+
+    // Check if we have a current world
+    if (!currentWorldId) {
+      setValidationErrors([{ 
+        field: 'world', 
+        message: 'No world selected. Please create or select a world first.' 
+      }]);
+      return;
+    }
+
+    // Check if we can proceed to step 2 (node creation)
+    if (!canProceedToStep || !canProceedToStep(2)) {
+      setValidationErrors([{ 
+        field: 'world', 
+        message: 'World properties must be set before creating nodes. Please complete Step 1 first.' 
+      }]);
       return;
     }
 
     setIsSaving(true);
     try {
-      // The actual save is handled by NodeEditor component
-      // This is called when NodeEditor completes its save operation
-      setHasUnsavedChanges(false);
-      setLastSaved(new Date());
-      console.log('Node saved successfully');
+      // Transform NodeEditor data to WorldBuilder format
+      const worldBuilderNodeData = {
+        id: nodeData.id,
+        name: nodeData.name,
+        type: nodeData.type,
+        description: nodeData.description,
+        environmentalProperties: {
+          environment: nodeData.environment,
+          features: nodeData.features,
+          developmentLevel: nodeData.developmentLevel,
+          ...nodeData.modifiers
+        },
+        resourceAvailability: nodeData.resources.reduce((acc, resource) => {
+          acc[resource] = 'available';
+          return acc;
+        }, {}),
+        culturalContext: {
+          populationCapacity: nodeData.populationCapacity,
+          currentPopulation: nodeData.currentPopulation,
+          tags: nodeData.tags
+        },
+        connections: nodeData.connections || [],
+        metadata: nodeData.metadata || {}
+      };
+
+      // Save using the WorldBuilder hook
+      if (addNode) {
+        addNode(worldBuilderNodeData);
+        
+        // Force auto-save to update its state
+        await saveNowAuto();
+        
+        setSaveSuccess(true);
+        console.log('Node saved manually to world:', currentWorldId, worldBuilderNodeData);
+
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        throw new Error('World builder not available');
+      }
+      
     } catch (error) {
       console.error('Save failed:', error);
-      alert('Failed to save node: ' + error.message);
+      setValidationErrors([{ 
+        field: 'save', 
+        message: error.message || 'Failed to save node' 
+      }]);
     } finally {
       setIsSaving(false);
     }
@@ -106,24 +231,26 @@ const NodeEditorPage = () => {
     navigate('/editors/world');
   };
 
-  const handleChange = (nodeData) => {
-    setHasUnsavedChanges(true);
+  const handleNodeChange = (nodeData) => {
     setCurrentNode(nodeData);
+    // Clear any previous success messages when editing
+    setSaveSuccess(false);
   };
 
-  // Get field-specific errors
-  const getFieldError = (fieldName) => {
-    const error = validationErrors.find(e => e.field === fieldName);
-    return error ? error.message : null;
-  };
+  // Update hasUnsavedChanges based on auto-save state
+  useEffect(() => {
+    setHasUnsavedChanges(hasAutoSaveChanges);
+  }, [hasAutoSaveChanges]);
+
+
 
   const handleExportTemplate = () => {
     if (currentNode) {
       const dataStr = JSON.stringify(currentNode, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
       const exportFileDefaultName = `node-template-${currentNode.name || 'unnamed'}.json`;
-      
+
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
@@ -173,6 +300,18 @@ const NodeEditorPage = () => {
         </div>
       )}
 
+      {/* Success Message */}
+      {saveSuccess && (
+        <div className="bg-green-600/10 border-b border-green-600/30 px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            <div className="text-green-400 text-sm font-medium">
+              Node saved successfully to your world!
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Full width responsive container */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
@@ -188,6 +327,45 @@ const NodeEditorPage = () => {
             <p className="text-lg text-gray-300 max-w-2xl mx-auto">
               Create abstract locations and contexts for your world
             </p>
+            
+            {/* World Selector */}
+            <div className="mt-6 max-w-md mx-auto">
+              <WorldSelector compact={true} />
+            </div>
+            
+            {/* World readiness status */}
+            {!currentWorldId && (
+              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg max-w-2xl mx-auto">
+                <div className="flex items-center gap-2 justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                  <p className="text-red-300 text-sm">
+                    No world selected. Please create or select a world first.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {currentWorldId && canProceedToStep && !canProceedToStep(2) && (
+              <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg max-w-2xl mx-auto">
+                <div className="flex items-center gap-2 justify-center">
+                  <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                  <p className="text-yellow-300 text-sm">
+                    World properties must be set before creating nodes. Please complete Step 1 first.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {currentWorldId && canProceedToStep && canProceedToStep(2) && worldConfig && worldConfig.nodes.length === 0 && (
+              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg max-w-2xl mx-auto">
+                <div className="flex items-center gap-2 justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <p className="text-green-300 text-sm">
+                    Ready to create nodes! Your world is properly configured.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -214,7 +392,7 @@ const NodeEditorPage = () => {
                 <Upload className="w-4 h-4" />
                 Import
               </label>
-              
+
               <button
                 onClick={handleExportTemplate}
                 disabled={!currentNode}
@@ -225,25 +403,69 @@ const NodeEditorPage = () => {
               </button>
             </div>
 
-            <button
-              onClick={handleSave}
-              disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0}
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${hasUnsavedChanges && !isSaving && validationErrors.length === 0
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
-            >
-              {isSaving ? 'Saving...' : (hasUnsavedChanges ? 'Save Node' : 'Saved')}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => currentNode && handleSave(currentNode)}
+                disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0 || !currentNode || !currentWorldId || (canProceedToStep && !canProceedToStep(2))}
+                className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                  hasUnsavedChanges && !isSaving && validationErrors.length === 0 && currentNode && currentWorldId && canProceedToStep && canProceedToStep(2)
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  }`}
+              >
+                {isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : (hasUnsavedChanges ? 'Save Node' : 'Save Node'))}
+              </button>
+
+              {hasUnsavedChanges && !isSaving && currentNode && currentWorldId && canProceedToStep && canProceedToStep(2) && (
+                <button
+                  onClick={() => saveNowAuto()}
+                  disabled={isAutoSaving}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                  title="Save immediately (don't wait for auto-save)"
+                >
+                  {isAutoSaving ? 'Saving...' : 'Save Now'}
+                </button>
+              )}
+            </div>
 
             <button
-              onClick={() => setShowNextSteps(true)}
+              onClick={() => navigate('/editors/world')}
               className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
             >
               <ArrowRight className="w-4 h-4" />
               Next Steps
             </button>
           </div>
+
+          {/* Auto-save Status */}
+          {currentNode && currentWorldId && (
+            <div className="flex items-center justify-center gap-4 mt-4 text-sm">
+              {isAutoSaving && (
+                <div className="flex items-center gap-2 text-blue-400">
+                  <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Auto-saving...</span>
+                </div>
+              )}
+              
+              {lastSaved && !isAutoSaving && (
+                <div className="text-green-400">
+                  <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+                </div>
+              )}
+              
+              {autoSaveError && (
+                <div className="text-red-400">
+                  <span>Auto-save failed: {autoSaveError}</span>
+                </div>
+              )}
+              
+              {hasUnsavedChanges && !isAutoSaving && (
+                <div className="text-yellow-400">
+                  <span>Unsaved changes (auto-save in 30s)</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Main Content Area */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
@@ -276,18 +498,70 @@ const NodeEditorPage = () => {
               /* Edit Mode */
               <div className="p-6 sm:p-8">
                 <h2 className="text-2xl font-semibold text-white mb-6">Node Configuration</h2>
-                
+
                 {/* Use existing NodeEditor component */}
-                <NodeEditor 
+                <NodeEditor
                   initialNode={currentNode}
-                  onChange={handleChange}
                   onSave={handleSave}
                   onCancel={handleCancel}
+                  onChange={handleNodeChange}
                   mode={currentNode ? 'edit' : 'create'}
                 />
               </div>
             )}
           </div>
+
+          {/* World State Viewer */}
+          <div className="mt-12">
+            <WorldStateViewer />
+          </div>
+
+          {/* Current World Nodes */}
+          {worldConfig && worldConfig.nodes && worldConfig.nodes.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold text-white text-center mb-8">
+                Current World Nodes ({worldConfig.nodes.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {worldConfig.nodes.map((node) => (
+                  <div
+                    key={node.id}
+                    className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl"
+                  >
+                    <h3 className="text-xl font-semibold text-white mb-2">{node.name}</h3>
+                    <p className="text-gray-300 text-sm mb-3">{node.description}</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="px-2 py-1 bg-blue-500/20 rounded text-blue-300">
+                        {node.type}
+                      </span>
+                      {node.environmentalProperties?.environment && (
+                        <span className="px-2 py-1 bg-green-500/20 rounded text-green-300">
+                          {node.environmentalProperties.environment}
+                        </span>
+                      )}
+                    </div>
+                    {node.resourceAvailability && Object.keys(node.resourceAvailability).length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-400 mb-1">Resources:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.keys(node.resourceAvailability).slice(0, 3).map((resource) => (
+                            <span key={resource} className="px-1 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-300">
+                              {resource}
+                            </span>
+                          ))}
+                          {Object.keys(node.resourceAvailability).length > 3 && (
+                            <span className="px-1 py-0.5 bg-gray-500/20 rounded text-xs text-gray-300">
+                              +{Object.keys(node.resourceAvailability).length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Next Steps */}
           <div className="mt-12">

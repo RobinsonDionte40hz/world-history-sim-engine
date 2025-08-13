@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { SimulationProvider } from './presentation/contexts/SimulationContext.js';
+import { WorldProvider } from './presentation/contexts/WorldContext.js';
 import AppRouter from './presentation/components/AppRouter.js';
 import './App.css';
 
@@ -52,9 +53,11 @@ function App() {
       
       {/* Content */}
       <div style={{ position: 'relative', zIndex: '1', minHeight: '100vh' }}>
-        <SimulationProvider>
-          <AppRouter />
-        </SimulationProvider>
+        <WorldProvider>
+          <SimulationProvider>
+            <AppRouter />
+          </SimulationProvider>
+        </WorldProvider>
       </div>
     </div>
   );

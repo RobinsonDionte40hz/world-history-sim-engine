@@ -337,6 +337,58 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
+  // Search and query methods
+  const searchNodes = useCallback((query) => {
+    if (!query || typeof query !== 'string') {
+      return worldConfig.nodes;
+    }
+    
+    const searchTerm = query.toLowerCase();
+    return worldConfig.nodes.filter(node => 
+      node.name.toLowerCase().includes(searchTerm) ||
+      node.description.toLowerCase().includes(searchTerm) ||
+      node.type.toLowerCase().includes(searchTerm) ||
+      (node.tags && node.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+    );
+  }, [worldConfig.nodes]);
+
+  const searchCharacters = useCallback((query) => {
+    if (!query || typeof query !== 'string') {
+      return worldConfig.characters;
+    }
+    
+    const searchTerm = query.toLowerCase();
+    return worldConfig.characters.filter(character => 
+      character.name.toLowerCase().includes(searchTerm) ||
+      (character.description && character.description.toLowerCase().includes(searchTerm))
+    );
+  }, [worldConfig.characters]);
+
+  const searchInteractions = useCallback((query) => {
+    if (!query || typeof query !== 'string') {
+      return worldConfig.interactions;
+    }
+    
+    const searchTerm = query.toLowerCase();
+    return worldConfig.interactions.filter(interaction => 
+      interaction.name.toLowerCase().includes(searchTerm) ||
+      interaction.type.toLowerCase().includes(searchTerm) ||
+      (interaction.description && interaction.description.toLowerCase().includes(searchTerm))
+    );
+  }, [worldConfig.interactions]);
+
+  const getNodeById = useCallback((nodeId) => {
+    return worldConfig.nodes.find(node => node.id === nodeId);
+  }, [worldConfig.nodes]);
+
+  const getCharacterById = useCallback((characterId) => {
+    return worldConfig.characters.find(character => character.id === characterId);
+  }, [worldConfig.characters]);
+
+  const getInteractionById = useCallback((interactionId) => {
+    return worldConfig.interactions.find(interaction => interaction.id === interactionId);
+  }, [worldConfig.interactions]);
+
   // Final world building and validation
   const validateWorld = useCallback(() => {
     try {
@@ -488,6 +540,14 @@ const useWorldBuilder = (templateManager = null) => {
     // Template management
     saveAsTemplate,
     loadFromTemplate,
+
+    // Search and query methods
+    searchNodes,
+    searchCharacters,
+    searchInteractions,
+    getNodeById,
+    getCharacterById,
+    getInteractionById,
 
     // Final world building
     validateWorld,

@@ -4,6 +4,8 @@
  * Enforces dependency chain validation and provides methods for each step
  */
 
+import WorldValidator from './WorldValidator.js';
+
 class WorldBuilder {
   constructor(templateManager = null) {
     this.templateManager = templateManager;
@@ -108,21 +110,16 @@ class WorldBuilder {
       throw new Error('Cannot add nodes until world properties are set (Step 1)');
     }
 
-    if (!nodeConfig || typeof nodeConfig !== 'object') {
-      throw new Error('Node configuration must be an object');
+    // Use centralized validation
+    const validation = WorldValidator.validateSingleNode(nodeConfig);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map(error => error.message).join('; ');
+      throw new Error(`Node validation failed: ${errorMessages}`);
     }
 
-    // Required fields for mappless nodes
-    const requiredFields = ['name', 'type', 'description'];
-    for (const field of requiredFields) {
-      if (!nodeConfig[field]) {
-        throw new Error(`Node ${field} is required`);
-      }
-    }
-
-    // Ensure no spatial coordinates in mappless system
-    if (nodeConfig.position || nodeConfig.x !== undefined || nodeConfig.y !== undefined) {
-      throw new Error('Spatial coordinates not allowed in mappless system');
+    // Log warnings if any
+    if (validation.warnings.length > 0) {
+      console.warn('Node validation warnings:', validation.warnings);
     }
 
     const node = {

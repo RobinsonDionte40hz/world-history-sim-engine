@@ -1,342 +1,287 @@
 /**
- * WorldSelector Component - Choose existing worlds or create new ones
+ * WorldSelector - Component for creating and selecting worlds
  * 
- * Provides a unified interface for selecting existing worlds or creating new ones,
- * with world metadata display and management capabilities.
- * 
- * Requirements: 1.1, 1.2, 1.3, 4.1, 4.2, 4.3, 4.4, 4.5
+ * Provides UI for world management including creation, selection, and deletion.
+ * Integrates with WorldContext for state management.
  */
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Globe, 
-  Plus, 
-  FileText, 
-  Trash2, 
-  Download, 
-  Upload,
-  Search,
-  Clock
-} from 'lucide-react';
-import worldPersistenceService from '../../application/services/WorldPersistenceService';
-import editorStateManager from '../../application/services/EditorStateManager';
+import React, { useState } from 'react';
+import { Plus, Globe, Trash2, Calendar, Users } from 'lucide-react';
+import { useWorldContext } from '../contexts/WorldContext';
 
-const WorldSelector = ({ 
-  onWorldSelected, 
-  onCreateNew, 
-  className = '',
-  showCreateButton = true,
-  showManagementActions = true 
-}) => {
-  const [worlds, setWorlds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedWorld, setSelectedWorld] = useState(null);
-  const [error, setError] = useState(null);
+const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = false }) => {
+  const {
+    currentWorldId,
+    worlds,
+    createWorld,
+    switchToWorld,
+    deleteWorld,
+    isLoading,
+    error
+  } = useWorldContext();
 
-  // Load worlds on component mount
-  useEffect(() => {
-    loadWorlds();
-  }, []);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newWorldName, setNewWorldName] = useState('');
+  const [newWorldDescription, setNewWorldDescription] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
-  const loadWorlds = async () => {
+  const handleCreateWorld = async (e) => {
+    e.preventDefault();
+    if (!newWorldName.trim()) return;
+
+    setIsCreating(true);
     try {
-      setLoading(true);
-      setError(null);
-      const worldsList = await worldPersistenceService.getAllWorlds();
-      setWorlds(worldsList);
-    } catch (err) {
-      setError('Failed to load worlds: ' + err.message);
-      console.error('Error loading worlds:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleWorldSelect = async (world) => {
-    try {
-      setSelectedWorld(world);
-      
-      // Load full world data
-      const fullWorldData = await worldPersistenceService.loadWorld(world.id);
-      
-      // Update editor state manager
-      editorStateManager.setCurrentWorld(fullWorldData);
+      const worldId = createWorld(newWorldName.trim(), newWorldDescription.trim());
+      setNewWorldName('');
+      setNewWorldDescription('');
+      setShowCreateForm(false);
       
       if (onWorldSelected) {
-        onWorldSelected(fullWorldData);
+        onWorldSelected(worldId);
       }
     } catch (err) {
-      setError('Failed to load world: ' + err.message);
-      console.error('Error loading world:', err);
+      console.error('Failed to create world:', err);
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const handleCreateNew = () => {
-    setSelectedWorld(null);
-    editorStateManager.reset();
-    
-    if (onCreateNew) {
-      onCreateNew();
-    }
-  };
-
-  const handleDeleteWorld = async (worldId, worldName) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${worldName}"? This action cannot be undone.`
-    );
-    
-    if (confirmed) {
-      try {
-        await worldPersistenceService.deleteWorld(worldId);
-        await loadWorlds(); // Refresh the list
-        
-        // If the deleted world was selected, clear selection
-        if (selectedWorld?.id === worldId) {
-          setSelectedWorld(null);
-          editorStateManager.reset();
-        }
-      } catch (err) {
-        setError('Failed to delete world: ' + err.message);
-        console.error('Error deleting world:', err);
-      }
-    }
-  };
-
-  const handleExportWorld = async (worldId, worldName) => {
+  const handleSelectWorld = (worldId) => {
     try {
-      const exportData = await worldPersistenceService.exportWorld(worldId);
-      
-      // Create download link
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${worldName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_export.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
+      switchToWorld(worldId);
+      if (onWorldSelected) {
+        onWorldSelected(worldId);
+      }
     } catch (err) {
-      setError('Failed to export world: ' + err.message);
-      console.error('Error exporting world:', err);
+      console.error('Failed to switch world:', err);
     }
   };
 
-  const handleImportWorld = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
+  const handleDeleteWorld = (worldId, e) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this world? This action cannot be undone.')) {
       try {
-        const importData = JSON.parse(e.target.result);
-        await worldPersistenceService.importWorld(importData);
-        await loadWorlds(); // Refresh the list
+        deleteWorld(worldId);
       } catch (err) {
-        setError('Failed to import world: ' + err.message);
-        console.error('Error importing world:', err);
+        console.error('Failed to delete world:', err);
       }
-    };
-    reader.readAsText(file);
-    
-    // Reset file input
-    event.target.value = '';
+    }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const filteredWorlds = worlds.filter(world =>
-    world.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    world.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className={`bg-slate-800/50 border border-slate-700/50 rounded-lg p-6 ${className}`}>
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
-          <span className="ml-3 text-slate-400">Loading worlds...</span>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-gray-300">Loading worlds...</div>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        {/* Current World Display */}
+        {currentWorldId && (
+          <div className="p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-300 text-sm font-medium">
+                {worlds.find(w => w.id === currentWorldId)?.name || 'Unknown World'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="flex gap-2">
+          {showCreateButton && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
+            >
+              <Plus className="w-4 h-4 inline mr-1" />
+              New World
+            </button>
+          )}
+          
+          {worlds.length > 1 && (
+            <select
+              value={currentWorldId || ''}
+              onChange={(e) => e.target.value && handleSelectWorld(e.target.value)}
+              className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+            >
+              <option value="">Select World</option>
+              {worlds.map(world => (
+                <option key={world.id} value={world.id} className="bg-gray-800">
+                  {world.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-slate-800/50 border border-slate-700/50 rounded-lg p-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Globe className="w-6 h-6 text-indigo-400" />
-          <h2 className="text-xl font-semibold text-white">World Selector</h2>
-        </div>
-        
-        {showManagementActions && (
-          <div className="flex items-center space-x-2">
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportWorld}
-                className="hidden"
-              />
-              <div className="p-2 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600/50 hover:border-slate-500 rounded-lg transition-colors">
-                <Upload className="w-4 h-4 text-slate-400" />
-              </div>
-            </label>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-6">
       {/* Error Display */}
       {error && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <p className="text-red-300 text-sm">{error}</p>
         </div>
       )}
 
-      {/* Search */}
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search worlds..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50"
-          />
-        </div>
-      </div>
+      {/* Create World Form */}
+      {showCreateForm && (
+        <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
+          <h3 className="text-xl font-semibold text-white mb-4">Create New World</h3>
+          
+          <form onSubmit={handleCreateWorld} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                World Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newWorldName}
+                onChange={(e) => setNewWorldName(e.target.value)}
+                placeholder="Enter world name..."
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                required
+                disabled={isCreating}
+              />
+            </div>
 
-      {/* Create New World Button */}
-      {showCreateButton && (
-        <button
-          onClick={handleCreateNew}
-          className="w-full mb-4 p-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 rounded-lg transition-colors group"
-        >
-          <div className="flex items-center justify-center space-x-3">
-            <div className="p-2 bg-indigo-500/20 group-hover:bg-indigo-500/30 rounded-lg transition-colors">
-              <Plus className="w-5 h-5 text-indigo-400" />
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Description
+              </label>
+              <textarea
+                value={newWorldDescription}
+                onChange={(e) => setNewWorldDescription(e.target.value)}
+                placeholder="Describe your world..."
+                rows={3}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                disabled={isCreating}
+              />
             </div>
-            <div className="text-left">
-              <h3 className="font-medium text-indigo-400 group-hover:text-indigo-300">
-                Create New World
-              </h3>
-              <p className="text-sm text-indigo-400/70">
-                Start building a new world from scratch
-              </p>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={!newWorldName.trim() || isCreating}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {isCreating ? 'Creating...' : 'Create World'}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setNewWorldName('');
+                  setNewWorldDescription('');
+                }}
+                className="px-6 py-2 border border-white/20 hover:bg-white/10 text-gray-300 rounded-lg transition-colors"
+                disabled={isCreating}
+              >
+                Cancel
+              </button>
             </div>
-          </div>
-        </button>
+          </form>
+        </div>
       )}
 
       {/* Worlds List */}
-      <div className="space-y-3">
-        {filteredWorlds.length === 0 ? (
-          <div className="text-center py-8">
-            <Globe className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400">
-              {searchQuery ? 'No worlds match your search' : 'No worlds found'}
-            </p>
-            <p className="text-slate-500 text-sm mt-1">
-              {!searchQuery && 'Create your first world to get started'}
-            </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-white">
+            Your Worlds ({worlds.length})
+          </h3>
+          
+          {showCreateButton && !showCreateForm && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New World
+            </button>
+          )}
+        </div>
+
+        {worlds.length === 0 ? (
+          <div className="text-center py-12">
+            <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-white mb-2">No Worlds Yet</h4>
+            <p className="text-gray-400 mb-6">Create your first world to get started</p>
+            {showCreateButton && (
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              >
+                Create Your First World
+              </button>
+            )}
           </div>
         ) : (
-          filteredWorlds.map((world) => (
-            <div
-              key={world.id}
-              className={`
-                p-4 border rounded-lg transition-all duration-200 cursor-pointer
-                ${selectedWorld?.id === world.id
-                  ? 'bg-indigo-500/10 border-indigo-500/30'
-                  : 'bg-slate-700/30 border-slate-600/30 hover:bg-slate-700/50 hover:border-slate-500/50'
-                }
-              `}
-              onClick={() => handleWorldSelect(world)}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <Globe className={`w-5 h-5 ${
-                      selectedWorld?.id === world.id ? 'text-indigo-400' : 'text-slate-400'
-                    }`} />
-                    <h3 className={`font-medium ${
-                      selectedWorld?.id === world.id ? 'text-indigo-300' : 'text-white'
-                    }`}>
-                      {world.name}
-                    </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {worlds.map((world) => (
+              <div
+                key={world.id}
+                onClick={() => handleSelectWorld(world.id)}
+                className={`
+                  p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200
+                  ${world.id === currentWorldId
+                    ? 'border-blue-500 bg-blue-500/20'
+                    : 'border-white/20 bg-white/10 hover:border-white/40 hover:bg-white/20'
+                  }
+                `}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Globe className={`w-5 h-5 ${world.id === currentWorldId ? 'text-blue-400' : 'text-gray-400'}`} />
+                    <h4 className="font-semibold text-white">{world.name}</h4>
                   </div>
                   
-                  <p className="text-slate-400 text-sm mb-3 line-clamp-2">
-                    {world.description}
-                  </p>
+                  <button
+                    onClick={(e) => handleDeleteWorld(world.id, e)}
+                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                    title="Delete World"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-gray-300 text-sm mb-4 line-clamp-2">
+                  {world.description || 'No description'}
+                </p>
+
+                <div className="space-y-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    <span>Modified {new Date(world.lastModified).toLocaleDateString()}</span>
+                  </div>
                   
-                  <div className="flex items-center space-x-4 text-xs text-slate-500">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatDate(world.lastModified)}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <FileText className="w-3 h-3" />
-                      <span>v{world.version}</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-3 h-3" />
+                    <span>
+                      {world.worldConfig?.nodes?.length || 0} nodes, {' '}
+                      {world.worldConfig?.characters?.length || 0} characters
+                    </span>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                {showManagementActions && (
-                  <div className="flex items-center space-x-1 ml-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportWorld(world.id, world.name);
-                      }}
-                      className="p-2 text-slate-400 hover:text-slate-300 hover:bg-slate-600/50 rounded-lg transition-colors"
-                      title="Export World"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteWorld(world.id, world.name);
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                      title="Delete World"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                {world.id === currentWorldId && (
+                  <div className="mt-3 px-2 py-1 bg-blue-500/30 rounded text-xs text-blue-300 text-center">
+                    Current World
                   </div>
                 )}
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Selected World Info */}
-      {selectedWorld && (
-        <div className="mt-6 p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-lg">
-          <h4 className="text-sm font-medium text-indigo-400 mb-2">Selected World</h4>
-          <p className="text-sm text-slate-300">{selectedWorld.name}</p>
-          <p className="text-xs text-slate-400 mt-1">
-            Last modified: {formatDate(selectedWorld.lastModified)}
-          </p>
-        </div>
-      )}
     </div>
   );
 };

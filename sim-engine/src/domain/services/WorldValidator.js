@@ -154,6 +154,130 @@ class WorldValidator {
   }
 
   /**
+   * Validates a single abstract node (mappless - no coordinates)
+   * @param {Object} node - Single node configuration to validate
+   * @returns {Object} Validation result with isValid, errors, and warnings
+   */
+  static validateSingleNode(node) {
+    const errors = [];
+    const warnings = [];
+
+    if (!node || typeof node !== 'object') {
+      errors.push({ field: 'node', message: 'Node data is required and must be an object' });
+      return { isValid: false, errors, warnings };
+    }
+
+    // Required fields for abstract nodes
+    if (!node.id || typeof node.id !== 'string') {
+      errors.push({ field: 'id', message: 'Node ID is required and must be a string' });
+    }
+
+    if (!node.name || typeof node.name !== 'string') {
+      errors.push({ field: 'name', message: 'Node name is required and must be a string' });
+    } else {
+      const trimmedName = node.name.trim();
+      if (!trimmedName) {
+        errors.push({ field: 'name', message: 'Node name cannot be empty' });
+      } else if (trimmedName.length < 3) {
+        errors.push({ field: 'name', message: 'Node name must be at least 3 characters long' });
+      } else if (trimmedName.length > 100) {
+        errors.push({ field: 'name', message: 'Node name cannot exceed 100 characters' });
+      }
+    }
+
+    if (!node.type || typeof node.type !== 'string') {
+      errors.push({ field: 'type', message: 'Node type is required and must be a string' });
+    }
+
+    if (!node.description || typeof node.description !== 'string') {
+      errors.push({ field: 'description', message: 'Node description is required and must be a string' });
+    } else {
+      const trimmedDescription = node.description.trim();
+      if (!trimmedDescription) {
+        errors.push({ field: 'description', message: 'Node description cannot be empty' });
+      } else if (trimmedDescription.length < 10) {
+        errors.push({ field: 'description', message: 'Node description must be at least 10 characters long' });
+      } else if (trimmedDescription.length > 1000) {
+        errors.push({ field: 'description', message: 'Node description cannot exceed 1000 characters' });
+      }
+    }
+
+    // Mapless architecture validation - NO spatial coordinates allowed
+    if (node.position || node.x !== undefined || node.y !== undefined || node.coordinates) {
+      errors.push({ 
+        field: 'position', 
+        message: 'Spatial coordinates not allowed in mapless system. Use abstract connections instead.' 
+      });
+    }
+
+    // Environmental properties validation (mappless - no coordinates)
+    if (node.environmentalProperties && typeof node.environmentalProperties !== 'object') {
+      errors.push({ field: 'environmentalProperties', message: 'Environmental properties must be an object if provided' });
+    }
+
+    // Resource availability validation
+    if (node.resourceAvailability && typeof node.resourceAvailability !== 'object') {
+      errors.push({ field: 'resourceAvailability', message: 'Resource availability must be an object if provided' });
+    }
+
+    // Cultural context validation
+    if (node.culturalContext && typeof node.culturalContext !== 'object') {
+      errors.push({ field: 'culturalContext', message: 'Cultural context must be an object if provided' });
+    }
+
+    // Resources validation (legacy format)
+    if (node.resources && !Array.isArray(node.resources)) {
+      errors.push({ field: 'resources', message: 'Resources must be an array if provided' });
+    }
+
+    // Capacity validation
+    if (node.capacity !== undefined) {
+      if (typeof node.capacity !== 'number' || node.capacity < 0) {
+        errors.push({ field: 'capacity', message: 'Capacity must be a non-negative number if provided' });
+      }
+    }
+
+    // Population capacity validation (new format)
+    if (node.populationCapacity !== undefined) {
+      if (typeof node.populationCapacity !== 'number' || node.populationCapacity < 0) {
+        errors.push({ field: 'populationCapacity', message: 'Population capacity must be a non-negative number if provided' });
+      } else if (node.populationCapacity > 1000000) {
+        warnings.push({ field: 'populationCapacity', message: 'Population capacity seems very high. Consider if this is realistic.' });
+      }
+    }
+
+    // Current population validation
+    if (node.currentPopulation !== undefined) {
+      if (typeof node.currentPopulation !== 'number' || node.currentPopulation < 0) {
+        errors.push({ field: 'currentPopulation', message: 'Current population must be a non-negative number if provided' });
+      } else {
+        const capacity = node.populationCapacity || node.capacity;
+        if (capacity !== undefined && node.currentPopulation > capacity) {
+          errors.push({ field: 'currentPopulation', message: 'Current population cannot exceed population capacity' });
+        }
+      }
+    }
+
+    // Development level validation
+    if (node.developmentLevel !== undefined) {
+      if (typeof node.developmentLevel !== 'number' || node.developmentLevel < 1 || node.developmentLevel > 10) {
+        errors.push({ field: 'developmentLevel', message: 'Development level must be a number between 1 and 10' });
+      }
+    }
+
+    // Connections validation (abstract, not spatial)
+    if (node.connections && !Array.isArray(node.connections)) {
+      errors.push({ field: 'connections', message: 'Connections must be an array if provided' });
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
    * Validates abstract nodes for step 2 (mappless - no coordinates)
    * @param {Array} nodes - Array of abstract node configurations
    * @returns {Object} Validation result
