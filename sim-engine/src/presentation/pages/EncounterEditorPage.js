@@ -10,14 +10,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, 
-  Eye, 
-  Download, 
-  Upload, 
-  TestTube, 
-  Swords, 
-  Clock, 
+import {
+  Download,
+  Upload,
+  TestTube,
+  Swords,
+  Clock,
   AlertTriangle,
   ArrowRight,
   CheckCircle,
@@ -32,19 +30,18 @@ import Encounter from '../../domain/entities/Encounter';
 
 const EncounterEditorPage = () => {
   const navigate = useNavigate();
-  
+
   // WorldContext integration
-  const { 
+  const {
     currentWorldId,
     currentWorld,
     updateWorldConfig,
     error: worldError
   } = useWorldContext();
-  
+
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [lastSaved, setLastSaved] = useState(null);
+  const [autoSaveEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [currentEncounter, setCurrentEncounter] = useState(null);
   const [testMode, setTestMode] = useState(false);
@@ -55,42 +52,42 @@ const EncounterEditorPage = () => {
 
   const validateEncounter = useCallback(() => {
     const errors = [];
-    
+
     // World validation
     if (!currentWorldId) {
       errors.push({ field: 'world', message: 'No world selected. Please create or select a world first.' });
     }
-    
+
     if (!currentWorld) {
       errors.push({ field: 'world', message: 'Current world not found.' });
     }
-    
+
     if (worldError) {
       errors.push({ field: 'world', message: worldError });
     }
-    
+
     // Encounter validation
     if (!currentEncounter?.name?.trim()) {
       errors.push({ field: 'name', message: 'Encounter name is required' });
     }
-    
+
     if (!currentEncounter?.description?.trim()) {
       errors.push({ field: 'description', message: 'Description is required' });
     }
-    
+
     if (!currentEncounter?.outcomes || currentEncounter.outcomes.length === 0) {
       errors.push({ field: 'outcomes', message: 'At least one outcome is required' });
     }
-    
+
     if (currentEncounter?.challengeRating < 1 || currentEncounter?.challengeRating > 30) {
       errors.push({ field: 'challengeRating', message: 'Challenge rating must be between 1 and 30' });
     }
-    
+
     // Validate turn-based configuration
     if (currentEncounter?.turnBased?.duration < 1) {
       errors.push({ field: 'turnBasedDuration', message: 'Turn duration must be at least 1' });
     }
-    
+
     setValidationErrors(errors);
     return errors.length === 0;
   }, [currentEncounter, currentWorldId, currentWorld, worldError]);
@@ -104,23 +101,22 @@ const EncounterEditorPage = () => {
 
   const handleAutoSave = useCallback(async () => {
     if (!hasUnsavedChanges || !validateEncounter()) return;
-    
+
     setIsSaving(true);
     try {
       // Save to localStorage
       const encounters = JSON.parse(localStorage.getItem('encounters') || '[]');
       const encounterIndex = encounters.findIndex(e => e.id === currentEncounter.id);
-      
+
       if (encounterIndex >= 0) {
         encounters[encounterIndex] = currentEncounter;
       } else {
         encounters.push(currentEncounter);
       }
-      
+
       localStorage.setItem('encounters', JSON.stringify(encounters));
-      
+
       setHasUnsavedChanges(false);
-      setLastSaved(new Date());
       console.log('Auto-saved encounter...');
     } catch (error) {
       console.error('Auto-save failed:', error);
@@ -144,28 +140,28 @@ const EncounterEditorPage = () => {
     if (!validateEncounter()) {
       return;
     }
-    
+
     setIsSaving(true);
     try {
       // Create Encounter entity
       const encounterEntity = new Encounter(currentEncounter);
-      
+
       // Save to localStorage
       const encounters = JSON.parse(localStorage.getItem('encounters') || '[]');
       const encounterIndex = encounters.findIndex(e => e.id === encounterEntity.id);
-      
+
       if (encounterIndex >= 0) {
         encounters[encounterIndex] = encounterEntity.toJSON();
       } else {
         encounters.push(encounterEntity.toJSON());
       }
-      
+
       localStorage.setItem('encounters', JSON.stringify(encounters));
-      
+
       // Generate and save interactions
       const generatedInteractions = encounterEntity.generateInteractions();
       const interactions = JSON.parse(localStorage.getItem('interactions') || '[]');
-      
+
       generatedInteractions.forEach(interaction => {
         const existingIndex = interactions.findIndex(i => i.id === interaction.id);
         if (existingIndex >= 0) {
@@ -174,33 +170,32 @@ const EncounterEditorPage = () => {
           interactions.push(interaction);
         }
       });
-      
+
       localStorage.setItem('interactions', JSON.stringify(interactions));
-      
+
       // Update world config with encounter reference if world is selected
       if (currentWorldId && currentWorld) {
         const updatedEncounters = [...(currentWorld.worldConfig.encounters || [])];
         const existingEncounterIndex = updatedEncounters.findIndex(e => e.id === encounterEntity.id);
-        
+
         if (existingEncounterIndex >= 0) {
           updatedEncounters[existingEncounterIndex] = encounterEntity.toJSON();
         } else {
           updatedEncounters.push(encounterEntity.toJSON());
         }
-        
+
         updateWorldConfig({
           ...currentWorld.worldConfig,
           encounters: updatedEncounters
         });
       }
-      
+
       setHasUnsavedChanges(false);
-      setLastSaved(new Date());
       setSaveSuccess(true);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
-      
+
       console.log('Saved encounter and generated interactions:', generatedInteractions);
     } catch (error) {
       console.error('Save failed:', error);
@@ -228,15 +223,15 @@ const EncounterEditorPage = () => {
       alert('No encounter to test. Please create an encounter first.');
       return;
     }
-    
+
     if (!validateEncounter()) {
       alert('Please fix validation errors before testing.');
       return;
     }
-    
+
     // Create encounter entity for testing
     const encounterEntity = new Encounter(currentEncounter);
-    
+
     // Simulate encounter testing with mock context
     const mockContext = {
       currentTurn: 1,
@@ -262,11 +257,11 @@ const EncounterEditorPage = () => {
         mood: 60
       }
     };
-    
+
     const canTrigger = encounterEntity.canTrigger(mockContext);
     const outcome = encounterEntity.resolveOutcome(mockContext);
     const generatedInteractions = encounterEntity.generateInteractions();
-    
+
     const mockTestResults = {
       success: canTrigger,
       canTrigger,
@@ -281,24 +276,24 @@ const EncounterEditorPage = () => {
       warnings: [],
       errors: []
     };
-    
+
     // Add warnings based on encounter configuration
     if (currentEncounter.outcomes?.length > 8) {
       mockTestResults.warnings.push('Many outcomes detected - consider simplifying for better balance');
     }
-    
+
     if (currentEncounter.prerequisites?.length === 0 && currentEncounter.triggers?.length === 0) {
       mockTestResults.warnings.push('No prerequisites or triggers - encounter may be too accessible');
     }
-    
+
     if (currentEncounter.turnBased?.duration > 10) {
       mockTestResults.warnings.push('Long encounter duration may impact simulation performance');
     }
-    
+
     if (!canTrigger) {
       mockTestResults.errors.push('Encounter cannot trigger with current test conditions');
     }
-    
+
     setTestResults(mockTestResults);
     setTestMode(true);
     console.log('Testing encounter...', mockTestResults);
@@ -308,12 +303,12 @@ const EncounterEditorPage = () => {
     if (currentEncounter) {
       const encounterEntity = new Encounter(currentEncounter);
       const template = encounterEntity.toTemplate();
-      
+
       const dataStr = JSON.stringify(template, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-      
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
       const exportFileDefaultName = `encounter-template-${currentEncounter.name || 'unnamed'}.json`;
-      
+
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
@@ -356,25 +351,25 @@ const EncounterEditorPage = () => {
           sequencing: 'sequential'
         },
         outcomes: [
-          { 
+          {
             id: Date.now(),
-            description: 'Victory - enemies defeated', 
+            description: 'Victory - enemies defeated',
             probability: 0.6,
             effects: [{ type: 'experience', value: 200 }],
             turnDuration: 1,
             timing: 'immediate'
           },
-          { 
+          {
             id: Date.now() + 1,
-            description: 'Tactical retreat - escape with minor losses', 
+            description: 'Tactical retreat - escape with minor losses',
             probability: 0.3,
             effects: [{ type: 'experience', value: 50 }],
             turnDuration: 1,
             timing: 'immediate'
           },
-          { 
+          {
             id: Date.now() + 2,
-            description: 'Defeat - significant consequences', 
+            description: 'Defeat - significant consequences',
             probability: 0.1,
             effects: [{ type: 'health', value: -20 }],
             turnDuration: 1,
@@ -398,25 +393,25 @@ const EncounterEditorPage = () => {
           sequencing: 'simultaneous'
         },
         outcomes: [
-          { 
+          {
             id: Date.now(),
-            description: 'Successful negotiation - favorable terms achieved', 
+            description: 'Successful negotiation - favorable terms achieved',
             probability: 0.5,
             effects: [{ type: 'influence', value: 10 }],
             turnDuration: 1,
             timing: 'immediate'
           },
-          { 
+          {
             id: Date.now() + 1,
-            description: 'Compromise reached - partial success', 
+            description: 'Compromise reached - partial success',
             probability: 0.4,
             effects: [{ type: 'influence', value: 5 }],
             turnDuration: 1,
             timing: 'immediate'
           },
-          { 
+          {
             id: Date.now() + 2,
-            description: 'Negotiations failed - relationship damaged', 
+            description: 'Negotiations failed - relationship damaged',
             probability: 0.1,
             effects: [{ type: 'influence', value: -5 }],
             turnDuration: 1,
@@ -440,25 +435,25 @@ const EncounterEditorPage = () => {
           sequencing: 'sequential'
         },
         outcomes: [
-          { 
+          {
             id: Date.now(),
-            description: 'Significant discovery made', 
+            description: 'Significant discovery made',
             probability: 0.4,
             effects: [{ type: 'experience', value: 150 }],
             turnDuration: 1,
             timing: 'immediate'
           },
-          { 
+          {
             id: Date.now() + 1,
-            description: 'Minor clue found', 
+            description: 'Minor clue found',
             probability: 0.5,
             effects: [{ type: 'experience', value: 75 }],
             turnDuration: 1,
             timing: 'immediate'
           },
-          { 
+          {
             id: Date.now() + 2,
-            description: 'Nothing of interest', 
+            description: 'Nothing of interest',
             probability: 0.1,
             effects: [],
             turnDuration: 1,
@@ -470,7 +465,7 @@ const EncounterEditorPage = () => {
         ]
       }
     };
-    
+
     const template = templates[templateType];
     if (template) {
       setCurrentEncounter(template);
@@ -484,7 +479,7 @@ const EncounterEditorPage = () => {
 
   const getNextStepsContent = () => {
     const steps = [];
-    
+
     if (!currentEncounter) {
       steps.push({
         title: "Create Your First Encounter",
@@ -587,7 +582,7 @@ const EncounterEditorPage = () => {
             <p className="text-lg text-gray-300 max-w-2xl mx-auto">
               Create dynamic encounters with turn-based mechanics
             </p>
-            
+
             {/* World Selection Section */}
             <div className="mt-6 max-w-2xl mx-auto">
               <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
@@ -600,7 +595,7 @@ const EncounterEditorPage = () => {
                 <WorldSelector compact={true} />
               </div>
             </div>
-            
+
             {/* World Selection Status */}
             <div className="mt-4 max-w-2xl mx-auto">
               {!currentWorldId ? (
@@ -693,7 +688,7 @@ const EncounterEditorPage = () => {
                 <Upload className="w-4 h-4" />
                 Import
               </label>
-              
+
               <button
                 onClick={handleExportTemplate}
                 disabled={!currentEncounter}
@@ -726,229 +721,227 @@ const EncounterEditorPage = () => {
 
           {/* Main Content Area */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-        {testMode && testResults ? (
-            <div className="p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">Encounter Test Results</h2>
-                <button
-                  onClick={() => setTestMode(false)}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors"
-                >
-                  Back to Editor
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                {/* Test Status */}
-                <div className={`p-4 rounded-lg border ${
-                  testResults.success 
-                    ? 'bg-green-600/10 border-green-600/30' 
-                    : 'bg-red-600/10 border-red-600/30'
-                }`}>
-                  <div className={`font-semibold ${
-                    testResults.success ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {testResults.success ? '✓ Encounter Test Passed' : '✗ Encounter Test Failed'}
-                  </div>
-                  <div className="text-sm text-gray-300 mt-1">
-                    Can Trigger: {testResults.canTrigger ? 'Yes' : 'No'}
-                  </div>
+            {testMode && testResults ? (
+              <div className="p-6 sm:p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-white">Encounter Test Results</h2>
+                  <button
+                    onClick={() => setTestMode(false)}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors"
+                  >
+                    Back to Editor
+                  </button>
                 </div>
-                
-                {/* Turn-Based Integration */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-indigo-400" />
-                    Turn-Based Integration
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-3 bg-white/10 rounded border border-white/20">
-                      <div className="text-sm text-gray-400">Duration</div>
-                      <div className="text-white font-medium">{testResults.turnBasedIntegration.duration} turns</div>
-                    </div>
-                    <div className="p-3 bg-white/10 rounded border border-white/20">
-                      <div className="text-sm text-gray-400">Initiative</div>
-                      <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.initiative}</div>
-                    </div>
-                    <div className="p-3 bg-white/10 rounded border border-white/20">
-                      <div className="text-sm text-gray-400">Timing</div>
-                      <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.timing}</div>
-                    </div>
-                    <div className="p-3 bg-white/10 rounded border border-white/20">
-                      <div className="text-sm text-gray-400">Sequencing</div>
-                      <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.sequencing}</div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Generated Interactions */}
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Interaction System Integration</h3>
-                  <div className="p-3 bg-white/10 rounded border border-white/20">
-                    <div className="text-sm text-gray-400">Generated Interactions</div>
-                    <div className="text-white font-medium">{testResults.generatedInteractions} interaction(s) created</div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      These interactions will be automatically created when the encounter is saved
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Outcome Test */}
-                {testResults.outcome && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-3">Sample Outcome</h3>
-                    <div className="p-4 bg-white/10 rounded border border-white/20">
-                      <div className="text-white font-medium mb-2">{testResults.outcome.description}</div>
-                      <div className="text-sm text-gray-400">
-                        Turn Duration: {testResults.outcome.turnDuration} | 
-                        Timing: {testResults.outcome.timing}
-                      </div>
-                      {testResults.outcome.effects && testResults.outcome.effects.length > 0 && (
-                        <div className="mt-2 text-sm text-gray-300">
-                          Effects: {testResults.outcome.effects.length} effect(s)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Warnings */}
-                {testResults.warnings.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-yellow-400 mb-3">Warnings</h3>
-                    <div className="space-y-2">
-                      {testResults.warnings.map((warning, index) => (
-                        <div key={index} className="p-3 bg-yellow-600/10 border border-yellow-600/30 rounded">
-                          <span className="text-yellow-300">{warning}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Errors */}
-                {testResults.errors.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-red-400 mb-3">Errors</h3>
-                    <div className="space-y-2">
-                      {testResults.errors.map((error, index) => (
-                        <div key={index} className="p-3 bg-red-600/10 border border-red-600/30 rounded">
-                          <span className="text-red-300">{error}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : previewMode ? (
-            <div className="p-6 sm:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">Encounter Preview</h2>
-              {currentEncounter ? (
+
                 <div className="space-y-6">
-                  {/* Basic Info */}
-                  <div className="p-4 bg-white/10 rounded border border-white/20">
-                    <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
-                      <Swords className="w-5 h-5 text-indigo-400" />
-                      {currentEncounter.name || 'Unnamed Encounter'}
+                  {/* Test Status */}
+                  <div className={`p-4 rounded-lg border ${testResults.success
+                    ? 'bg-green-600/10 border-green-600/30'
+                    : 'bg-red-600/10 border-red-600/30'
+                    }`}>
+                    <div className={`font-semibold ${testResults.success ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                      {testResults.success ? '✓ Encounter Test Passed' : '✗ Encounter Test Failed'}
+                    </div>
+                    <div className="text-sm text-gray-300 mt-1">
+                      Can Trigger: {testResults.canTrigger ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+
+                  {/* Turn-Based Integration */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-indigo-400" />
+                      Turn-Based Integration
                     </h3>
-                    <p className="text-gray-300 mb-3">
-                      {currentEncounter.description || 'No description provided'}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-gray-400">Type: <span className="text-white capitalize">{currentEncounter.type}</span></span>
-                      <span className="text-gray-400">Difficulty: <span className="text-white capitalize">{currentEncounter.difficulty}</span></span>
-                      <span className="text-gray-400">CR: <span className="text-white">{currentEncounter.challengeRating}</span></span>
-                    </div>
-                  </div>
-                  
-                  {/* Turn-Based Info */}
-                  <div className="p-4 bg-white/10 rounded border border-white/20">
-                    <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-indigo-400" />
-                      Turn-Based Configuration
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <span className="text-gray-400">Duration:</span>
-                        <span className="text-white ml-1">{currentEncounter.turnBased?.duration || 1} turns</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-3 bg-white/10 rounded border border-white/20">
+                        <div className="text-sm text-gray-400">Duration</div>
+                        <div className="text-white font-medium">{testResults.turnBasedIntegration.duration} turns</div>
                       </div>
-                      <div>
-                        <span className="text-gray-400">Initiative:</span>
-                        <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.initiative || 'random'}</span>
+                      <div className="p-3 bg-white/10 rounded border border-white/20">
+                        <div className="text-sm text-gray-400">Initiative</div>
+                        <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.initiative}</div>
                       </div>
-                      <div>
-                        <span className="text-gray-400">Timing:</span>
-                        <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.timing || 'immediate'}</span>
+                      <div className="p-3 bg-white/10 rounded border border-white/20">
+                        <div className="text-sm text-gray-400">Timing</div>
+                        <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.timing}</div>
                       </div>
-                      <div>
-                        <span className="text-gray-400">Sequencing:</span>
-                        <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.sequencing || 'simultaneous'}</span>
+                      <div className="p-3 bg-white/10 rounded border border-white/20">
+                        <div className="text-sm text-gray-400">Sequencing</div>
+                        <div className="text-white font-medium capitalize">{testResults.turnBasedIntegration.sequencing}</div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Outcomes */}
-                  {currentEncounter.outcomes && currentEncounter.outcomes.length > 0 && (
-                    <div className="p-4 bg-white/10 rounded border border-white/20">
-                      <h4 className="font-semibold text-white mb-3">Possible Outcomes</h4>
+
+                  {/* Generated Interactions */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-3">Interaction System Integration</h3>
+                    <div className="p-3 bg-white/10 rounded border border-white/20">
+                      <div className="text-sm text-gray-400">Generated Interactions</div>
+                      <div className="text-white font-medium">{testResults.generatedInteractions} interaction(s) created</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        These interactions will be automatically created when the encounter is saved
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Outcome Test */}
+                  {testResults.outcome && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-3">Sample Outcome</h3>
+                      <div className="p-4 bg-white/10 rounded border border-white/20">
+                        <div className="text-white font-medium mb-2">{testResults.outcome.description}</div>
+                        <div className="text-sm text-gray-400">
+                          Turn Duration: {testResults.outcome.turnDuration} |
+                          Timing: {testResults.outcome.timing}
+                        </div>
+                        {testResults.outcome.effects && testResults.outcome.effects.length > 0 && (
+                          <div className="mt-2 text-sm text-gray-300">
+                            Effects: {testResults.outcome.effects.length} effect(s)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {testResults.warnings.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-yellow-400 mb-3">Warnings</h3>
                       <div className="space-y-2">
-                        {currentEncounter.outcomes.map((outcome, index) => (
-                          <div key={outcome.id || index} className="p-3 bg-white/10 rounded border border-white/20">
-                            <div className="flex items-center justify-between">
-                              <span className="text-white">{outcome.description || `Outcome ${index + 1}`}</span>
-                              <span className="text-xs text-gray-400">
-                                {Math.round((outcome.probability || 1.0) * 100)}% chance
-                              </span>
-                            </div>
-                            {outcome.effects && outcome.effects.length > 0 && (
-                              <div className="text-xs text-gray-400 mt-1">
-                                {outcome.effects.length} effect(s) | Duration: {outcome.turnDuration || 1} turn(s)
-                              </div>
-                            )}
+                        {testResults.warnings.map((warning, index) => (
+                          <div key={index} className="p-3 bg-yellow-600/10 border border-yellow-600/30 rounded">
+                            <span className="text-yellow-300">{warning}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  
-                  {/* Prerequisites */}
-                  {currentEncounter.prerequisites && currentEncounter.prerequisites.length > 0 && (
-                    <div className="p-4 bg-white/10 rounded border border-white/20">
-                      <h4 className="font-semibold text-white mb-3">Prerequisites</h4>
-                      <div className="space-y-1">
-                        {currentEncounter.prerequisites.map((prereq, index) => (
-                          <div key={prereq.id || index} className="text-sm text-gray-300">
-                            • {prereq.type === 'attribute' ? `${prereq.attribute} ≥ ${prereq.value}` : 
-                               prereq.type === 'level' ? `Level ≥ ${prereq.value}` :
-                               `${prereq.type} requirement`}
+
+                  {/* Errors */}
+                  {testResults.errors.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-red-400 mb-3">Errors</h3>
+                      <div className="space-y-2">
+                        {testResults.errors.map((error, index) => (
+                          <div key={index} className="p-3 bg-red-600/10 border border-red-600/30 rounded">
+                            <span className="text-red-300">{error}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
-              ) : (
+              </div>
+            ) : previewMode ? (
+              <div className="p-6 sm:p-8">
+                <h2 className="text-xl font-semibold text-white mb-4">Encounter Preview</h2>
+                {currentEncounter ? (
+                  <div className="space-y-6">
+                    {/* Basic Info */}
+                    <div className="p-4 bg-white/10 rounded border border-white/20">
+                      <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
+                        <Swords className="w-5 h-5 text-indigo-400" />
+                        {currentEncounter.name || 'Unnamed Encounter'}
+                      </h3>
+                      <p className="text-gray-300 mb-3">
+                        {currentEncounter.description || 'No description provided'}
+                      </p>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-gray-400">Type: <span className="text-white capitalize">{currentEncounter.type}</span></span>
+                        <span className="text-gray-400">Difficulty: <span className="text-white capitalize">{currentEncounter.difficulty}</span></span>
+                        <span className="text-gray-400">CR: <span className="text-white">{currentEncounter.challengeRating}</span></span>
+                      </div>
+                    </div>
+
+                    {/* Turn-Based Info */}
+                    <div className="p-4 bg-white/10 rounded border border-white/20">
+                      <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-indigo-400" />
+                        Turn-Based Configuration
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-400">Duration:</span>
+                          <span className="text-white ml-1">{currentEncounter.turnBased?.duration || 1} turns</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Initiative:</span>
+                          <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.initiative || 'random'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Timing:</span>
+                          <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.timing || 'immediate'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Sequencing:</span>
+                          <span className="text-white ml-1 capitalize">{currentEncounter.turnBased?.sequencing || 'simultaneous'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Outcomes */}
+                    {currentEncounter.outcomes && currentEncounter.outcomes.length > 0 && (
+                      <div className="p-4 bg-white/10 rounded border border-white/20">
+                        <h4 className="font-semibold text-white mb-3">Possible Outcomes</h4>
+                        <div className="space-y-2">
+                          {currentEncounter.outcomes.map((outcome, index) => (
+                            <div key={outcome.id || index} className="p-3 bg-white/10 rounded border border-white/20">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white">{outcome.description || `Outcome ${index + 1}`}</span>
+                                <span className="text-xs text-gray-400">
+                                  {Math.round((outcome.probability || 1.0) * 100)}% chance
+                                </span>
+                              </div>
+                              {outcome.effects && outcome.effects.length > 0 && (
+                                <div className="text-xs text-gray-400 mt-1">
+                                  {outcome.effects.length} effect(s) | Duration: {outcome.turnDuration || 1} turn(s)
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Prerequisites */}
+                    {currentEncounter.prerequisites && currentEncounter.prerequisites.length > 0 && (
+                      <div className="p-4 bg-white/10 rounded border border-white/20">
+                        <h4 className="font-semibold text-white mb-3">Prerequisites</h4>
+                        <div className="space-y-1">
+                          {currentEncounter.prerequisites.map((prereq, index) => (
+                            <div key={prereq.id || index} className="text-sm text-gray-300">
+                              • {prereq.type === 'attribute' ? `${prereq.attribute} ≥ ${prereq.value}` :
+                                prereq.type === 'level' ? `Level ≥ ${prereq.value}` :
+                                  `${prereq.type} requirement`}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
                   <p className="text-gray-300">
-                  No encounter data to preview. Create or load an encounter to see the preview.
-                </p>
-              )}
-            </div>
-          ) : (
-            /* Edit Mode */
-            <div className="p-6 sm:p-8">
-              <h2 className="text-2xl font-semibold text-white mb-6">Encounter Configuration</h2>
-              
-              {/* Use EncounterEditor component */}
-              <EncounterEditor 
-                initialEncounter={currentEncounter}
-                onChange={handleChange}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                mode={currentEncounter ? 'edit' : 'create'}
-              />
-            </div>
-          )}
+                    No encounter data to preview. Create or load an encounter to see the preview.
+                  </p>
+                )}
+              </div>
+            ) : (
+              /* Edit Mode */
+              <div className="p-6 sm:p-8">
+                <h2 className="text-2xl font-semibold text-white mb-6">Encounter Configuration</h2>
+
+                {/* Use EncounterEditor component */}
+                <EncounterEditor
+                  initialEncounter={currentEncounter}
+                  onChange={handleChange}
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  mode={currentEncounter ? 'edit' : 'create'}
+                />
+              </div>
+            )}
           </div>
 
           {/* Next Steps */}
@@ -1029,11 +1022,10 @@ const EncounterEditorPage = () => {
                 {getNextStepsContent().map((step, index) => (
                   <div
                     key={index}
-                    className={`p-4 rounded-lg border ${
-                      step.completed
-                        ? 'bg-emerald-600/10 border-emerald-600/30'
-                        : 'bg-white/10 border-white/20'
-                    }`}
+                    className={`p-4 rounded-lg border ${step.completed
+                      ? 'bg-emerald-600/10 border-emerald-600/30'
+                      : 'bg-white/10 border-white/20'
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`mt-1 ${step.completed ? 'text-emerald-400' : 'text-gray-400'}`}>
@@ -1046,17 +1038,15 @@ const EncounterEditorPage = () => {
                         )}
                       </div>
                       <div className="flex-1">
-                        <h3 className={`font-semibold mb-2 ${
-                          step.completed ? 'text-emerald-400' : 'text-white'
-                        }`}>
+                        <h3 className={`font-semibold mb-2 ${step.completed ? 'text-emerald-400' : 'text-white'
+                          }`}>
                           {step.title}
                         </h3>
                         <p className="text-gray-300 text-sm mb-2">
                           {step.description}
                         </p>
-                        <p className={`text-sm ${
-                          step.completed ? 'text-emerald-300' : 'text-indigo-300'
-                        }`}>
+                        <p className={`text-sm ${step.completed ? 'text-emerald-300' : 'text-indigo-300'
+                          }`}>
                           {step.action}
                         </p>
                       </div>
