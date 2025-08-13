@@ -5,6 +5,8 @@
  */
 
 import WorldValidator from './WorldValidator.js';
+import Character from '../entities/Character.js';
+import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 class WorldBuilder {
   constructor(templateManager = null) {
@@ -239,10 +241,10 @@ class WorldBuilder {
     return this.addInteraction(interactionConfig);
   }
 
-  // Step 4: Character creation methods (with capability assignment)
+  // Step 4: Enhanced Character creation and management methods
 
   /**
-   * Adds a character with assigned capabilities to the world
+   * Adds a character with enhanced validation and type support
    * @param {Object} characterConfig - Character configuration
    * @returns {WorldBuilder} This instance for chaining
    */
@@ -255,54 +257,505 @@ class WorldBuilder {
       throw new Error('Character configuration must be an object');
     }
 
-    // Required fields for characters
-    const requiredFields = ['name', 'attributes', 'assignedInteractions'];
-    for (const field of requiredFields) {
-      if (!characterConfig[field]) {
-        throw new Error(`Character ${field} is required`);
+    // Create Character instance for enhanced validation
+    let character;
+    try {
+      // Convert legacy format to new Character entity format
+      const enhancedConfig = this._convertLegacyCharacterConfig(characterConfig);
+      character = new Character(enhancedConfig);
+    } catch (error) {
+      throw new ValidationError('characterConfig', characterConfig, `Character creation failed: ${error.message}`);
+    }
+
+    // Validate against interactions still exist (legacy requirement)
+    if (characterConfig.assignedInteractions && characterConfig.assignedInteractions.length > 0) {
+      const interactionIds = new Set(this.worldConfig.interactions.map(i => i.id));
+      for (const interactionId of characterConfig.assignedInteractions) {
+        if (!interactionIds.has(interactionId)) {
+          throw new Error(`Assigned interaction '${interactionId}' does not exist`);
+        }
       }
     }
 
-    // Validate D&D attributes
-    const requiredAttributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
-    for (const attr of requiredAttributes) {
-      if (typeof characterConfig.attributes[attr] !== 'number') {
-        throw new Error(`Character attribute ${attr} must be a number`);
-      }
-    }
-
-    // Validate assigned interactions exist
-    if (!Array.isArray(characterConfig.assignedInteractions) || characterConfig.assignedInteractions.length === 0) {
-      throw new Error('Character must have at least one assigned interaction');
-    }
-
-    const interactionIds = new Set(this.worldConfig.interactions.map(i => i.id));
-    for (const interactionId of characterConfig.assignedInteractions) {
-      if (!interactionIds.has(interactionId)) {
-        throw new Error(`Assigned interaction '${interactionId}' does not exist`);
-      }
-    }
-
-    // Ensure character is not yet placed in nodes (Step 5)
-    if (characterConfig.currentNodeId) {
-      throw new Error('Characters should not be assigned to nodes yet (Step 5)');
-    }
-
-    const character = {
-      id: characterConfig.id || this._generateId('character'),
-      name: characterConfig.name,
-      attributes: { ...characterConfig.attributes },
-      assignedInteractions: [...characterConfig.assignedInteractions],
-      personality: characterConfig.personality || {},
-      consciousness: characterConfig.consciousness || {},
-      skills: characterConfig.skills || {},
-      goals: characterConfig.goals || [],
-      ...characterConfig
+    // Convert Character entity back to plain object for storage
+    const characterData = {
+      ...character.toJSON(),
+      // Preserve legacy fields for backwards compatibility
+      assignedInteractions: characterConfig.assignedInteractions || []
     };
 
-    this.worldConfig.characters.push(character);
+    // Check for duplicates
+    if (this.getCharacter(characterData.id)) {
+      throw new ValidationError('characterId', characterData.id, 'Character with this ID already exists');
+    }
+
+    this.worldConfig.characters.push(characterData);
     this._validateStep(4);
     return this;
+  }
+
+  /**
+   * Updates an existing character
+   * @param {string} characterId - ID of character to update
+   * @param {Object} updates - Updates to apply
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  updateCharacter(characterId, updates) {
+    if (!characterId || typeof characterId !== 'string') {
+      throw new ValidationError('characterId', characterId, 'Character ID must be a non-empty string');
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      throw new ValidationError('updates', updates, 'Updates must be an object');
+    }
+
+    const characterIndex = this.worldConfig.characters.findIndex(c => c.id === characterId);
+    if (characterIndex === -1) {
+      throw new ValidationError('characterId', characterId, 'Character not found');
+    }
+
+    const existingCharacter = this.worldConfig.characters[characterIndex];
+    
+    try {
+      // Create updated character with validation
+      const updatedConfig = { ...existingCharacter, ...updates };
+      const character = Character.fromJSON(updatedConfig);
+      
+      // Validate the updated character
+      const validation = character.validateAgainstType();
+      if (!validation.success) {
+        const errorMessages = validation.errors.map(err => err.message).join('; ');
+        throw new ValidationError('characterValidation', updates, `Character validation failed: ${errorMessages}`);
+      }
+
+      // Update the character in storage
+      this.worldConfig.characters[characterIndex] = {
+        ...character.toJSON(),
+        assignedInteractions: updatedConfig.assignedInteractions || existingCharacter.assignedInteractions || []
+      };
+
+      this._validateStep(4);
+      return this;
+    } catch (error) {
+      throw new ValidationError('characterUpdate', updates, `Character update failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Deletes a character and handles cleanup
+   * @param {string} characterId - ID of character to delete
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  deleteCharacter(characterId) {
+    if (!characterId || typeof characterId !== 'string') {
+      throw new ValidationError('characterId', characterId, 'Character ID must be a non-empty string');
+    }
+
+    const characterIndex = this.worldConfig.characters.findIndex(c => c.id === characterId);
+    if (characterIndex === -1) {
+      throw new ValidationError('characterId', characterId, 'Character not found');
+    }
+
+    // Remove character from characters array
+    this.worldConfig.characters.splice(characterIndex, 1);
+
+    // Clean up character assignments from nodes
+    for (const nodeId in this.worldConfig.nodePopulations) {
+      const characterIndex = this.worldConfig.nodePopulations[nodeId].indexOf(characterId);
+      if (characterIndex !== -1) {
+        this.worldConfig.nodePopulations[nodeId].splice(characterIndex, 1);
+      }
+    }
+
+    // Revalidate steps that might be affected
+    this._validateStep(4);
+    this._validateStep(5);
+
+    return this;
+  }
+
+  /**
+   * Gets a character by ID
+   * @param {string} characterId - ID of character to retrieve
+   * @returns {Object|null} Character data or null if not found
+   */
+  getCharacter(characterId) {
+    if (!characterId || typeof characterId !== 'string') {
+      return null;
+    }
+
+    return this.worldConfig.characters.find(c => c.id === characterId) || null;
+  }
+
+  /**
+   * Gets all characters
+   * @returns {Array} Array of all character data
+   */
+  getAllCharacters() {
+    return [...this.worldConfig.characters];
+  }
+
+  /**
+   * Searches characters by various criteria
+   * @param {Object} searchCriteria - Search criteria
+   * @returns {Array} Array of matching characters
+   */
+  searchCharacters(searchCriteria = {}) {
+    let results = [...this.worldConfig.characters];
+
+    // Filter by name (partial match, case-insensitive)
+    if (searchCriteria.name) {
+      const nameQuery = searchCriteria.name.toLowerCase();
+      results = results.filter(character => 
+        character.name && character.name.toLowerCase().includes(nameQuery)
+      );
+    }
+
+    // Filter by character type
+    if (searchCriteria.characterType) {
+      results = results.filter(character => {
+        const charType = character.characterType?.typeId || 'generic';
+        return charType === searchCriteria.characterType;
+      });
+    }
+
+    // Filter by character category
+    if (searchCriteria.category) {
+      results = results.filter(character => {
+        const category = character.characterType?.category || 'npc';
+        return category === searchCriteria.category;
+      });
+    }
+
+    // Filter by age range
+    if (searchCriteria.minAge !== undefined || searchCriteria.maxAge !== undefined) {
+      results = results.filter(character => {
+        const age = character.age || 25;
+        const meetsMin = searchCriteria.minAge === undefined || age >= searchCriteria.minAge;
+        const meetsMax = searchCriteria.maxAge === undefined || age <= searchCriteria.maxAge;
+        return meetsMin && meetsMax;
+      });
+    }
+
+    // Filter by level range
+    if (searchCriteria.minLevel !== undefined || searchCriteria.maxLevel !== undefined) {
+      results = results.filter(character => {
+        const level = character.level || 1;
+        const meetsMin = searchCriteria.minLevel === undefined || level >= searchCriteria.minLevel;
+        const meetsMax = searchCriteria.maxLevel === undefined || level <= searchCriteria.maxLevel;
+        return meetsMin && meetsMax;
+      });
+    }
+
+    // Filter by attribute values
+    if (searchCriteria.attributes) {
+      results = results.filter(character => {
+        if (!character.attributes) return false;
+        
+        return Object.entries(searchCriteria.attributes).every(([attr, criteria]) => {
+          const value = character.attributes[attr];
+          if (value === undefined) return false;
+          
+          if (typeof criteria === 'number') {
+            return value >= criteria;
+          }
+          
+          if (typeof criteria === 'object' && criteria !== null) {
+            const meetsMin = criteria.min === undefined || value >= criteria.min;
+            const meetsMax = criteria.max === undefined || value <= criteria.max;
+            return meetsMin && meetsMax;
+          }
+          
+          return true;
+        });
+      });
+    }
+
+    // Filter by skill values
+    if (searchCriteria.skills) {
+      results = results.filter(character => {
+        if (!character.skills) return false;
+        
+        return Object.entries(searchCriteria.skills).every(([skill, criteria]) => {
+          const value = character.skills[skill] || 0;
+          
+          if (typeof criteria === 'number') {
+            return value >= criteria;
+          }
+          
+          if (typeof criteria === 'object' && criteria !== null) {
+            const meetsMin = criteria.min === undefined || value >= criteria.min;
+            const meetsMax = criteria.max === undefined || value <= criteria.max;
+            return meetsMin && meetsMax;
+          }
+          
+          return true;
+        });
+      });
+    }
+
+    // Filter by assignment status
+    if (searchCriteria.hasAssignments !== undefined) {
+      results = results.filter(character => {
+        const assignments = character.assignments;
+        const hasAnyAssignments = assignments && Object.values(assignments).some(assignmentSet => 
+          (Array.isArray(assignmentSet) && assignmentSet.length > 0) ||
+          (assignmentSet && typeof assignmentSet === 'object' && assignmentSet.size > 0)
+        );
+        return hasAnyAssignments === searchCriteria.hasAssignments;
+      });
+    }
+
+    // Filter by assigned to specific node
+    if (searchCriteria.assignedToNode) {
+      results = results.filter(character => {
+        const nodePopulation = this.worldConfig.nodePopulations[searchCriteria.assignedToNode];
+        return nodePopulation && nodePopulation.includes(character.id);
+      });
+    }
+
+    // Filter by assigned interactions (legacy)
+    if (searchCriteria.hasInteraction) {
+      results = results.filter(character => {
+        const interactions = character.assignedInteractions || [];
+        return interactions.includes(searchCriteria.hasInteraction);
+      });
+    }
+
+    // Filter by health range
+    if (searchCriteria.minHealth !== undefined || searchCriteria.maxHealth !== undefined) {
+      results = results.filter(character => {
+        const health = character.health || 100;
+        const meetsMin = searchCriteria.minHealth === undefined || health >= searchCriteria.minHealth;
+        const meetsMax = searchCriteria.maxHealth === undefined || health <= searchCriteria.maxHealth;
+        return meetsMin && meetsMax;
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Filters characters by a custom filter function
+   * @param {Function} filterFn - Filter function that takes a character and returns boolean
+   * @returns {Array} Array of matching characters
+   */
+  filterCharacters(filterFn) {
+    if (typeof filterFn !== 'function') {
+      throw new ValidationError('filterFn', filterFn, 'Filter function must be a function');
+    }
+
+    return this.worldConfig.characters.filter(filterFn);
+  }
+
+  /**
+   * Gets characters by character type
+   * @param {string} characterTypeId - Character type ID to filter by
+   * @returns {Array} Array of characters with the specified type
+   */
+  getCharactersByType(characterTypeId) {
+    return this.searchCharacters({ characterType: characterTypeId });
+  }
+
+  /**
+   * Gets characters by category
+   * @param {string} category - Character category to filter by
+   * @returns {Array} Array of characters with the specified category
+   */
+  getCharactersByCategory(category) {
+    return this.searchCharacters({ category });
+  }
+
+  /**
+   * Gets characters assigned to a specific node
+   * @param {string} nodeId - Node ID to check
+   * @returns {Array} Array of characters assigned to the node
+   */
+  getCharactersAtNode(nodeId) {
+    const nodePopulation = this.worldConfig.nodePopulations[nodeId] || [];
+    return nodePopulation.map(characterId => this.getCharacter(characterId)).filter(Boolean);
+  }
+
+  /**
+   * Gets unassigned characters (not assigned to any node)
+   * @returns {Array} Array of unassigned characters
+   */
+  getUnassignedCharacters() {
+    const assignedCharacterIds = new Set();
+    
+    // Collect all assigned character IDs from node populations
+    Object.values(this.worldConfig.nodePopulations).forEach(population => {
+      population.forEach(characterId => assignedCharacterIds.add(characterId));
+    });
+    
+    return this.worldConfig.characters.filter(character => 
+      !assignedCharacterIds.has(character.id)
+    );
+  }
+
+  /**
+   * Validates a character against its type and world constraints
+   * @param {Object} characterData - Character data to validate
+   * @returns {Object} Validation result
+   */
+  validateCharacter(characterData) {
+    const errors = [];
+    const warnings = [];
+
+    try {
+      // Create character instance for validation
+      const character = Character.fromJSON(characterData);
+      
+      // Validate against character type
+      const typeValidation = character.validateAgainstType();
+      errors.push(...typeValidation.errors);
+      warnings.push(...typeValidation.warnings);
+
+      // Validate assigned interactions exist (legacy)
+      if (characterData.assignedInteractions) {
+        const interactionIds = new Set(this.worldConfig.interactions.map(i => i.id));
+        for (const interactionId of characterData.assignedInteractions) {
+          if (!interactionIds.has(interactionId)) {
+            errors.push({
+              field: 'assignedInteractions',
+              type: 'reference',
+              message: `Assigned interaction '${interactionId}' does not exist`
+            });
+          }
+        }
+      }
+
+      // Check for duplicate names (warning)
+      const existingCharacter = this.worldConfig.characters.find(c => 
+        c.id !== characterData.id && c.name === characterData.name
+      );
+      if (existingCharacter) {
+        warnings.push({
+          field: 'name',
+          type: 'duplicate',
+          message: `Character name '${characterData.name}' is already used by another character`
+        });
+      }
+
+    } catch (error) {
+      errors.push({
+        field: 'character',
+        type: 'creation',
+        message: `Character creation failed: ${error.message}`
+      });
+    }
+
+    return {
+      success: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * Bulk adds multiple characters with validation
+   * @param {Array} charactersData - Array of character configurations
+   * @returns {Object} Result with successes and failures
+   */
+  bulkAddCharacters(charactersData) {
+    if (!Array.isArray(charactersData)) {
+      throw new ValidationError('charactersData', charactersData, 'Characters data must be an array');
+    }
+
+    const results = {
+      successes: [],
+      failures: [],
+      totalAttempted: charactersData.length
+    };
+
+    for (let i = 0; i < charactersData.length; i++) {
+      const characterData = charactersData[i];
+      
+      try {
+        this.addCharacter(characterData);
+        results.successes.push({
+          index: i,
+          characterId: characterData.id || 'generated',
+          characterName: characterData.name
+        });
+      } catch (error) {
+        results.failures.push({
+          index: i,
+          characterData,
+          error: error.message
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Gets character statistics and summary
+   * @returns {Object} Statistics about characters in the world
+   */
+  getCharacterStatistics() {
+    const characters = this.worldConfig.characters;
+    
+    if (characters.length === 0) {
+      return {
+        total: 0,
+        byType: {},
+        byCategory: {},
+        levelDistribution: {},
+        ageDistribution: {},
+        assignmentStatus: {
+          assigned: 0,
+          unassigned: 0
+        }
+      };
+    }
+
+    const stats = {
+      total: characters.length,
+      byType: {},
+      byCategory: {},
+      levelDistribution: {},
+      ageDistribution: {},
+      assignmentStatus: {
+        assigned: 0,
+        unassigned: 0
+      }
+    };
+
+    const assignedCharacterIds = new Set();
+    Object.values(this.worldConfig.nodePopulations).forEach(population => {
+      population.forEach(characterId => assignedCharacterIds.add(characterId));
+    });
+
+    characters.forEach(character => {
+      // Type distribution
+      const type = character.characterType?.typeId || 'generic';
+      stats.byType[type] = (stats.byType[type] || 0) + 1;
+
+      // Category distribution
+      const category = character.characterType?.category || 'npc';
+      stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
+
+      // Level distribution
+      const level = character.level || 1;
+      const levelRange = `${Math.floor(level / 5) * 5}-${Math.floor(level / 5) * 5 + 4}`;
+      stats.levelDistribution[levelRange] = (stats.levelDistribution[levelRange] || 0) + 1;
+
+      // Age distribution
+      const age = character.age || 25;
+      const ageRange = `${Math.floor(age / 10) * 10}-${Math.floor(age / 10) * 10 + 9}`;
+      stats.ageDistribution[ageRange] = (stats.ageDistribution[ageRange] || 0) + 1;
+
+      // Assignment status
+      if (assignedCharacterIds.has(character.id)) {
+        stats.assignmentStatus.assigned++;
+      } else {
+        stats.assignmentStatus.unassigned++;
+      }
+    });
+
+    return stats;
   }
 
   /**
@@ -704,6 +1157,74 @@ class WorldBuilder {
    */
   _generateId(prefix = 'item') {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  /**
+   * Converts legacy character config to new Character entity format
+   * @param {Object} characterConfig - Legacy character configuration
+   * @returns {Object} Enhanced character configuration
+   * @private
+   */
+  _convertLegacyCharacterConfig(characterConfig) {
+    // Start with the original config
+    const enhancedConfig = { ...characterConfig };
+
+    // Ensure ID exists
+    if (!enhancedConfig.id) {
+      enhancedConfig.id = this._generateId('character');
+    }
+
+    // Set default character type if not specified
+    if (!enhancedConfig.characterType && !enhancedConfig.characterTypeId) {
+      enhancedConfig.characterTypeId = 'generic';
+    }
+
+    // Ensure required attributes exist with defaults
+    if (!enhancedConfig.attributes) {
+      enhancedConfig.attributes = {};
+    }
+
+    const requiredAttributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+    for (const attr of requiredAttributes) {
+      if (typeof enhancedConfig.attributes[attr] !== 'number') {
+        enhancedConfig.attributes[attr] = 10; // Default attribute value
+      }
+    }
+
+    // Ensure health exists
+    if (enhancedConfig.health === undefined) {
+      enhancedConfig.health = 100;
+    }
+
+    // Convert assignedInteractions to assignments format if needed
+    if (characterConfig.assignedInteractions && characterConfig.assignedInteractions.length > 0) {
+      if (!enhancedConfig.assignedInteractionIds) {
+        enhancedConfig.assignedInteractionIds = [...characterConfig.assignedInteractions];
+      }
+    }
+
+    // Ensure other defaults
+    if (!enhancedConfig.name) {
+      enhancedConfig.name = 'Unnamed Character';
+    }
+
+    if (enhancedConfig.age === undefined) {
+      enhancedConfig.age = 25;
+    }
+
+    if (enhancedConfig.level === undefined) {
+      enhancedConfig.level = 1;
+    }
+
+    // Ensure consciousness exists
+    if (!enhancedConfig.consciousness) {
+      enhancedConfig.consciousness = {
+        frequency: 40,
+        coherence: 0.5
+      };
+    }
+
+    return enhancedConfig;
   }
 }
 
