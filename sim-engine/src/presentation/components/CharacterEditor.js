@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 
 // Character archetypes
 const CHARACTER_ARCHETYPES = [
@@ -721,7 +722,10 @@ const CharacterEditor = ({
   initialCharacter = null, 
   onSave,
   onCancel,
-  mode = 'create' // 'create' or 'edit'
+  mode = 'create', // 'create' or 'edit'
+  availableInteractions = [], // Available interactions from world
+  onCreateInteraction = null, // Callback to create new interactions
+  onEditInteraction = null // Callback to edit interactions
 }) => {
   // Form state
   const [characterData, setCharacterData] = useState({
@@ -749,6 +753,7 @@ const CharacterEditor = ({
     },
     skills: initialCharacter?.skills || {},
     goals: initialCharacter?.goals || [],
+    assignedInteractions: initialCharacter?.assignedInteractions || [],
     equipment: initialCharacter?.equipment || {},
     relationshipTemplates: initialCharacter?.relationshipTemplates || [],
     background: initialCharacter?.background || '',
@@ -811,6 +816,31 @@ const CharacterEditor = ({
     }
   };
 
+  // Handle interaction assignment
+  const handleAssignInteraction = useCallback((characterId, interactionId) => {
+    if (!characterData.assignedInteractions.includes(interactionId)) {
+      setCharacterData({
+        ...characterData,
+        assignedInteractions: [...characterData.assignedInteractions, interactionId]
+      });
+    }
+  }, [characterData]);
+
+  // Handle interaction unassignment
+  const handleUnassignInteraction = useCallback((characterId, interactionId) => {
+    setCharacterData({
+      ...characterData,
+      assignedInteractions: characterData.assignedInteractions.filter(id => id !== interactionId)
+    });
+  }, [characterData]);
+
+  // Get assigned interaction objects
+  const getAssignedInteractions = useCallback(() => {
+    return characterData.assignedInteractions
+      .map(id => availableInteractions.find(interaction => interaction.id === id))
+      .filter(Boolean);
+  }, [characterData.assignedInteractions, availableInteractions]);
+
   // Tabs configuration
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: '📝' },
@@ -818,6 +848,7 @@ const CharacterEditor = ({
     { id: 'personality', label: 'Personality', icon: '🧠' },
     { id: 'skills', label: 'Skills', icon: '⭐' },
     { id: 'goals', label: 'Goals', icon: '🎯' },
+    { id: 'interactions', label: 'Interactions', icon: '⚡' },
     { id: 'equipment', label: 'Equipment', icon: '🎒' },
     { id: 'relationships', label: 'Relationships', icon: '🤝' },
     { id: 'advanced', label: 'Advanced', icon: '⚙️' }
@@ -1087,6 +1118,24 @@ const CharacterEditor = ({
             <GoalEditor
               goals={characterData.goals}
               onChange={(goals) => setCharacterData({...characterData, goals})}
+            />
+          </div>
+        )}
+
+        {/* Interactions Tab */}
+        {activeTab === 'interactions' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Assign interactions that this character can perform. Interactions define what actions the character can take during simulation.
+            </p>
+            <InteractionAssignmentPanel
+              character={characterData}
+              assignedInteractions={getAssignedInteractions()}
+              availableInteractions={availableInteractions}
+              onAssignInteraction={handleAssignInteraction}
+              onUnassignInteraction={handleUnassignInteraction}
+              onCreateInteraction={onCreateInteraction}
+              onEditInteraction={onEditInteraction}
             />
           </div>
         )}

@@ -21,6 +21,7 @@ import ExamplesPage from '../pages/ExamplesPage';
 // Editor pages (full-page editors with global navigation)
 import NodeEditorPage from '../pages/NodeEditorPage';
 import CharacterEditorPage from '../pages/CharacterEditorPage';
+import CharacterManagerPage from '../pages/CharacterManagerPage';
 import InteractionEditorPage from '../pages/InteractionEditorPage';
 import EncounterEditorPage from '../pages/EncounterEditorPage';
 
@@ -56,6 +57,7 @@ const AppRouter = () => {
             <Route path="/editors/nodes" element={<NodeEditorPage />} />
             <Route path="/editors/interactions" element={<InteractionEditorPage />} />
             <Route path="/editors/characters" element={<CharacterEditorPage />} />
+            <Route path="/editors/character-manager" element={<CharacterManagerPage />} />
             <Route path="/editors/encounters" element={<EncounterEditorPage />} />
             
             {/* Simulation route - Optional, with prerequisites */}

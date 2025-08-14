@@ -25,6 +25,12 @@ class WorldState {
     this.groups = config.groups || [];
     this.items = config.items || [];
     
+    // Character assignment tracking
+    this.characterNodeAssignments = new Map(config.characterNodeAssignments || []);
+    this.characterInteractionAssignments = new Map(config.characterInteractionAssignments || []);
+    this.nodeCharacterAssignments = new Map(config.nodeCharacterAssignments || []);
+    this.interactionCharacterAssignments = new Map(config.interactionCharacterAssignments || []);
+    
     // State tracking
     this.isValid = false;
     this.validationResult = null;
@@ -39,6 +45,9 @@ class WorldState {
     // Template integration
     this.templateId = config.templateId || null;
     this.isTemplateInstance = config.isTemplateInstance || false;
+    
+    // Initialize assignment tracking from character data if not provided
+    this._initializeAssignmentTracking();
     
     // Perform initial validation
     this.validate();
@@ -262,11 +271,604 @@ class WorldState {
     return [...this[type]]; // Return copy to prevent external modification
   }
 
+  // Character-specific persistence methods
+
   /**
-   * Gets a summary of the world state
+   * Adds a character to the world with assignment tracking
+   * @param {Object} character - Character to add
+   * @returns {WorldState} This instance for chaining
+   */
+  addCharacter(character) {
+    if (!character || typeof character !== 'object') {
+      throw new Error('Character must be an object');
+    }
+    
+    // Ensure character has an ID
+    if (!character.id) {
+      character.id = this._generateId('character');
+    }
+    
+    // Check if character already exists
+    const existingIndex = this.characters.findIndex(c => c.id === character.id);
+    if (existingIndex !== -1) {
+      throw new Error(`Character with ID ${character.id} already exists`);
+    }
+    
+    this.characters.push(character);
+    
+    // Update assignment tracking if character has assignments
+    this._updateCharacterAssignments(character);
+    
+    this.modifiedAt = new Date();
+    this.validate();
+    return this;
+  }
+
+  /**
+   * Updates an existing character in the world
+   * @param {string} characterId - ID of character to update
+   * @param {Object} updates - Updates to apply
+   * @returns {boolean} True if character was updated
+   */
+  updateCharacter(characterId, updates) {
+    const characterIndex = this.characters.findIndex(c => c.id === characterId);
+    if (characterIndex === -1) {
+      return false;
+    }
+    
+    const oldCharacter = this.characters[characterIndex];
+    const updatedCharacter = { ...oldCharacter, ...updates, id: characterId };
+    
+    this.characters[characterIndex] = updatedCharacter;
+    
+    // Update assignment tracking
+    this._removeCharacterFromAssignmentTracking(characterId);
+    this._updateCharacterAssignments(updatedCharacter);
+    
+    this.modifiedAt = new Date();
+    this.validate();
+    return true;
+  }
+
+  /**
+   * Removes a character from the world and cleans up assignments
+   * @param {string} characterId - ID of character to remove
+   * @returns {boolean} True if character was removed
+   */
+  deleteCharacter(characterId) {
+    const characterIndex = this.characters.findIndex(c => c.id === characterId);
+    if (characterIndex === -1) {
+      return false;
+    }
+    
+    // Remove character from array
+    this.characters.splice(characterIndex, 1);
+    
+    // Clean up assignment tracking
+    this._removeCharacterFromAssignmentTracking(characterId);
+    
+    this.modifiedAt = new Date();
+    this.validate();
+    return true;
+  }
+
+  /**
+   * Gets a character by ID
+   * @param {string} characterId - Character ID
+   * @returns {Object|null} Character or null if not found
+   */
+  getCharacter(characterId) {
+    return this.characters.find(c => c.id === characterId) || null;
+  }
+
+  /**
+   * Gets all characters in the world
+   * @returns {Array} Copy of characters array
+   */
+  getCharacters() {
+    return [...this.characters];
+  }
+
+  /**
+   * Searches characters based on query and filters
+   * @param {string} [query] - Search query
+   * @param {Object} [filters] - Search filters
+   * @returns {Array} Filtered characters
+   */
+  searchCharacters(query = '', filters = {}) {
+    let results = [...this.characters];
+    
+    // Apply text search if query provided
+    if (query && query.trim()) {
+      const searchTerm = query.toLowerCase().trim();
+      results = results.filter(character => {
+        return (
+          (character.name && character.name.toLowerCase().includes(searchTerm)) ||
+          (character.description && character.description.toLowerCase().includes(searchTerm)) ||
+          (character.race && character.race.toLowerCase().includes(searchTerm)) ||
+          (character.characterClass && character.characterClass.toLowerCase().includes(searchTerm)) ||
+          (character.tags && character.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+        );
+      });
+    }
+    
+    // Apply filters
+    if (filters.type) {
+      results = results.filter(character => character.type === filters.type);
+    }
+    
+    if (filters.race) {
+      results = results.filter(character => character.race === filters.race);
+    }
+    
+    if (filters.characterClass) {
+      results = results.filter(character => character.characterClass === filters.characterClass);
+    }
+    
+    if (filters.level !== undefined) {
+      results = results.filter(character => character.level === filters.level);
+    }
+    
+    if (filters.assignedToNode) {
+      results = results.filter(character => 
+        this.isCharacterAssignedToNode(character.id, filters.assignedToNode)
+      );
+    }
+    
+    if (filters.hasNodeAssignments !== undefined) {
+      results = results.filter(character => {
+        const hasAssignments = this.getCharacterNodeAssignments(character.id).length > 0;
+        return filters.hasNodeAssignments ? hasAssignments : !hasAssignments;
+      });
+    }
+    
+    if (filters.assignedToInteraction) {
+      results = results.filter(character => 
+        this.isCharacterAssignedToInteraction(character.id, filters.assignedToInteraction)
+      );
+    }
+    
+    if (filters.hasInteractionAssignments !== undefined) {
+      results = results.filter(character => {
+        const hasAssignments = this.getCharacterInteractionAssignments(character.id).length > 0;
+        return filters.hasInteractionAssignments ? hasAssignments : !hasAssignments;
+      });
+    }
+    
+    return results;
+  }
+
+  /**
+   * Filters characters by multiple criteria
+   * @param {Object} criteria - Filter criteria
+   * @returns {Array} Filtered characters
+   */
+  filterCharacters(criteria) {
+    return this.searchCharacters('', criteria);
+  }
+
+  // Character assignment management methods
+
+  /**
+   * Assigns a character to a node
+   * @param {string} characterId - Character ID
+   * @param {string} nodeId - Node ID
+   * @returns {boolean} True if assignment was successful
+   */
+  assignCharacterToNode(characterId, nodeId) {
+    // Validate character and node exist
+    if (!this.getCharacter(characterId)) {
+      throw new Error(`Character not found: ${characterId}`);
+    }
+    if (!this.getContent('nodes', nodeId)) {
+      throw new Error(`Node not found: ${nodeId}`);
+    }
+    
+    // Add to character -> node mapping
+    if (!this.characterNodeAssignments.has(characterId)) {
+      this.characterNodeAssignments.set(characterId, new Set());
+    }
+    this.characterNodeAssignments.get(characterId).add(nodeId);
+    
+    // Add to node -> character mapping
+    if (!this.nodeCharacterAssignments.has(nodeId)) {
+      this.nodeCharacterAssignments.set(nodeId, new Set());
+    }
+    this.nodeCharacterAssignments.get(nodeId).add(characterId);
+    
+    this.modifiedAt = new Date();
+    return true;
+  }
+
+  /**
+   * Unassigns a character from a node
+   * @param {string} characterId - Character ID
+   * @param {string} nodeId - Node ID
+   * @returns {boolean} True if unassignment was successful
+   */
+  unassignCharacterFromNode(characterId, nodeId) {
+    let changed = false;
+    
+    // Remove from character -> node mapping
+    if (this.characterNodeAssignments.has(characterId)) {
+      const nodeSet = this.characterNodeAssignments.get(characterId);
+      if (nodeSet.has(nodeId)) {
+        nodeSet.delete(nodeId);
+        changed = true;
+        
+        // Clean up empty set
+        if (nodeSet.size === 0) {
+          this.characterNodeAssignments.delete(characterId);
+        }
+      }
+    }
+    
+    // Remove from node -> character mapping
+    if (this.nodeCharacterAssignments.has(nodeId)) {
+      const characterSet = this.nodeCharacterAssignments.get(nodeId);
+      if (characterSet.has(characterId)) {
+        characterSet.delete(characterId);
+        changed = true;
+        
+        // Clean up empty set
+        if (characterSet.size === 0) {
+          this.nodeCharacterAssignments.delete(nodeId);
+        }
+      }
+    }
+    
+    if (changed) {
+      this.modifiedAt = new Date();
+    }
+    
+    return changed;
+  }
+
+  /**
+   * Assigns a character to an interaction
+   * @param {string} characterId - Character ID
+   * @param {string} interactionId - Interaction ID
+   * @returns {boolean} True if assignment was successful
+   */
+  assignCharacterToInteraction(characterId, interactionId) {
+    // Validate character and interaction exist
+    if (!this.getCharacter(characterId)) {
+      throw new Error(`Character not found: ${characterId}`);
+    }
+    if (!this.getContent('interactions', interactionId)) {
+      throw new Error(`Interaction not found: ${interactionId}`);
+    }
+    
+    // Add to character -> interaction mapping
+    if (!this.characterInteractionAssignments.has(characterId)) {
+      this.characterInteractionAssignments.set(characterId, new Set());
+    }
+    this.characterInteractionAssignments.get(characterId).add(interactionId);
+    
+    // Add to interaction -> character mapping
+    if (!this.interactionCharacterAssignments.has(interactionId)) {
+      this.interactionCharacterAssignments.set(interactionId, new Set());
+    }
+    this.interactionCharacterAssignments.get(interactionId).add(characterId);
+    
+    this.modifiedAt = new Date();
+    return true;
+  }
+
+  /**
+   * Unassigns a character from an interaction
+   * @param {string} characterId - Character ID
+   * @param {string} interactionId - Interaction ID
+   * @returns {boolean} True if unassignment was successful
+   */
+  unassignCharacterFromInteraction(characterId, interactionId) {
+    let changed = false;
+    
+    // Remove from character -> interaction mapping
+    if (this.characterInteractionAssignments.has(characterId)) {
+      const interactionSet = this.characterInteractionAssignments.get(characterId);
+      if (interactionSet.has(interactionId)) {
+        interactionSet.delete(interactionId);
+        changed = true;
+        
+        // Clean up empty set
+        if (interactionSet.size === 0) {
+          this.characterInteractionAssignments.delete(characterId);
+        }
+      }
+    }
+    
+    // Remove from interaction -> character mapping
+    if (this.interactionCharacterAssignments.has(interactionId)) {
+      const characterSet = this.interactionCharacterAssignments.get(interactionId);
+      if (characterSet.has(characterId)) {
+        characterSet.delete(characterId);
+        changed = true;
+        
+        // Clean up empty set
+        if (characterSet.size === 0) {
+          this.interactionCharacterAssignments.delete(interactionId);
+        }
+      }
+    }
+    
+    if (changed) {
+      this.modifiedAt = new Date();
+    }
+    
+    return changed;
+  }
+
+  /**
+   * Gets all node assignments for a character
+   * @param {string} characterId - Character ID
+   * @returns {Array} Array of node IDs
+   */
+  getCharacterNodeAssignments(characterId) {
+    const nodeSet = this.characterNodeAssignments.get(characterId);
+    return nodeSet ? Array.from(nodeSet) : [];
+  }
+
+  /**
+   * Gets all interaction assignments for a character
+   * @param {string} characterId - Character ID
+   * @returns {Array} Array of interaction IDs
+   */
+  getCharacterInteractionAssignments(characterId) {
+    const interactionSet = this.characterInteractionAssignments.get(characterId);
+    return interactionSet ? Array.from(interactionSet) : [];
+  }
+
+  /**
+   * Gets all characters assigned to a node
+   * @param {string} nodeId - Node ID
+   * @returns {Array} Array of character IDs
+   */
+  getNodeCharacterAssignments(nodeId) {
+    const characterSet = this.nodeCharacterAssignments.get(nodeId);
+    return characterSet ? Array.from(characterSet) : [];
+  }
+
+  /**
+   * Gets all characters assigned to an interaction
+   * @param {string} interactionId - Interaction ID
+   * @returns {Array} Array of character IDs
+   */
+  getInteractionCharacterAssignments(interactionId) {
+    const characterSet = this.interactionCharacterAssignments.get(interactionId);
+    return characterSet ? Array.from(characterSet) : [];
+  }
+
+  /**
+   * Checks if a character is assigned to a specific node
+   * @param {string} characterId - Character ID
+   * @param {string} nodeId - Node ID
+   * @returns {boolean} True if character is assigned to node
+   */
+  isCharacterAssignedToNode(characterId, nodeId) {
+    const nodeSet = this.characterNodeAssignments.get(characterId);
+    return nodeSet ? nodeSet.has(nodeId) : false;
+  }
+
+  /**
+   * Checks if a character is assigned to a specific interaction
+   * @param {string} characterId - Character ID
+   * @param {string} interactionId - Interaction ID
+   * @returns {boolean} True if character is assigned to interaction
+   */
+  isCharacterAssignedToInteraction(characterId, interactionId) {
+    const interactionSet = this.characterInteractionAssignments.get(characterId);
+    return interactionSet ? interactionSet.has(interactionId) : false;
+  }
+
+  /**
+   * Gets characters by node assignment
+   * @param {string} nodeId - Node ID
+   * @returns {Array} Array of character objects
+   */
+  getCharactersByNode(nodeId) {
+    const characterIds = this.getNodeCharacterAssignments(nodeId);
+    return characterIds.map(id => this.getCharacter(id)).filter(char => char !== null);
+  }
+
+  /**
+   * Gets characters by interaction assignment
+   * @param {string} interactionId - Interaction ID
+   * @returns {Array} Array of character objects
+   */
+  getCharactersByInteraction(interactionId) {
+    const characterIds = this.getInteractionCharacterAssignments(interactionId);
+    return characterIds.map(id => this.getCharacter(id)).filter(char => char !== null);
+  }
+
+  // Assignment consistency validation methods
+
+  /**
+   * Validates all character assignments for consistency
+   * @returns {Object} Validation result with errors and warnings
+   */
+  validateCharacterAssignments() {
+    const errors = [];
+    const warnings = [];
+    
+    // Check character -> node assignments
+    for (const [characterId, nodeSet] of this.characterNodeAssignments) {
+      // Verify character exists
+      if (!this.getCharacter(characterId)) {
+        errors.push(`Character assignment references non-existent character: ${characterId}`);
+        continue;
+      }
+      
+      // Verify all assigned nodes exist
+      for (const nodeId of nodeSet) {
+        if (!this.getContent('nodes', nodeId)) {
+          errors.push(`Character ${characterId} assigned to non-existent node: ${nodeId}`);
+        }
+      }
+    }
+    
+    // Check character -> interaction assignments
+    for (const [characterId, interactionSet] of this.characterInteractionAssignments) {
+      // Verify character exists
+      if (!this.getCharacter(characterId)) {
+        errors.push(`Character assignment references non-existent character: ${characterId}`);
+        continue;
+      }
+      
+      // Verify all assigned interactions exist
+      for (const interactionId of interactionSet) {
+        if (!this.getContent('interactions', interactionId)) {
+          errors.push(`Character ${characterId} assigned to non-existent interaction: ${interactionId}`);
+        }
+      }
+    }
+    
+    // Check node -> character assignments for consistency
+    for (const [nodeId, characterSet] of this.nodeCharacterAssignments) {
+      // Verify node exists
+      if (!this.getContent('nodes', nodeId)) {
+        errors.push(`Node assignment references non-existent node: ${nodeId}`);
+        continue;
+      }
+      
+      // Verify bidirectional consistency
+      for (const characterId of characterSet) {
+        if (!this.isCharacterAssignedToNode(characterId, nodeId)) {
+          errors.push(`Inconsistent assignment: Node ${nodeId} references character ${characterId}, but character doesn't reference node`);
+        }
+      }
+    }
+    
+    // Check interaction -> character assignments for consistency
+    for (const [interactionId, characterSet] of this.interactionCharacterAssignments) {
+      // Verify interaction exists
+      if (!this.getContent('interactions', interactionId)) {
+        errors.push(`Interaction assignment references non-existent interaction: ${interactionId}`);
+        continue;
+      }
+      
+      // Verify bidirectional consistency
+      for (const characterId of characterSet) {
+        if (!this.isCharacterAssignedToInteraction(characterId, interactionId)) {
+          errors.push(`Inconsistent assignment: Interaction ${interactionId} references character ${characterId}, but character doesn't reference interaction`);
+        }
+      }
+    }
+    
+    // Check for orphaned characters (no assignments)
+    const charactersWithoutAssignments = this.characters.filter(character => {
+      const hasNodeAssignments = this.getCharacterNodeAssignments(character.id).length > 0;
+      const hasInteractionAssignments = this.getCharacterInteractionAssignments(character.id).length > 0;
+      return !hasNodeAssignments && !hasInteractionAssignments;
+    });
+    
+    if (charactersWithoutAssignments.length > 0) {
+      warnings.push(`${charactersWithoutAssignments.length} characters have no assignments: ${charactersWithoutAssignments.map(c => c.name || c.id).join(', ')}`);
+    }
+    
+    // Check for nodes without characters
+    const nodesWithoutCharacters = this.nodes.filter(node => {
+      return this.getNodeCharacterAssignments(node.id).length === 0;
+    });
+    
+    if (nodesWithoutCharacters.length > 0) {
+      warnings.push(`${nodesWithoutCharacters.length} nodes have no assigned characters: ${nodesWithoutCharacters.map(n => n.name || n.id).join(', ')}`);
+    }
+    
+    // Check for interactions without characters
+    const interactionsWithoutCharacters = this.interactions.filter(interaction => {
+      return this.getInteractionCharacterAssignments(interaction.id).length === 0;
+    });
+    
+    if (interactionsWithoutCharacters.length > 0) {
+      warnings.push(`${interactionsWithoutCharacters.length} interactions have no assigned characters: ${interactionsWithoutCharacters.map(i => i.name || i.id).join(', ')}`);
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      summary: {
+        totalCharacters: this.characters.length,
+        charactersWithNodeAssignments: this.characterNodeAssignments.size,
+        charactersWithInteractionAssignments: this.characterInteractionAssignments.size,
+        charactersWithoutAssignments: charactersWithoutAssignments.length,
+        nodesWithCharacters: this.nodeCharacterAssignments.size,
+        nodesWithoutCharacters: nodesWithoutCharacters.length,
+        interactionsWithCharacters: this.interactionCharacterAssignments.size,
+        interactionsWithoutCharacters: interactionsWithoutCharacters.length
+      }
+    };
+  }
+
+  /**
+   * Repairs inconsistent character assignments
+   * @returns {Object} Repair result with actions taken
+   */
+  repairCharacterAssignments() {
+    const repairActions = [];
+    
+    // Remove assignments to non-existent characters
+    for (const [characterId, nodeSet] of [...this.characterNodeAssignments]) {
+      if (!this.getCharacter(characterId)) {
+        this.characterNodeAssignments.delete(characterId);
+        repairActions.push(`Removed node assignments for non-existent character: ${characterId}`);
+      }
+    }
+    
+    for (const [characterId, interactionSet] of [...this.characterInteractionAssignments]) {
+      if (!this.getCharacter(characterId)) {
+        this.characterInteractionAssignments.delete(characterId);
+        repairActions.push(`Removed interaction assignments for non-existent character: ${characterId}`);
+      }
+    }
+    
+    // Remove assignments to non-existent nodes/interactions
+    for (const [characterId, nodeSet] of this.characterNodeAssignments) {
+      const validNodes = new Set();
+      for (const nodeId of nodeSet) {
+        if (this.getContent('nodes', nodeId)) {
+          validNodes.add(nodeId);
+        } else {
+          repairActions.push(`Removed assignment of character ${characterId} to non-existent node: ${nodeId}`);
+        }
+      }
+      this.characterNodeAssignments.set(characterId, validNodes);
+    }
+    
+    for (const [characterId, interactionSet] of this.characterInteractionAssignments) {
+      const validInteractions = new Set();
+      for (const interactionId of interactionSet) {
+        if (this.getContent('interactions', interactionId)) {
+          validInteractions.add(interactionId);
+        } else {
+          repairActions.push(`Removed assignment of character ${characterId} to non-existent interaction: ${interactionId}`);
+        }
+      }
+      this.characterInteractionAssignments.set(characterId, validInteractions);
+    }
+    
+    // Rebuild reverse mappings to ensure consistency
+    this._rebuildAssignmentMappings();
+    repairActions.push('Rebuilt assignment mappings for consistency');
+    
+    if (repairActions.length > 0) {
+      this.modifiedAt = new Date();
+    }
+    
+    return {
+      repaired: repairActions.length > 0,
+      actions: repairActions
+    };
+  }
+
+  /**
+   * Gets a summary of the world state including character assignment information
    * @returns {Object} World state summary
    */
   getSummary() {
+    const assignmentValidation = this.validateCharacterAssignments();
+    
     return {
       id: this.id,
       name: this.name,
@@ -280,6 +882,12 @@ class WorldState {
         events: this.events.length,
         groups: this.groups.length,
         items: this.items.length
+      },
+      assignmentSummary: assignmentValidation.summary,
+      assignmentValidation: {
+        isValid: assignmentValidation.isValid,
+        errorCount: assignmentValidation.errors.length,
+        warningCount: assignmentValidation.warnings.length
       },
       hasDimensions: !!this.dimensions,
       hasRules: !!this.rules,
@@ -308,6 +916,11 @@ class WorldState {
       events: this.events.map(event => this._serializeContent(event)),
       groups: this.groups.map(group => this._serializeContent(group)),
       items: this.items.map(item => this._serializeContent(item)),
+      // Serialize assignment tracking
+      characterNodeAssignments: this._serializeMapOfSets(this.characterNodeAssignments),
+      characterInteractionAssignments: this._serializeMapOfSets(this.characterInteractionAssignments),
+      nodeCharacterAssignments: this._serializeMapOfSets(this.nodeCharacterAssignments),
+      interactionCharacterAssignments: this._serializeMapOfSets(this.interactionCharacterAssignments),
       isValid: this.isValid,
       validationResult: this.validationResult,
       completeness: this.completeness,
@@ -333,7 +946,16 @@ class WorldState {
     const config = {
       ...data,
       createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-      modifiedAt: data.modifiedAt ? new Date(data.modifiedAt) : new Date()
+      modifiedAt: data.modifiedAt ? new Date(data.modifiedAt) : new Date(),
+      // Deserialize assignment tracking
+      characterNodeAssignments: data.characterNodeAssignments ? 
+        WorldState._deserializeMapOfSets(data.characterNodeAssignments) : new Map(),
+      characterInteractionAssignments: data.characterInteractionAssignments ? 
+        WorldState._deserializeMapOfSets(data.characterInteractionAssignments) : new Map(),
+      nodeCharacterAssignments: data.nodeCharacterAssignments ? 
+        WorldState._deserializeMapOfSets(data.nodeCharacterAssignments) : new Map(),
+      interactionCharacterAssignments: data.interactionCharacterAssignments ? 
+        WorldState._deserializeMapOfSets(data.interactionCharacterAssignments) : new Map()
     };
     
     return new WorldState(config);
@@ -791,6 +1413,190 @@ class WorldState {
     }
     
     return content;
+  }
+
+  // Character assignment helper methods
+
+  /**
+   * Initializes assignment tracking from character data
+   * @private
+   */
+  _initializeAssignmentTracking() {
+    // If assignment maps are empty but characters have assignment data, initialize from characters
+    if (this.characterNodeAssignments.size === 0 && this.characterInteractionAssignments.size === 0) {
+      this.characters.forEach(character => {
+        this._updateCharacterAssignments(character);
+      });
+    }
+  }
+
+  /**
+   * Updates assignment tracking for a character
+   * @param {Object} character - Character object
+   * @private
+   */
+  _updateCharacterAssignments(character) {
+    if (!character || !character.id) return;
+    
+    // Handle node assignments
+    const nodeAssignments = this._extractAssignments(character, 'nodes');
+    if (nodeAssignments.length > 0) {
+      this.characterNodeAssignments.set(character.id, new Set(nodeAssignments));
+      
+      // Update reverse mapping
+      nodeAssignments.forEach(nodeId => {
+        if (!this.nodeCharacterAssignments.has(nodeId)) {
+          this.nodeCharacterAssignments.set(nodeId, new Set());
+        }
+        this.nodeCharacterAssignments.get(nodeId).add(character.id);
+      });
+    }
+    
+    // Handle interaction assignments
+    const interactionAssignments = this._extractAssignments(character, 'interactions');
+    if (interactionAssignments.length > 0) {
+      this.characterInteractionAssignments.set(character.id, new Set(interactionAssignments));
+      
+      // Update reverse mapping
+      interactionAssignments.forEach(interactionId => {
+        if (!this.interactionCharacterAssignments.has(interactionId)) {
+          this.interactionCharacterAssignments.set(interactionId, new Set());
+        }
+        this.interactionCharacterAssignments.get(interactionId).add(character.id);
+      });
+    }
+  }
+
+  /**
+   * Extracts assignments from character object
+   * @param {Object} character - Character object
+   * @param {string} assignmentType - Type of assignment ('nodes' or 'interactions')
+   * @returns {Array} Array of assignment IDs
+   * @private
+   */
+  _extractAssignments(character, assignmentType) {
+    // Try multiple possible property names for assignments
+    const possibleProperties = [
+      `assigned${assignmentType.charAt(0).toUpperCase() + assignmentType.slice(1)}`,
+      `${assignmentType}Assignments`,
+      assignmentType
+    ];
+    
+    for (const prop of possibleProperties) {
+      if (character[prop]) {
+        if (Array.isArray(character[prop])) {
+          return character[prop];
+        } else if (character[prop] instanceof Set) {
+          return Array.from(character[prop]);
+        } else if (typeof character[prop] === 'object' && character[prop][assignmentType]) {
+          const assignments = character[prop][assignmentType];
+          return Array.isArray(assignments) ? assignments : 
+                 assignments instanceof Set ? Array.from(assignments) : [];
+        }
+      }
+    }
+    
+    // Check for assignments object structure
+    if (character.assignments && character.assignments[assignmentType]) {
+      const assignments = character.assignments[assignmentType];
+      return Array.isArray(assignments) ? assignments : 
+             assignments instanceof Set ? Array.from(assignments) : [];
+    }
+    
+    return [];
+  }
+
+  /**
+   * Removes a character from all assignment tracking
+   * @param {string} characterId - Character ID
+   * @private
+   */
+  _removeCharacterFromAssignmentTracking(characterId) {
+    // Remove from character -> node mapping and update reverse mapping
+    if (this.characterNodeAssignments.has(characterId)) {
+      const nodeSet = this.characterNodeAssignments.get(characterId);
+      nodeSet.forEach(nodeId => {
+        if (this.nodeCharacterAssignments.has(nodeId)) {
+          this.nodeCharacterAssignments.get(nodeId).delete(characterId);
+          if (this.nodeCharacterAssignments.get(nodeId).size === 0) {
+            this.nodeCharacterAssignments.delete(nodeId);
+          }
+        }
+      });
+      this.characterNodeAssignments.delete(characterId);
+    }
+    
+    // Remove from character -> interaction mapping and update reverse mapping
+    if (this.characterInteractionAssignments.has(characterId)) {
+      const interactionSet = this.characterInteractionAssignments.get(characterId);
+      interactionSet.forEach(interactionId => {
+        if (this.interactionCharacterAssignments.has(interactionId)) {
+          this.interactionCharacterAssignments.get(interactionId).delete(characterId);
+          if (this.interactionCharacterAssignments.get(interactionId).size === 0) {
+            this.interactionCharacterAssignments.delete(interactionId);
+          }
+        }
+      });
+      this.characterInteractionAssignments.delete(characterId);
+    }
+  }
+
+  /**
+   * Rebuilds assignment mappings for consistency
+   * @private
+   */
+  _rebuildAssignmentMappings() {
+    // Clear reverse mappings
+    this.nodeCharacterAssignments.clear();
+    this.interactionCharacterAssignments.clear();
+    
+    // Rebuild from character -> node mappings
+    for (const [characterId, nodeSet] of this.characterNodeAssignments) {
+      nodeSet.forEach(nodeId => {
+        if (!this.nodeCharacterAssignments.has(nodeId)) {
+          this.nodeCharacterAssignments.set(nodeId, new Set());
+        }
+        this.nodeCharacterAssignments.get(nodeId).add(characterId);
+      });
+    }
+    
+    // Rebuild from character -> interaction mappings
+    for (const [characterId, interactionSet] of this.characterInteractionAssignments) {
+      interactionSet.forEach(interactionId => {
+        if (!this.interactionCharacterAssignments.has(interactionId)) {
+          this.interactionCharacterAssignments.set(interactionId, new Set());
+        }
+        this.interactionCharacterAssignments.get(interactionId).add(characterId);
+      });
+    }
+  }
+
+  /**
+   * Serializes a Map of Sets to a plain object
+   * @param {Map} mapOfSets - Map containing Sets as values
+   * @returns {Object} Serialized object
+   * @private
+   */
+  _serializeMapOfSets(mapOfSets) {
+    const result = {};
+    for (const [key, set] of mapOfSets) {
+      result[key] = Array.from(set);
+    }
+    return result;
+  }
+
+  /**
+   * Deserializes a plain object to a Map of Sets
+   * @param {Object} obj - Serialized object
+   * @returns {Map} Map containing Sets as values
+   * @private
+   */
+  static _deserializeMapOfSets(obj) {
+    const result = new Map();
+    for (const [key, array] of Object.entries(obj)) {
+      result.set(key, new Set(array));
+    }
+    return result;
   }
 }
 

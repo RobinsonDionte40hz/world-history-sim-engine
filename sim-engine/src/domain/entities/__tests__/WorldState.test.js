@@ -421,6 +421,21 @@ describe('WorldState', () => {
           groups: 0,
           items: 0
         },
+        assignmentSummary: {
+          totalCharacters: 1,
+          charactersWithNodeAssignments: 0,
+          charactersWithInteractionAssignments: 0,
+          charactersWithoutAssignments: 1,
+          nodesWithCharacters: 0,
+          nodesWithoutCharacters: 2,
+          interactionsWithCharacters: 0,
+          interactionsWithoutCharacters: 0
+        },
+        assignmentValidation: {
+          isValid: true,
+          errorCount: 0,
+          warningCount: 2 // Warnings for character without assignments and nodes without characters
+        },
         hasDimensions: true,
         hasRules: true,
         hasInitialConditions: true,

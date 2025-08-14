@@ -48,6 +48,9 @@ const CharacterEditorPage = () => {
   const [showNextSteps, setShowNextSteps] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Get available interactions from current world
+  const availableInteractions = currentWorld?.worldConfig?.interactions || [];
+
   const validateCharacter = useCallback(() => {
     const errors = [];
     
@@ -226,6 +229,59 @@ const CharacterEditorPage = () => {
     setHasUnsavedChanges(true);
     setCurrentCharacter(characterData);
   };
+
+  // Handle creating new interactions
+  const handleCreateInteraction = useCallback((interactionData) => {
+    if (!currentWorld || !currentWorldId) {
+      alert('No world selected. Please select a world first.');
+      return;
+    }
+
+    try {
+      // Add interaction to world config
+      const updatedInteractions = [...(currentWorld.worldConfig.interactions || []), interactionData];
+      
+      updateWorldConfig({
+        ...currentWorld.worldConfig,
+        interactions: updatedInteractions
+      });
+
+      console.log('Created new interaction:', interactionData);
+    } catch (error) {
+      console.error('Failed to create interaction:', error);
+      alert('Failed to create interaction. Please try again.');
+    }
+  }, [currentWorld, currentWorldId, updateWorldConfig]);
+
+  // Handle editing interactions
+  const handleEditInteraction = useCallback((interactionData) => {
+    if (!currentWorld || !currentWorldId) {
+      alert('No world selected. Please select a world first.');
+      return;
+    }
+
+    try {
+      // Update interaction in world config
+      const updatedInteractions = [...(currentWorld.worldConfig.interactions || [])];
+      const interactionIndex = updatedInteractions.findIndex(i => i.id === interactionData.id);
+      
+      if (interactionIndex >= 0) {
+        updatedInteractions[interactionIndex] = interactionData;
+        
+        updateWorldConfig({
+          ...currentWorld.worldConfig,
+          interactions: updatedInteractions
+        });
+
+        console.log('Updated interaction:', interactionData);
+      } else {
+        console.warn('Interaction not found for editing:', interactionData.id);
+      }
+    } catch (error) {
+      console.error('Failed to edit interaction:', error);
+      alert('Failed to edit interaction. Please try again.');
+    }
+  }, [currentWorld, currentWorldId, updateWorldConfig]);
 
 
 
@@ -950,6 +1006,9 @@ const CharacterEditorPage = () => {
                   onSave={handleSave}
                   onCancel={handleCancel}
                   mode={currentCharacter ? 'edit' : 'create'}
+                  availableInteractions={availableInteractions}
+                  onCreateInteraction={handleCreateInteraction}
+                  onEditInteraction={handleEditInteraction}
                 />
               </div>
             )}

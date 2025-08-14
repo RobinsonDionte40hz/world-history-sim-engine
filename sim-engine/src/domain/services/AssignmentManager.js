@@ -895,6 +895,10 @@ class AssignmentManager extends EventEmitter {
           case 'orphaned_interaction':
             orphanedInteractions.add(issue.id);
             break;
+          default:
+            // Handle unexpected issue types - log for debugging
+            console.warn(`Unexpected issue type during cleanup: ${issue.type}`, issue);
+            break;
         }
       });
 
