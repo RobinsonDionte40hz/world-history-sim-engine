@@ -5,6 +5,7 @@ export * from './BaseDomainService';
 
 // Export new services
 export { default as AlignmentService } from './AlignmentService';
+export { default as AssignmentManager, AssignmentManager as AssignmentManagerClass } from './AssignmentManager';
 export { default as WorldBuilder } from './WorldBuilder';
 export { default as WorldValidator } from './WorldValidator';
 
