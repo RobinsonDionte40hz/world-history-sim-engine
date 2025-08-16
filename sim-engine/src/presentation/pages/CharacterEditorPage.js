@@ -6,10 +6,9 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Users, 
-  Dice6, 
   AlertTriangle,
   Download,
   Upload,
@@ -17,7 +16,13 @@ import {
   ArrowRight,
   CheckCircle,
   X,
-  Settings
+  Settings,
+  MapPin,
+  Copy,
+  Trash2,
+  Edit3,
+  Filter,
+  Search
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import CharacterEditor from '../components/CharacterEditor';
@@ -29,6 +34,14 @@ import { saveCharacter } from '../../shared/utils/characterSaveUtils';
 
 const CharacterEditorPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Extract template mode and initial data from route state
+  const routeState = location.state || {};
+  const isTemplate = routeState.isTemplate || false;
+  const templateMode = routeState.createMode || routeState.editMode || false;
+  const initialData = routeState.initialData || null;
+  const fromTemplate = routeState.fromTemplate || false;
   
   // WorldContext integration
   const { 
@@ -53,8 +66,31 @@ const CharacterEditorPage = () => {
   const [showNextSteps, setShowNextSteps] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Character Management States
+  const [showAssignmentPanel, setShowAssignmentPanel] = useState(false);
+  const [showCharacterList, setShowCharacterList] = useState(false);
+  const [showBatchActions, setShowBatchActions] = useState(false);
+  const [worldCharacters, setWorldCharacters] = useState([]);
+  const [selectedCharacters, setSelectedCharacters] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterArchetype, setFilterArchetype] = useState('all');
+
   // Get available interactions from current world
   const availableInteractions = currentWorld?.worldConfig?.interactions || [];
+
+  // Load characters from current world
+  useEffect(() => {
+    if (currentWorldId && currentWorld) {
+      const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
+      const worldChars = allCharacters.filter(char => 
+        char.worldId === currentWorldId || 
+        currentWorld.worldConfig?.characters?.includes(char.id)
+      );
+      setWorldCharacters(worldChars);
+    } else {
+      setWorldCharacters([]);
+    }
+  }, [currentWorldId, currentWorld]);
 
   const validateCharacter = useCallback(() => {
     const errors = [];
@@ -523,35 +559,94 @@ const CharacterEditorPage = () => {
     }
   };
 
-  const rollAttributes = () => {
-    // Roll 4d6, drop lowest for each attribute
-    const rollAttribute = () => {
-      const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
-      rolls.sort((a, b) => b - a);
-      return rolls.slice(0, 3).reduce((sum, roll) => sum + roll, 0);
-    };
 
-    const rolledAttributes = {
-      strength: rollAttribute(),
-      dexterity: rollAttribute(),
-      constitution: rollAttribute(),
-      intelligence: rollAttribute(),
-      wisdom: rollAttribute(),
-      charisma: rollAttribute()
-    };
-
-    const newCharacter = {
-      ...currentCharacter,
-      attributes: rolledAttributes
-    };
-
-    setCurrentCharacter(newCharacter);
-    setHasUnsavedChanges(true);
-  };
 
   const handleNextSteps = () => {
     setShowNextSteps(true);
   };
+
+  // Character Management Functions
+  const handleDuplicateCharacter = (character) => {
+    const duplicatedCharacter = {
+      ...character,
+      id: `character_${Date.now()}`,
+      name: `${character.name} (Copy)`,
+      worldId: currentWorldId
+    };
+    
+    const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
+    allCharacters.push(duplicatedCharacter);
+    localStorage.setItem('characters', JSON.stringify(allCharacters));
+    
+    // Refresh world characters
+    setWorldCharacters([...worldCharacters, duplicatedCharacter]);
+  };
+
+  const handleDeleteCharacter = (characterId) => {
+    if (window.confirm('Are you sure you want to delete this character?')) {
+      const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
+      const updatedCharacters = allCharacters.filter(char => char.id !== characterId);
+      localStorage.setItem('characters', JSON.stringify(updatedCharacters));
+      
+      // Update world characters
+      setWorldCharacters(worldCharacters.filter(char => char.id !== characterId));
+      
+      // If we're deleting the current character, clear it
+      if (currentCharacter?.id === characterId) {
+        setCurrentCharacter(null);
+        setHasUnsavedChanges(false);
+      }
+    }
+  };
+
+  const handleEditCharacter = (character) => {
+    if (hasUnsavedChanges) {
+      const confirmSwitch = window.confirm('You have unsaved changes. Switch to editing this character?');
+      if (!confirmSwitch) return;
+    }
+    
+    setCurrentCharacter(character);
+    setHasUnsavedChanges(false);
+    setShowCharacterList(false);
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedCharacters.length === 0) return;
+    
+    const confirmDelete = window.confirm(`Delete ${selectedCharacters.length} selected characters?`);
+    if (!confirmDelete) return;
+    
+    const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
+    const updatedCharacters = allCharacters.filter(char => !selectedCharacters.includes(char.id));
+    localStorage.setItem('characters', JSON.stringify(updatedCharacters));
+    
+    // Update world characters
+    setWorldCharacters(worldCharacters.filter(char => !selectedCharacters.includes(char.id)));
+    setSelectedCharacters([]);
+  };
+
+  const handleBatchExport = () => {
+    if (selectedCharacters.length === 0) return;
+    
+    const charactersToExport = worldCharacters.filter(char => selectedCharacters.includes(char.id));
+    const dataStr = JSON.stringify(charactersToExport, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `characters-batch-${Date.now()}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  // Filter characters based on search and archetype
+  const filteredCharacters = worldCharacters.filter(character => {
+    const matchesSearch = character.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         character.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesArchetype = filterArchetype === 'all' || character.archetype === filterArchetype;
+    return matchesSearch && matchesArchetype;
+  });
 
   const getNextStepsContent = () => {
     const steps = [];
@@ -631,7 +726,7 @@ const CharacterEditorPage = () => {
         </div>
       )}
 
-      {/* Success Message */}
+      {/* Success Messages */}
       {saveSuccess && (
         <div className="bg-green-600/10 border-b border-green-600/30 px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-3">
@@ -643,6 +738,8 @@ const CharacterEditorPage = () => {
         </div>
       )}
 
+
+
       {/* Main Content - Full width responsive container */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
@@ -652,12 +749,29 @@ const CharacterEditorPage = () => {
             <div className="flex items-center justify-center gap-3 mb-4">
               <Users className="w-10 h-10 text-indigo-400" />
               <h1 className="text-3xl sm:text-4xl font-bold text-white">
-                Character Editor
+                {isTemplate ? 'Template Editor' : 'Character Editor'}
               </h1>
             </div>
             <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Design NPCs with personalities, attributes, and consciousness
+              {isTemplate 
+                ? 'Create reusable character templates for rapid world building'
+                : 'Design NPCs with personalities, attributes, and consciousness'
+              }
             </p>
+            
+            {/* Template Mode Indicator */}
+            {isTemplate && (
+              <div className="mt-4 max-w-2xl mx-auto">
+                <div className="inline-flex items-center px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                  <span className="text-blue-300 text-sm font-medium">
+                    📚 Template Mode
+                    {fromTemplate && ' - From Template'}
+                    {templateMode && routeState.createMode && ' - Creating New'}
+                    {templateMode && routeState.editMode && ' - Editing'}
+                  </span>
+                </div>
+              </div>
+            )}
             
             {/* World Selection Section */}
             <div className="mt-6 max-w-2xl mx-auto">
@@ -709,98 +823,123 @@ const CharacterEditorPage = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-            <button
-              onClick={() => setPreviewMode(!previewMode)}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
-            >
-              {previewMode ? 'Edit Mode' : 'Preview'}
-            </button>
-
-            {/* Character Archetypes */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => loadArchetype('warrior')}
-                className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                ⚔️ Warrior
-              </button>
-              <button
-                onClick={() => loadArchetype('scholar')}
-                className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                📚 Scholar
-              </button>
-              <button
-                onClick={() => loadArchetype('merchant')}
-                className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
-              >
-                💰 Merchant
-              </button>
+          {/* Enhanced Action Bar */}
+          <div className="mb-8">
+            {/* Mode Toggle */}
+            <div className="flex justify-center mb-6">
+              <div className="flex gap-1 p-1 bg-white/10 rounded-lg border border-white/20">
+                <button
+                  onClick={() => setPreviewMode(false)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    !previewMode 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Edit Mode
+                </button>
+                <button
+                  onClick={() => setPreviewMode(true)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    previewMode 
+                      ? 'bg-blue-600 text-white' 
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Preview
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={rollAttributes}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-            >
-              <Dice6 className="w-4 h-4" />
-              Roll Attributes
-            </button>
+            {/* Main Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* Left Side - Essential Tools */}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleTest}
+                  disabled={!currentCharacter || validationErrors.length > 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <TestTube className="w-4 h-4" />
+                  Test Character
+                </button>
 
-            <button
-              onClick={handleTest}
-              disabled={!currentCharacter || validationErrors.length > 0}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <TestTube className="w-4 h-4" />
-              Test
-            </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportTemplate}
+                    className="hidden"
+                    id="import-character-template"
+                  />
+                  <label
+                    htmlFor="import-character-template"
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import
+                  </label>
+                  
+                  <button
+                    onClick={handleExportTemplate}
+                    disabled={!currentCharacter}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                  </button>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportTemplate}
-                className="hidden"
-                id="import-character-template"
-              />
-              <label
-                htmlFor="import-character-template"
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
-              >
-                <Upload className="w-4 h-4" />
-                Import
-              </label>
-              
-              <button
-                onClick={handleExportTemplate}
-                disabled={!currentCharacter}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
+              {/* Right Side - Management & Workflow */}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setShowAssignmentPanel(true)}
+                  disabled={!currentCharacter || !currentWorldId}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Settings className="w-4 h-4" />
+                  Assign to Nodes
+                </button>
+
+                <button
+                  onClick={() => setShowCharacterList(true)}
+                  disabled={!currentWorldId}
+                  className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Users className="w-4 h-4" />
+                  View All Characters
+                </button>
+
+                <button
+                  onClick={() => setShowBatchActions(true)}
+                  disabled={!currentWorldId}
+                  className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Settings className="w-4 h-4" />
+                  Batch Actions
+                </button>
+
+                <button
+                  onClick={handleSave}
+                  disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0 || !currentCharacter || !currentWorldId || !currentWorld}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all ${hasUnsavedChanges && !isSaving && validationErrors.length === 0 && currentCharacter && currentWorldId && currentWorld
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                  {isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : (hasUnsavedChanges ? 'Save Character' : 'Save Character'))}
+                </button>
+
+                <button
+                  onClick={handleNextSteps}
+                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  Next Steps
+                </button>
+              </div>
             </div>
-
-            <button
-              onClick={handleSave}
-              disabled={!hasUnsavedChanges || isSaving || validationErrors.length > 0 || !currentCharacter || !currentWorldId || !currentWorld}
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${hasUnsavedChanges && !isSaving && validationErrors.length === 0 && currentCharacter && currentWorldId && currentWorld
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
-            >
-              {isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : (hasUnsavedChanges ? 'Save Character' : 'Save Character'))}
-            </button>
-
-            <button
-              onClick={handleNextSteps}
-              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium"
-            >
-              <ArrowRight className="w-4 h-4" />
-              Next Steps
-            </button>
           </div>
 
           {/* Main Content Area */}
@@ -988,14 +1127,16 @@ const CharacterEditorPage = () => {
                 
                 {/* Use existing CharacterEditor component */}
                 <CharacterEditor 
-                  initialCharacter={currentCharacter}
+                  initialCharacter={initialData || currentCharacter}
                   onChange={handleChange}
                   onSave={handleSave}
                   onCancel={handleCancel}
-                  mode={currentCharacter ? 'edit' : 'create'}
+                  mode={currentCharacter || initialData ? 'edit' : 'create'}
                   availableInteractions={availableInteractions}
                   onCreateInteraction={handleCreateInteraction}
                   onEditInteraction={handleEditInteraction}
+                  isTemplate={isTemplate}
+                  templateMode={templateMode}
                 />
               </div>
             )}
@@ -1056,6 +1197,292 @@ const CharacterEditorPage = () => {
 
         </div>
       </div>
+
+      {/* Assignment Panel Modal */}
+      {showAssignmentPanel && currentCharacter && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-6 h-6 text-orange-400" />
+                  <h2 className="text-2xl font-bold text-white">Assign Character to Nodes</h2>
+                </div>
+                <button
+                  onClick={() => setShowAssignmentPanel(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                <h3 className="font-semibold text-blue-200 mb-2">Character: {currentCharacter.name}</h3>
+                <p className="text-blue-100 text-sm">{currentCharacter.description}</p>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">Available Nodes</h3>
+                {currentWorld?.worldConfig?.nodes?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentWorld.worldConfig.nodes.map(node => (
+                      <div key={node.id} className="p-4 bg-white/10 rounded-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-white">{node.name}</h4>
+                          <button
+                            onClick={() => {
+                              // TODO: Implement node assignment logic
+                              console.log('Assign character to node:', node.id);
+                            }}
+                            className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
+                          >
+                            Assign
+                          </button>
+                        </div>
+                        <p className="text-gray-300 text-sm">{node.description}</p>
+                        <div className="mt-2 text-xs text-gray-400">
+                          Type: {node.type} • Characters: {node.assignedCharacters?.length || 0}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-300 mb-4">No nodes available in this world</p>
+                    <button
+                      onClick={() => navigate('/editors/nodes')}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                      Create Nodes
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Character List Modal */}
+      {showCharacterList && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-6xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Users className="w-6 h-6 text-cyan-400" />
+                  <h2 className="text-2xl font-bold text-white">All Characters</h2>
+                  <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 rounded text-sm">
+                    {worldCharacters.length} total
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowCharacterList(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Search and Filter */}
+              <div className="flex gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search characters..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                  />
+                </div>
+                <select
+                  value={filterArchetype}
+                  onChange={(e) => setFilterArchetype(e.target.value)}
+                  className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                >
+                  <option value="all" className="bg-gray-800">All Archetypes</option>
+                  <option value="warrior" className="bg-gray-800">Warrior</option>
+                  <option value="scholar" className="bg-gray-800">Scholar</option>
+                  <option value="merchant" className="bg-gray-800">Merchant</option>
+                  <option value="diplomat" className="bg-gray-800">Diplomat</option>
+                  <option value="rogue" className="bg-gray-800">Rogue</option>
+                  <option value="priest" className="bg-gray-800">Priest</option>
+                  <option value="artisan" className="bg-gray-800">Artisan</option>
+                  <option value="noble" className="bg-gray-800">Noble</option>
+                </select>
+              </div>
+
+              {/* Character Grid */}
+              {filteredCharacters.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredCharacters.map(character => (
+                    <div key={character.id} className="p-4 bg-white/10 rounded-lg border border-white/20">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white">{character.name}</h3>
+                          <p className="text-sm text-gray-300 capitalize">{character.archetype}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleEditCharacter(character)}
+                            className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDuplicateCharacter(character)}
+                            className="p-1 text-green-400 hover:text-green-300 transition-colors"
+                            title="Duplicate"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCharacter(character.id)}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                        {character.description}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Goals: {character.goals?.length || 0}</span>
+                        <span>Interactions: {character.assignedInteractions?.length || 0}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-300 mb-4">
+                    {worldCharacters.length === 0 ? 'No characters in this world yet' : 'No characters match your search'}
+                  </p>
+                  {worldCharacters.length === 0 && (
+                    <button
+                      onClick={() => {
+                        setShowCharacterList(false);
+                        setCurrentCharacter(null);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                      Create First Character
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Actions Modal */}
+      {showBatchActions && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-6 h-6 text-yellow-400" />
+                  <h2 className="text-2xl font-bold text-white">Batch Actions</h2>
+                </div>
+                <button
+                  onClick={() => setShowBatchActions(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Selection Area */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Select Characters</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedCharacters(worldCharacters.map(c => c.id))}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={() => setSelectedCharacters([])}
+                      className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
+                  {worldCharacters.map(character => (
+                    <label key={character.id} className="flex items-center gap-3 p-3 bg-white/10 rounded-lg border border-white/20 cursor-pointer hover:bg-white/20 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedCharacters.includes(character.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedCharacters([...selectedCharacters, character.id]);
+                          } else {
+                            setSelectedCharacters(selectedCharacters.filter(id => id !== character.id));
+                          }
+                        }}
+                        className="rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{character.name}</div>
+                        <div className="text-sm text-gray-400 capitalize">{character.archetype}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="mt-4 text-sm text-gray-400">
+                  {selectedCharacters.length} of {worldCharacters.length} characters selected
+                </div>
+              </div>
+
+              {/* Batch Actions */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">Actions</h3>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleBatchExport}
+                    disabled={selectedCharacters.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export Selected
+                  </button>
+                  
+                  <button
+                    onClick={handleBatchDelete}
+                    disabled={selectedCharacters.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Selected
+                  </button>
+
+                  <button
+                    disabled={selectedCharacters.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    Batch Assign to Nodes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Next Steps Modal */}
       {showNextSteps && (

@@ -300,6 +300,13 @@ const Sidebar = ({
           hoverBorder: 'rgba(59, 130, 246, 0.3)'
         },
         {
+          id: 'template-library',
+          label: '📚 Template Library',
+          onClick: () => navigate('/templates'),
+          hoverColor: 'rgba(129, 140, 248, 0.1)',
+          hoverBorder: 'rgba(129, 140, 248, 0.3)'
+        },
+        {
           id: 'interaction-templates-divider',
           type: 'divider',
           label: 'Interaction Templates'

@@ -1,6 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
+import { Users, User } from 'lucide-react';
+
+// Character creation modes
+const CHARACTER_CREATION_MODES = {
+  TEMPLATE: 'template',    // Quick NPC template creation
+  DETAILED: 'detailed'     // Full character creation
+};
 
 // Character archetypes
 const CHARACTER_ARCHETYPES = [
@@ -109,6 +116,21 @@ const AttributeEditor = ({ attributes, onChange }) => {
     onChange(newAttributes);
   };
 
+  const handleRoll4d6 = () => {
+    // Roll 4d6, drop lowest for each attribute (classic D&D method)
+    const rollAttribute = () => {
+      const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
+      rolls.sort((a, b) => b - a);
+      return rolls.slice(0, 3).reduce((sum, roll) => sum + roll, 0);
+    };
+
+    const newAttributes = {};
+    DND_ATTRIBUTES.forEach(attr => {
+      newAttributes[attr.id] = rollAttribute();
+    });
+    onChange(newAttributes);
+  };
+
   const handleStandardArray = () => {
     const standardArray = [15, 14, 13, 12, 10, 8];
     const shuffled = [...standardArray].sort(() => Math.random() - 0.5);
@@ -123,6 +145,12 @@ const AttributeEditor = ({ attributes, onChange }) => {
     <div className="space-y-4">
       <div className="flex gap-2 mb-4">
         <button
+          onClick={handleRoll4d6}
+          className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm flex items-center gap-1"
+        >
+          <span>🎲</span> Roll 4d6
+        </button>
+        <button
           onClick={handleRandomize}
           className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
         >
@@ -130,7 +158,7 @@ const AttributeEditor = ({ attributes, onChange }) => {
         </button>
         <button
           onClick={handleStandardArray}
-          className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+          className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
         >
           Standard Array
         </button>
@@ -589,6 +617,386 @@ const EquipmentEditor = ({ equipment, onChange }) => {
   );
 };
 
+// NPC Template Form Components
+const ArchetypeSelector = ({ selectedArchetype, onSelect }) => (
+  <div>
+    <label className="block text-sm font-medium text-white mb-3">
+      Character Archetype <span className="text-red-500">*</span>
+    </label>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {CHARACTER_ARCHETYPES.map(archetype => (
+        <button
+          key={archetype.id}
+          onClick={() => onSelect(archetype.id)}
+          className={`
+            p-4 rounded-lg border-2 transition-all text-center
+            ${selectedArchetype === archetype.id
+              ? 'border-blue-500 bg-blue-500/20 shadow-lg'
+              : 'border-white/20 hover:border-white/40 bg-white/5'
+            }
+          `}
+        >
+          <div className="text-3xl mb-2">{archetype.icon}</div>
+          <div className="text-sm font-medium text-white">{archetype.label}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            {archetype.primaryStats.map(stat => stat.toUpperCase()).join(', ')}
+          </div>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
+const NamePattern = ({ pattern, onChange }) => (
+  <div>
+    <label className="block text-sm font-medium text-white mb-2">
+      Name Generation Pattern
+    </label>
+    <div className="space-y-3">
+      <input
+        type="text"
+        value={pattern.prefix || ''}
+        onChange={(e) => onChange({ ...pattern, prefix: e.target.value })}
+        placeholder="Name prefix (e.g., 'Sir', 'Lady', 'Captain')"
+        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <input
+        type="text"
+        value={pattern.suffix || ''}
+        onChange={(e) => onChange({ ...pattern, suffix: e.target.value })}
+        placeholder="Name suffix (e.g., 'the Bold', 'of Westmarch')"
+        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+      />
+      <div className="text-xs text-gray-400">
+        Generated names will follow the pattern: [Prefix] [Random Name] [Suffix]
+      </div>
+    </div>
+  </div>
+);
+
+const AttributeRange = ({ ranges, onChange }) => {
+  const handleRollRanges = () => {
+    // Roll 4d6 drop lowest for each attribute, then create ranges around those values
+    const rollAttribute = () => {
+      const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
+      rolls.sort((a, b) => b - a);
+      return rolls.slice(0, 3).reduce((sum, roll) => sum + roll, 0);
+    };
+
+    const newRanges = {};
+    DND_ATTRIBUTES.forEach(attr => {
+      const baseValue = rollAttribute();
+      newRanges[attr.id] = {
+        min: Math.max(3, baseValue - 2),
+        max: Math.min(18, baseValue + 2)
+      };
+    });
+    onChange(newRanges);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <label className="block text-sm font-medium text-white">
+          Attribute Ranges
+        </label>
+        <button
+          onClick={handleRollRanges}
+          className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm flex items-center gap-1"
+        >
+          <span>🎲</span> Roll Base Ranges
+        </button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {DND_ATTRIBUTES.map(attr => (
+          <div key={attr.id} className="p-3 bg-white/10 rounded-lg border border-white/20">
+            <div className="text-sm font-medium text-white mb-2">
+              {attr.label} ({attr.abbr})
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="3"
+                max="18"
+                value={ranges[attr.id]?.min || 8}
+                onChange={(e) => onChange({
+                  ...ranges,
+                  [attr.id]: {
+                    ...ranges[attr.id],
+                    min: parseInt(e.target.value) || 8
+                  }
+                })}
+                className="w-16 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-center text-sm"
+              />
+              <span className="text-gray-400">to</span>
+              <input
+                type="number"
+                min="3"
+                max="18"
+                value={ranges[attr.id]?.max || 15}
+                onChange={(e) => onChange({
+                  ...ranges,
+                  [attr.id]: {
+                    ...ranges[attr.id],
+                    max: parseInt(e.target.value) || 15
+                  }
+                })}
+                className="w-16 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-center text-sm"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const PersonalitySliders = ({ personality, onChange }) => {
+  const essentialTraits = [
+    { id: 'aggression', label: 'Aggression', description: 'How confrontational' },
+    { id: 'curiosity', label: 'Curiosity', description: 'How exploratory' },
+    { id: 'empathy', label: 'Empathy', description: 'How caring' },
+    { id: 'ambition', label: 'Ambition', description: 'How driven' },
+    { id: 'sociability', label: 'Sociability', description: 'How social' }
+  ];
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-white mb-3">
+        Core Personality Traits
+      </label>
+      <div className="space-y-3">
+        {essentialTraits.map(trait => (
+          <div key={trait.id} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-white">{trait.label}</span>
+                <span className="text-xs text-gray-400 ml-2">{trait.description}</span>
+              </div>
+              <span className="text-sm font-mono text-gray-300">
+                {(personality.traits?.[trait.id] || 0.5).toFixed(1)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={personality.traits?.[trait.id] || 0.5}
+              onChange={(e) => onChange({
+                ...personality,
+                traits: {
+                  ...personality.traits,
+                  [trait.id]: parseFloat(e.target.value)
+                }
+              })}
+              className="w-full"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const VariationSettings = ({ variation, onChange }) => (
+  <div>
+    <label className="block text-sm font-medium text-white mb-3">
+      NPC Variation Settings
+    </label>
+    <div className="space-y-4 p-4 bg-white/10 rounded-lg border border-white/20">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-white">Attribute Variation</span>
+          <span className="text-sm font-mono text-gray-300">±{variation.attributes || 2}</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="5"
+          step="1"
+          value={variation.attributes || 2}
+          onChange={(e) => onChange({ ...variation, attributes: parseInt(e.target.value) })}
+          className="w-full"
+        />
+        <div className="text-xs text-gray-400 mt-1">
+          How much attributes can vary from template ranges
+        </div>
+      </div>
+      
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-white">Personality Variation</span>
+          <span className="text-sm font-mono text-gray-300">±{((variation.personality || 0.2) * 100).toFixed(0)}%</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="0.5"
+          step="0.1"
+          value={variation.personality || 0.2}
+          onChange={(e) => onChange({ ...variation, personality: parseFloat(e.target.value) })}
+          className="w-full"
+        />
+        <div className="text-xs text-gray-400 mt-1">
+          How much personality traits can vary from template
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const BulkGenerationOptions = ({ bulkOptions, onChange, onPreview, onGenerate }) => (
+  <div className="border-2 border-dashed border-blue-500/30 rounded-lg p-4">
+    <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+      <Users className="w-4 h-4" />
+      Bulk NPC Generation
+    </h4>
+    
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm text-gray-300">Number to Generate</label>
+          <input
+            type="number"
+            min="1"
+            max="50"
+            value={bulkOptions.count || 5}
+            onChange={(e) => onChange({ ...bulkOptions, count: parseInt(e.target.value) || 5 })}
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+          />
+        </div>
+        
+        <div>
+          <label className="text-sm text-gray-300">Distribution Strategy</label>
+          <select
+            value={bulkOptions.distribution || 'random'}
+            onChange={(e) => onChange({ ...bulkOptions, distribution: e.target.value })}
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+          >
+            <option value="random" className="bg-gray-800">Random Distribution</option>
+            <option value="even" className="bg-gray-800">Even Distribution</option>
+            <option value="weighted" className="bg-gray-800">Population Weighted</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="flex gap-2">
+        <button
+          onClick={onPreview}
+          className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+        >
+          👁️ Preview NPCs
+        </button>
+        <button
+          onClick={onGenerate}
+          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+        >
+          🚀 Generate & Place
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const NPCTemplateForm = ({ 
+  characterData, 
+  onChange, 
+  onPreview, 
+  onBulkGenerate,
+  errors = {} 
+}) => {
+  const handleArchetypeSelect = (archetypeId) => {
+    const archetype = CHARACTER_ARCHETYPES.find(a => a.id === archetypeId);
+    if (archetype) {
+      // Set attribute ranges based on archetype
+      const newRanges = {};
+      DND_ATTRIBUTES.forEach(attr => {
+        if (archetype.primaryStats.includes(attr.id)) {
+          newRanges[attr.id] = { min: 12, max: 16 };
+        } else {
+          newRanges[attr.id] = { min: 8, max: 14 };
+        }
+      });
+      
+      onChange({
+        ...characterData,
+        archetype: archetypeId,
+        templateSettings: {
+          ...characterData.templateSettings,
+          attributeRanges: newRanges
+        }
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Quick Setup */}
+      <ArchetypeSelector
+        selectedArchetype={characterData.archetype}
+        onSelect={handleArchetypeSelect}
+      />
+      
+      {errors.archetype && (
+        <p className="text-red-500 text-sm">{errors.archetype}</p>
+      )}
+
+      <NamePattern
+        pattern={characterData.templateSettings?.namePattern || {}}
+        onChange={(pattern) => onChange({
+          ...characterData,
+          templateSettings: {
+            ...characterData.templateSettings,
+            namePattern: pattern
+          }
+        })}
+      />
+
+      <AttributeRange
+        ranges={characterData.templateSettings?.attributeRanges || {}}
+        onChange={(ranges) => onChange({
+          ...characterData,
+          templateSettings: {
+            ...characterData.templateSettings,
+            attributeRanges: ranges
+          }
+        })}
+      />
+
+      <PersonalitySliders
+        personality={characterData.personality}
+        onChange={(personality) => onChange({ ...characterData, personality })}
+      />
+
+      <VariationSettings
+        variation={characterData.templateSettings?.variation || {}}
+        onChange={(variation) => onChange({
+          ...characterData,
+          templateSettings: {
+            ...characterData.templateSettings,
+            variation
+          }
+        })}
+      />
+
+      {/* Bulk Creation */}
+      <BulkGenerationOptions
+        bulkOptions={characterData.templateSettings?.bulkOptions || {}}
+        onChange={(bulkOptions) => onChange({
+          ...characterData,
+          templateSettings: {
+            ...characterData.templateSettings,
+            bulkOptions
+          }
+        })}
+        onPreview={onPreview}
+        onGenerate={onBulkGenerate}
+      />
+    </div>
+  );
+};
+
 // Relationships template editor
 const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
   const [newTemplate, setNewTemplate] = useState({
@@ -726,7 +1134,9 @@ const CharacterEditor = ({
   mode = 'create', // 'create' or 'edit'
   availableInteractions = [], // Available interactions from world
   onCreateInteraction = null, // Callback to create new interactions
-  onEditInteraction = null // Callback to edit interactions
+  onEditInteraction = null, // Callback to edit interactions
+  isTemplate = false, // Whether this is a template
+  templateMode = false // Whether we're in template creation/editing mode
 }) => {
   // Form state
   const [characterData, setCharacterData] = useState({
@@ -760,7 +1170,14 @@ const CharacterEditor = ({
     background: initialCharacter?.background || '',
     appearance: initialCharacter?.appearance || '',
     tags: initialCharacter?.tags || [],
-    metadata: initialCharacter?.metadata || {}
+    metadata: initialCharacter?.metadata || {},
+    // Template-specific settings
+    templateSettings: initialCharacter?.templateSettings || {
+      namePattern: { prefix: '', suffix: '' },
+      attributeRanges: {},
+      variation: { attributes: 2, personality: 0.2 },
+      bulkOptions: { count: 5, distribution: 'random' }
+    }
   });
 
   const [errors, setErrors] = useState({});
@@ -768,8 +1185,9 @@ const CharacterEditor = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [creationMode, setCreationMode] = useState(CHARACTER_CREATION_MODES.TEMPLATE);
 
-  // Validation using unified utility
+  // Validation using unified utility with mode-specific requirements
   const validateCharacter = useCallback(() => {
     const validationResult = validateCharacterForSave(characterData);
     
@@ -788,14 +1206,33 @@ const CharacterEditor = ({
       }
     });
     
-    // Add component-specific validation
-    if (characterData.goals && characterData.goals.length === 0) {
-      newErrors.goals = 'At least one goal is required';
+    // Mode-specific validation
+    if (creationMode === CHARACTER_CREATION_MODES.TEMPLATE) {
+      // Template mode: Only require essential fields
+      if (!characterData.archetype) {
+        newErrors.archetype = 'Please select a character archetype';
+      }
+      if (!characterData.name && !characterData.templateSettings?.namePattern?.prefix) {
+        newErrors.name = 'Template name or name pattern is required';
+      }
+      // Remove validation for optional fields in template mode
+      delete newErrors.skills;
+      delete newErrors.equipment;
+      delete newErrors.relationshipTemplates;
+      delete newErrors.goals; // Goals are optional for templates
+    } else {
+      // Detailed mode: More comprehensive validation
+      if (characterData.goals && characterData.goals.length === 0) {
+        newErrors.goals = 'At least one goal is required';
+      }
+      if (Object.keys(characterData.skills).length === 0) {
+        newErrors.skills = 'At least one skill should be defined';
+      }
     }
     
     setErrors(newErrors);
     return validationResult.isValid && Object.keys(newErrors).length === 0;
-  }, [characterData]);
+  }, [characterData, creationMode]);
 
   // Handle save
   const handleSave = useCallback(async () => {
@@ -871,18 +1308,109 @@ const CharacterEditor = ({
       .filter(Boolean);
   }, [characterData.assignedInteractions, availableInteractions]);
 
-  // Tabs configuration
-  const tabs = [
-    { id: 'basic', label: 'Basic Info', icon: '📝' },
-    { id: 'attributes', label: 'Attributes', icon: '💪' },
-    { id: 'personality', label: 'Personality', icon: '🧠' },
-    { id: 'skills', label: 'Skills', icon: '⭐' },
-    { id: 'goals', label: 'Goals', icon: '🎯' },
-    { id: 'interactions', label: 'Interactions', icon: '⚡' },
-    { id: 'equipment', label: 'Equipment', icon: '🎒' },
-    { id: 'relationships', label: 'Relationships', icon: '🤝' },
-    { id: 'advanced', label: 'Advanced', icon: '⚙️' }
-  ];
+  // Template mode handlers
+  const handlePreviewNPCs = useCallback(() => {
+    // Generate sample NPCs based on template
+    const sampleNPCs = [];
+    const count = Math.min(characterData.templateSettings?.bulkOptions?.count || 3, 3);
+    
+    for (let i = 0; i < count; i++) {
+      const npc = generateNPCFromTemplate(characterData, i);
+      sampleNPCs.push(npc);
+    }
+    
+    // Show preview modal or update state
+    console.log('Preview NPCs:', sampleNPCs);
+    // TODO: Implement preview modal
+  }, [characterData]);
+
+  const handleBulkGenerate = useCallback(() => {
+    // Generate and place NPCs in world
+    const count = characterData.templateSettings?.bulkOptions?.count || 5;
+    const distribution = characterData.templateSettings?.bulkOptions?.distribution || 'random';
+    
+    console.log(`Generating ${count} NPCs with ${distribution} distribution`);
+    // TODO: Implement bulk generation logic
+  }, [characterData]);
+
+  // Helper function to generate NPC from template
+  const generateNPCFromTemplate = (template, index) => {
+    const variation = template.templateSettings?.variation || {};
+    const attributeRanges = template.templateSettings?.attributeRanges || {};
+    const namePattern = template.templateSettings?.namePattern || {};
+    
+    // Generate varied attributes
+    const attributes = {};
+    DND_ATTRIBUTES.forEach(attr => {
+      const range = attributeRanges[attr.id] || { min: 8, max: 15 };
+      const baseValue = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+      const variationAmount = variation.attributes || 2;
+      const finalValue = Math.max(3, Math.min(18, 
+        baseValue + Math.floor(Math.random() * (variationAmount * 2 + 1)) - variationAmount
+      ));
+      attributes[attr.id] = finalValue;
+    });
+
+    // Generate varied personality
+    const personality = { traits: {} };
+    Object.entries(template.personality.traits || {}).forEach(([trait, value]) => {
+      const variationAmount = variation.personality || 0.2;
+      const finalValue = Math.max(0, Math.min(1,
+        value + (Math.random() * (variationAmount * 2) - variationAmount)
+      ));
+      personality.traits[trait] = parseFloat(finalValue.toFixed(1));
+    });
+
+    // Generate name
+    const randomNames = ['Aiden', 'Bella', 'Connor', 'Diana', 'Ethan', 'Fiona', 'Gabriel', 'Hannah'];
+    const baseName = randomNames[Math.floor(Math.random() * randomNames.length)];
+    const fullName = [
+      namePattern.prefix,
+      baseName,
+      namePattern.suffix
+    ].filter(Boolean).join(' ');
+
+    return {
+      id: `${template.id}_generated_${index}`,
+      name: fullName || `${template.name} ${index + 1}`,
+      description: `Generated from ${template.name} template`,
+      archetype: template.archetype,
+      attributes,
+      personality,
+      consciousness: { ...template.consciousness },
+      goals: [...template.goals],
+      assignedInteractions: [...template.assignedInteractions]
+    };
+  };
+
+  // Tabs configuration based on creation mode
+  const getTabsForMode = () => {
+    if (creationMode === CHARACTER_CREATION_MODES.TEMPLATE) {
+      // Simplified tabs for quick NPC template creation
+      return [
+        { id: 'basic', label: 'Basic Info', icon: '📝' },
+        { id: 'attributes', label: 'Attributes', icon: '💪' },
+        { id: 'personality', label: 'Personality', icon: '🧠' },
+        { id: 'goals', label: 'Goals', icon: '🎯' },
+        { id: 'interactions', label: 'Interactions', icon: '⚡' }
+      ];
+    } else {
+      // Full tabs for detailed character creation
+      return [
+        { id: 'basic', label: 'Basic Info', icon: '📝' },
+        { id: 'attributes', label: 'Attributes', icon: '💪' },
+        { id: 'personality', label: 'Personality', icon: '🧠' },
+        { id: 'skills', label: 'Skills', icon: '⭐' },
+        { id: 'goals', label: 'Goals', icon: '🎯' },
+        { id: 'interactions', label: 'Interactions', icon: '⚡' },
+        { id: 'equipment', label: 'Equipment', icon: '🎒' },
+        { id: 'relationships', label: 'Relationships', icon: '🤝' },
+        { id: 'advanced', label: 'Advanced', icon: '⚙️' }
+      ];
+    }
+  };
+
+  const tabs = getTabsForMode();
 
   return (
     <div className="p-6">
@@ -896,30 +1424,94 @@ const CharacterEditor = ({
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`
-              px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors
-              ${activeTab === tab.id
-                ? 'bg-blue-600 text-white'
-                : 'bg-white/10 hover:bg-white/20 text-gray-300'
-              }
-            `}
-          >
-            <span className="mr-2">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
+      {/* Creation Mode Selector */}
+      <div className="flex gap-2 mb-6 p-1 bg-white/10 rounded-lg border border-white/20 w-fit">
+        <button
+          onClick={() => {
+            setCreationMode(CHARACTER_CREATION_MODES.TEMPLATE);
+            // Reset to basic tab when switching modes
+            setActiveTab('basic');
+          }}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+            ${creationMode === CHARACTER_CREATION_MODES.TEMPLATE
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'text-gray-300 hover:text-white hover:bg-white/10'
+            }
+          `}
+        >
+          <Users className="w-4 h-4" />
+          NPC Template Mode
+        </button>
+        <button
+          onClick={() => {
+            setCreationMode(CHARACTER_CREATION_MODES.DETAILED);
+            // Reset to basic tab when switching modes
+            setActiveTab('basic');
+          }}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+            ${creationMode === CHARACTER_CREATION_MODES.DETAILED
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'text-gray-300 hover:text-white hover:bg-white/10'
+            }
+          `}
+        >
+          <User className="w-4 h-4" />
+          Detailed Character Mode
+        </button>
       </div>
+
+      {/* Mode Description */}
+      <div className="mb-6 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+        <p className="text-blue-200 text-sm">
+          {creationMode === CHARACTER_CREATION_MODES.TEMPLATE
+            ? '🚀 Quick mode for creating NPC templates with essential attributes, personality, and goals. Perfect for rapid world population.'
+            : '🔧 Comprehensive mode with full character customization including skills, equipment, relationships, and advanced settings.'
+          }
+        </p>
+      </div>
+
+      {/* Tabs - Only show in Detailed Mode */}
+      {creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+        <div className="flex gap-2 mb-6 overflow-x-auto">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors
+                ${activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white/10 hover:bg-white/20 text-gray-300'
+                }
+              `}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tab content */}
       <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-        {/* Basic Info Tab */}
-        {activeTab === 'basic' && (
+        {/* Template Mode - Simplified Form */}
+        {creationMode === CHARACTER_CREATION_MODES.TEMPLATE && (
+          <NPCTemplateForm
+            characterData={characterData}
+            onChange={setCharacterData}
+            onPreview={handlePreviewNPCs}
+            onBulkGenerate={handleBulkGenerate}
+            errors={errors}
+          />
+        )}
+
+        {/* Detailed Mode - Full Tabs */}
+        {creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <>
+            {/* Basic Info Tab */}
+            {activeTab === 'basic' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -1123,8 +1715,8 @@ const CharacterEditor = ({
           </div>
         )}
 
-        {/* Skills Tab */}
-        {activeTab === 'skills' && (
+        {/* Skills Tab - Only in Detailed Mode */}
+        {activeTab === 'skills' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
           <div>
             <p className="text-sm text-gray-400 mb-4">
               Set skill levels for this character template (0-10 scale)
@@ -1170,8 +1762,8 @@ const CharacterEditor = ({
           </div>
         )}
 
-        {/* Equipment Tab */}
-        {activeTab === 'equipment' && (
+        {/* Equipment Tab - Only in Detailed Mode */}
+        {activeTab === 'equipment' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
           <div>
             <p className="text-sm text-gray-400 mb-4">
               Define starting equipment for this character template
@@ -1183,8 +1775,8 @@ const CharacterEditor = ({
           </div>
         )}
 
-        {/* Relationships Tab */}
-        {activeTab === 'relationships' && (
+        {/* Relationships Tab - Only in Detailed Mode */}
+        {activeTab === 'relationships' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
           <div>
             <p className="text-sm text-gray-400 mb-4">
               Define potential relationship templates for this character
@@ -1196,8 +1788,8 @@ const CharacterEditor = ({
           </div>
         )}
 
-        {/* Advanced Tab */}
-        {activeTab === 'advanced' && (
+        {/* Advanced Tab - Only in Detailed Mode */}
+        {activeTab === 'advanced' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -1230,11 +1822,15 @@ const CharacterEditor = ({
             </div>
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Preview Panel */}
       <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
-        <h3 className="font-semibold text-white mb-3">Template Summary</h3>
+        <h3 className="font-semibold text-white mb-3">
+          {creationMode === CHARACTER_CREATION_MODES.TEMPLATE ? 'NPC Template Summary' : 'Character Summary'}
+        </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
             <span className="font-medium text-gray-300">Archetype:</span> <span className="text-white">{
@@ -1247,18 +1843,68 @@ const CharacterEditor = ({
             }</span>
           </div>
           <div>
-            <span className="font-medium text-gray-300">Skills:</span> <span className="text-white">{Object.keys(characterData.skills).length}</span>
-          </div>
-          <div>
             <span className="font-medium text-gray-300">Goals:</span> <span className="text-white">{characterData.goals.length}</span>
           </div>
           <div>
-            <span className="font-medium text-gray-300">Equipment:</span> <span className="text-white">{
-              Object.values(characterData.equipment).flat().length
-            } items</span>
+            <span className="font-medium text-gray-300">Interactions:</span> <span className="text-white">{characterData.assignedInteractions.length}</span>
           </div>
-          <div>
-            <span className="font-medium text-gray-300">Relationships:</span> <span className="text-white">{characterData.relationshipTemplates.length}</span>
+          {creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+            <>
+              <div>
+                <span className="font-medium text-gray-300">Skills:</span> <span className="text-white">{Object.keys(characterData.skills).length}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-300">Equipment:</span> <span className="text-white">{
+                  Object.values(characterData.equipment).flat().length
+                } items</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-300">Relationships:</span> <span className="text-white">{characterData.relationshipTemplates.length}</span>
+              </div>
+            </>
+          )}
+        </div>
+        
+        {/* Mode-specific completion indicators */}
+        <div className="mt-4 pt-4 border-t border-white/20">
+          <div className="flex items-center gap-4 text-sm flex-wrap">
+            {creationMode === CHARACTER_CREATION_MODES.TEMPLATE ? (
+              <>
+                <div className={`flex items-center gap-2 ${characterData.archetype ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${characterData.archetype ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  Archetype
+                </div>
+                <div className={`flex items-center gap-2 ${Object.keys(characterData.templateSettings?.attributeRanges || {}).length > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${Object.keys(characterData.templateSettings?.attributeRanges || {}).length > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  Attributes
+                </div>
+                <div className={`flex items-center gap-2 ${Object.keys(characterData.personality?.traits || {}).length > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${Object.keys(characterData.personality?.traits || {}).length > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  Personality
+                </div>
+                <div className="text-blue-400 text-xs ml-auto">
+                  🚀 Template Mode: Ready for bulk NPC generation
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={`flex items-center gap-2 ${characterData.name && characterData.description ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${characterData.name && characterData.description ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  Basic Info
+                </div>
+                <div className={`flex items-center gap-2 ${characterData.goals.length > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${characterData.goals.length > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  Goals
+                </div>
+                <div className={`flex items-center gap-2 ${characterData.assignedInteractions.length > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${characterData.assignedInteractions.length > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                  Interactions
+                </div>
+                <div className="text-purple-400 text-xs ml-auto">
+                  🔧 Detailed Mode: Full character customization
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1310,7 +1956,10 @@ const CharacterEditor = ({
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-          {mode === 'create' ? 'Create Character' : 'Save Changes'}
+          {mode === 'create' 
+            ? (creationMode === CHARACTER_CREATION_MODES.TEMPLATE ? 'Create NPC Template' : 'Create Character')
+            : 'Save Changes'
+          }
         </button>
       </div>
     </div>

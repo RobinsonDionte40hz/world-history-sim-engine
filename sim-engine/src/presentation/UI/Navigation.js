@@ -68,6 +68,7 @@ const Navigation = ({
     { title: 'Documentation', path: '/docs', description: 'Comprehensive guides and API reference' },
     { title: 'Examples', path: '/examples', description: 'Sample worlds and scenarios' },
     { title: 'World Foundation', path: '/builder', description: 'Create world basics and foundation' },
+    { title: 'Template Library', path: '/templates', description: 'Browse and manage reusable templates' },
     { title: 'Node Editor', path: '/editors/nodes', description: 'Create and edit world nodes' },
     { title: 'Character Editor', path: '/editors/characters', description: 'Design characters and NPCs' },
     { title: 'Character Manager', path: '/editors/character-manager', description: 'Manage all characters (under Character Editor)' },
