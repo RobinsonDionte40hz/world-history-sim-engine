@@ -620,7 +620,18 @@ const Sidebar = ({
       onClick: () => navigate('/editors/characters'),
       description: 'Design people & NPCs',
       hoverColor: 'rgba(168, 85, 247, 0.15)',
-      hoverBorder: 'rgba(168, 85, 247, 0.4)'
+      hoverBorder: 'rgba(168, 85, 247, 0.4)',
+      subItems: [
+        {
+          id: 'character-manager',
+          label: '👥 Character Manager',
+          path: '/editors/character-manager',
+          onClick: () => navigate('/editors/character-manager'),
+          description: 'Manage all characters',
+          hoverColor: 'rgba(147, 51, 234, 0.15)',
+          hoverBorder: 'rgba(147, 51, 234, 0.4)'
+        }
+      ]
     },
     {
       id: 'interaction-editor',
@@ -1214,75 +1225,152 @@ const Sidebar = ({
                 }
 
                 const isActive = isActiveItem(item.path);
+                const hasSubItems = item.subItems && item.subItems.length > 0;
+                const isSubItemActive = hasSubItems && item.subItems.some(subItem => isActiveItem(subItem.path));
+                const shouldShowExpanded = isActive || isSubItemActive;
 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={item.disabled ? undefined : item.onClick}
-                    disabled={item.disabled}
-                    title={item.disabled ? item.tooltip : undefined}
-                    className={`w-full text-left p-4 rounded-xl transition-all duration-300 font-medium group ${
-                      item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.02]'
-                    }`}
-                    style={{
-                      color: item.disabled ? '#94a3b8' : (isActive ? 'white' : '#e2e8f0'),
-                      border: isActive && !item.disabled 
-                        ? `2px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.6)'}` 
-                        : '2px solid transparent',
-                      fontSize: '0.95rem',
-                      background: item.disabled 
-                        ? 'rgba(71, 85, 105, 0.05)' 
-                        : (isActive 
-                          ? `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`
-                          : 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))'),
-                      transform: isActive && !item.disabled ? 'translateX(12px)' : 'translateX(0)',
-                      boxShadow: isActive && !item.disabled 
-                        ? `0 8px 25px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.05)` 
-                        : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                      backdropFilter: 'blur(12px)'
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isActive && !item.disabled) {
-                        e.target.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
-                        e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
-                        e.target.style.transform = 'translateX(12px) scale(1.02)';
-                        e.target.style.color = 'white';
-                        e.target.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!isActive && !item.disabled) {
-                        e.target.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
-                        e.target.style.borderColor = 'transparent';
-                        e.target.style.transform = 'translateX(0) scale(1)';
-                        e.target.style.color = '#e2e8f0';
-                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                      }
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm mb-1">
-                          {item.label}
+                  <div key={item.id}>
+                    <button
+                      onClick={item.disabled ? undefined : item.onClick}
+                      disabled={item.disabled}
+                      title={item.disabled ? item.tooltip : undefined}
+                      className={`w-full text-left p-4 rounded-xl transition-all duration-300 font-medium group ${
+                        item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.02]'
+                      }`}
+                      style={{
+                        color: item.disabled ? '#94a3b8' : (isActive ? 'white' : '#e2e8f0'),
+                        border: (isActive || isSubItemActive) && !item.disabled 
+                          ? `2px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.6)'}` 
+                          : '2px solid transparent',
+                        fontSize: '0.95rem',
+                        background: item.disabled 
+                          ? 'rgba(71, 85, 105, 0.05)' 
+                          : ((isActive || isSubItemActive)
+                            ? `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`
+                            : 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))'),
+                        transform: (isActive || isSubItemActive) && !item.disabled ? 'translateX(12px)' : 'translateX(0)',
+                        boxShadow: (isActive || isSubItemActive) && !item.disabled 
+                          ? `0 8px 25px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.05)` 
+                          : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                        backdropFilter: 'blur(12px)'
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isActive && !isSubItemActive && !item.disabled) {
+                          e.target.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
+                          e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
+                          e.target.style.transform = 'translateX(12px) scale(1.02)';
+                          e.target.style.color = 'white';
+                          e.target.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isActive && !isSubItemActive && !item.disabled) {
+                          e.target.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
+                          e.target.style.borderColor = 'transparent';
+                          e.target.style.transform = 'translateX(0) scale(1)';
+                          e.target.style.color = '#e2e8f0';
+                          e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm mb-1">
+                            {item.label}
+                          </div>
+                          {item.description && (
+                            <div className="text-xs opacity-75 leading-relaxed">
+                              {item.description}
+                            </div>
+                          )}
                         </div>
-                        {item.description && (
-                          <div className="text-xs opacity-75 leading-relaxed">
-                            {item.description}
+                        {item.disabled && (
+                          <div className="ml-2 text-gray-500 group-hover:animate-pulse">
+                            🔒
+                          </div>
+                        )}
+                        {hasSubItems && (
+                          <div className="ml-2 text-sm opacity-60">
+                            {shouldShowExpanded ? '▼' : '▶'}
+                          </div>
+                        )}
+                        {(isActive || isSubItemActive) && !item.disabled && (
+                          <div className="ml-2 text-sm opacity-80">
+                            ✨
                           </div>
                         )}
                       </div>
-                      {item.disabled && (
-                        <div className="ml-2 text-gray-500 group-hover:animate-pulse">
-                          🔒
-                        </div>
-                      )}
-                      {isActive && !item.disabled && (
-                        <div className="ml-2 text-sm opacity-80">
-                          ✨
-                        </div>
-                      )}
-                    </div>
-                  </button>
+                    </button>
+                    
+                    {/* Sub-items */}
+                    {hasSubItems && shouldShowExpanded && (
+                      <div className="ml-4 mt-2 space-y-1">
+                        {item.subItems.map((subItem) => {
+                          const isSubActive = isActiveItem(subItem.path);
+                          return (
+                            <button
+                              key={subItem.id}
+                              onClick={subItem.disabled ? undefined : subItem.onClick}
+                              disabled={subItem.disabled}
+                              className={`w-full text-left p-3 rounded-lg transition-all duration-200 text-sm ${
+                                subItem.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.01]'
+                              }`}
+                              style={{
+                                color: subItem.disabled ? '#94a3b8' : (isSubActive ? 'white' : '#cbd5e1'),
+                                border: isSubActive && !subItem.disabled 
+                                  ? `1px solid ${subItem.hoverBorder || 'rgba(147, 51, 234, 0.6)'}` 
+                                  : '1px solid transparent',
+                                background: subItem.disabled 
+                                  ? 'rgba(71, 85, 105, 0.05)' 
+                                  : (isSubActive 
+                                    ? `linear-gradient(135deg, ${subItem.hoverColor || 'rgba(147, 51, 234, 0.2)'}, rgba(15, 23, 42, 0.6))`
+                                    : 'rgba(71, 85, 105, 0.1)'),
+                                transform: isSubActive && !subItem.disabled ? 'translateX(8px)' : 'translateX(0)',
+                                boxShadow: isSubActive && !subItem.disabled 
+                                  ? `0 4px 15px -3px ${subItem.hoverColor || 'rgba(147, 51, 234, 0.3)'}` 
+                                  : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                              }}
+                              onMouseOver={(e) => {
+                                if (!isSubActive && !subItem.disabled) {
+                                  e.target.style.background = `linear-gradient(135deg, ${subItem.hoverColor || 'rgba(147, 51, 234, 0.2)'}, rgba(15, 23, 42, 0.6))`;
+                                  e.target.style.borderColor = subItem.hoverBorder || 'rgba(147, 51, 234, 0.6)';
+                                  e.target.style.transform = 'translateX(8px) scale(1.01)';
+                                  e.target.style.color = 'white';
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (!isSubActive && !subItem.disabled) {
+                                  e.target.style.background = 'rgba(71, 85, 105, 0.1)';
+                                  e.target.style.borderColor = 'transparent';
+                                  e.target.style.transform = 'translateX(0) scale(1)';
+                                  e.target.style.color = '#cbd5e1';
+                                }
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="font-medium">
+                                    {subItem.label}
+                                  </div>
+                                  {subItem.description && (
+                                    <div className="text-xs opacity-75 mt-1">
+                                      {subItem.description}
+                                    </div>
+                                  )}
+                                </div>
+                                {isSubActive && !subItem.disabled && (
+                                  <div className="ml-2 text-xs opacity-80">
+                                    ✨
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
                 })}
             </div>

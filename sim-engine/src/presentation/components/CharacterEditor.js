@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
+import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
 
 // Character archetypes
 const CHARACTER_ARCHETYPES = [
@@ -764,37 +765,66 @@ const CharacterEditor = ({
 
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
-  // Validation
+  // Validation using unified utility
   const validateCharacter = useCallback(() => {
+    const validationResult = validateCharacterForSave(characterData);
+    
+    // Convert validation errors to component error format
     const newErrors = {};
+    validationResult.errors.forEach(error => {
+      const fieldPath = error.field.split('.');
+      if (fieldPath.length === 1) {
+        newErrors[fieldPath[0]] = error.message;
+      } else {
+        // Handle nested fields like attributes.strength
+        if (!newErrors[fieldPath[0]]) {
+          newErrors[fieldPath[0]] = {};
+        }
+        newErrors[fieldPath[0]][fieldPath[1]] = error.message;
+      }
+    });
     
-    if (!characterData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    
-    if (!characterData.description.trim()) {
-      newErrors.description = 'Description is required';
-    }
-    
-    if (characterData.goals.length === 0) {
+    // Add component-specific validation
+    if (characterData.goals && characterData.goals.length === 0) {
       newErrors.goals = 'At least one goal is required';
     }
     
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return validationResult.isValid && Object.keys(newErrors).length === 0;
   }, [characterData]);
 
   // Handle save
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!validateCharacter()) {
       return;
     }
 
-    // Let parent component handle the actual save operation
-    // This maintains clean architecture - presentation layer doesn't know about domain services
-    if (onSave) {
-      onSave(characterData);
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      // Let parent component handle the actual save operation
+      // This maintains clean architecture - presentation layer doesn't know about domain services
+      if (onSave) {
+        await onSave(characterData);
+        setSaveSuccess(true);
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+      setSaveError(error.message || 'Failed to save character');
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => setSaveError(null), 5000);
+    } finally {
+      setIsSaving(false);
     }
   }, [characterData, onSave, validateCharacter]);
 
@@ -1233,18 +1263,53 @@ const CharacterEditor = ({
         </div>
       </div>
 
+      {/* Save Feedback */}
+      {(saveSuccess || saveError || isSaving) && (
+        <div className="mb-4">
+          {isSaving && (
+            <div className="flex items-center gap-2 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+              <span className="text-blue-400 text-sm">Saving character...</span>
+            </div>
+          )}
+          
+          {saveSuccess && (
+            <div className="flex items-center gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+              <div className="w-4 h-4 bg-green-400 rounded-full flex items-center justify-center">
+                <span className="text-green-900 text-xs">✓</span>
+              </div>
+              <span className="text-green-400 text-sm">
+                Character {mode === 'create' ? 'created' : 'updated'} successfully!
+              </span>
+            </div>
+          )}
+          
+          {saveError && (
+            <div className="flex items-center gap-2 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+              <div className="w-4 h-4 bg-red-400 rounded-full flex items-center justify-center">
+                <span className="text-red-900 text-xs">!</span>
+              </div>
+              <span className="text-red-400 text-sm">{saveError}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onCancel}
-          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+          disabled={isSaving}
+          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          disabled={isSaving}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
+          {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
           {mode === 'create' ? 'Create Character' : 'Save Changes'}
         </button>
       </div>

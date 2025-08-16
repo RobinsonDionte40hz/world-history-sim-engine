@@ -1471,4 +1471,4 @@ class WorldValidator {
   }
 }
 
-module.exports = WorldValidator;
+export default WorldValidator;

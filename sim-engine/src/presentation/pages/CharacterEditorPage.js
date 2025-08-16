@@ -23,7 +23,9 @@ import Navigation from '../UI/Navigation';
 import CharacterEditor from '../components/CharacterEditor';
 import WorldSelector from '../components/WorldSelector';
 import { useWorldContext } from '../contexts/WorldContext';
+import { useSimulationContext } from '../contexts/SimulationContext';
 import Character from '../../domain/entities/Character';
+import { saveCharacter } from '../../shared/utils/characterSaveUtils';
 
 const CharacterEditorPage = () => {
   const navigate = useNavigate();
@@ -35,6 +37,9 @@ const CharacterEditorPage = () => {
     updateWorldConfig,
     error: worldError
   } = useWorldContext();
+  
+  // SimulationContext integration for WorldBuilder
+  const { worldBuilder } = useSimulationContext();
   
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
@@ -169,49 +174,31 @@ const CharacterEditorPage = () => {
     }
     
     setIsSaving(true);
+    
     try {
-      // Create Character entity
-      const characterEntity = new Character(currentCharacter);
+      // Use unified save utility for consistent behavior
+      const saveResult = await saveCharacter(currentCharacter, {
+        worldBuilder,
+        currentWorldId,
+        currentWorld,
+        updateWorldConfig
+      });
       
-      // Save to localStorage
-      const characters = JSON.parse(localStorage.getItem('characters') || '[]');
-      const characterIndex = characters.findIndex(c => c.id === characterEntity.id);
-      
-      if (characterIndex >= 0) {
-        characters[characterIndex] = characterEntity.toJSON();
+      if (saveResult.success) {
+        setHasUnsavedChanges(false);
+        setSaveSuccess(true);
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
+        
+        console.log(saveResult.message);
       } else {
-        characters.push(characterEntity.toJSON());
+        throw new Error(saveResult.message);
       }
       
-      localStorage.setItem('characters', JSON.stringify(characters));
-      
-      // Update world config with character reference if world is selected
-      if (currentWorldId && currentWorld) {
-        const updatedCharacters = [...(currentWorld.worldConfig.characters || [])];
-        const existingCharacterIndex = updatedCharacters.findIndex(c => c.id === characterEntity.id);
-        
-        if (existingCharacterIndex >= 0) {
-          updatedCharacters[existingCharacterIndex] = characterEntity.toJSON();
-        } else {
-          updatedCharacters.push(characterEntity.toJSON());
-        }
-        
-        updateWorldConfig({
-          ...currentWorld.worldConfig,
-          characters: updatedCharacters
-        });
-      }
-      
-      setHasUnsavedChanges(false);
-      setSaveSuccess(true);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
-      
-      console.log('Saved character:', characterEntity);
     } catch (error) {
-      console.error('Save failed:', error);
-      alert('Failed to save character. Please try again.');
+      console.error('Failed to save character:', error);
+      alert(`Failed to save character: ${error.message}`);
     } finally {
       setIsSaving(false);
     }

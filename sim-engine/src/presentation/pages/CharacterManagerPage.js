@@ -13,6 +13,7 @@ import CharacterManager from '../components/CharacterManager';
 import CharacterEditor from '../components/CharacterEditor';
 import Modal from '../components/Modal';
 import { useSimulationContext } from '../contexts/SimulationContext';
+import { saveCharacter } from '../../shared/utils/characterSaveUtils';
 
 const CharacterManagerPage = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const CharacterManagerPage = () => {
   const [showCharacterEditor, setShowCharacterEditor] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [editorMode, setEditorMode] = useState('create');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Handle character creation
   const handleCreateCharacter = useCallback(() => {
@@ -50,22 +52,24 @@ const CharacterManagerPage = () => {
     }
 
     try {
-      if (editorMode === 'create') {
-        // Create new character
-        worldBuilder.addCharacter(characterData);
-        console.log('Created character:', characterData.name);
-      } else {
-        // Update existing character
-        worldBuilder.updateCharacter(characterData.id, characterData);
-        console.log('Updated character:', characterData.name);
-      }
-
-      // Close editor
-      setShowCharacterEditor(false);
-      setEditingCharacter(null);
+      // Use unified save utility for consistent behavior
+      const saveResult = await saveCharacter(characterData, {
+        worldBuilder,
+        mode: editorMode
+      });
       
-      // Force refresh of character list by triggering a re-render
-      // The CharacterManager will reload characters automatically
+      if (saveResult.success) {
+        // Close editor
+        setShowCharacterEditor(false);
+        setEditingCharacter(null);
+        
+        // Force refresh of character list by updating the refresh key
+        setRefreshKey(prev => prev + 1);
+        
+        console.log(saveResult.message);
+      } else {
+        throw new Error(saveResult.message);
+      }
       
     } catch (error) {
       console.error('Failed to save character:', error);
@@ -250,6 +254,7 @@ const CharacterManagerPage = () => {
           {/* Character Manager */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6">
             <CharacterManager
+              key={refreshKey}
               onEditCharacter={handleEditCharacter}
               onCreateCharacter={handleCreateCharacter}
               onViewCharacter={handleViewCharacter}
