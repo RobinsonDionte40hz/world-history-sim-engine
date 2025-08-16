@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import EncounterEditor from '../components/EncounterEditor';
-import WorldSelector from '../components/WorldSelector';
+import WorldDropdown from '../UI/WorldDropdown';
 import { useWorldContext } from '../contexts/WorldContext';
 import Encounter from '../../domain/entities/Encounter';
 
@@ -586,13 +586,10 @@ const EncounterEditorPage = () => {
             {/* World Selection Section */}
             <div className="mt-6 max-w-2xl mx-auto">
               <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-3 text-center">
-                  Select Target World
-                </h3>
-                <p className="text-gray-300 text-sm text-center mb-4">
-                  Choose which world this encounter will be added to
-                </p>
-                <WorldSelector compact={true} />
+                <WorldDropdown 
+                  label="Add Encounter To"
+                  showCreateButton={true}
+                />
               </div>
             </div>
 

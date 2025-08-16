@@ -21,6 +21,7 @@ export {
 // Navigation Components
 export { default as Navigation } from './Navigation';
 export { default as Sidebar } from './Sidebar';
+export { default as WorldDropdown } from './WorldDropdown';
 
 // Form Components
 export { default as ValidationPanel } from './ValidationPanel';

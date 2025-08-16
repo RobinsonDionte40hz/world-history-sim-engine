@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import CharacterEditor from '../components/CharacterEditor';
-import WorldSelector from '../components/WorldSelector';
+import WorldDropdown from '../UI/WorldDropdown';
 import { useWorldContext } from '../contexts/WorldContext';
 import { useSimulationContext } from '../contexts/SimulationContext';
 import Character from '../../domain/entities/Character';
@@ -776,13 +776,10 @@ const CharacterEditorPage = () => {
             {/* World Selection Section */}
             <div className="mt-6 max-w-2xl mx-auto">
               <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-3 text-center">
-                  Select Target World
-                </h3>
-                <p className="text-gray-300 text-sm text-center mb-4">
-                  Choose which world this character will be added to
-                </p>
-                <WorldSelector compact={true} />
+                <WorldDropdown 
+                  label="Add Character To"
+                  showCreateButton={true}
+                />
               </div>
             </div>
             

@@ -6,10 +6,10 @@
  */
 
 import React, { useState } from 'react';
-import { Plus, Globe, Trash2, Calendar, Users } from 'lucide-react';
+import { Plus, Globe, Trash2 } from 'lucide-react';
 import { useWorldContext } from '../contexts/WorldContext';
 
-const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = false }) => {
+const WorldSelector = ({ onWorldSelected, showCreateButton = true }) => {
   const {
     currentWorldId,
     worlds,
@@ -93,78 +93,7 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
     );
   }
 
-  if (compact) {
-    return (
-      <div className="space-y-2">
-        {/* Current World Display */}
-        {currentWorldId && (
-          <div className="p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-blue-400" />
-              <div className="flex-1">
-                <span className="text-blue-300 text-sm font-medium">
-                  {worlds.find(w => w.id === currentWorldId)?.name || 'Unknown World'}
-                </span>
-                <div className="text-blue-200 text-xs mt-1">
-                  {(() => {
-                    const world = worlds.find(w => w.id === currentWorldId);
-                    if (!world) return 'Unknown world';
-                    const nodeCount = world.worldConfig?.nodes?.length || 0;
-                    const charCount = world.worldConfig?.characters?.length || 0;
-                    return `${nodeCount} nodes, ${charCount} characters`;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Quick Actions */}
-        <div className="flex gap-2">
-          {showCreateButton && (
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4 inline mr-1" />
-              New World
-            </button>
-          )}
-
-          {worlds.length > 0 && (
-            <div className="flex-1">
-              <select
-                value={currentWorldId || ''}
-                onChange={(e) => e.target.value && handleSelectWorld(e.target.value)}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
-                title={worlds.length === 1 ? "Only one world available" : "Select a world"}
-              >
-                <option value="">Select World</option>
-                {worlds.map(world => (
-                  <option key={world.id} value={world.id} className="bg-gray-800">
-                    {world.name} ({world.worldConfig?.nodes?.length || 0} nodes)
-                  </option>
-                ))}
-              </select>
-              
-              {/* World Selection Hint */}
-              {worlds.length === 1 && currentWorldId && (
-                <div className="mt-1 text-xs text-gray-400 text-center">
-                  Only one world available - automatically selected
-                </div>
-              )}
-              
-              {worlds.length > 1 && (
-                <div className="mt-1 text-xs text-gray-400 text-center">
-                  {worlds.length} worlds available - choose target for new nodes
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -269,58 +198,54 @@ const WorldSelector = ({ onWorldSelected, showCreateButton = true, compact = fal
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-3">
             {worlds.map((world) => (
               <div
                 key={world.id}
                 onClick={() => handleSelectWorld(world.id)}
                 className={`
-                  p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200
+                  p-4 rounded-lg border cursor-pointer transition-all duration-200 group
                   ${world.id === currentWorldId
-                    ? 'border-blue-500 bg-blue-500/20'
+                    ? 'border-blue-500/50 bg-blue-500/20'
                     : 'border-white/20 bg-white/10 hover:border-white/40 hover:bg-white/20'
                   }
                 `}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Globe className={`w-5 h-5 ${world.id === currentWorldId ? 'text-blue-400' : 'text-gray-400'}`} />
-                    <h4 className="font-semibold text-white">{world.name}</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Globe className={`w-4 h-4 flex-shrink-0 ${world.id === currentWorldId ? 'text-blue-400' : 'text-gray-400'}`} />
+                    <h4 className="font-medium text-white text-sm truncate">{world.name}</h4>
+                    {world.id === currentWorldId && (
+                      <span className="px-2 py-0.5 bg-blue-500/30 rounded text-xs text-blue-300 flex-shrink-0">
+                        Active
+                      </span>
+                    )}
                   </div>
 
                   <button
                     onClick={(e) => handleDeleteWorld(world.id, e)}
-                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                    className="p-1 text-gray-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
                     title="Delete World"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
 
-                <p className="text-gray-300 text-sm mb-4 line-clamp-2">
-                  {world.description || 'No description'}
-                </p>
-
-                <div className="space-y-2 text-xs text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3 h-3" />
-                    <span>Modified {new Date(world.lastModified).toLocaleDateString()}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Users className="w-3 h-3" />
-                    <span>
-                      {world.worldConfig?.nodes?.length || 0} nodes, {' '}
-                      {world.worldConfig?.characters?.length || 0} characters
-                    </span>
-                  </div>
-                </div>
-
-                {world.id === currentWorldId && (
-                  <div className="mt-3 px-2 py-1 bg-blue-500/30 rounded text-xs text-blue-300 text-center">
-                    Current World
-                  </div>
+                {world.description && (
+                  <p className="text-gray-300 text-xs mb-2 line-clamp-1">
+                    {world.description}
+                  </p>
                 )}
+
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <div className="flex items-center gap-3">
+                    <span>{world.worldConfig?.nodes?.length || 0} nodes</span>
+                    <span>{world.worldConfig?.characters?.length || 0} chars</span>
+                  </div>
+                  <span className="text-xs">
+                    {new Date(world.lastModified).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

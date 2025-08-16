@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import InteractionEditor from '../components/InteractionEditor';
+import WorldDropdown from '../UI/WorldDropdown';
 
 const InteractionEditorPage = () => {
   const navigate = useNavigate();
@@ -491,6 +492,16 @@ const InteractionEditorPage = () => {
               /* Edit Mode */
               <div className="p-6 sm:p-8">
                 <h2 className="text-2xl font-semibold text-white mb-6">Interaction Configuration</h2>
+                
+                {/* World Selection Section */}
+                <div className="mb-6 max-w-2xl mx-auto">
+                  <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
+                    <WorldDropdown 
+                      label="Add Interaction To"
+                      showCreateButton={true}
+                    />
+                  </div>
+                </div>
                 
                 {/* Use existing InteractionEditor component */}
                 <InteractionEditor 
