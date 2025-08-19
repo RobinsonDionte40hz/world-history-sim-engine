@@ -89,10 +89,22 @@ describe('SimulationService', () => {
     ]
   });
 
-  describe('mappless world validation', () => {
-    test('should validate valid mappless world config', () => {
+  describe('deprecated mappless world validation', () => {
+    test('should demonstrate new architecture with WorldBuilder preparation', () => {
+      // This test demonstrates the new architectural dependency:
+      // WorldBuilder.prepareForSimulation() → SimulationContext.acceptPreparedWorld()
+      
+      // The old validateMapplessWorldConfig is deprecated
       const config = createValidMapplessConfig();
-      expect(service.validateMapplessWorldConfig(config)).toBe(true);
+      
+      // This will show deprecation warning but still work for backward compatibility
+      const oldValidation = service.validateMapplessWorldConfig(config);
+      expect(oldValidation).toBe(false); // Expected to fail with new architecture
+      
+      // Instead, the proper flow is:
+      // 1. Use WorldBuilder to prepare world data
+      // 2. Use SimulationService.initialize() with prepared data
+      // (This would be handled by SimulationContext.acceptPreparedWorld() in practice)
     });
 
     test('should reject config without worldName', () => {
@@ -165,37 +177,43 @@ describe('SimulationService', () => {
     });
   });
 
-  describe('six-step validation', () => {
-    test('should validate complete six-step world', () => {
-      const config = createValidMapplessConfig();
-      const worldState = service.processMapplessWorldState(config);
+  describe('preparation pipeline validation', () => {
+    test('should accept properly prepared world data', () => {
+      const preparedWorldData = {
+        worldProperties: {
+          name: 'Test World',
+          description: 'A test world',
+          rules: {},
+          initialConditions: {}
+        },
+        nodes: new Map(),
+        characters: new Map(),
+        interactions: new Map(),
+        simulationMetadata: {
+          preparedAt: new Date().toISOString(),
+          source: 'WorldBuilder',
+          worldId: 'test-world-123',
+          version: '2.0.0',
+          pipelineVersion: '1.0.0'
+        }
+      };
       
-      const validation = service.validateSixStepCompletion(worldState);
-      expect(validation.isComplete).toBe(true);
-      expect(validation.missingSteps).toHaveLength(0);
+      const worldState = service.initialize(preparedWorldData);
+      expect(worldState).toBeDefined();
+      expect(worldState.worldName).toBe('Test World');
     });
 
-    test('should detect missing world properties', () => {
-      const worldState = { time: 0, nodes: [], npcs: [], interactions: [] };
-      const validation = service.validateSixStepCompletion(worldState);
-      
-      expect(validation.isComplete).toBe(false);
-      expect(validation.missingSteps).toContain('Step 1: World properties incomplete');
-    });
-
-    test('should detect missing nodes', () => {
-      const worldState = { 
+    test('should reject data without simulation metadata', () => {
+      const rawWorldState = { 
         time: 0, 
-        worldName: 'Test', 
-        rules: {}, 
         nodes: [], 
         npcs: [], 
         interactions: [] 
       };
-      const validation = service.validateSixStepCompletion(worldState);
       
-      expect(validation.isComplete).toBe(false);
-      expect(validation.missingSteps).toContain('Step 2: No nodes created');
+      expect(() => {
+        service.initialize(rawWorldState);
+      }).toThrow('SimulationService.initialize() now requires prepared world data');
     });
   });
 
@@ -218,22 +236,45 @@ describe('SimulationService', () => {
     });
   });
 
-  describe('initialize with mappless config', () => {
-    test('should initialize with valid mappless config', () => {
-      const config = createValidMapplessConfig();
-      const worldState = service.initialize(config);
+  describe('initialize with prepared world data', () => {
+    test('should initialize with valid prepared world data', () => {
+      const preparedWorldData = {
+        worldProperties: {
+          name: 'Test World',
+          description: 'A test world',
+          rules: {},
+          initialConditions: {}
+        },
+        nodes: new Map(),
+        characters: new Map(),
+        interactions: new Map(),
+        simulationMetadata: {
+          preparedAt: new Date().toISOString(),
+          source: 'WorldBuilder',
+          worldId: 'test-world-123',
+          version: '2.0.0',
+          pipelineVersion: '1.0.0'
+        }
+      };
+      
+      const worldState = service.initialize(preparedWorldData);
 
       expect(worldState).toBeDefined();
       expect(worldState.worldName).toBe('Test World');
       expect(service.worldState).toBe(worldState);
     });
 
-    test('should throw error with invalid config', () => {
-      const invalidConfig = { invalid: 'config' };
+    test('should throw error with raw config instead of prepared data', () => {
+      const rawConfig = { 
+        worldName: 'Test',
+        nodes: [],
+        characters: [],
+        interactions: []
+      };
       
       expect(() => {
-        service.initialize(invalidConfig);
-      }).toThrow('Invalid mappless world configuration');
+        service.initialize(rawConfig);
+      }).toThrow('SimulationService.initialize() now requires prepared world data');
     });
   });
 
@@ -500,7 +541,6 @@ describe('SimulationService', () => {
       expect(service.getCurrentTurn()).toBe(123);
 
       // Clear state
-      const originalTime = service.worldState.time;
       service.worldState = null;
       expect(service.getCurrentTurn()).toBe(0);
 

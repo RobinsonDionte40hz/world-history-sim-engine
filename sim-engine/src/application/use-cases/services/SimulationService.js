@@ -19,35 +19,115 @@ class SimulationService {
     this.currentTurnSummary = null;
   }
 
-  // Initialize or reset the simulation with mappless world configuration
-  initialize(config = {}) {
-    if (!this.validateMapplessWorldConfig(config)) {
-      throw new Error('Invalid mappless world configuration');
+  /**
+   * Initialize simulation with prepared world data
+   * @param {Object} preparedWorldData - World data prepared by WorldBuilder and validated by SimulationContext
+   * @returns {Object} Initialized world state
+   * @throws {Error} If world data is not properly prepared
+   */
+  initialize(preparedWorldData) {
+    // Runtime validation check - ensure proper data structures
+    if (!preparedWorldData || typeof preparedWorldData !== 'object') {
+      throw new Error(
+        'Invalid world data format. Expected prepared world data object from SimulationContext.'
+      );
     }
 
-    this.worldState = this.processMapplessWorldState(config);
+    // Validate that this is prepared world data, not raw config
+    if (!preparedWorldData.simulationMetadata) {
+      throw new Error(
+        'SimulationService.initialize() now requires prepared world data. ' +
+        'Use WorldBuilder.prepareForSimulation() followed by SimulationContext.acceptPreparedWorld()'
+      );
+    }
+
+    // Validate source
+    if (preparedWorldData.simulationMetadata.source !== 'WorldBuilder') {
+      throw new Error(
+        'Invalid world data source. World must be prepared through WorldBuilder.prepareForSimulation()'
+      );
+    }
+
+    // Validate required data structures are Maps
+    if (!(preparedWorldData.nodes instanceof Map)) {
+      throw new Error(
+        'Invalid world data structure: nodes must be a Map. ' +
+        'Ensure data comes from SimulationContext.acceptPreparedWorld()'
+      );
+    }
+
+    if (!(preparedWorldData.characters instanceof Map)) {
+      throw new Error(
+        'Invalid world data structure: characters must be a Map. ' +
+        'Ensure data comes from SimulationContext.acceptPreparedWorld()'
+      );
+    }
+
+    if (!(preparedWorldData.interactions instanceof Map)) {
+      throw new Error(
+        'Invalid world data structure: interactions must be a Map. ' +
+        'Ensure data comes from SimulationContext.acceptPreparedWorld()'
+      );
+    }
+
+    // Validate world properties
+    if (!preparedWorldData.worldProperties || !preparedWorldData.worldProperties.name) {
+      throw new Error(
+        'Invalid world data: missing required world properties. ' +
+        'Ensure world is properly prepared through the pipeline.'
+      );
+    }
+
+    // Convert prepared data to simulation state
+    this.worldState = this.processPreparedWorldData(preparedWorldData);
     this.initializeTurnHistory();
     this.saveState();  // Persist initial state
     return this.worldState;
   }
 
-  // Validate mappless world configuration before initialization
+  /**
+   * Process prepared world data into simulation state
+   * @private
+   * @param {Object} preparedWorldData - Prepared world data with Maps and metadata
+   * @returns {Object} Simulation world state
+   */
+  processPreparedWorldData(preparedWorldData) {
+    const { worldProperties, nodes, characters, interactions } = preparedWorldData;
+    
+    // Convert Maps to arrays for simulation processing
+    const nodeArray = Array.from(nodes.values());
+    const characterArray = Array.from(characters.values());
+    const interactionArray = Array.from(interactions.values());
+
+    // Build simulation state
+    const worldState = {
+      time: 0,
+      worldName: worldProperties.name,
+      worldId: preparedWorldData.simulationMetadata.worldId || this._generateId(),
+      nodes: nodeArray,
+      npcs: characterArray,
+      interactions: interactionArray,
+      resources: {},
+      history: [],
+      rules: worldProperties.rules || {},
+      initialConditions: worldProperties.initialConditions || {},
+      metadata: {
+        preparedAt: preparedWorldData.simulationMetadata.preparedAt,
+        source: preparedWorldData.simulationMetadata.source,
+        version: '2.0.0'
+      }
+    };
+
+    return worldState;
+  }
+
+  // Legacy validation method - kept for backward compatibility but deprecated
   validateMapplessWorldConfig(config) {
-    if (!config || typeof config !== 'object') {
-      console.error('SimulationService: Configuration must be an object');
-      return false;
-    }
-
-    // Check required properties for mappless world
-    if (!config.worldName || typeof config.worldName !== 'string') {
-      console.error('SimulationService: worldName is required and must be a string');
-      return false;
-    }
-
-    if (!Array.isArray(config.nodes) || config.nodes.length === 0) {
-      console.error('SimulationService: At least one node is required');
-      return false;
-    }
+    console.warn(
+      'validateMapplessWorldConfig is deprecated. ' +
+      'Use WorldBuilder.prepareForSimulation() to prepare world data.'
+    );
+    return false;  // Always fail to force proper pipeline usage
 
     if (!Array.isArray(config.characters) || config.characters.length === 0) {
       console.error('SimulationService: At least one character is required');
@@ -104,8 +184,21 @@ class SimulationService {
     return true;
   }
 
-  // Process mappless world state for simulation
+  /**
+   * Generate unique ID
+   * @private
+   * @returns {string} Unique identifier
+   */
+  _generateId() {
+    return `world_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // Legacy method - deprecated
   processMapplessWorldState(config) {
+    console.warn(
+      'processMapplessWorldState is deprecated. ' +
+      'Use processPreparedWorldData with properly prepared world data.'
+    );
     const worldState = {
       time: 0,
       worldName: config.worldName,
@@ -219,72 +312,72 @@ class SimulationService {
     });
   }
 
-  // Check if simulation can start (validates six-step completion)
+  // Check if simulation can start (validates preparation pipeline completion)
   canStart() {
     if (!this.worldState) {
       return { canStart: false, reason: 'No world state initialized' };
     }
 
-    // Validate six-step completion
-    const validation = this.validateSixStepCompletion(this.worldState);
+    // Validate preparation pipeline completion
+    const validation = this.validatePipelineCompletion(this.worldState);
     return {
       canStart: validation.isComplete,
-      reason: validation.isComplete ? 'Ready to start' : validation.missingSteps.join(', ')
+      reason: validation.isComplete ? 'Ready to start' : validation.missingPhases.join(', ')
     };
   }
 
-  // Validate that all six steps are completed
-  validateSixStepCompletion(worldState) {
-    const missingSteps = [];
+  // Validate that all preparation phases are completed
+  validatePipelineCompletion(worldState) {
+    const missingPhases = [];
 
-    // Step 1: World properties
+    // Phase 1: World properties
     if (!worldState.worldName || !worldState.rules) {
-      missingSteps.push('Step 1: World properties incomplete');
+      missingPhases.push('Phase 1: World properties incomplete');
     }
 
-    // Step 2: Nodes exist
+    // Phase 2: Nodes exist
     if (!worldState.nodes || worldState.nodes.length === 0) {
-      missingSteps.push('Step 2: No nodes created');
+      missingPhases.push('Phase 2: No nodes created');
     }
 
-    // Step 3: Interactions exist
+    // Phase 3: Interactions exist
     if (!worldState.interactions || worldState.interactions.length === 0) {
-      missingSteps.push('Step 3: No interactions created');
+      missingPhases.push('Phase 3: No interactions created');
     }
 
-    // Step 4: Characters exist with assigned interactions
+    // Phase 4: Characters exist with assigned interactions
     if (!worldState.npcs || worldState.npcs.length === 0) {
-      missingSteps.push('Step 4: No characters created');
+      missingPhases.push('Phase 4: No characters created');
     } else {
       const charactersWithoutInteractions = worldState.npcs.filter(npc => 
         !npc.assignedInteractions || npc.assignedInteractions.length === 0
       );
       if (charactersWithoutInteractions.length > 0) {
-        missingSteps.push('Step 4: Some characters have no assigned interactions');
+        missingPhases.push('Phase 4: Some characters have no assigned interactions');
       }
     }
 
-    // Step 5: All nodes have assigned characters
+    // Phase 5: All nodes have assigned characters
     if (worldState.nodes) {
       const nodesWithoutCharacters = worldState.nodes.filter(node => 
         !node.assignedCharacters || node.assignedCharacters.length === 0
       );
       if (nodesWithoutCharacters.length > 0) {
-        missingSteps.push('Step 5: Some nodes have no assigned characters');
+        missingPhases.push('Phase 5: Some nodes have no assigned characters');
       }
     }
 
-    // Step 6: All characters are assigned to nodes
+    // Phase 6: All characters are assigned to nodes
     if (worldState.npcs) {
       const charactersWithoutNodes = worldState.npcs.filter(npc => !npc.currentNodeId);
       if (charactersWithoutNodes.length > 0) {
-        missingSteps.push('Step 6: Some characters are not assigned to nodes');
+        missingPhases.push('Phase 6: Some characters are not assigned to nodes');
       }
     }
 
     return {
-      isComplete: missingSteps.length === 0,
-      missingSteps
+      isComplete: missingPhases.length === 0,
+      missingPhases
     };
   }
 

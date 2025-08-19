@@ -135,7 +135,7 @@ describe('WorldState', () => {
   });
 
   describe('toSimulationConfig', () => {
-    test('should convert valid world to simulation config', () => {
+    test('should throw error directing to proper pipeline', () => {
       const worldState = new WorldState({
         dimensions: { width: 100, height: 100 },
         rules: { tickDelay: 500 },
@@ -152,59 +152,31 @@ describe('WorldState', () => {
         items: [{ id: 'item1', name: 'Test Item' }]
       });
 
-      const config = worldState.toSimulationConfig();
-      
-      expect(config).toEqual({
-        size: { width: 100, height: 100 },
-        nodeCount: 1,
-        characterCount: 1,
-        resourceTypes: ['food', 'water'],
-        startingResources: { food: 100 },
-        customNodes: [{ id: 'node1', name: 'Test Node' }],
-        customCharacters: [{ id: 'char1', name: 'Test Character' }],
-        customInteractions: [{ id: 'int1', name: 'Test Interaction' }],
-        customEvents: [{ id: 'event1', name: 'Test Event' }],
-        customGroups: [{ id: 'group1', name: 'Test Group' }],
-        customItems: [{ id: 'item1', name: 'Test Item' }],
-        rules: { tickDelay: 500 },
-        initialConditions: { 
-          resourceTypes: ['food', 'water'],
-          startingResources: { food: 100 },
-          timeScale: 2
-        },
-        timeScale: 2,
-        tickDelay: 500,
-        worldId: worldState.id,
-        worldName: worldState.name,
-        worldVersion: worldState.version
-      });
-    });
-
-    test('should throw error for invalid world', () => {
-      mockValidationResult.isValid = false;
-      mockValidationResult.errors = ['Invalid dimensions'];
-      
-      const worldState = new WorldState();
-      
       expect(() => worldState.toSimulationConfig()).toThrow(
-        'Cannot convert invalid world to simulation config. Validation errors: Invalid dimensions'
+        'Direct world-to-simulation conversion is no longer supported. ' +
+        'Please use WorldBuilder.prepareForSimulation() to prepare your world data, ' +
+        'then pass it to SimulationContext.acceptPreparedWorld() for simulation initialization.'
       );
     });
 
-    test('should handle missing optional properties', () => {
-      const worldState = new WorldState({
-        dimensions: { width: 50, height: 50 }
+    test('should always throw error regardless of world validity', () => {
+      const validWorld = new WorldState({
+        dimensions: { width: 100, height: 100 }
       });
-
-      const config = worldState.toSimulationConfig();
       
-      expect(config.resourceTypes).toEqual([]);
-      expect(config.startingResources).toEqual({});
-      expect(config.rules).toEqual({});
-      expect(config.initialConditions).toEqual({});
-      expect(config.timeScale).toBe(1);
-      expect(config.tickDelay).toBe(1000);
+      mockValidationResult.isValid = false;
+      mockValidationResult.errors = ['Invalid dimensions'];
+      const invalidWorld = new WorldState();
+      
+      const expectedError = 'Direct world-to-simulation conversion is no longer supported. ' +
+        'Please use WorldBuilder.prepareForSimulation() to prepare your world data, ' +
+        'then pass it to SimulationContext.acceptPreparedWorld() for simulation initialization.';
+      
+      expect(() => validWorld.toSimulationConfig()).toThrow(expectedError);
+      expect(() => invalidWorld.toSimulationConfig()).toThrow(expectedError);
     });
+
+
   });
 
   describe('Content Management', () => {

@@ -421,22 +421,58 @@ class WorldBuilder {
     return this.worldConfig;
   }
 
-  // Build and validation methods
-  build() {
+  // Simulation preparation methods
+  prepareForSimulation() {
     const validation = this.validate();
     if (!validation.isValid) {
-      throw new Error(`Cannot build invalid world: ${validation.errors.join(', ')}`);
+      throw new Error(`World configuration is not valid for simulation: ${validation.errors.join(', ')}`);
     }
 
-    // Create WorldState instance (will be implemented in task 3)
+    // Create simulation-optimized data structures
+    const simulationNodes = new Map(this.worldConfig.nodes.map(node => [node.id, { ...node, characters: [] }]));
+    const simulationCharacters = new Map(this.worldConfig.characters.map(char => [char.id, { ...char }]));
+
+    // Populate nodes with character references if nodePopulations exists
+    if (this.worldConfig.nodePopulations) {
+      for (const [nodeId, characterIds] of Object.entries(this.worldConfig.nodePopulations)) {
+        const node = simulationNodes.get(nodeId);
+        if (node && Array.isArray(characterIds)) {
+          node.characters = characterIds.map(id => simulationCharacters.get(id)).filter(Boolean);
+        }
+      }
+    } else {
+      // Fallback: assign characters to nodes based on currentNodeId if available
+      for (const character of this.worldConfig.characters) {
+        if (character.currentNodeId) {
+          const node = simulationNodes.get(character.currentNodeId);
+          if (node) {
+            node.characters.push(character);
+          }
+        }
+      }
+    }
+
     return {
-      id: this._generateId('world'),
-      name: 'Generated World',
-      ...this.worldConfig,
-      isValid: true,
-      validationResult: validation,
-      createdAt: new Date(),
-      modifiedAt: new Date()
+      worldProperties: {
+        name: this.worldConfig.name || 'Generated World',
+        description: this.worldConfig.description || 'A world created through the WorldBuilder',
+        rules: this.worldConfig.rules,
+        initialConditions: this.worldConfig.initialConditions,
+      },
+      nodes: simulationNodes,
+      characters: simulationCharacters,
+      interactions: new Map(this.worldConfig.interactions.map(i => [i.id, { ...i }])),
+      events: new Map(this.worldConfig.events.map(e => [e.id, { ...e }])),
+      groups: new Map(this.worldConfig.groups.map(g => [g.id, { ...g }])),
+      items: new Map(this.worldConfig.items.map(i => [i.id, { ...i }])),
+      simulationMetadata: {
+        preparedAt: new Date().toISOString(),
+        source: 'WorldBuilder',
+        worldId: `world_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        version: '2.0.0',
+        pipelineVersion: '1.0.0',
+        validationResult: validation
+      }
     };
   }
 

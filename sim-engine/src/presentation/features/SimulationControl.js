@@ -1,44 +1,31 @@
-// src/presentation/components/features/SimulationControl.js
+/**
+ * SimulationControl - Simulation control component using SimulationContext
+ * 
+ * This component now properly uses SimulationContext instead of directly
+ * accessing SimulationService, enforcing the proper architectural boundaries.
+ */
 
-import React, { useState } from 'react';
-import SimulationService from '../../application/use-cases/services/SimulationService.js';
+import React from 'react';
+import { useSimulationContext } from '../contexts/SimulationContext.js';
 import HistoryTimeline from './HistoryTimeline.js';
 
 const SimulationControl = () => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [currentTurn, setCurrentTurn] = useState(0);
-
-  const handleInitialize = () => {
-    try {
-      // Try to load existing state first
-      let worldState = SimulationService.loadState();
-      
-      // If no saved state, don't create a default world - user must build manually
-      if (!worldState) {
-        console.log('No saved state found. User must create world through World Builder.');
-        // Don't initialize - user needs to go through world building process
-        return;
-      }
-      
-      setIsInitialized(true);
-      setCurrentTurn(SimulationService.getCurrentTurn());
-    } catch (error) {
-      console.error('Failed to initialize simulation:', error);
-    }
-  };
+  const simulationContext = useSimulationContext();
+  
+  // Get state from context
+  const isInitialized = simulationContext.isInitialized;
+  const currentTurn = simulationContext.currentTurn;
+  const hasPreparedWorld = simulationContext.simulationReadinessStatus.hasPreparedWorld;
 
   const handleProcessTurn = () => {
     try {
-      // Ensure we're initialized before processing a turn
-      if (!isInitialized) {
-        handleInitialize();
+      if (!hasPreparedWorld) {
+        console.error('No prepared world available. Complete world building first.');
+        return;
       }
       
-      // Process turn directly - no need to "start" simulation for turn-based mode
-      const result = SimulationService.processTurn();
-      if (result && result.success) {
-        setCurrentTurn(SimulationService.getCurrentTurn());
-      }
+      // Process turn through context
+      simulationContext.processTurn();
     } catch (error) {
       console.error('Failed to process turn:', error);
     }
@@ -46,9 +33,7 @@ const SimulationControl = () => {
 
   const handleReset = () => {
     try {
-      SimulationService.reset();
-      setIsInitialized(false);
-      setCurrentTurn(0);
+      simulationContext.resetSimulation();
     } catch (error) {
       console.error('Failed to reset simulation:', error);
     }
@@ -58,27 +43,31 @@ const SimulationControl = () => {
     <div className="p-4">
       <h2 className="text-lg font-bold">Simulation Controls (Turn-Based)</h2>
       <div className="mb-4">
-        <span className="text-sm text-gray-600">Current Turn: {currentTurn}</span>
+        <span className="text-sm text-gray-600">
+          Current Turn: {currentTurn !== null ? currentTurn : '--'}
+        </span>
       </div>
+      {!hasPreparedWorld && (
+        <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+          <p>No prepared world available. Complete world building and preparation first.</p>
+        </div>
+      )}
       <div className="space-x-2 mb-4">
-        {!isInitialized && (
-          <button 
-            onClick={handleInitialize} 
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Load Saved World
-          </button>
-        )}
         <button 
           onClick={handleProcessTurn} 
-          className="bg-green-500 text-white p-2 rounded hover:bg-green-600"
-          disabled={!isInitialized}
+          className={`text-white p-2 rounded ${
+            hasPreparedWorld && isInitialized
+              ? 'bg-green-500 hover:bg-green-600' 
+              : 'bg-gray-400 cursor-not-allowed'
+          }`}
+          disabled={!hasPreparedWorld || !isInitialized}
         >
           Process Next Turn
         </button>
         <button 
           onClick={handleReset} 
           className="bg-red-500 text-white p-2 rounded hover:bg-red-600"
+          disabled={!hasPreparedWorld}
         >
           Reset
         </button>

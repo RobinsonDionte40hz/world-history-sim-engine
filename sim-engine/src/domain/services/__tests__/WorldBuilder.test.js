@@ -1,6 +1,6 @@
 /**
  * WorldBuilder Tests
- * Tests for the core world builder infrastructure with six-step flow
+ * Tests for the core world builder infrastructure with simulation preparation pipeline
  */
 
 import WorldBuilder from '../WorldBuilder';
@@ -20,7 +20,6 @@ describe('WorldBuilder', () => {
   describe('Constructor', () => {
     it('should initialize with default configuration', () => {
       const builder = new WorldBuilder();
-      expect(builder.currentStep).toBe(1);
       expect(builder.worldConfig.name).toBeNull();
       expect(builder.worldConfig.nodes).toEqual([]);
       expect(builder.worldConfig.interactions).toEqual([]);
@@ -30,21 +29,24 @@ describe('WorldBuilder', () => {
       expect(builder.worldConfig.isValid).toBe(false);
     });
 
-    it('should initialize step validation to false', () => {
+    it('should initialize simulation readiness phases to false', () => {
       const builder = new WorldBuilder();
-      for (let i = 1; i <= 6; i++) {
-        expect(builder.worldConfig.stepValidation[i]).toBe(false);
-      }
+      expect(builder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(false);
+      expect(builder.worldConfig.simulationReadiness.locationsDefined).toBe(false);
+      expect(builder.worldConfig.simulationReadiness.capabilitiesDefined).toBe(false);
+      expect(builder.worldConfig.simulationReadiness.actorsDefined).toBe(false);
+      expect(builder.worldConfig.simulationReadiness.actorsAssigned).toBe(false);
+      expect(builder.worldConfig.simulationReadiness.readyForSimulation).toBe(false);
     });
   });
 
-  describe('Step 1: World Properties', () => {
+  describe('Phase 1: World Properties', () => {
     it('should set world properties correctly', () => {
       worldBuilder.setWorldProperties('Test World', 'A test world for simulation');
       
       expect(worldBuilder.worldConfig.name).toBe('Test World');
       expect(worldBuilder.worldConfig.description).toBe('A test world for simulation');
-      expect(worldBuilder.worldConfig.stepValidation[1]).toBe(false); // Still need rules and conditions
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(false); // Still need rules and conditions
     });
 
     it('should validate world name and description', () => {
@@ -67,19 +69,19 @@ describe('WorldBuilder', () => {
       expect(worldBuilder.worldConfig.initialConditions).toEqual(conditions);
     });
 
-    it('should validate step 1 when all properties are set', () => {
+    it('should validate world foundation when all properties are set', () => {
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
         .setInitialConditions({ startingResources: 1000 });
       
-      expect(worldBuilder.worldConfig.stepValidation[1]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(true);
     });
   });
 
-  describe('Step 2: Nodes', () => {
+  describe('Phase 2: Nodes', () => {
     beforeEach(() => {
-      // Complete step 1 first
+      // Complete phase 1 first
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
@@ -101,10 +103,10 @@ describe('WorldBuilder', () => {
       expect(worldBuilder.worldConfig.nodes).toHaveLength(1);
       expect(worldBuilder.worldConfig.nodes[0].name).toBe('Test Village');
       expect(worldBuilder.worldConfig.nodes[0].type).toBe('settlement');
-      expect(worldBuilder.worldConfig.stepValidation[2]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.locationsDefined).toBe(true);
     });
 
-    it('should prevent adding nodes without step 1 completion', () => {
+    it('should prevent adding nodes without world foundation completion', () => {
       const incompleteBuilder = new WorldBuilder();
       const nodeConfig = {
         name: 'Test Village',
@@ -145,9 +147,9 @@ describe('WorldBuilder', () => {
     });
   });
 
-  describe('Step 3: Interactions', () => {
+  describe('Phase 3: Interactions', () => {
     beforeEach(() => {
-      // Complete steps 1-2 first
+      // Complete phases 1-2 first
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
@@ -174,10 +176,10 @@ describe('WorldBuilder', () => {
       expect(worldBuilder.worldConfig.interactions).toHaveLength(1);
       expect(worldBuilder.worldConfig.interactions[0].name).toBe('Trade Goods');
       expect(worldBuilder.worldConfig.interactions[0].type).toBe('economic');
-      expect(worldBuilder.worldConfig.stepValidation[3]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.capabilitiesDefined).toBe(true);
     });
 
-    it('should prevent adding interactions without step 2 completion', () => {
+    it('should prevent adding interactions without locations completion', () => {
       const incompleteBuilder = new WorldBuilder();
       incompleteBuilder
         .setWorldProperties('Test World', 'A test world')
@@ -217,9 +219,9 @@ describe('WorldBuilder', () => {
     });
   });
 
-  describe('Step 4: Characters', () => {
+  describe('Phase 4: Characters', () => {
     beforeEach(() => {
-      // Complete steps 1-3 first
+      // Complete phases 1-3 first
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
@@ -260,10 +262,10 @@ describe('WorldBuilder', () => {
       expect(worldBuilder.worldConfig.characters).toHaveLength(1);
       expect(worldBuilder.worldConfig.characters[0].name).toBe('Test Merchant');
       expect(worldBuilder.worldConfig.characters[0].attributes.charisma).toBe(16);
-      expect(worldBuilder.worldConfig.stepValidation[4]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(true);
     });
 
-    it('should prevent adding characters without steps 2-3 completion', () => {
+    it('should prevent adding characters without locations and capabilities completion', () => {
       const incompleteBuilder = new WorldBuilder();
       incompleteBuilder
         .setWorldProperties('Test World', 'A test world')
@@ -324,9 +326,9 @@ describe('WorldBuilder', () => {
     });
   });
 
-  describe('Step 5: Node Population', () => {
+  describe('Phase 5: Node Population', () => {
     beforeEach(() => {
-      // Complete steps 1-4 first
+      // Complete phases 1-4 first
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
@@ -365,7 +367,7 @@ describe('WorldBuilder', () => {
       worldBuilder.assignCharacterToNode(characterId, nodeId);
       
       expect(worldBuilder.worldConfig.nodePopulations[nodeId]).toContain(characterId);
-      expect(worldBuilder.worldConfig.stepValidation[5]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsAssigned).toBe(true);
     });
 
     it('should populate nodes with multiple characters', () => {
@@ -389,7 +391,7 @@ describe('WorldBuilder', () => {
       worldBuilder.populateNode(nodeId, characterIds);
       
       expect(worldBuilder.worldConfig.nodePopulations[nodeId]).toHaveLength(2);
-      expect(worldBuilder.worldConfig.stepValidation[5]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsAssigned).toBe(true);
     });
 
     it('should validate character and node existence', () => {
@@ -400,32 +402,107 @@ describe('WorldBuilder', () => {
     });
   });
 
-  describe('Step Validation and Dependencies', () => {
-    it('should enforce step dependencies', () => {
-      expect(worldBuilder.canProceedToStep(1)).toBe(true);
-      expect(worldBuilder.canProceedToStep(2)).toBe(false);
-      expect(worldBuilder.canProceedToStep(3)).toBe(false);
-      expect(worldBuilder.canProceedToStep(4)).toBe(false);
-      expect(worldBuilder.canProceedToStep(5)).toBe(false);
-      expect(worldBuilder.canProceedToStep(6)).toBe(false);
+  describe('Preparation Pipeline Validation and Dependencies', () => {
+    it('should enforce preparation phase dependencies', () => {
+      // Initially no phases should be complete
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(false);
+      expect(worldBuilder.worldConfig.simulationReadiness.locationsDefined).toBe(false);
+      expect(worldBuilder.worldConfig.simulationReadiness.capabilitiesDefined).toBe(false);
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(false);
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsAssigned).toBe(false);
+      expect(worldBuilder.worldConfig.simulationReadiness.readyForSimulation).toBe(false);
+      
+      // Cannot proceed to later phases without foundation
+      expect(worldBuilder._canProceedToPhase('locationsDefined')).toBe(false);
+      expect(worldBuilder._canProceedToPhase('capabilitiesDefined')).toBe(false);
+      expect(worldBuilder._canProceedToPhase('actorsDefined')).toBe(false);
+      expect(worldBuilder._canProceedToPhase('actorsAssigned')).toBe(false);
+      expect(worldBuilder._canProceedToPhase('readyForSimulation')).toBe(false);
     });
 
-    it('should validate individual steps', () => {
-      expect(worldBuilder.validateStep(1)).toBe(false);
+    it('should validate individual preparation phases', () => {
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(false);
       
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
         .setInitialConditions({ startingResources: 1000 });
       
-      expect(worldBuilder.validateStep(1)).toBe(true);
-      expect(worldBuilder.canProceedToStep(2)).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(true);
+      expect(worldBuilder._canProceedToPhase('locationsDefined')).toBe(true);
+    });
+
+    it('should validate preparation phase progression', () => {
+      // Complete foundation phase
+      worldBuilder
+        .setWorldProperties('Pipeline Test World', 'Testing phase progression')
+        .setRules({ timeProgression: 'turn-based' })
+        .setInitialConditions({ startingResources: 1000 });
+      
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(true);
+      
+      // Add locations
+      worldBuilder.addNode({
+        name: 'Test Location',
+        type: 'settlement',
+        description: 'A test location'
+      });
+      
+      expect(worldBuilder.worldConfig.simulationReadiness.locationsDefined).toBe(true);
+      expect(worldBuilder._canProceedToPhase('capabilitiesDefined')).toBe(true);
+      
+      // Add capabilities
+      worldBuilder.addInteraction({
+        name: 'Test Capability',
+        type: 'social',
+        requirements: {},
+        branches: [],
+        effects: [],
+        context: ['settlement']
+      });
+      
+      expect(worldBuilder.worldConfig.simulationReadiness.capabilitiesDefined).toBe(true);
+      expect(worldBuilder._canProceedToPhase('actorsDefined')).toBe(true);
+      
+      // Add actors
+      worldBuilder.addCharacter({
+        name: 'Test Actor',
+        attributes: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
+        assignedInteractions: [worldBuilder.worldConfig.interactions[0].id]
+      });
+      
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(true);
+      expect(worldBuilder._canProceedToPhase('actorsAssigned')).toBe(true);
+      
+      // Assign actors to locations
+      const nodeId = worldBuilder.worldConfig.nodes[0].id;
+      const characterId = worldBuilder.worldConfig.characters[0].id;
+      worldBuilder.assignCharacterToNode(characterId, nodeId);
+      
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsAssigned).toBe(true);
+      expect(worldBuilder._canProceedToPhase('readyForSimulation')).toBe(true);
+    });
+
+    it('should reject preparation when phases are incomplete', () => {
+      // Try to prepare without completing all phases
+      expect(() => {
+        worldBuilder.prepareForSimulation();
+      }).toThrow('World configuration is not valid for simulation');
+      
+      // Partial completion should still fail
+      worldBuilder
+        .setWorldProperties('Incomplete World', 'Missing requirements')
+        .setRules({ timeProgression: 'turn-based' });
+      
+      expect(() => {
+        worldBuilder.prepareForSimulation();
+      }).toThrow('World configuration is not valid for simulation');
     });
   });
 
-  describe('Build and Validation', () => {
-    it('should build complete world configuration', () => {
-      // Complete all steps
+  describe('Preparation Pipeline and Simulation Readiness', () => {
+    it('should successfully prepare complete world for simulation', () => {
+      // Complete all preparation phases
       worldBuilder
         .setWorldProperties('Test World', 'A test world')
         .setRules({ timeProgression: 'turn-based' })
@@ -460,21 +537,21 @@ describe('WorldBuilder', () => {
       const characterId = worldBuilder.worldConfig.characters[0].id;
       worldBuilder.assignCharacterToNode(characterId, nodeId);
 
-      // Manually validate step 6 since it depends on step 5 being complete
-      worldBuilder.validateStep(6);
+      // Verify simulation readiness
+      expect(worldBuilder.worldConfig.simulationReadiness.readyForSimulation).toBe(true);
 
-      const worldState = worldBuilder.build();
+      const preparedWorld = worldBuilder.prepareForSimulation();
       
-      expect(worldState.isComplete).toBe(true);
-      expect(worldState.isValid).toBe(true);
-      expect(worldState.builtAt).toBeDefined();
+      expect(preparedWorld.simulationMetadata).toBeDefined();
+      expect(preparedWorld.simulationMetadata.source).toBe('WorldBuilder');
+      expect(preparedWorld.simulationMetadata.preparedAt).toBeDefined();
     });
 
     it('should validate entire world configuration', () => {
       const validation = worldBuilder.validate();
       
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Step 1 validation failed');
+      expect(validation.errors).toContain('Phase 1 validation failed');
       expect(validation.completeness).toBe(0);
     });
 
@@ -482,9 +559,8 @@ describe('WorldBuilder', () => {
       worldBuilder.setWorldProperties('Test', 'Test');
       worldBuilder.reset();
       
-      expect(worldBuilder.currentStep).toBe(1);
       expect(worldBuilder.worldConfig.name).toBeNull();
-      expect(worldBuilder.worldConfig.stepValidation[1]).toBe(false);
+      expect(worldBuilder.worldConfig.simulationReadiness.worldFoundationDefined).toBe(false);
     });
   });
 
@@ -517,7 +593,14 @@ describe('WorldBuilder', () => {
           interactions: [],
           characters: [],
           nodePopulations: {},
-          stepValidation: { 1: true, 2: false, 3: false, 4: false, 5: false, 6: false }
+          simulationReadiness: { 
+            worldFoundationDefined: true, 
+            locationsDefined: false, 
+            capabilitiesDefined: false, 
+            actorsDefined: false, 
+            actorsAssigned: false, 
+            readyForSimulation: false 
+          }
         }
       };
 

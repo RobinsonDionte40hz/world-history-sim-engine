@@ -1,10 +1,10 @@
 /**
- * useWorldBuilder Hook - Core hook functionality for step-by-step progression
+ * useWorldBuilder Hook - Core hook functionality for holistic simulation readiness validation
  * 
- * Implements state management for mappless world configuration with step tracking.
+ * Implements state management for mappless world configuration with simulation compatibility assessment.
  * Provides template loading and management for world, node, interaction, character, composite templates.
- * Creates methods for six-step flow: world properties, nodes, interactions, characters, population.
- * Adds step navigation and dependency validation (cannot skip steps).
+ * Creates methods for preparation phases: world foundation, locations, capabilities, actors, assignments.
+ * Adds simulation readiness validation and performance assessment for simulation engines.
  * 
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
  */
@@ -13,18 +13,20 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import WorldBuilder from '../../domain/services/WorldBuilder';
 
 /**
- * Custom hook for managing six-step world building process
+ * Custom hook for managing simulation-ready world building process
  * @param {Object} templateManager - Template manager instance for template operations
- * @returns {Object} World builder state and methods
+ * @returns {Object} World builder state and methods for simulation readiness
  */
 const useWorldBuilder = (templateManager = null) => {
   // Initialize WorldBuilder instance
   const [worldBuilder] = useState(() => new WorldBuilder(templateManager));
   
-  // State management for mappless world configuration with step tracking
+  // State management for mappless world configuration with simulation readiness tracking
   const [worldConfig, setWorldConfig] = useState(worldBuilder.worldConfig);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [validationStatus, setValidationStatus] = useState(null);
+  const [preparationPhase, setPreparationPhase] = useState('worldFoundation');
+  const [simulationReadiness, setSimulationReadiness] = useState(worldBuilder.worldConfig.simulationReadiness);
+  const [simulationCompatibility, setSimulationCompatibility] = useState(null);
+  const [performanceAssessment, setPerformanceAssessment] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -74,19 +76,190 @@ const useWorldBuilder = (templateManager = null) => {
     loadTemplates();
   }, [loadTemplates]);
 
-  // Sync world config with builder state
+  // Holistic simulation compatibility assessment
+  const assessSimulationCompatibility = useCallback((config) => {
+    const issues = [];
+    const warnings = [];
+    const recommendations = [];
+
+    // Core compatibility checks
+    if (!config.name || !config.description) {
+      issues.push('World foundation incomplete - missing name or description');
+    }
+
+    if (!config.nodes || config.nodes.length === 0) {
+      issues.push('No locations defined - simulation requires at least one location');
+    }
+
+    if (!config.interactions || config.interactions.length === 0) {
+      issues.push('No capabilities defined - characters need interaction capabilities');
+    }
+
+    if (!config.characters || config.characters.length === 0) {
+      issues.push('No actors defined - simulation requires characters');
+    }
+
+    // Advanced compatibility checks
+    if (config.nodes && config.characters) {
+      const unassignedCharacters = config.characters.filter(char => {
+        return !Object.values(config.nodePopulations || {}).some(pop => pop.includes(char.id));
+      });
+      
+      if (unassignedCharacters.length > 0) {
+        issues.push(`${unassignedCharacters.length} characters not assigned to locations`);
+      }
+    }
+
+    // Simulation engine specific checks
+    if (config.interactions) {
+      const complexInteractions = config.interactions.filter(i => 
+        i.branches && i.branches.length > 10
+      );
+      if (complexInteractions.length > 0) {
+        warnings.push(`${complexInteractions.length} interactions have high complexity (>10 branches)`);
+      }
+    }
+
+    // Data structure validation for simulation
+    if (config.characters) {
+      const invalidCharacters = config.characters.filter(char => 
+        !char.id || !char.name || !char.attributes
+      );
+      if (invalidCharacters.length > 0) {
+        issues.push(`${invalidCharacters.length} characters have invalid data structure`);
+      }
+    }
+
+    // Recommendations for better simulation
+    if (config.nodes && config.nodes.length < 3) {
+      recommendations.push('Consider adding more locations for richer world interactions');
+    }
+
+    if (config.characters && config.characters.length < 5) {
+      recommendations.push('Consider adding more characters for dynamic interactions');
+    }
+
+    if (config.interactions && config.interactions.length < 3) {
+      recommendations.push('Consider adding more interaction types for diverse behaviors');
+    }
+
+    return {
+      isCompatible: issues.length === 0,
+      issues,
+      warnings,
+      recommendations,
+      score: issues.length === 0 ? 1.0 : Math.max(0, 1.0 - (issues.length * 0.2))
+    };
+  }, []);
+
+  // Performance assessment for simulation engines
+  const assessPerformanceForSimulation = useCallback((config) => {
+    const metrics = {
+      characterCount: config.characters?.length || 0,
+      nodeCount: config.nodes?.length || 0,
+      interactionCount: config.interactions?.length || 0,
+      totalPopulation: Object.values(config.nodePopulations || {}).reduce((sum, pop) => sum + pop.length, 0)
+    };
+
+    const warnings = [];
+    const recommendations = [];
+    let performanceScore = 1.0;
+
+    // Character limit checks
+    if (metrics.characterCount > 1000) {
+      warnings.push('High character count may impact simulation performance');
+      performanceScore *= 0.8;
+    } else if (metrics.characterCount > 500) {
+      warnings.push('Moderate character count - monitor performance');
+      performanceScore *= 0.9;
+    }
+
+    // Node complexity checks
+    if (metrics.nodeCount > 100) {
+      warnings.push('High node count may increase memory usage');
+      performanceScore *= 0.9;
+    }
+
+    // Interaction complexity assessment
+    const complexityScore = config.interactions?.reduce((score, interaction) => {
+      const branches = interaction.branches?.length || 1;
+      const effects = interaction.effects ? Object.keys(interaction.effects).length : 1;
+      return score + (branches * effects);
+    }, 0) || 0;
+
+    if (complexityScore > 5000) {
+      warnings.push('High interaction complexity may slow simulation processing');
+      performanceScore *= 0.7;
+    } else if (complexityScore > 2000) {
+      warnings.push('Moderate interaction complexity detected');
+      performanceScore *= 0.85;
+    }
+
+    // Memory usage estimation
+    const estimatedMemoryMB = (
+      metrics.characterCount * 0.1 + 
+      metrics.nodeCount * 0.05 + 
+      metrics.interactionCount * 0.02
+    );
+
+    if (estimatedMemoryMB > 100) {
+      warnings.push(`High estimated memory usage: ${estimatedMemoryMB.toFixed(1)}MB`);
+    }
+
+    // Performance recommendations
+    if (metrics.characterCount > 100 && metrics.nodeCount < 5) {
+      recommendations.push('Consider adding more locations to distribute character load');
+    }
+
+    if (complexityScore / metrics.interactionCount > 50) {
+      recommendations.push('Consider simplifying interaction complexity for better performance');
+    }
+
+    return {
+      score: performanceScore,
+      metrics,
+      warnings,
+      recommendations,
+      estimatedMemoryMB,
+      isOptimal: performanceScore > 0.8 && warnings.length === 0
+    };
+  }, []);
+
+  // Sync world config with builder state and assess simulation readiness
   const syncWorldConfig = useCallback(() => {
     // Create a deep copy to ensure React detects the change
     const newWorldConfig = JSON.parse(JSON.stringify(worldBuilder.worldConfig));
     setWorldConfig(newWorldConfig);
-    setCurrentStep(worldBuilder.currentStep);
     
-    // Update validation status after sync
-    const validationResult = worldBuilder.validate();
-    setValidationStatus(validationResult);
-  }, [worldBuilder]);
+    // Update simulation readiness state
+    setSimulationReadiness(newWorldConfig.simulationReadiness);
+    
+    // Determine current preparation phase based on readiness
+    const readiness = newWorldConfig.simulationReadiness;
+    if (!readiness.worldFoundationDefined) {
+      setPreparationPhase('worldFoundation');
+    } else if (!readiness.locationsDefined) {
+      setPreparationPhase('locations');
+    } else if (!readiness.capabilitiesDefined) {
+      setPreparationPhase('capabilities');
+    } else if (!readiness.actorsDefined) {
+      setPreparationPhase('actors');
+    } else if (!readiness.actorsAssigned) {
+      setPreparationPhase('assignments');
+    } else {
+      setPreparationPhase('simulationReady');
+    }
+    
+    // Assess simulation compatibility and performance
+    const compatibility = assessSimulationCompatibility(newWorldConfig);
+    setSimulationCompatibility(compatibility);
+    
+    const performance = assessPerformanceForSimulation(newWorldConfig);
+    setPerformanceAssessment(performance);
+    
+  }, [worldBuilder, assessSimulationCompatibility, assessPerformanceForSimulation]);
 
-  // Step 1: World properties methods (no dimensions)
+  // Phase 1: World properties methods (no dimensions)
   const setWorldProperties = useCallback((name, description) => {
     try {
       // Only validate and sync if both name and description are provided
@@ -123,7 +296,7 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
-  // Step 2: Node creation methods (abstract locations, no coordinates)
+  // Phase 2: Node creation methods (abstract locations, no coordinates)
   const addNode = useCallback((nodeConfig) => {
     try {
       worldBuilder.addNode(nodeConfig);
@@ -156,9 +329,9 @@ const useWorldBuilder = (templateManager = null) => {
         delete worldBuilder.worldConfig.nodePopulations[nodeId];
       }
       
-      // Revalidate affected steps using public methods
-      worldBuilder.validateStep(2);
-      worldBuilder.validateStep(5);
+      // Revalidate preparation phases
+      worldBuilder.validatePreparationPhase('locationsDefined');
+      worldBuilder.validatePreparationPhase('actorsAssigned');
       
       syncWorldConfig();
       setError(null);
@@ -168,7 +341,7 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
-  // Step 3: Interaction creation methods (character capabilities)
+  // Phase 3: Interaction creation methods (character capabilities)
   const addInteraction = useCallback((interactionConfig) => {
     try {
       worldBuilder.addInteraction(interactionConfig);
@@ -203,9 +376,9 @@ const useWorldBuilder = (templateManager = null) => {
         }
       });
       
-      // Revalidate affected steps using public methods
-      worldBuilder.validateStep(3);
-      worldBuilder.validateStep(4);
+      // Revalidate preparation phases
+      worldBuilder.validatePreparationPhase('capabilitiesDefined');
+      worldBuilder.validatePreparationPhase('actorsDefined');
       
       syncWorldConfig();
       setError(null);
@@ -215,7 +388,7 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
-  // Step 4: Character creation methods (with capability assignment)
+  // Phase 4: Character creation methods (with capability assignment)
   const addCharacter = useCallback((characterConfig) => {
     try {
       worldBuilder.addCharacter(characterConfig);
@@ -249,9 +422,9 @@ const useWorldBuilder = (templateManager = null) => {
           worldBuilder.worldConfig.nodePopulations[nodeId].filter(id => id !== characterId);
       });
       
-      // Revalidate affected steps using public methods
-      worldBuilder.validateStep(4);
-      worldBuilder.validateStep(5);
+      // Revalidate preparation phases
+      worldBuilder.validatePreparationPhase('actorsDefined');
+      worldBuilder.validatePreparationPhase('actorsAssigned');
       
       syncWorldConfig();
       setError(null);
@@ -261,7 +434,7 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
-  // Step 5: Node population methods (assign characters to nodes)
+  // Phase 5: Node population methods (assign characters to nodes)
   const assignCharacterToNode = useCallback((characterId, nodeId) => {
     try {
       worldBuilder.assignCharacterToNode(characterId, nodeId);
@@ -284,25 +457,25 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
-  // Step navigation and dependency validation (cannot skip steps)
-  const canProceedToStep = useCallback((stepNumber) => {
-    return worldBuilder.canProceedToStep(stepNumber);
+  // Preparation phase navigation and validation
+  const canProceedToPhase = useCallback((phaseName) => {
+    return worldBuilder._canProceedToPhase(phaseName);
   }, [worldBuilder]);
 
-  const proceedToStep = useCallback((stepNumber) => {
-    if (!canProceedToStep(stepNumber)) {
-      const error = `Cannot proceed to step ${stepNumber}. Previous steps must be completed first.`;
+  const proceedToPhase = useCallback((phaseName) => {
+    if (!canProceedToPhase(phaseName)) {
+      const error = `Cannot proceed to ${phaseName} phase. Previous phases must be completed first.`;
       setError(error);
       throw new Error(error);
     }
     
-    setCurrentStep(stepNumber);
+    setPreparationPhase(phaseName);
     setError(null);
-  }, [canProceedToStep]);
+  }, [canProceedToPhase, setPreparationPhase]);
 
-  const validateCurrentStep = useCallback(() => {
+  const validateCurrentPhase = useCallback(() => {
     try {
-      const isValid = worldBuilder.validateStep(currentStep);
+      const isValid = worldBuilder.validatePreparationPhase(preparationPhase);
       syncWorldConfig();
       setError(null);
       return isValid;
@@ -310,7 +483,7 @@ const useWorldBuilder = (templateManager = null) => {
       setError(err.message);
       return false;
     }
-  }, [worldBuilder, currentStep, syncWorldConfig]);
+  }, [worldBuilder, preparationPhase, syncWorldConfig]);
 
   // Template management methods
   const saveAsTemplate = useCallback((type, name, description) => {
@@ -389,24 +562,25 @@ const useWorldBuilder = (templateManager = null) => {
     return worldConfig.interactions.find(interaction => interaction.id === interactionId);
   }, [worldConfig.interactions]);
 
-  // Final world building and validation
-  const validateWorld = useCallback(() => {
+  // Final world validation and preparation for simulation
+  const validateWorldForSimulation = useCallback(() => {
     try {
       const result = worldBuilder.validate();
-      setValidationStatus(result);
+      syncWorldConfig();
       setError(null);
       return result;
     } catch (err) {
       setError(err.message);
-      return { isValid: false, errors: [err.message], warnings: [], stepValidation: {}, completeness: 0 };
+      return { isValid: false, errors: [err.message], warnings: [], simulationReadiness: {}, completeness: 0 };
     }
-  }, [worldBuilder]);
+  }, [worldBuilder, syncWorldConfig]);
 
-  const buildWorld = useCallback(() => {
+  const prepareWorldForSimulation = useCallback(() => {
     try {
-      const worldState = worldBuilder.build();
+      // This is the exclusive gateway to simulation-ready data
+      const simulationWorld = worldBuilder.prepareForSimulation();
       setError(null);
-      return worldState;
+      return simulationWorld;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -417,8 +591,9 @@ const useWorldBuilder = (templateManager = null) => {
     try {
       worldBuilder.reset();
       syncWorldConfig();
-      setCurrentStep(1);
-      setValidationStatus(null);
+      setPreparationPhase('worldFoundation');
+      setSimulationCompatibility(null);
+      setPerformanceAssessment(null);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -426,116 +601,105 @@ const useWorldBuilder = (templateManager = null) => {
     }
   }, [worldBuilder, syncWorldConfig]);
 
-  // Computed values for step validation status
-  const stepValidationStatus = useMemo(() => {
-    return {
-      1: worldConfig.stepValidation[1],
-      2: worldConfig.stepValidation[2],
-      3: worldConfig.stepValidation[3],
-      4: worldConfig.stepValidation[4],
-      5: worldConfig.stepValidation[5],
-      6: worldConfig.stepValidation[6]
-    };
-  }, [worldConfig.stepValidation]);
+  // Computed value for overall simulation readiness
+  const isSimulationReady = useMemo(() => {
+    return simulationCompatibility ? simulationCompatibility.isCompatible : false;
+  }, [simulationCompatibility]);
 
-  // Computed value for overall completion status
-  const isWorldComplete = useMemo(() => {
-    return validationStatus ? validationStatus.isValid : false;
-  }, [validationStatus]);
-
-  // Computed value for current step requirements
-  const currentStepRequirements = useMemo(() => {
-    switch (currentStep) {
-      case 1:
+  // Computed value for current preparation phase requirements
+  const currentPhaseRequirements = useMemo(() => {
+    switch (preparationPhase) {
+      case 'worldFoundation':
         return {
-          title: 'Create World Properties',
+          title: 'Define World Foundation',
           description: 'Set world name, description, rules, and initial conditions',
           required: ['name', 'description', 'rules', 'initialConditions'],
-          completed: stepValidationStatus[1]
+          completed: simulationReadiness.worldFoundationDefined
         };
-      case 2:
+      case 'locations':
         return {
-          title: 'Create Nodes',
+          title: 'Define Locations',
           description: 'Add abstract locations/contexts to your world',
-          required: ['At least one node'],
-          completed: stepValidationStatus[2]
+          required: ['At least one location'],
+          completed: simulationReadiness.locationsDefined
         };
-      case 3:
+      case 'capabilities':
         return {
-          title: 'Create Interactions',
+          title: 'Define Capabilities',
           description: 'Define character capabilities and actions',
-          required: ['At least one interaction'],
-          completed: stepValidationStatus[3]
+          required: ['At least one interaction type'],
+          completed: simulationReadiness.capabilitiesDefined
         };
-      case 4:
+      case 'actors':
         return {
-          title: 'Create Characters',
+          title: 'Define Actors',
           description: 'Add characters with assigned capabilities',
-          required: ['At least one character with assigned interactions'],
-          completed: stepValidationStatus[4]
+          required: ['At least one character with capabilities'],
+          completed: simulationReadiness.actorsDefined
         };
-      case 5:
+      case 'assignments':
         return {
-          title: 'Populate Nodes',
-          description: 'Assign characters to nodes',
-          required: ['All nodes must have at least one character'],
-          completed: stepValidationStatus[5]
+          title: 'Assign Actors',
+          description: 'Assign characters to locations',
+          required: ['All characters assigned to locations'],
+          completed: simulationReadiness.actorsAssigned
         };
-      case 6:
+      case 'simulationReady':
         return {
           title: 'Simulation Ready',
           description: 'World is ready for simulation',
-          required: ['All previous steps completed'],
-          completed: stepValidationStatus[6]
+          required: ['All preparation phases completed'],
+          completed: simulationReadiness.readyForSimulation
         };
       default:
         return null;
     }
-  }, [currentStep, stepValidationStatus]);
+  }, [preparationPhase, simulationReadiness]);
 
   return {
     // State
     worldConfig,
-    currentStep,
-    validationStatus,
+    preparationPhase,
+    simulationReadiness,
+    simulationCompatibility,
+    performanceAssessment,
     availableTemplates,
     isLoading,
     error,
-    stepValidationStatus,
-    isWorldComplete,
-    currentStepRequirements,
+    isSimulationReady,
+    currentPhaseRequirements,
 
     // Template management
     loadTemplates,
 
-    // Step 1: World properties methods
+    // Phase 1: World foundation methods
     setWorldProperties,
     setRules,
     setInitialConditions,
 
-    // Step 2: Node methods
+    // Phase 2: Location methods
     addNode,
     addNodeFromTemplate,
     removeNode,
 
-    // Step 3: Interaction methods
+    // Phase 3: Capability methods
     addInteraction,
     addInteractionFromTemplate,
     removeInteraction,
 
-    // Step 4: Character methods
+    // Phase 4: Actor methods
     addCharacter,
     addCharacterFromTemplate,
     removeCharacter,
 
-    // Step 5: Population methods
+    // Phase 5: Assignment methods
     assignCharacterToNode,
     populateNode,
 
-    // Step navigation and validation
-    canProceedToStep,
-    proceedToStep,
-    validateCurrentStep,
+    // Preparation phase navigation and validation
+    canProceedToPhase,
+    proceedToPhase,
+    validateCurrentPhase,
 
     // Template management
     saveAsTemplate,
@@ -549,9 +713,9 @@ const useWorldBuilder = (templateManager = null) => {
     getCharacterById,
     getInteractionById,
 
-    // Final world building
-    validateWorld,
-    buildWorld,
+    // Final simulation preparation
+    validateWorldForSimulation,
+    prepareWorldForSimulation,
     resetBuilder
   };
 };

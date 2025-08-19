@@ -1,120 +1,86 @@
 /**
- * WorldValidator - Six-step validation service for mappless world configurations
- * Implements step-by-step validation (world properties, nodes, interactions, characters, populations)
- * Removes spatial validation (no dimensions or coordinates in mappless system)
- * Adds character capability validation (ensure characters have assigned interactions)
- * Adds node population validation (ensure all nodes have assigned characters)
- * Creates completeness scoring system for six-step progression
- * Adds real-time validation feedback with step-specific error messages
- * 
- * Requirements: 6.1, 6.2, 6.3, 6.4, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
+ * WorldValidator - Service for validating world configurations through preparation phases.
+ * Ensures that a world is well-formed and ready for simulation.
  */
 class WorldValidator {
   /**
-   * Validates a complete world configuration using six-step mappless validation
-   * @param {Object} worldConfig - The world configuration to validate
-   * @returns {Object} Validation result with step-by-step errors, warnings, and completeness score
+   * Validates a complete world configuration against all preparation phases.
+   * @param {Object} worldConfig - The world configuration to validate.
+   * @returns {Object} A comprehensive validation result.
    */
   static validate(worldConfig) {
     const errors = [];
     const warnings = [];
-    const stepDetails = {};
-    const stepValidation = {
-      1: false, // World properties
-      2: false, // Nodes
-      3: false, // Interactions
-      4: false, // Characters
-      5: false, // Node populations
-      6: false  // Complete and ready
+    const phaseDetails = {};
+    const simulationReadiness = {
+      worldFoundationDefined: false,
+      locationsDefined: false,
+      capabilitiesDefined: false,
+      actorsDefined: false,
+      actorsAssigned: false,
+      readyForSimulation: false
     };
 
-    // Step 1: Validate world properties (no spatial dimensions)
-    const worldPropertiesResult = this.validateWorldProperties(worldConfig);
-    stepDetails.worldProperties = worldPropertiesResult;
-    stepValidation[1] = worldPropertiesResult.valid;
-    if (!worldPropertiesResult.valid) {
-      errors.push(...worldPropertiesResult.errors.map(error => ({ step: 1, ...error })));
-    }
-    if (worldPropertiesResult.warnings.length > 0) {
-      warnings.push(...worldPropertiesResult.warnings.map(warning => ({ step: 1, ...warning })));
-    }
+    // Phase 1: World Foundation
+    const foundationResult = this.validateWorldFoundation(worldConfig);
+    phaseDetails.worldFoundation = foundationResult;
+    simulationReadiness.worldFoundationDefined = foundationResult.valid;
+    if (!foundationResult.valid) errors.push(...foundationResult.errors.map(e => ({ phase: 'World Foundation', ...e })));
+    warnings.push(...foundationResult.warnings.map(w => ({ phase: 'World Foundation', ...w })));
 
-    // Step 2: Validate abstract nodes (no coordinates)
-    const nodesResult = this.validateAbstractNodes(worldConfig.nodes);
-    stepDetails.nodes = nodesResult;
-    stepValidation[2] = nodesResult.valid && stepValidation[1];
-    if (!nodesResult.valid) {
-      errors.push(...nodesResult.errors.map(error => ({ step: 2, ...error })));
-    }
-    if (nodesResult.warnings.length > 0) {
-      warnings.push(...nodesResult.warnings.map(warning => ({ step: 2, ...warning })));
-    }
+    // Phase 2: Locations
+    const locationsResult = this.validateLocations(worldConfig.nodes);
+    phaseDetails.locations = locationsResult;
+    simulationReadiness.locationsDefined = locationsResult.valid && simulationReadiness.worldFoundationDefined;
+    if (!locationsResult.valid) errors.push(...locationsResult.errors.map(e => ({ phase: 'Locations', ...e })));
+    warnings.push(...locationsResult.warnings.map(w => ({ phase: 'Locations', ...w })));
 
-    // Step 3: Validate character interactions (capabilities)
-    const interactionsResult = this.validateCharacterCapabilities(worldConfig.interactions);
-    stepDetails.interactions = interactionsResult;
-    stepValidation[3] = interactionsResult.valid && stepValidation[2];
-    if (!interactionsResult.valid) {
-      errors.push(...interactionsResult.errors.map(error => ({ step: 3, ...error })));
-    }
-    if (interactionsResult.warnings.length > 0) {
-      warnings.push(...interactionsResult.warnings.map(warning => ({ step: 3, ...warning })));
-    }
+    // Phase 3: Capabilities
+    const capabilitiesResult = this.validateCapabilities(worldConfig.interactions);
+    phaseDetails.capabilities = capabilitiesResult;
+    simulationReadiness.capabilitiesDefined = capabilitiesResult.valid && simulationReadiness.locationsDefined;
+    if (!capabilitiesResult.valid) errors.push(...capabilitiesResult.errors.map(e => ({ phase: 'Capabilities', ...e })));
+    warnings.push(...capabilitiesResult.warnings.map(w => ({ phase: 'Capabilities', ...w })));
 
-    // Step 4: Validate characters with assigned capabilities
-    const charactersResult = this.validateCharactersWithCapabilities(worldConfig.characters, worldConfig.interactions);
-    stepDetails.characters = charactersResult;
-    stepValidation[4] = charactersResult.valid && stepValidation[3];
-    if (!charactersResult.valid) {
-      errors.push(...charactersResult.errors.map(error => ({ step: 4, ...error })));
-    }
-    if (charactersResult.warnings.length > 0) {
-      warnings.push(...charactersResult.warnings.map(warning => ({ step: 4, ...warning })));
-    }
+    // Phase 4: Actors
+    const actorsResult = this.validateActors(worldConfig.characters, worldConfig.interactions);
+    phaseDetails.actors = actorsResult;
+    simulationReadiness.actorsDefined = actorsResult.valid && simulationReadiness.capabilitiesDefined;
+    if (!actorsResult.valid) errors.push(...actorsResult.errors.map(e => ({ phase: 'Actors', ...e })));
+    warnings.push(...actorsResult.warnings.map(w => ({ phase: 'Actors', ...w })));
 
-    // Step 5: Validate node populations (character-to-node assignments)
-    const populationsResult = this.validateNodePopulations(worldConfig.nodePopulations, worldConfig.nodes, worldConfig.characters);
-    stepDetails.nodePopulations = populationsResult;
-    stepValidation[5] = populationsResult.valid && stepValidation[4];
-    if (!populationsResult.valid) {
-      errors.push(...populationsResult.errors.map(error => ({ step: 5, ...error })));
-    }
-    if (populationsResult.warnings.length > 0) {
-      warnings.push(...populationsResult.warnings.map(warning => ({ step: 5, ...warning })));
-    }
+    // Phase 5: Actor Assignments
+    const assignmentsResult = this.validateActorAssignments(worldConfig.nodePopulations, worldConfig.nodes, worldConfig.characters);
+    phaseDetails.actorAssignments = assignmentsResult;
+    simulationReadiness.actorsAssigned = assignmentsResult.valid && simulationReadiness.actorsDefined;
+    if (!assignmentsResult.valid) errors.push(...assignmentsResult.errors.map(e => ({ phase: 'Actor Assignments', ...e })));
+    warnings.push(...assignmentsResult.warnings.map(w => ({ phase: 'Actor Assignments', ...w })));
 
-    // Step 6: Final completeness validation
-    const completenessResult = this.validateCompleteness(worldConfig);
-    stepDetails.completeness = completenessResult;
-    stepValidation[6] = completenessResult.valid && stepValidation[5];
-    if (!completenessResult.valid) {
-      errors.push(...completenessResult.errors.map(error => ({ step: 6, ...error })));
-    }
-    if (completenessResult.warnings.length > 0) {
-      warnings.push(...completenessResult.warnings.map(warning => ({ step: 6, ...warning })));
-    }
+    // Final Readiness Check
+    const readinessResult = this.validateSimulationReadiness(worldConfig);
+    phaseDetails.simulationReadiness = readinessResult;
+    simulationReadiness.readyForSimulation = readinessResult.valid && simulationReadiness.actorsAssigned;
+    if (!readinessResult.valid) errors.push(...readinessResult.errors.map(e => ({ phase: 'Simulation Readiness', ...e })));
+    warnings.push(...readinessResult.warnings.map(w => ({ phase: 'Simulation Readiness', ...w })));
 
-    // Calculate completeness score (0-1 based on completed steps)
-    const completenessScore = this.calculateCompletenessScore(stepValidation, stepDetails);
+    const completenessScore = this.calculateCompleteness(simulationReadiness);
 
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
       completeness: completenessScore,
-      stepValidation,
-      stepDetails,
-      currentStep: this.getCurrentStep(stepValidation),
-      nextRequirements: this.getNextStepRequirements(stepValidation, stepDetails)
+      simulationReadiness,
+      phaseDetails,
     };
   }
 
   /**
-   * Validates world properties for step 1 (mappless - no spatial dimensions)
-   * @param {Object} worldConfig - World configuration to validate
-   * @returns {Object} Validation result
+   * Phase 1: Validates the world's foundational properties.
+   * @param {Object} worldConfig - The world configuration.
+   * @returns {Object} Validation result for this phase.
    */
-  static validateWorldProperties(worldConfig) {
+  static validateWorldFoundation(worldConfig) {
     const errors = [];
     const warnings = [];
 
@@ -154,9 +120,9 @@ class WorldValidator {
   }
 
   /**
-   * Validates a single abstract node (mappless - no coordinates)
-   * @param {Object} node - Single node configuration to validate
-   * @returns {Object} Validation result with isValid, errors, and warnings
+   * Validates a single abstract node configuration.
+   * @param {Object} node - The node configuration to validate.
+   * @returns {Object} Validation result.
    */
   static validateSingleNode(node) {
     const errors = [];
@@ -278,11 +244,11 @@ class WorldValidator {
   }
 
   /**
-   * Validates abstract nodes for step 2 (mappless - no coordinates)
-   * @param {Array} nodes - Array of abstract node configurations
-   * @returns {Object} Validation result
+   * Phase 2: Validates the locations (nodes) of the world.
+   * @param {Array} nodes - An array of node configurations.
+   * @returns {Object} Validation result for this phase.
    */
-  static validateAbstractNodes(nodes) {
+  static validateLocations(nodes) {
     const errors = [];
     const warnings = [];
 
@@ -362,11 +328,11 @@ class WorldValidator {
   }
 
   /**
-   * Validates character capabilities (interactions) for step 3
-   * @param {Array} interactions - Array of interaction/capability configurations
-   * @returns {Object} Validation result
+   * Phase 3: Validates character capabilities (interactions).
+   * @param {Array} interactions - An array of interaction configurations.
+   * @returns {Object} Validation result for this phase.
    */
-  static validateCharacterCapabilities(interactions) {
+  static validateCapabilities(interactions) {
     const errors = [];
     const warnings = [];
 
@@ -446,12 +412,12 @@ class WorldValidator {
   }
 
   /**
-   * Validates characters with assigned capabilities for step 4
-   * @param {Array} characters - Array of character configurations
-   * @param {Array} interactions - Array of available interactions/capabilities
-   * @returns {Object} Validation result
+   * Phase 4: Validates the actors (characters) of the world.
+   * @param {Array} characters - An array of character configurations.
+   * @param {Array} interactions - An array of available interactions.
+   * @returns {Object} Validation result for this phase.
    */
-  static validateCharactersWithCapabilities(characters, interactions) {
+  static validateActors(characters, interactions) {
     const errors = [];
     const warnings = [];
 
@@ -534,13 +500,13 @@ class WorldValidator {
   }
 
   /**
-   * Validates node populations (character-to-node assignments) for step 5
-   * @param {Object} nodePopulations - Object mapping node IDs to character arrays
-   * @param {Array} nodes - Array of available nodes
-   * @param {Array} characters - Array of available characters
-   * @returns {Object} Validation result
+   * Phase 5: Validates actor assignments to locations.
+   * @param {Object} nodePopulations - A map of node IDs to character ID arrays.
+   * @param {Array} nodes - An array of available nodes.
+   * @param {Array} characters - An array of available characters.
+   * @returns {Object} Validation result for this phase.
    */
-  static validateNodePopulations(nodePopulations, nodes, characters) {
+  static validateActorAssignments(nodePopulations, nodes, characters) {
     const errors = [];
     const warnings = [];
 
@@ -630,11 +596,11 @@ class WorldValidator {
   }
 
   /**
-   * Validates world completeness for step 6 (final validation)
-   * @param {Object} worldConfig - Complete world configuration
-   * @returns {Object} Validation result
+   * Final Phase: Validates the overall readiness for simulation.
+   * @param {Object} worldConfig - The complete world configuration.
+   * @returns {Object} Validation result for this phase.
    */
-  static validateCompleteness(worldConfig) {
+  static validateSimulationReadiness(worldConfig) {
     const errors = [];
     const warnings = [];
 
@@ -685,74 +651,17 @@ class WorldValidator {
   }
 
   /**
-   * Calculates completeness score based on step validation results
-   * @param {Object} stepValidation - Step validation status
-   * @param {Object} stepDetails - Detailed step validation results
-   * @returns {number} Completeness score (0-1)
+   * Calculates a completeness score based on validated phases.
+   * @param {Object} simulationReadiness - An object with boolean flags for each phase.
+   * @returns {number} A completeness score between 0 and 1.
    */
-  static calculateCompletenessScore(stepValidation, stepDetails) {
-    const weights = {
-      1: 0.1,  // World properties
-      2: 0.2,  // Nodes
-      3: 0.2,  // Interactions
-      4: 0.25, // Characters
-      5: 0.15, // Populations
-      6: 0.1   // Final completeness
-    };
-
-    let score = 0;
-    for (let step = 1; step <= 6; step++) {
-      if (stepValidation[step]) {
-        score += weights[step];
-      }
-    }
-
-    return Math.round(score * 100) / 100; // Round to 2 decimal places
+  static calculateCompleteness(simulationReadiness) {
+    const validPhases = Object.values(simulationReadiness).filter(Boolean).length;
+    const totalPhases = Object.keys(simulationReadiness).length;
+    return totalPhases > 0 ? validPhases / totalPhases : 0;
   }
 
-  /**
-   * Determines current step based on validation status
-   * @param {Object} stepValidation - Step validation status
-   * @returns {number} Current step (1-6)
-   */
-  static getCurrentStep(stepValidation) {
-    for (let step = 1; step <= 6; step++) {
-      if (!stepValidation[step]) {
-        return step;
-      }
-    }
-    return 6; // All steps complete
-  }
-
-  /**
-   * Gets requirements for the next step
-   * @param {Object} stepValidation - Step validation status
-   * @param {Object} stepDetails - Detailed step validation results
-   * @returns {Object} Next step requirements
-   */
-  static getNextStepRequirements(stepValidation, stepDetails) {
-    const currentStep = this.getCurrentStep(stepValidation);
-    
-    const stepRequirements = {
-      1: 'Set world name, description, rules, and initial conditions',
-      2: 'Create at least one abstract node with name, type, and environment properties',
-      3: 'Define at least one character interaction/capability type',
-      4: 'Create at least one character with assigned capabilities',
-      5: 'Assign all characters to nodes through node populations',
-      6: 'Final validation - ensure all components are complete and consistent'
-    };
-
-    const stepErrors = stepDetails[Object.keys(stepDetails)[currentStep - 1]]?.errors || [];
-
-    return {
-      currentStep,
-      requirement: stepRequirements[currentStep],
-      errors: stepErrors.slice(0, 3), // Show top 3 errors
-      isComplete: currentStep > 6
-    };
-  }
-
-  // Legacy method compatibility (deprecated - use six-step validation instead)
+  // Legacy method compatibility (deprecated - use simulation preparation pipeline validation instead)
   static validateDimensions(dimensions) {
     const errors = [];
     const warnings = [];

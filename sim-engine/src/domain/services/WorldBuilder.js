@@ -1,7 +1,7 @@
 /**
- * WorldBuilder - Core world builder infrastructure for six-step flow
- * Implements mappless world configuration with step-by-step progression tracking
- * Enforces dependency chain validation and provides methods for each step
+ * WorldBuilder - Core service for preparing a world for simulation.
+ * This service guides the user through a series of preparation phases to ensure
+ * a valid and simulation-ready world configuration.
  */
 
 import WorldValidator from './WorldValidator.js';
@@ -11,43 +11,42 @@ import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 class WorldBuilder {
   constructor(templateManager = null) {
     this.templateManager = templateManager;
-    this.currentStep = 1;
 
-    // Mappless world configuration (no dimensions, abstract nodes)
+    // Mappless world configuration
     this.worldConfig = {
-      // Step 1: World properties (no spatial dimensions)
+      // Phase 1: World Foundation
       name: null,
       description: null,
       rules: null,
       initialConditions: null,
 
-      // Step 2: Abstract nodes (no coordinates)
+      // Phase 2: Locations
       nodes: [],
 
-      // Step 3: Character capabilities
+      // Phase 3: Capabilities
       interactions: [],
 
-      // Step 4: Characters with assigned capabilities
+      // Phase 4: Actors
       characters: [],
 
-      // Step 5: Character-to-node assignments
+      // Phase 5: Actor Assignments
       nodePopulations: {},
 
-      // Validation state
+      // Simulation readiness state
       isComplete: false,
       isValid: false,
-      stepValidation: {
-        1: false, // World created
-        2: false, // Nodes created
-        3: false, // Interactions created
-        4: false, // Characters created
-        5: false, // Nodes populated
-        6: false  // Ready for simulation
+      simulationReadiness: {
+        worldFoundationDefined: false,
+        locationsDefined: false,
+        capabilitiesDefined: false,
+        actorsDefined: false,
+        actorsAssigned: false,
+        readyForSimulation: false
       }
     };
   }
 
-  // Step 1: World creation methods (no spatial dimensions)
+  // Phase 1: World Foundation
 
   /**
    * Sets basic world properties
@@ -66,7 +65,7 @@ class WorldBuilder {
 
     this.worldConfig.name = name;
     this.worldConfig.description = description;
-    this._validateStep(1);
+    this._validatePreparationPhase('worldFoundationDefined');
     return this;
   }
 
@@ -81,7 +80,7 @@ class WorldBuilder {
     }
 
     this.worldConfig.rules = { ...rules };
-    this._validateStep(1);
+    this._validatePreparationPhase('worldFoundationDefined');
     return this;
   }
 
@@ -96,11 +95,11 @@ class WorldBuilder {
     }
 
     this.worldConfig.initialConditions = { ...conditions };
-    this._validateStep(1);
+    this._validatePreparationPhase('worldFoundationDefined');
     return this;
   }
 
-  // Step 2: Node creation methods (abstract locations, no coordinates)
+  // Phase 2: Location Definition
 
   /**
    * Adds an abstract node (location/context) to the world
@@ -108,8 +107,8 @@ class WorldBuilder {
    * @returns {WorldBuilder} This instance for chaining
    */
   addNode(nodeConfig) {
-    if (!this.canProceedToStep(2)) {
-      throw new Error('Cannot add nodes until world properties are set (Step 1)');
+    if (!this._canProceedToPhase('locationsDefined')) {
+      throw new Error('Cannot add nodes until the world foundation is defined.');
     }
 
     // Use centralized validation
@@ -137,7 +136,7 @@ class WorldBuilder {
     };
 
     this.worldConfig.nodes.push(node);
-    this._validateStep(2);
+    this._validatePreparationPhase('locationsDefined');
     return this;
   }
 
@@ -168,7 +167,7 @@ class WorldBuilder {
     return this.addNode(nodeConfig);
   }
 
-  // Step 3: Interaction creation methods (character capabilities)
+  // Phase 3: Interaction creation methods (character capabilities)
 
   /**
    * Adds an interaction (character capability) to the world
@@ -176,8 +175,8 @@ class WorldBuilder {
    * @returns {WorldBuilder} This instance for chaining
    */
   addInteraction(interactionConfig) {
-    if (!this.canProceedToStep(3)) {
-      throw new Error('Cannot add interactions until at least one node exists (Step 2)');
+    if (!this._canProceedToPhase('capabilitiesDefined')) {
+      throw new Error('Cannot add interactions until at least one location is defined.');
     }
 
     if (!interactionConfig || typeof interactionConfig !== 'object') {
@@ -210,7 +209,7 @@ class WorldBuilder {
     };
 
     this.worldConfig.interactions.push(interaction);
-    this._validateStep(3);
+    this._validatePreparationPhase('capabilitiesDefined');
     return this;
   }
 
@@ -241,7 +240,7 @@ class WorldBuilder {
     return this.addInteraction(interactionConfig);
   }
 
-  // Step 4: Enhanced Character creation and management methods
+  // Phase 4: Enhanced Character creation and management methods
 
   /**
    * Adds a character with enhanced validation and type support
@@ -249,8 +248,8 @@ class WorldBuilder {
    * @returns {WorldBuilder} This instance for chaining
    */
   addCharacter(characterConfig) {
-    if (!this.canProceedToStep(4)) {
-      throw new Error('Cannot add characters until both nodes and interactions exist (Steps 2-3)');
+    if (!this._canProceedToPhase('actorsDefined')) {
+      throw new Error('Cannot add characters until locations and capabilities are defined.');
     }
 
     if (!characterConfig || typeof characterConfig !== 'object') {
@@ -290,7 +289,7 @@ class WorldBuilder {
     }
 
     this.worldConfig.characters.push(characterData);
-    this._validateStep(4);
+    this._validatePreparationPhase('actorsDefined');
     return this;
   }
 
@@ -334,7 +333,7 @@ class WorldBuilder {
         assignedInteractions: updatedConfig.assignedInteractions || existingCharacter.assignedInteractions || []
       };
 
-      this._validateStep(4);
+      this._validatePreparationPhase('actorsDefined');
       return this;
     } catch (error) {
       throw new ValidationError('characterUpdate', updates, `Character update failed: ${error.message}`);
@@ -367,9 +366,9 @@ class WorldBuilder {
       }
     }
 
-    // Revalidate steps that might be affected
-    this._validateStep(4);
-    this._validateStep(5);
+    // Revalidate phases that might be affected
+    this._validatePreparationPhase('actorsDefined');
+    this._validatePreparationPhase('actorsAssigned');
 
     return this;
   }
@@ -785,7 +784,7 @@ class WorldBuilder {
     return this.addCharacter(characterConfig);
   }
 
-  // Step 5: Node population methods (assign characters to nodes)
+  // Phase 5: Node population methods (assign characters to nodes)
 
   /**
    * Assigns a character to a specific node
@@ -794,8 +793,8 @@ class WorldBuilder {
    * @returns {WorldBuilder} This instance for chaining
    */
   assignCharacterToNode(characterId, nodeId) {
-    if (!this.canProceedToStep(5)) {
-      throw new Error('Cannot populate nodes until both nodes and characters exist (Steps 2-4)');
+    if (!this._canProceedToPhase('actorsAssigned')) {
+      throw new Error('Cannot assign actors until both locations and actors are defined.');
     }
 
     // Validate character exists
@@ -820,7 +819,7 @@ class WorldBuilder {
       this.worldConfig.nodePopulations[nodeId].push(characterId);
     }
 
-    this._validateStep(5);
+    this._validatePreparationPhase('actorsAssigned');
     return this;
   }
 
@@ -842,36 +841,38 @@ class WorldBuilder {
     return this;
   }
 
-  // Step validation methods
+  // Preparation Phase Validation
 
   /**
-   * Validates a specific step
-   * @param {number} stepNumber - Step number to validate
-   * @returns {boolean} True if step is valid
+   * Validates a specific preparation phase.
+   * @param {string} phaseName - The name of the phase to validate.
+   * @returns {boolean} True if the phase is valid.
    */
-  validateStep(stepNumber) {
-    return this._validateStep(stepNumber);
+  validatePreparationPhase(phaseName) {
+    return this._validatePreparationPhase(phaseName);
   }
 
   /**
-   * Checks if can proceed to a specific step
-   * @param {number} stepNumber - Step number to check
-   * @returns {boolean} True if can proceed to step
+   * Checks if the builder can proceed to a specific phase.
+   * @param {string} phaseName - The name of the phase to check.
+   * @returns {boolean} True if the builder can proceed.
+   * @private
    */
-  canProceedToStep(stepNumber) {
-    switch (stepNumber) {
-      case 1:
-        return true; // Can always start with step 1
-      case 2:
-        return this.worldConfig.stepValidation[1]; // Need world properties
-      case 3:
-        return this.worldConfig.stepValidation[2]; // Need nodes
-      case 4:
-        return this.worldConfig.stepValidation[3]; // Need interactions
-      case 5:
-        return this.worldConfig.stepValidation[4]; // Need characters
-      case 6:
-        return this.worldConfig.stepValidation[5]; // Need populated nodes
+  _canProceedToPhase(phaseName) {
+    const readiness = this.worldConfig.simulationReadiness;
+    switch (phaseName) {
+      case 'worldFoundationDefined':
+        return true;
+      case 'locationsDefined':
+        return readiness.worldFoundationDefined;
+      case 'capabilitiesDefined':
+        return readiness.locationsDefined;
+      case 'actorsDefined':
+        return readiness.capabilitiesDefined;
+      case 'actorsAssigned':
+        return readiness.actorsDefined;
+      case 'readyForSimulation':
+        return readiness.actorsAssigned;
       default:
         return false;
     }
@@ -988,33 +989,55 @@ class WorldBuilder {
       isTemplateInstance: true
     };
 
-    // Validate all steps
-    for (let step = 1; step <= 6; step++) {
-      this._validateStep(step);
-    }
+    // Validate all preparation phases
+    Object.keys(this.worldConfig.simulationReadiness).forEach(phase => {
+      this._validatePreparationPhase(phase);
+    });
 
     return this;
   }
 
-  // Build and validation
+  // Simulation Handoff
 
   /**
-   * Builds and returns the final world state
-   * @returns {Object} World state configuration
+   * Prepares the world for simulation and returns simulation-optimized data structures.
+   * This is the exclusive handoff point from the builder to the simulation engine.
+   * @returns {Object} Simulation-ready world data.
    */
-  build() {
-    // Validate all steps before building
-    for (let step = 1; step <= 6; step++) {
-      if (!this.worldConfig.stepValidation[step]) {
-        throw new Error(`Cannot build world: Step ${step} validation failed`);
+  prepareForSimulation() {
+    if (!this.validate().isValid) {
+      throw new Error('World configuration is not valid for simulation.');
+    }
+
+    // Create simulation-optimized data structures
+    const simulationNodes = new Map(this.worldConfig.nodes.map(node => [node.id, { ...node, characters: [] }]));
+    const simulationCharacters = new Map(this.worldConfig.characters.map(char => [char.id, { ...char }]));
+
+    // Populate nodes with character references
+    for (const [nodeId, characterIds] of Object.entries(this.worldConfig.nodePopulations)) {
+      const node = simulationNodes.get(nodeId);
+      if (node) {
+        node.characters = characterIds.map(id => simulationCharacters.get(id)).filter(Boolean);
       }
     }
 
     return {
-      ...this.worldConfig,
-      isComplete: true,
-      isValid: true,
-      builtAt: new Date().toISOString()
+      worldProperties: {
+        name: this.worldConfig.name,
+        description: this.worldConfig.description,
+        rules: this.worldConfig.rules,
+        initialConditions: this.worldConfig.initialConditions,
+      },
+      nodes: simulationNodes,
+      characters: simulationCharacters,
+      interactions: new Map(this.worldConfig.interactions.map(i => [i.id, { ...i }])),
+      simulationMetadata: {
+        preparedAt: new Date().toISOString(),
+        source: 'WorldBuilder',
+        worldId: `world_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        version: '2.0.0',
+        pipelineVersion: '1.0.0'
+      },
     };
   }
 
@@ -1025,19 +1048,18 @@ class WorldBuilder {
   validate() {
     const errors = [];
     const warnings = [];
-    const stepResults = {};
+    const phaseResults = {};
 
-    // Validate each step
-    for (let step = 1; step <= 6; step++) {
-      const stepValid = this._validateStep(step);
-      stepResults[step] = stepValid;
-
-      if (!stepValid) {
-        errors.push(`Step ${step} validation failed`);
+    // Validate each preparation phase
+    Object.keys(this.worldConfig.simulationReadiness).forEach(phase => {
+      const phaseValid = this._validatePreparationPhase(phase);
+      phaseResults[phase] = phaseValid;
+      if (!phaseValid) {
+        errors.push(`Preparation phase '${phase}' is not complete.`);
       }
-    }
+    });
 
-    // Additional cross-step validations
+    // Additional cross-phase validations
     if (this.worldConfig.characters.length > 0 && this.worldConfig.nodes.length === 0) {
       errors.push('Characters exist but no nodes defined');
     }
@@ -1052,7 +1074,7 @@ class WorldBuilder {
       isValid,
       errors,
       warnings,
-      stepValidation: stepResults,
+      simulationReadiness: phaseResults,
       completeness: this._calculateCompleteness()
     };
   }
@@ -1062,7 +1084,6 @@ class WorldBuilder {
    * @returns {WorldBuilder} This instance for chaining
    */
   reset() {
-    this.currentStep = 1;
     this.worldConfig = {
       name: null,
       description: null,
@@ -1074,13 +1095,13 @@ class WorldBuilder {
       nodePopulations: {},
       isComplete: false,
       isValid: false,
-      stepValidation: {
-        1: false,
-        2: false,
-        3: false,
-        4: false,
-        5: false,
-        6: false
+      simulationReadiness: {
+        worldFoundationDefined: false,
+        locationsDefined: false,
+        capabilitiesDefined: false,
+        actorsDefined: false,
+        actorsAssigned: false,
+        readyForSimulation: false
       }
     };
     return this;
@@ -1089,65 +1110,50 @@ class WorldBuilder {
   // Private helper methods
 
   /**
-   * Internal step validation logic
-   * @param {number} stepNumber - Step number to validate
-   * @returns {boolean} True if step is valid
+   * Internal validation logic for each preparation phase.
+   * @param {string} phaseName - The name of the phase to validate.
+   * @returns {boolean} True if the phase is valid.
+   * @private
    */
-  _validateStep(stepNumber) {
+  _validatePreparationPhase(phaseName) {
+    const readiness = this.worldConfig.simulationReadiness;
     let isValid = false;
 
-    switch (stepNumber) {
-      case 1: // World properties
-        isValid = !!(this.worldConfig.name &&
-          this.worldConfig.description &&
-          this.worldConfig.rules &&
-          this.worldConfig.initialConditions);
+    switch (phaseName) {
+      case 'worldFoundationDefined':
+        isValid = !!(this.worldConfig.name && this.worldConfig.description && this.worldConfig.rules && this.worldConfig.initialConditions);
         break;
-      case 2: // Nodes
-        isValid = this.worldConfig.stepValidation[1] &&
-          this.worldConfig.nodes.length > 0;
+      case 'locationsDefined':
+        isValid = readiness.worldFoundationDefined && this.worldConfig.nodes.length > 0;
         break;
-      case 3: // Interactions
-        isValid = this.worldConfig.stepValidation[2] &&
-          this.worldConfig.interactions.length > 0;
+      case 'capabilitiesDefined':
+        isValid = readiness.locationsDefined && this.worldConfig.interactions.length > 0;
         break;
-      case 4: // Characters
-        isValid = this.worldConfig.stepValidation[3] &&
-          this.worldConfig.characters.length > 0 &&
-          this.worldConfig.characters.every(c =>
-            c.assignedInteractions && c.assignedInteractions.length > 0);
+      case 'actorsDefined':
+        isValid = readiness.capabilitiesDefined && this.worldConfig.characters.length > 0;
         break;
-      case 5: // Node populations
-        isValid = this.worldConfig.stepValidation[4] &&
-          this.worldConfig.nodes.every(node =>
-            this.worldConfig.nodePopulations[node.id] &&
-            this.worldConfig.nodePopulations[node.id].length > 0);
+      case 'actorsAssigned':
+        isValid = readiness.actorsDefined && this.worldConfig.nodes.every(node => this.worldConfig.nodePopulations[node.id] && this.worldConfig.nodePopulations[node.id].length > 0);
         break;
-      case 6: // Simulation ready
-        isValid = this.worldConfig.stepValidation[5];
+      case 'readyForSimulation':
+        isValid = readiness.actorsAssigned;
         break;
       default:
         isValid = false;
-        break;
     }
 
-    this.worldConfig.stepValidation[stepNumber] = isValid;
-
-    // Update current step to highest valid step
-    if (isValid && stepNumber > this.currentStep) {
-      this.currentStep = stepNumber;
-    }
-
+    this.worldConfig.simulationReadiness[phaseName] = isValid;
     return isValid;
   }
 
   /**
-   * Calculates completeness score
-   * @returns {number} Completeness score between 0 and 1
+   * Calculates completeness score based on preparation phases.
+   * @returns {number} Completeness score between 0 and 1.
+   * @private
    */
   _calculateCompleteness() {
-    const validSteps = Object.values(this.worldConfig.stepValidation).filter(Boolean).length;
-    return validSteps / 6;
+    const validPhases = Object.values(this.worldConfig.simulationReadiness).filter(Boolean).length;
+    return validPhases / Object.keys(this.worldConfig.simulationReadiness).length;
   }
 
   /**

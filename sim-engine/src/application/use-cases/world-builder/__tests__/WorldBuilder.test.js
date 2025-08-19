@@ -222,23 +222,25 @@ describe('WorldBuilder', () => {
   });
 
   describe('build', () => {
-    it('should build valid world', () => {
+    it('should prepare valid world for simulation', () => {
       worldBuilder.setDimensions(100, 100);
       worldBuilder.addNode({
         name: 'Test Node',
         position: { x: 10, y: 10 }
       });
 
-      const worldState = worldBuilder.build();
-      expect(worldState.id).toBeDefined();
-      expect(worldState.name).toBe('Generated World');
-      expect(worldState.isValid).toBe(true);
-      expect(worldState.dimensions).toEqual({ width: 100, height: 100 });
-      expect(worldState.nodes).toHaveLength(1);
+      const preparedWorld = worldBuilder.prepareForSimulation();
+      expect(preparedWorld.simulationMetadata).toBeDefined();
+      expect(preparedWorld.simulationMetadata.worldId).toBeDefined();
+      expect(preparedWorld.simulationMetadata.source).toBe('WorldBuilder');
+      expect(preparedWorld.worldProperties.name).toBe('Generated World');
+      expect(preparedWorld.nodes).toBeInstanceOf(Map);
+      expect(preparedWorld.characters).toBeInstanceOf(Map);
+      expect(preparedWorld.nodes.size).toBe(1);
     });
 
-    it('should throw error when building invalid world', () => {
-      expect(() => worldBuilder.build()).toThrow('Cannot build invalid world');
+    it('should throw error when preparing invalid world for simulation', () => {
+      expect(() => worldBuilder.prepareForSimulation()).toThrow('World configuration is not valid for simulation');
     });
   });
 

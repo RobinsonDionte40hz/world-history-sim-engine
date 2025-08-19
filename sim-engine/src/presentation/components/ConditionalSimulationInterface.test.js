@@ -1,10 +1,10 @@
 /**
  * ConditionalSimulationInterface Component Tests
  * 
- * Tests for six-step world validation checking and conditional rendering.
+ * Tests for simulation preparation pipeline validation checking and conditional rendering.
  * Verifies world builder to simulation interface transitions.
  * Tests initialization loading and error states for mappless world processing.
- * Validates step-by-step progress display when world is incomplete.
+ * Validates preparation phase progress display when world is incomplete.
  */
 
 import React from 'react';
@@ -18,7 +18,7 @@ jest.mock('./WorldBuilderInterface.js', () => {
     return (
       <div data-testid="world-builder-interface">
         <div>World Builder Interface</div>
-        <div>Current Step: {worldBuilderState?.currentStep || 1}</div>
+        <div>Current Phase: {worldBuilderState?.currentPhase || 1}</div>
         <div>Is Complete: {worldBuilderState?.isWorldComplete ? 'Yes' : 'No'}</div>
       </div>
     );
@@ -110,8 +110,8 @@ describe('ConditionalSimulationInterface', () => {
     });
   });
 
-  describe('Step-by-Step Progress Display', () => {
-    it('should display all six steps with correct status', () => {
+  describe('Preparation Phase Progress Display', () => {
+    it('should display all preparation phases with correct status', () => {
       const worldBuilderState = createMockWorldBuilderState({
         currentStep: 3,
         stepValidationStatus: {
@@ -131,24 +131,24 @@ describe('ConditionalSimulationInterface', () => {
       );
 
       // Check all steps are displayed
-      expect(screen.getByText('Step 1: Create World')).toBeInTheDocument();
-      expect(screen.getByText('Step 2: Create Nodes')).toBeInTheDocument();
-      expect(screen.getByText('Step 3: Create Interactions')).toBeInTheDocument();
-      expect(screen.getByText('Step 4: Create Characters')).toBeInTheDocument();
-      expect(screen.getByText('Step 5: Populate Nodes')).toBeInTheDocument();
-      expect(screen.getByText('Step 6: Simulation Ready')).toBeInTheDocument();
+      expect(screen.getByText('Phase 1: Create World')).toBeInTheDocument();
+      expect(screen.getByText('Phase 2: Create Nodes')).toBeInTheDocument();
+      expect(screen.getByText('Phase 3: Create Interactions')).toBeInTheDocument();
+      expect(screen.getByText('Phase 4: Create Characters')).toBeInTheDocument();
+      expect(screen.getByText('Phase 5: Populate Nodes')).toBeInTheDocument();
+      expect(screen.getByText('Phase 6: Simulation Ready')).toBeInTheDocument();
 
-      // Check step status
-      expect(screen.getAllByText('Complete')).toHaveLength(2); // Steps 1 and 2
-      expect(screen.getByText('Current')).toBeInTheDocument(); // Step 3
-      expect(screen.getAllByText('Pending')).toHaveLength(3); // Steps 4, 5, 6
+      // Check phase status
+      expect(screen.getAllByText('Complete')).toHaveLength(2); // Phases 1 and 2
+      expect(screen.getByText('Current')).toBeInTheDocument(); // Phase 3
+      expect(screen.getAllByText('Pending')).toHaveLength(3); // Phases 4, 5, 6
 
       // Check progress bar
-      expect(screen.getByText('Progress: 2/6 steps')).toBeInTheDocument();
+      expect(screen.getByText('Progress: 2/6 phases')).toBeInTheDocument();
       expect(screen.getByText('33% complete')).toBeInTheDocument();
     });
 
-    it('should show start simulation button when all steps are complete', () => {
+    it('should show start simulation button when all phases are complete', () => {
       const worldBuilderState = createMockWorldBuilderState({
         currentStep: 6,
         isWorldComplete: true,
@@ -394,7 +394,7 @@ describe('ConditionalSimulationInterface', () => {
   });
 
   describe('Error Prevention', () => {
-    it('should not allow starting simulation when world is incomplete', () => {
+    it('should not allow starting simulation when preparation is incomplete', () => {
       const worldBuilderState = createMockWorldBuilderState({
         currentStep: 3,
         isWorldComplete: false,
@@ -415,7 +415,7 @@ describe('ConditionalSimulationInterface', () => {
       expect(screen.queryByText('Start Simulation')).not.toBeInTheDocument();
     });
 
-    it('should handle missing step validation gracefully', () => {
+    it('should handle missing phase validation gracefully', () => {
       const worldBuilderState = createMockWorldBuilderState({
         stepValidationStatus: null
       });

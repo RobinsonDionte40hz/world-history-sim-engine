@@ -82,52 +82,16 @@ class WorldState {
   }
 
   /**
-   * Converts the world state to simulation configuration format
-   * Only works if the world state is valid
-   * @returns {Object} Simulation configuration
-   * @throws {Error} If world state is invalid
+   * @deprecated This method has been removed to enforce proper simulation pipeline.
+   * Use WorldBuilder.prepareForSimulation() followed by SimulationContext.acceptPreparedWorld() instead.
+   * @throws {Error} Always throws an error directing to proper pipeline
    */
   toSimulationConfig() {
-    if (!this.isValid) {
-      throw new Error('Cannot convert invalid world to simulation config. Validation errors: ' + 
-        (this.validationResult?.errors?.join(', ') || 'Unknown validation errors'));
-    }
-    
-    try {
-      return {
-        // Basic simulation parameters
-        size: this.dimensions,
-        nodeCount: this.nodes.length,
-        characterCount: this.characters.length,
-        
-        // Resource configuration
-        resourceTypes: this.initialConditions?.resourceTypes || [],
-        startingResources: this.initialConditions?.startingResources || {},
-        
-        // Custom content from world builder
-        customNodes: this.nodes.map(node => this._serializeForSimulation(node)),
-        customCharacters: this.characters.map(character => this._serializeForSimulation(character)),
-        customInteractions: this.interactions.map(interaction => this._serializeForSimulation(interaction)),
-        customEvents: this.events.map(event => this._serializeForSimulation(event)),
-        customGroups: this.groups.map(group => this._serializeForSimulation(group)),
-        customItems: this.items.map(item => this._serializeForSimulation(item)),
-        
-        // Rules and conditions
-        rules: this.rules || {},
-        initialConditions: this.initialConditions || {},
-        
-        // Simulation timing
-        timeScale: this.initialConditions?.timeScale || 1,
-        tickDelay: this.rules?.tickDelay || 1000,
-        
-        // Metadata for simulation
-        worldId: this.id,
-        worldName: this.name,
-        worldVersion: this.version
-      };
-    } catch (error) {
-      throw new Error(`Failed to convert world to simulation config: ${error.message}`);
-    }
+    throw new Error(
+      'Direct world-to-simulation conversion is no longer supported. ' +
+      'Please use WorldBuilder.prepareForSimulation() to prepare your world data, ' +
+      'then pass it to SimulationContext.acceptPreparedWorld() for simulation initialization.'
+    );
   }
 
   /**
@@ -1367,22 +1331,7 @@ class WorldState {
     };
   }
 
-  /**
-   * Serializes content for simulation use
-   * @param {Object} content - Content to serialize
-   * @returns {Object} Serialized content
-   */
-  _serializeForSimulation(content) {
-    if (!content) return null;
-    
-    // If content has a toJSON method, use it
-    if (typeof content.toJSON === 'function') {
-      return content.toJSON();
-    }
-    
-    // Otherwise, create a clean copy
-    return this._serializeContent(content);
-  }
+
 
   /**
    * Serializes content for JSON storage

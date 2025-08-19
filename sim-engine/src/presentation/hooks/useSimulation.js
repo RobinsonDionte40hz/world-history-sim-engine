@@ -1,64 +1,68 @@
-// src/presentation/hooks/useSimulation.js
+/**
+ * useSimulation - Hook for managing simulation state
+ * 
+ * This hook now only accepts prepared world data that has been validated
+ * and processed through the SimulationContext pipeline. Direct world builder
+ * state is no longer supported to enforce proper architectural boundaries.
+ * 
+ * IMPORTANT: This hook must only be used within SimulationContext to maintain
+ * architectural integrity. Direct usage will throw an error.
+ * 
+ * @param {Object} preparedWorldData - World data prepared by WorldBuilder and validated by SimulationContext
+ * @param {Object} validationToken - Security token from SimulationContext
+ */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import SimulationService from '../../application/use-cases/services/SimulationService.js';
+import pipelineValidationService from '../../application/services/PipelineValidationService.js';
 
 /**
- * Check if world is ready for simulation based on content completion
- * @param {Object} worldBuilderState - World builder state
- * @returns {boolean} Whether world is ready for simulation
+ * Validate that the world data has been properly prepared
+ * @param {Object} preparedWorldData - Prepared world data from SimulationContext
+ * @returns {boolean} Whether data is valid for simulation
  */
-const isWorldReadyForSimulation = (worldBuilderState) => {
-  if (!worldBuilderState || !worldBuilderState.isValid) {
+const isPreparedWorldValid = (preparedWorldData) => {
+  if (!preparedWorldData) {
     return false;
   }
 
-  // Check for manual world building completion requirements
-  const config = worldBuilderState.worldConfig || worldBuilderState;
-  
-  // 1. World must exist with basic properties
-  if (!config.name || !config.description) {
+  // Must have simulation metadata from preparation pipeline
+  if (!preparedWorldData.simulationMetadata || 
+      preparedWorldData.simulationMetadata.source !== 'WorldBuilder') {
     return false;
   }
 
-  // 2. At least one node must exist
-  if (!config.nodes || config.nodes.length === 0) {
+  // Must have proper data structures
+  if (!preparedWorldData.nodes || !(preparedWorldData.nodes instanceof Map)) {
     return false;
   }
 
-  // 3. At least one interaction must exist
-  if (!config.interactions || config.interactions.length === 0) {
+  if (!preparedWorldData.characters || !(preparedWorldData.characters instanceof Map)) {
     return false;
   }
 
-  // 4. At least one character must exist
-  if (!config.characters || config.characters.length === 0) {
+  if (!preparedWorldData.interactions || !(preparedWorldData.interactions instanceof Map)) {
     return false;
   }
 
-  // 5. All nodes must have at least one character assigned
-  const nodePopulations = config.nodePopulations || {};
-  const populatedNodes = Object.keys(nodePopulations).filter(
-    nodeId => nodePopulations[nodeId] && nodePopulations[nodeId].length > 0
-  );
-  
-  if (populatedNodes.length !== config.nodes.length) {
-    return false;
-  }
-
-  // 6. All characters must have at least one interaction capability
-  const charactersWithInteractions = config.characters.filter(
-    character => character.assignedInteractions && character.assignedInteractions.length > 0
-  );
-  
-  if (charactersWithInteractions.length !== config.characters.length) {
+  if (!preparedWorldData.worldProperties) {
     return false;
   }
 
   return true;
 };
 
-const useSimulation = (worldBuilderState = null) => {
+const useSimulation = (preparedWorldData = null, validationToken = null) => {
+  // Validate that this hook is being used within SimulationContext
+  try {
+    pipelineValidationService.requireSimulationContext();
+  } catch (error) {
+    console.error('useSimulation:', error.message);
+    throw new Error(
+      'useSimulation hook must be used within SimulationContext. ' +
+      'Direct usage is not allowed. Import and use useSimulationContext() instead.'
+    );
+  }
   const [worldState, setWorldState] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initializationError, setInitializationError] = useState(null);
@@ -67,13 +71,24 @@ const useSimulation = (worldBuilderState = null) => {
   const [turnSummary, setTurnSummary] = useState(null);
   const [turnHistory, setTurnHistory] = useState([]);
 
-  // Initialize simulation only when valid world builder state is provided
+  // Initialize simulation only when valid prepared world data is provided
   useEffect(() => {
-    if (worldBuilderState && worldBuilderState.isValid && isWorldReadyForSimulation(worldBuilderState)) {
+    if (preparedWorldData && isPreparedWorldValid(preparedWorldData)) {
+      // Validate token if provided
+      if (validationToken) {
+        const tokenValidation = pipelineValidationService.validateToken(preparedWorldData, validationToken);
+        if (!tokenValidation.isValid) {
+          console.error('useSimulation: Token validation failed:', tokenValidation.error);
+          setInitializationError(tokenValidation.error);
+          setIsInitialized(false);
+          setWorldState(null);
+          return;
+        }
+      }
+      
       try {
-        // Convert world builder state to simulation config
-        const simulationConfig = worldBuilderState.toSimulationConfig();
-        const initializedState = SimulationService.initialize(simulationConfig);
+        // Initialize with prepared world data
+        const initializedState = SimulationService.initialize(preparedWorldData);
         setWorldState(initializedState);
         setIsInitialized(true);
         setInitializationError(null);
@@ -82,13 +97,13 @@ const useSimulation = (worldBuilderState = null) => {
         const turn = SimulationService.getCurrentTurn();
         setCurrentTurn(turn);
       } catch (error) {
-        console.error('useSimulation: Failed to initialize simulation from world builder state:', error);
+        console.error('useSimulation: Failed to initialize simulation from prepared world:', error);
         setInitializationError(error.message);
         setIsInitialized(false);
         setWorldState(null);
       }
     } else {
-      // Don't auto-load from localStorage - only initialize when world is complete
+      // No valid prepared world data
       setWorldState(null);
       setIsInitialized(false);
       setInitializationError(null);
@@ -96,7 +111,7 @@ const useSimulation = (worldBuilderState = null) => {
       // Set current turn to null to show "--" in UI
       setCurrentTurn(null);
     }
-  }, [worldBuilderState]);
+  }, [preparedWorldData, validationToken]);
 
   // Update currentTurn when worldState changes
   useEffect(() => {
@@ -188,26 +203,16 @@ const useSimulation = (worldBuilderState = null) => {
     return analysis;
   }, []);
 
-  const initializeWorld = useCallback((worldBuilderState) => {
-    if (!worldBuilderState || !worldBuilderState.isValid) {
-      const error = 'Cannot initialize: Invalid world builder state';
-      setInitializationError(error);
-      return false;
-    }
-
-    try {
-      const simulationConfig = worldBuilderState.toSimulationConfig();
-      const initializedState = SimulationService.initialize(simulationConfig);
-      setWorldState(initializedState);
-      setIsInitialized(true);
-      setInitializationError(null);
-      setCurrentTurn(SimulationService.getCurrentTurn());
-      return true;
-    } catch (error) {
-      console.error('useSimulation: Failed to initialize world:', error);
-      setInitializationError(error.message);
-      return false;
-    }
+  /**
+   * @deprecated Direct world initialization is no longer supported.
+   * Use SimulationContext.acceptPreparedWorld() instead.
+   */
+  const initializeWorld = useCallback(() => {
+    const error = 'Direct world initialization is no longer supported. ' +
+                  'Use SimulationContext.acceptPreparedWorld() with data from WorldBuilder.prepareForSimulation()';
+    setInitializationError(error);
+    console.error('useSimulation:', error);
+    return false;
   }, []);
 
   return {

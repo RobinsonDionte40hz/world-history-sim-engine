@@ -283,16 +283,18 @@ describe('WorldBuilder Character Management', () => {
         }).toThrow(ValidationError);
       });
 
-      test('should revalidate affected steps after deletion', () => {
-        // Initially step 4 should be valid (has characters)
-        expect(worldBuilder.worldConfig.stepValidation[4]).toBe(true);
+      test('should revalidate affected preparation phases after deletion', () => {
+        // Initially actors should be defined (has characters)
+        expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(true);
         
         worldBuilder.deleteCharacter('delete-test-char');
         
-        // After deleting all characters, step 4 should be invalid
-        expect(worldBuilder.worldConfig.stepValidation[4]).toBe(false);
-        // Step 5 should also be invalid (no characters to populate nodes)
-        expect(worldBuilder.worldConfig.stepValidation[5]).toBe(false);
+        // After deleting all characters, actors should no longer be defined
+        expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(false);
+        // Actors assignment should also be invalid (no characters to populate nodes)
+        expect(worldBuilder.worldConfig.simulationReadiness.actorsAssigned).toBe(false);
+        // World should not be ready for simulation
+        expect(worldBuilder.worldConfig.simulationReadiness.readyForSimulation).toBe(false);
       });
     });
 
@@ -792,41 +794,52 @@ describe('WorldBuilder Character Management', () => {
     });
   });
 
-  describe('Integration with World Building Steps', () => {
-    test('should validate step 4 when characters are added', () => {
-      expect(worldBuilder.worldConfig.stepValidation[4]).toBe(false);
+  describe('Integration with Preparation Pipeline', () => {
+    test('should validate actors defined phase when characters are added', () => {
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(false);
       
       worldBuilder.addCharacter({
-        name: 'Step Test Character',
+        name: 'Pipeline Test Character',
         assignedInteractions: ['test-interaction-1']
       });
       
-      expect(worldBuilder.worldConfig.stepValidation[4]).toBe(true);
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(true);
     });
 
-    test('should invalidate step 4 when all characters are removed', () => {
+    test('should affect simulation readiness when all characters are removed', () => {
       worldBuilder.addCharacter({
         id: 'temp-char',
         name: 'Temporary Character',
         assignedInteractions: ['test-interaction-1']
       });
       
-      expect(worldBuilder.worldConfig.stepValidation[4]).toBe(true);
+      // Characters should be defined now
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(true);
       
       worldBuilder.deleteCharacter('temp-char');
       
-      expect(worldBuilder.worldConfig.stepValidation[4]).toBe(false);
+      // Should invalidate actors defined phase
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(false);
+      
+      // Should not be ready for simulation
+      const validation = worldBuilder.validate();
+      expect(validation.isValid).toBe(false);
     });
 
-    test('should require characters to have assigned interactions for step 4', () => {
-      // Add character without interactions - this should work but step validation should fail
+    test('should validate characters have proper configuration for simulation preparation', () => {
+      // Add character without interactions - should be valid to add but not ready for simulation
       worldBuilder.addCharacter({
         name: 'No Interactions Character',
         assignedInteractions: []
       });
       
-      // Step 4 should be invalid because characters need assigned interactions
-      expect(worldBuilder.worldConfig.stepValidation[4]).toBe(false);
+      // Actors should be defined but not properly configured for simulation
+      expect(worldBuilder.worldConfig.simulationReadiness.actorsDefined).toBe(true);
+      
+      // Should fail validation due to incomplete configuration
+      const validation = worldBuilder.validate();
+      expect(validation.isValid).toBe(false);
+      expect(validation.errors).toContain('Characters must have assigned interactions for simulation');
     });
   });
 });
