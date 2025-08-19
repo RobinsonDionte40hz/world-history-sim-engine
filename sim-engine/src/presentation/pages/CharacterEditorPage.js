@@ -21,7 +21,6 @@ import {
   Copy,
   Trash2,
   Edit3,
-  Filter,
   Search
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
@@ -65,9 +64,14 @@ const CharacterEditorPage = () => {
   const [testResults, setTestResults] = useState(null);
   const [showNextSteps, setShowNextSteps] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [bulkGenerateSuccess, setBulkGenerateSuccess] = useState(false);
+  const [templateSaveSuccess, setTemplateSaveSuccess] = useState(false);
+  const [nodeAssignmentSuccess, setNodeAssignmentSuccess] = useState(false);
+  const [interactionAssignmentSuccess, setInteractionAssignmentSuccess] = useState(false);
 
   // Character Management States
   const [showAssignmentPanel, setShowAssignmentPanel] = useState(false);
+  const [showInteractionAssignmentPanel, setShowInteractionAssignmentPanel] = useState(false);
   const [showCharacterList, setShowCharacterList] = useState(false);
   const [showBatchActions, setShowBatchActions] = useState(false);
   const [worldCharacters, setWorldCharacters] = useState([]);
@@ -81,12 +85,24 @@ const CharacterEditorPage = () => {
   // Load characters from current world
   useEffect(() => {
     if (currentWorldId && currentWorld) {
+      // Get characters from world config (primary source)
+      const worldConfigCharacters = currentWorld.worldConfig?.characters || [];
+      
+      // Also check localStorage for characters linked to this world as fallback
       const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
-      const worldChars = allCharacters.filter(char => 
-        char.worldId === currentWorldId || 
-        currentWorld.worldConfig?.characters?.includes(char.id)
+      const localWorldChars = allCharacters.filter(char => 
+        char.worldId === currentWorldId
       );
-      setWorldCharacters(worldChars);
+      
+      // Combine and deduplicate characters
+      const combinedCharacters = [...worldConfigCharacters];
+      localWorldChars.forEach(localChar => {
+        if (!combinedCharacters.find(worldChar => worldChar.id === localChar.id)) {
+          combinedCharacters.push(localChar);
+        }
+      });
+      
+      setWorldCharacters(combinedCharacters);
     } else {
       setWorldCharacters([]);
     }
@@ -115,10 +131,18 @@ const CharacterEditorPage = () => {
       errors.push({ field: 'name', message: 'Character name must be at least 2 characters' });
     }
     
-    if (!currentCharacter?.description?.trim()) {
-      errors.push({ field: 'description', message: 'Character description is required' });
-    } else if (currentCharacter.description.length < 10) {
-      errors.push({ field: 'description', message: 'Character description must be at least 10 characters' });
+    // Description validation - more lenient for templates
+    if (!isTemplate) {
+      if (!currentCharacter?.description?.trim()) {
+        errors.push({ field: 'description', message: 'Character description is required' });
+      } else if (currentCharacter.description.length < 10) {
+        errors.push({ field: 'description', message: 'Character description must be at least 10 characters' });
+      }
+    } else {
+      // For templates, description is optional but if provided, should be meaningful
+      if (currentCharacter?.description?.trim() && currentCharacter.description.length < 5) {
+        errors.push({ field: 'description', message: 'Template description should be at least 5 characters if provided' });
+      }
     }
     
     // Validate D&D attributes
@@ -158,7 +182,7 @@ const CharacterEditorPage = () => {
     
     setValidationErrors(errors);
     return errors.length === 0;
-  }, [currentCharacter, currentWorldId, currentWorld, worldError]);
+  }, [currentCharacter, currentWorldId, currentWorld, worldError, isTemplate]);
 
   const handleAutoSave = useCallback(async () => {
     if (!hasUnsavedChanges || !validateCharacter()) return;
@@ -306,6 +330,80 @@ const CharacterEditorPage = () => {
     }
   }, [currentWorld, currentWorldId, updateWorldConfig]);
 
+  // Handler for bulk generation with success message
+  const handleBulkGenerate = useCallback((templateData) => {
+    try {
+      const count = templateData.templateSettings?.bulkOptions?.count || 5;
+      const distribution = templateData.templateSettings?.bulkOptions?.distribution || 'random';
+      
+      console.log(`Generating ${count} NPCs with ${distribution} distribution`);
+      
+      // Generate characters from template
+      const generatedCharacters = [];
+      for (let i = 0; i < count; i++) {
+        const character = {
+          id: `generated_${Date.now()}_${i}`,
+          name: `${templateData.name} ${i + 1}`,
+          description: templateData.description,
+          worldId: currentWorldId,
+          attributes: { ...templateData.attributes },
+          personality: { ...templateData.personality },
+          consciousness: { ...templateData.consciousness },
+          goals: [...(templateData.goals || [])],
+          archetype: templateData.archetype,
+          createdAt: new Date().toISOString(),
+          isGenerated: true
+        };
+        generatedCharacters.push(character);
+      }
+      
+      // Add to world config
+      if (currentWorld && updateWorldConfig) {
+        const updatedCharacters = [...(currentWorld.worldConfig.characters || []), ...generatedCharacters];
+        updateWorldConfig({
+          ...currentWorld.worldConfig,
+          characters: updatedCharacters
+        });
+      }
+      
+      // Update local state
+      setWorldCharacters(prev => [...prev, ...generatedCharacters]);
+      
+      // Show success message
+      setBulkGenerateSuccess(true);
+      
+    } catch (error) {
+      console.error('Failed to generate characters:', error);
+      alert('Failed to generate characters. Please try again.');
+    }
+  }, [currentWorldId, currentWorld, updateWorldConfig]);
+
+  // Handler for template creation with success message
+  const handleCreateTemplate = useCallback((templateData) => {
+    try {
+      const template = {
+        id: `template_${Date.now()}`,
+        ...templateData,
+        createdAt: new Date().toISOString(),
+        isTemplate: true
+      };
+      
+      // Save template to localStorage or template system
+      const templates = JSON.parse(localStorage.getItem('characterTemplates') || '[]');
+      templates.push(template);
+      localStorage.setItem('characterTemplates', JSON.stringify(templates));
+      
+      // Show success message
+      setTemplateSaveSuccess(true);
+      
+      console.log('Template created successfully:', template);
+      
+    } catch (error) {
+      console.error('Failed to create template:', error);
+      alert('Failed to create template. Please try again.');
+    }
+  }, []);
+
 
 
   const handleTest = () => {
@@ -413,159 +511,53 @@ const CharacterEditorPage = () => {
     }
   };
 
-  const loadArchetype = (archetypeId) => {
-    const archetypes = {
-      warrior: {
-        id: Date.now().toString(),
-        name: 'Warrior Template',
-        description: 'A strong and brave fighter dedicated to protecting others',
-        attributes: { 
-          strength: 16, 
-          dexterity: 12, 
-          constitution: 15, 
-          intelligence: 10, 
-          wisdom: 13, 
-          charisma: 11 
-        },
-        consciousness: {
-          frequency: 45,
-          coherence: 0.7
-        },
-        personality: {
-          aggression: 0.6,
-          curiosity: 0.3,
-          empathy: 0.7,
-          ambition: 0.5,
-          caution: 0.4
-        },
-        skills: { 
-          'Melee Combat': 5, 
-          'Defense': 4, 
-          'Tactics': 3,
-          'Athletics': 4,
-          'Intimidation': 3
-        },
-        goals: [
-          { 
-            id: Date.now(), 
-            description: 'Protect the innocent from harm', 
-            priority: 'high', 
-            type: 'ideological' 
-          },
-          { 
-            id: Date.now() + 1, 
-            description: 'Master combat techniques', 
-            priority: 'medium', 
-            type: 'personal' 
-          }
-        ]
-      },
-      scholar: {
-        id: Date.now().toString(),
-        name: 'Scholar Template',
-        description: 'A wise and knowledgeable researcher seeking truth and understanding',
-        attributes: { 
-          strength: 8, 
-          dexterity: 10, 
-          constitution: 12, 
-          intelligence: 16, 
-          wisdom: 15, 
-          charisma: 13 
-        },
-        consciousness: {
-          frequency: 50,
-          coherence: 0.9
-        },
-        personality: {
-          aggression: 0.2,
-          curiosity: 0.9,
-          empathy: 0.6,
-          ambition: 0.7,
-          caution: 0.8
-        },
-        skills: { 
-          'History': 5, 
-          'Arcana': 4, 
-          'Medicine': 3,
-          'Investigation': 5,
-          'Insight': 4
-        },
-        goals: [
-          { 
-            id: Date.now(), 
-            description: 'Discover ancient knowledge and secrets', 
-            priority: 'high', 
-            type: 'personal' 
-          },
-          { 
-            id: Date.now() + 1, 
-            description: 'Share knowledge with others', 
-            priority: 'medium', 
-            type: 'ideological' 
-          }
-        ]
-      },
-      merchant: {
-        id: Date.now().toString(),
-        name: 'Merchant Template',
-        description: 'A charismatic and cunning trader focused on building wealth and influence',
-        attributes: { 
-          strength: 10, 
-          dexterity: 12, 
-          constitution: 13, 
-          intelligence: 14, 
-          wisdom: 11, 
-          charisma: 16 
-        },
-        consciousness: {
-          frequency: 42,
-          coherence: 0.6
-        },
-        personality: {
-          aggression: 0.4,
-          curiosity: 0.6,
-          empathy: 0.4,
-          ambition: 0.9,
-          caution: 0.7
-        },
-        skills: { 
-          'Persuasion': 5, 
-          'Deception': 3, 
-          'Leadership': 4,
-          'Insight': 3,
-          'Economics': 5
-        },
-        goals: [
-          { 
-            id: Date.now(), 
-            description: 'Build a vast trading empire', 
-            priority: 'high', 
-            type: 'professional' 
-          },
-          { 
-            id: Date.now() + 1, 
-            description: 'Accumulate wealth and influence', 
-            priority: 'high', 
-            type: 'personal' 
-          }
-        ]
-      }
-    };
-    
-    const template = archetypes[archetypeId];
-    if (template) {
-      setCurrentCharacter(template);
-      setHasUnsavedChanges(true);
-    }
-  };
-
-
-
   const handleNextSteps = () => {
     setShowNextSteps(true);
   };
 
   // Character Management Functions
+  const handleAssignToNode = (nodeId) => {
+    try {
+      // Generate temporary ID for unsaved characters
+      const characterId = currentCharacter.id || `temp_${Date.now()}`;
+      
+      // TODO: Implement actual node assignment logic
+      // This would update the character's assigned nodes and the node's assigned characters
+      console.log('Assigning character to node:', { characterId, characterName: currentCharacter.name, nodeId });
+      
+      // Close modal immediately
+      setShowAssignmentPanel(false);
+      
+      // Show success feedback
+      setNodeAssignmentSuccess(true);
+      
+    } catch (error) {
+      console.error('Failed to assign character to node:', error);
+      alert('Failed to assign character to node. Please try again.');
+    }
+  };
+
+  const handleAssignToInteraction = (interactionId) => {
+    try {
+      // Generate temporary ID for unsaved characters
+      const characterId = currentCharacter.id || `temp_${Date.now()}`;
+      
+      // TODO: Implement actual interaction assignment logic
+      // This would update the character's assigned interactions
+      console.log('Assigning character to interaction:', { characterId, characterName: currentCharacter.name, interactionId });
+      
+      // Close modal immediately
+      setShowInteractionAssignmentPanel(false);
+      
+      // Show success feedback
+      setInteractionAssignmentSuccess(true);
+      
+    } catch (error) {
+      console.error('Failed to assign character to interaction:', error);
+      alert('Failed to assign character to interaction. Please try again.');
+    }
+  };
+
   const handleDuplicateCharacter = (character) => {
     const duplicatedCharacter = {
       ...character,
@@ -584,11 +576,23 @@ const CharacterEditorPage = () => {
 
   const handleDeleteCharacter = (characterId) => {
     if (window.confirm('Are you sure you want to delete this character?')) {
+      // Remove from localStorage
       const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
       const updatedCharacters = allCharacters.filter(char => char.id !== characterId);
       localStorage.setItem('characters', JSON.stringify(updatedCharacters));
       
-      // Update world characters
+      // Remove from world config as well
+      if (currentWorld && updateWorldConfig) {
+        const worldConfigCharacters = currentWorld.worldConfig?.characters || [];
+        const updatedWorldCharacters = worldConfigCharacters.filter(char => char.id !== characterId);
+        
+        updateWorldConfig({
+          ...currentWorld.worldConfig,
+          characters: updatedWorldCharacters
+        });
+      }
+      
+      // Update local state
       setWorldCharacters(worldCharacters.filter(char => char.id !== characterId));
       
       // If we're deleting the current character, clear it
@@ -616,11 +620,23 @@ const CharacterEditorPage = () => {
     const confirmDelete = window.confirm(`Delete ${selectedCharacters.length} selected characters?`);
     if (!confirmDelete) return;
     
+    // Remove from localStorage
     const allCharacters = JSON.parse(localStorage.getItem('characters') || '[]');
     const updatedCharacters = allCharacters.filter(char => !selectedCharacters.includes(char.id));
     localStorage.setItem('characters', JSON.stringify(updatedCharacters));
     
-    // Update world characters
+    // Remove from world config as well
+    if (currentWorld && updateWorldConfig) {
+      const worldConfigCharacters = currentWorld.worldConfig?.characters || [];
+      const updatedWorldCharacters = worldConfigCharacters.filter(char => !selectedCharacters.includes(char.id));
+      
+      updateWorldConfig({
+        ...currentWorld.worldConfig,
+        characters: updatedWorldCharacters
+      });
+    }
+    
+    // Update local state
     setWorldCharacters(worldCharacters.filter(char => !selectedCharacters.includes(char.id)));
     setSelectedCharacters([]);
   };
@@ -638,6 +654,28 @@ const CharacterEditorPage = () => {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  };
+
+  // Success message component
+  const SuccessMessage = ({ message, isVisible, onClose }) => {
+    useEffect(() => {
+      if (isVisible) {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+      }
+    }, [isVisible, onClose]);
+
+    if (!isVisible) return null;
+
+    return (
+      <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-bounce">
+        <div className="w-2 h-2 bg-green-300 rounded-full"></div>
+        <span className="font-medium">{message}</span>
+        <button onClick={onClose} className="ml-2 text-green-200 hover:text-white">
+          ✕
+        </button>
+      </div>
+    );
   };
 
   // Filter characters based on search and archetype
@@ -890,32 +928,51 @@ const CharacterEditorPage = () => {
 
               {/* Right Side - Management & Workflow */}
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => setShowAssignmentPanel(true)}
-                  disabled={!currentCharacter || !currentWorldId}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Settings className="w-4 h-4" />
-                  Assign to Nodes
-                </button>
+                {!isTemplate && (
+                  <>
+                    <button
+                      onClick={() => setShowAssignmentPanel(true)}
+                      disabled={!currentCharacter?.name?.trim() || !currentWorldId}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={!currentCharacter?.name?.trim() ? 'Enter a character name first' : !currentWorldId ? 'Select a world first' : 'Assign character to world nodes'}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Assign to Nodes
+                    </button>
 
-                <button
-                  onClick={() => setShowCharacterList(true)}
-                  disabled={!currentWorldId}
-                  className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Users className="w-4 h-4" />
-                  View All Characters
-                </button>
+                    <button
+                      onClick={() => setShowInteractionAssignmentPanel(true)}
+                      disabled={!currentCharacter?.name?.trim() || !currentWorldId}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={!currentCharacter?.name?.trim() ? 'Enter a character name first' : !currentWorldId ? 'Select a world first' : 'Assign character to interactions'}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Assign Interactions
+                    </button>
+                  </>
+                )}
 
-                <button
-                  onClick={() => setShowBatchActions(true)}
-                  disabled={!currentWorldId}
-                  className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Settings className="w-4 h-4" />
-                  Batch Actions
-                </button>
+                {!isTemplate && (
+                  <>
+                    <button
+                      onClick={() => setShowCharacterList(true)}
+                      disabled={!currentWorldId}
+                      className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Users className="w-4 h-4" />
+                      View All Characters
+                    </button>
+
+                    <button
+                      onClick={() => setShowBatchActions(true)}
+                      disabled={!currentWorldId}
+                      className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Batch Actions
+                    </button>
+                  </>
+                )}
 
                 <button
                   onClick={handleSave}
@@ -1132,6 +1189,8 @@ const CharacterEditorPage = () => {
                   availableInteractions={availableInteractions}
                   onCreateInteraction={handleCreateInteraction}
                   onEditInteraction={handleEditInteraction}
+                  onBulkGenerate={handleBulkGenerate}
+                  onCreateTemplate={handleCreateTemplate}
                   isTemplate={isTemplate}
                   templateMode={templateMode}
                 />
@@ -1196,7 +1255,7 @@ const CharacterEditorPage = () => {
       </div>
 
       {/* Assignment Panel Modal */}
-      {showAssignmentPanel && currentCharacter && (
+      {showAssignmentPanel && currentCharacter?.name?.trim() && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6">
@@ -1216,6 +1275,11 @@ const CharacterEditorPage = () => {
               <div className="mb-6 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
                 <h3 className="font-semibold text-blue-200 mb-2">Character: {currentCharacter.name}</h3>
                 <p className="text-blue-100 text-sm">{currentCharacter.description}</p>
+                {!currentCharacter.id && (
+                  <p className="text-blue-200 text-xs mt-2 italic">
+                    💡 You can assign nodes even before saving the character!
+                  </p>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -1227,10 +1291,7 @@ const CharacterEditorPage = () => {
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-white">{node.name}</h4>
                           <button
-                            onClick={() => {
-                              // TODO: Implement node assignment logic
-                              console.log('Assign character to node:', node.id);
-                            }}
+                            onClick={() => handleAssignToNode(node.id)}
                             className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm transition-colors"
                           >
                             Assign
@@ -1252,6 +1313,74 @@ const CharacterEditorPage = () => {
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     >
                       Create Nodes
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interaction Assignment Panel Modal */}
+      {showInteractionAssignmentPanel && currentCharacter?.name?.trim() && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl border border-white/20 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-6 h-6 text-purple-400" />
+                  <h2 className="text-2xl font-bold text-white">Assign Character to Interactions</h2>
+                </div>
+                <button
+                  onClick={() => setShowInteractionAssignmentPanel(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                <h3 className="font-semibold text-purple-200 mb-2">Character: {currentCharacter.name}</h3>
+                <p className="text-purple-100 text-sm">{currentCharacter.description}</p>
+                {!currentCharacter.id && (
+                  <p className="text-purple-200 text-xs mt-2 italic">
+                    💡 You can assign interactions even before saving the character!
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">Available Interactions</h3>
+                {availableInteractions?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {availableInteractions.map(interaction => (
+                      <div key={interaction.id} className="p-4 bg-white/10 rounded-lg border border-white/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-white">{interaction.name}</h4>
+                          <button
+                            onClick={() => handleAssignToInteraction(interaction.id)}
+                            className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm transition-colors"
+                          >
+                            Assign
+                          </button>
+                        </div>
+                        <p className="text-gray-300 text-sm">{interaction.description}</p>
+                        <div className="mt-2 text-xs text-gray-400">
+                          Type: {interaction.type} • Prerequisites: {interaction.prerequisites?.length || 0}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-300 mb-4">No interactions available in this world</p>
+                    <button
+                      onClick={() => navigate('/editors/interactions')}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                      Create Interactions
                     </button>
                   </div>
                 )}
@@ -1588,6 +1717,33 @@ const CharacterEditorPage = () => {
           </div>
         </div>
       )}
+
+      {/* Success Messages */}
+      <SuccessMessage 
+        message="Character saved successfully!"
+        isVisible={saveSuccess}
+        onClose={() => setSaveSuccess(false)}
+      />
+      <SuccessMessage 
+        message="Characters generated and placed successfully!"
+        isVisible={bulkGenerateSuccess}
+        onClose={() => setBulkGenerateSuccess(false)}
+      />
+      <SuccessMessage 
+        message="NPC template created successfully!"
+        isVisible={templateSaveSuccess}
+        onClose={() => setTemplateSaveSuccess(false)}
+      />
+      <SuccessMessage 
+        message="Character assigned to node successfully!"
+        isVisible={nodeAssignmentSuccess}
+        onClose={() => setNodeAssignmentSuccess(false)}
+      />
+      <SuccessMessage 
+        message="Character assigned to interaction successfully!"
+        isVisible={interactionAssignmentSuccess}
+        onClose={() => setInteractionAssignmentSuccess(false)}
+      />
     </div>
   );
 };

@@ -1135,6 +1135,8 @@ const CharacterEditor = ({
   availableInteractions = [], // Available interactions from world
   onCreateInteraction = null, // Callback to create new interactions
   onEditInteraction = null, // Callback to edit interactions
+  onBulkGenerate = null, // Callback for bulk generation
+  onCreateTemplate = null, // Callback for template creation
   isTemplate = false, // Whether this is a template
   templateMode = false // Whether we're in template creation/editing mode
 }) => {
@@ -1245,14 +1247,25 @@ const CharacterEditor = ({
     setSaveSuccess(false);
 
     try {
-      // Let parent component handle the actual save operation
-      // This maintains clean architecture - presentation layer doesn't know about domain services
-      if (onSave) {
-        await onSave(characterData);
-        setSaveSuccess(true);
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSaveSuccess(false), 3000);
+      // Check if we're creating a template or regular character
+      if (mode === 'create' && creationMode === CHARACTER_CREATION_MODES.TEMPLATE) {
+        // Call template creation handler
+        if (onCreateTemplate) {
+          await onCreateTemplate(characterData);
+          setSaveSuccess(true);
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => setSaveSuccess(false), 3000);
+        }
+      } else {
+        // Call regular save handler
+        if (onSave) {
+          await onSave(characterData);
+          setSaveSuccess(true);
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => setSaveSuccess(false), 3000);
+        }
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -1263,7 +1276,7 @@ const CharacterEditor = ({
     } finally {
       setIsSaving(false);
     }
-  }, [characterData, onSave, validateCharacter]);
+  }, [characterData, mode, creationMode, onSave, onCreateTemplate, validateCharacter]);
 
   // Handle archetype selection
   const handleArchetypeSelect = (archetypeId) => {
@@ -1324,14 +1337,23 @@ const CharacterEditor = ({
     // TODO: Implement preview modal
   }, [characterData]);
 
-  const handleBulkGenerate = useCallback(() => {
-    // Generate and place NPCs in world
-    const count = characterData.templateSettings?.bulkOptions?.count || 5;
-    const distribution = characterData.templateSettings?.bulkOptions?.distribution || 'random';
-    
-    console.log(`Generating ${count} NPCs with ${distribution} distribution`);
-    // TODO: Implement bulk generation logic
-  }, [characterData]);
+  const handleBulkGenerate = useCallback(async () => {
+    if (onBulkGenerate) {
+      try {
+        await onBulkGenerate(characterData);
+        console.log('Bulk generation completed successfully');
+      } catch (error) {
+        console.error('Bulk generation failed:', error);
+      }
+    } else {
+      // Fallback - Generate and place NPCs in world locally
+      const count = characterData.templateSettings?.bulkOptions?.count || 5;
+      const distribution = characterData.templateSettings?.bulkOptions?.distribution || 'random';
+      
+      console.log(`Generating ${count} NPCs with ${distribution} distribution`);
+      // TODO: Implement local bulk generation logic if needed
+    }
+  }, [characterData, onBulkGenerate]);
 
   // Helper function to generate NPC from template
   const generateNPCFromTemplate = (template, index) => {
