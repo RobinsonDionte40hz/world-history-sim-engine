@@ -3,6 +3,32 @@
  * Ensures that a world is well-formed and ready for simulation.
  */
 class WorldValidator {
+  // Static validation cache for performance optimization
+  static validationCache = null;
+
+  /**
+   * Validates a world configuration with caching to prevent re-validation of identical configs.
+   * @param {Object} worldConfig - The world configuration to validate.
+   * @returns {Object} A comprehensive validation result.
+   */
+  static validateWithCache(worldConfig) {
+    const configHash = JSON.stringify(worldConfig);
+    if (this.validationCache?.hash === configHash) {
+      return this.validationCache.result;
+    }
+    
+    const result = this.validate(worldConfig);
+    this.validationCache = { hash: configHash, result };
+    return result;
+  }
+
+  /**
+   * Clears the validation cache. Useful when you want to force re-validation.
+   */
+  static clearValidationCache() {
+    this.validationCache = null;
+  }
+
   /**
    * Validates a complete world configuration against all preparation phases.
    * @param {Object} worldConfig - The world configuration to validate.
@@ -1226,61 +1252,6 @@ class WorldValidator {
       warnings,
       message: errors.length === 0 ? 'Valid initial conditions' : 'Invalid initial conditions'
     };
-  }
-
-  /**
-   * Calculates completeness score for world configuration
-   * @param {Object} worldConfig - World configuration
-   * @param {Object} details - Validation details
-   * @returns {number} Completeness score between 0 and 1
-   */
-  static calculateCompleteness(worldConfig, details) {
-    let score = 0;
-    let maxScore = 0;
-
-    // Dimensions (required - 20 points)
-    maxScore += 20;
-    if (details.dimensions && details.dimensions.valid) {
-      score += 20;
-    }
-
-    // Nodes (required - 25 points)
-    maxScore += 25;
-    if (details.nodes && details.nodes.valid && details.nodes.count > 0) {
-      score += 25;
-    }
-
-    // Characters (recommended - 20 points)
-    maxScore += 20;
-    if (details.characters && details.characters.count > 0) {
-      score += 20;
-    }
-
-    // Rules (recommended - 10 points)
-    maxScore += 10;
-    if (worldConfig.rules && Object.keys(worldConfig.rules).length > 0) {
-      score += 10;
-    }
-
-    // Initial conditions (recommended - 10 points)
-    maxScore += 10;
-    if (worldConfig.initialConditions && Object.keys(worldConfig.initialConditions).length > 0) {
-      score += 10;
-    }
-
-    // Interactions (optional - 10 points)
-    maxScore += 10;
-    if (details.interactions && details.interactions.count > 0) {
-      score += 10;
-    }
-
-    // Events (optional - 5 points)
-    maxScore += 5;
-    if (details.events && details.events.count > 0) {
-      score += 5;
-    }
-
-    return maxScore > 0 ? score / maxScore : 0;
   }
 
   /**

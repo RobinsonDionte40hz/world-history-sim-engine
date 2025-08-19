@@ -1,4 +1,4 @@
-const WorldValidator = require('../WorldValidator');
+import WorldValidator from '../WorldValidator.js';
 
 describe('WorldValidator', () => {
   describe('validateDimensions', () => {
@@ -437,49 +437,6 @@ describe('WorldValidator', () => {
     });
   });
 
-  describe('calculateCompleteness', () => {
-    it('should calculate completeness correctly', () => {
-      const worldConfig = {
-        dimensions: { width: 100, height: 100 },
-        nodes: [{ id: 'node1' }],
-        characters: [{ id: 'char1' }],
-        rules: { physics: {} },
-        initialConditions: { characterCount: 1 },
-        interactions: [{ id: 'int1' }],
-        events: [{ id: 'event1' }]
-      };
-      
-      const details = {
-        dimensions: { valid: true },
-        nodes: { valid: true, count: 1 },
-        characters: { count: 1 },
-        interactions: { count: 1 },
-        events: { count: 1 }
-      };
-      
-      const completeness = WorldValidator.calculateCompleteness(worldConfig, details);
-      expect(completeness).toBe(1.0); // 100% complete
-    });
-
-    it('should handle minimal configuration', () => {
-      const worldConfig = {
-        dimensions: { width: 100, height: 100 },
-        nodes: [{ id: 'node1' }]
-      };
-      
-      const details = {
-        dimensions: { valid: true },
-        nodes: { valid: true, count: 1 },
-        characters: { count: 0 },
-        interactions: { count: 0 },
-        events: { count: 0 }
-      };
-      
-      const completeness = WorldValidator.calculateCompleteness(worldConfig, details);
-      expect(completeness).toBe(0.45); // Only dimensions and nodes (45/100)
-    });
-  });
-
   describe('validate - full integration', () => {
     it('should validate a complete world configuration', () => {
       const worldConfig = {
@@ -586,6 +543,89 @@ describe('WorldValidator', () => {
       
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Unknown component type: unknown');
+    });
+  });
+
+  describe('Validation Caching', () => {
+    beforeEach(() => {
+      // Clear cache before each test
+      WorldValidator.clearValidationCache();
+    });
+
+    it('should cache validation results for identical configurations', () => {
+      const worldConfig = {
+        name: 'Test World',
+        description: 'A test world for caching',
+        rules: { timeProgression: 'turn-based' },
+        initialConditions: { startingResources: 1000 },
+        nodes: [],
+        characters: [],
+        interactions: []
+      };
+
+      // First validation call
+      const result1 = WorldValidator.validateWithCache(worldConfig);
+      
+      // Second validation call with same config should return cached result
+      const result2 = WorldValidator.validateWithCache(worldConfig);
+      
+      // Results should be identical (same object reference for cached result)
+      expect(result2).toBe(result1);
+      expect(result1.isValid).toBeDefined();
+      expect(result2.isValid).toBeDefined();
+    });
+
+    it('should not use cache for different configurations', () => {
+      const worldConfig1 = {
+        name: 'Test World 1',
+        description: 'First test world',
+        rules: { timeProgression: 'turn-based' },
+        initialConditions: { startingResources: 1000 },
+        nodes: [],
+        characters: [],
+        interactions: []
+      };
+
+      const worldConfig2 = {
+        name: 'Test World 2',
+        description: 'Second test world',
+        rules: { timeProgression: 'real-time' },
+        initialConditions: { startingResources: 2000 },
+        nodes: [],
+        characters: [],
+        interactions: []
+      };
+
+      const result1 = WorldValidator.validateWithCache(worldConfig1);
+      const result2 = WorldValidator.validateWithCache(worldConfig2);
+      
+      // Results should be different objects (not cached)
+      expect(result2).not.toBe(result1);
+    });
+
+    it('should clear cache when requested', () => {
+      const worldConfig = {
+        name: 'Test World',
+        description: 'A test world for cache clearing',
+        rules: { timeProgression: 'turn-based' },
+        initialConditions: { startingResources: 1000 },
+        nodes: [],
+        characters: [],
+        interactions: []
+      };
+
+      // First validation
+      const result1 = WorldValidator.validateWithCache(worldConfig);
+      
+      // Clear cache
+      WorldValidator.clearValidationCache();
+      
+      // Second validation should not use cache
+      const result2 = WorldValidator.validateWithCache(worldConfig);
+      
+      // Results should be different objects (cache was cleared)
+      expect(result2).not.toBe(result1);
+      expect(result1.isValid).toEqual(result2.isValid); // But validation results should be the same
     });
   });
 });
