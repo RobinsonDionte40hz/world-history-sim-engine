@@ -39,7 +39,7 @@ export const SimulationProvider = ({ children }) => {
   });
   
   // State for simulation management (managed internally, not via useSimulation hook)
-  const [simulationState, setSimulationState] = useState({
+  const simulationState = {
     worldState: null,
     isInitialized: false,
     initializationError: null,
@@ -59,7 +59,7 @@ export const SimulationProvider = ({ children }) => {
     },
     getTurnHistory: () => [],
     analyzeHistory: () => null
-  });
+  };
   
   // Validation function to ensure world data comes from WorldBuilder pipeline
   const validatePreparedWorld = useCallback((worldData) => {
