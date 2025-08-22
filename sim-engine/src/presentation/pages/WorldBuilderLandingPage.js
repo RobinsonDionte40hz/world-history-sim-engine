@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Globe, Users, Layers, Sparkles, Clock, Map, Mail, MessageSquare, Phone } from 'lucide-react';
+import { ChevronRight, Globe, Users, Layers, Sparkles, Clock, Map, Mail, MessageSquare, Phone, Database, Shield, Share2 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 
 const WorldBuilderLandingPage = () => {
@@ -19,9 +19,9 @@ const WorldBuilderLandingPage = () => {
   const [contentVisible, setContentVisible] = useState({
     cta: false,
     reviews: false,
-    howItWorks: false
+    howItWorks: false,
+    additionalFeatures: false
   });
-  const [contentFadedOut, setContentFadedOut] = useState(false);
 
   // Handle world creation
   const handleCreateWorld = () => {
@@ -34,22 +34,13 @@ const WorldBuilderLandingPage = () => {
       const scrollPosition = window.scrollY;
       const windowHeight = window.innerHeight;
       
-      // Define scroll threshold for content fadeout (e.g., 3x viewport height)
-      const fadeOutThreshold = windowHeight * 3;
-      
-      // Check if user has scrolled past the fadeout threshold
-      if (scrollPosition > fadeOutThreshold) {
-        setContentFadedOut(true);
-      } else {
-        setContentFadedOut(false);
-        
-        // Trigger visibility based on scroll position (only when not faded out)
-        setContentVisible({
-          cta: scrollPosition > windowHeight * 0.2,
-          reviews: scrollPosition > windowHeight * 0.4,
-          howItWorks: scrollPosition > windowHeight * 0.7
-        });
-      }
+      // Make content appear earlier and stay visible
+      setContentVisible({
+        cta: scrollPosition > windowHeight * 0.1,
+        reviews: scrollPosition > windowHeight * 0.3,
+        howItWorks: scrollPosition > windowHeight * 0.5,
+        additionalFeatures: scrollPosition > windowHeight * 0.8
+      });
     };
     
     window.addEventListener('scroll', handleScroll);
@@ -146,7 +137,16 @@ const WorldBuilderLandingPage = () => {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(-920px);
+            transform: translateX(-1696px);
+          }
+        }
+
+        @keyframes carouselMoveWide {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-2296px);
           }
         }
       `}</style>
@@ -155,10 +155,7 @@ const WorldBuilderLandingPage = () => {
         className="min-h-screen text-white relative"
         style={{ 
           minHeight: '100vh',
-          background: 'transparent', // Let global background show through
-          opacity: contentFadedOut ? 0 : 1,
-          transform: contentFadedOut ? 'translateY(-50px)' : 'translateY(0)',
-          transition: 'opacity 1s ease-out, transform 1s ease-out'
+          background: 'transparent' // Let global background show through
         }}
       >
       {/* Use Global Navigation Component */}
@@ -594,8 +591,9 @@ const WorldBuilderLandingPage = () => {
               style={{
                 display: 'flex',
                 gap: '2rem',
-                animation: contentVisible.howItWorks ? 'carouselMove 18s linear infinite' : 'none',
-                animationPlayState: 'running'
+                animation: contentVisible.howItWorks ? 'carouselMove 30s linear infinite' : 'none',
+                animationPlayState: 'running',
+                willChange: 'transform'
               }}
               className="carousel-container"
             >
@@ -623,18 +621,20 @@ const WorldBuilderLandingPage = () => {
                 onMouseOver={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'paused';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                  e.currentTarget.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
                   e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
                 }}
                 onMouseOut={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'running';
-                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                   e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
                   e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
                 }}
               >
                 <div 
@@ -693,18 +693,20 @@ const WorldBuilderLandingPage = () => {
                 onMouseOver={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'paused';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                  e.currentTarget.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
                   e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
                 }}
                 onMouseOut={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'running';
-                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                   e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
                   e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
                 }}
               >
                 <div 
@@ -763,18 +765,20 @@ const WorldBuilderLandingPage = () => {
                 onMouseOver={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'paused';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                  e.currentTarget.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
                   e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
                 }}
                 onMouseOut={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'running';
-                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                   e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
                   e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
                 }}
               >
                 <div 
@@ -809,7 +813,7 @@ const WorldBuilderLandingPage = () => {
                 </p>
               </div>
 
-              {/* Duplicate cards for seamless loop */}
+              {/* Card 4: Analyze & Interact */}
               <div 
                 className="carousel-card transition-all duration-500"
                 style={{
@@ -833,18 +837,167 @@ const WorldBuilderLandingPage = () => {
                 onMouseOver={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'paused';
-                  e.currentTarget.style.transform = 'scale(1.15)';
-                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                  e.currentTarget.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
                   e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
                 }}
                 onMouseOut={(e) => {
                   const container = e.currentTarget.closest('.carousel-container');
                   container.style.animationPlayState = 'running';
-                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                   e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
                   e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+                }}
+              >
+                <div 
+                  className="mx-auto mb-6 flex items-center justify-center"
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    background: 'linear-gradient(to right, #f59e0b, #10b981)',
+                    borderRadius: '50%',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}
+                >
+                  4
+                </div>
+                <h3 
+                  className="text-xl font-bold mb-4"
+                  style={{ color: 'white', textAlign: 'center' }}
+                >
+                  Analyze & Interact
+                </h3>
+                <p 
+                  style={{ 
+                    color: '#cbd5e1', 
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    textAlign: 'center'
+                  }}
+                >
+                  Dive deep into your world's data with analytics tools. Interact with characters, influence events, and guide the evolution of your civilization.
+                </p>
+              </div>
+
+              {/* Card 5: Export & Share */}
+              <div 
+                className="carousel-card transition-all duration-500"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(71, 85, 105, 0.3)',
+                  borderRadius: '1rem',
+                  width: '280px',
+                  height: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  flex: 'none',
+                  padding: '2rem',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.5s ease-out'
+                }}
+                onMouseOver={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'paused';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'running';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+                }}
+              >
+                <div 
+                  className="mx-auto mb-6 flex items-center justify-center"
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
+                    borderRadius: '50%',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}
+                >
+                  5
+                </div>
+                <h3 
+                  className="text-xl font-bold mb-4"
+                  style={{ color: 'white', textAlign: 'center' }}
+                >
+                  Export & Share
+                </h3>
+                <p 
+                  style={{ 
+                    color: '#cbd5e1', 
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    textAlign: 'center'
+                  }}
+                >
+                  Export your world data, generate reports, and share your creations with the community. Perfect for D&D campaigns and storytelling projects.
+                </p>
+              </div>
+
+              {/* Spacer for visual separation */}
+              <div style={{ width: '200px', flex: 'none' }} />
+
+              {/* Second set of cards for seamless loop */}
+              <div 
+                className="carousel-card transition-all duration-500"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(71, 85, 105, 0.3)',
+                  borderRadius: '1rem',
+                  width: '280px',
+                  height: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  flex: 'none',
+                  padding: '2rem',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.5s ease-out'
+                }}
+                onMouseOver={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'paused';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'running';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
                 }}
               >
                 <div 
@@ -878,6 +1031,294 @@ const WorldBuilderLandingPage = () => {
                   Use our flexible template system to create the foundation of your world. Define rules, environment, and watch civilizations rise and fall through procedurally generated history.
                 </p>
               </div>
+
+              {/* Duplicate card 2 for seamless loop */}
+              <div 
+                className="carousel-card transition-all duration-500"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(71, 85, 105, 0.3)',
+                  borderRadius: '1rem',
+                  width: '280px',
+                  height: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  flex: 'none',
+                  padding: '2rem',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.5s ease-out'
+                }}
+                onMouseOver={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'paused';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'running';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+                }}
+              >
+                <div 
+                  className="mx-auto mb-6 flex items-center justify-center"
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    background: 'linear-gradient(to right, #34d399, #fbbf24)',
+                    borderRadius: '50%',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}
+                >
+                  2
+                </div>
+                <h3 
+                  className="text-xl font-bold mb-4"
+                  style={{ color: 'white', textAlign: 'center' }}
+                >
+                  Populate & Connect
+                </h3>
+                <p 
+                  style={{ 
+                    color: '#cbd5e1', 
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    textAlign: 'center'
+                  }}
+                >
+                  Add characters with unique personalities and create settlements. Build the social fabric that drives emergent storytelling and creates memorable narratives.
+                </p>
+              </div>
+
+              {/* Duplicate card 3 for seamless loop */}
+              <div 
+                className="carousel-card transition-all duration-500"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(71, 85, 105, 0.3)',
+                  borderRadius: '1rem',
+                  width: '280px',
+                  height: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  flex: 'none',
+                  padding: '2rem',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.5s ease-out'
+                }}
+                onMouseOver={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'paused';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'running';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+                }}
+              >
+                <div 
+                  className="mx-auto mb-6 flex items-center justify-center"
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    background: 'linear-gradient(to right, #fbbf24, #818cf8)',
+                    borderRadius: '50%',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}
+                >
+                  3
+                </div>
+                <h3 
+                  className="text-xl font-bold mb-4"
+                  style={{ color: 'white', textAlign: 'center' }}
+                >
+                  Watch History Unfold
+                </h3>
+                <p 
+                  style={{ 
+                    color: '#cbd5e1', 
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    textAlign: 'center'
+                  }}
+                >
+                  Launch your simulation and observe as settlements grow organically based on resources. Characters make decisions and history writes itself.
+                </p>
+              </div>
+
+              {/* Duplicate card 4 for seamless loop */}
+              <div 
+                className="carousel-card transition-all duration-500"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(71, 85, 105, 0.3)',
+                  borderRadius: '1rem',
+                  width: '280px',
+                  height: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  flex: 'none',
+                  padding: '2rem',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.5s ease-out'
+                }}
+                onMouseOver={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'paused';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'running';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+                }}
+              >
+                <div 
+                  className="mx-auto mb-6 flex items-center justify-center"
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    background: 'linear-gradient(to right, #f59e0b, #10b981)',
+                    borderRadius: '50%',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}
+                >
+                  4
+                </div>
+                <h3 
+                  className="text-xl font-bold mb-4"
+                  style={{ color: 'white', textAlign: 'center' }}
+                >
+                  Analyze & Interact
+                </h3>
+                <p 
+                  style={{ 
+                    color: '#cbd5e1', 
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    textAlign: 'center'
+                  }}
+                >
+                  Dive deep into your world's data with analytics tools. Interact with characters, influence events, and guide the evolution of your civilization.
+                </p>
+              </div>
+
+              {/* Duplicate card 5 for seamless loop */}
+              <div 
+                className="carousel-card transition-all duration-500"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(71, 85, 105, 0.3)',
+                  borderRadius: '1rem',
+                  width: '280px',
+                  height: '360px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  flex: 'none',
+                  padding: '2rem',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  transformOrigin: 'center',
+                  transition: 'all 0.5s ease-out'
+                }}
+                onMouseOver={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'paused';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                  e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                  e.currentTarget.style.zIndex = '10';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseOut={(e) => {
+                  const container = e.currentTarget.closest('.carousel-container');
+                  container.style.animationPlayState = 'running';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.zIndex = '1';
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+                }}
+              >
+                <div 
+                  className="mx-auto mb-6 flex items-center justify-center"
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
+                    borderRadius: '50%',
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}
+                >
+                  5
+                </div>
+                <h3 
+                  className="text-xl font-bold mb-4"
+                  style={{ color: 'white', textAlign: 'center' }}
+                >
+                  Export & Share
+                </h3>
+                <p 
+                  style={{ 
+                    color: '#cbd5e1', 
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    textAlign: 'center'
+                  }}
+                >
+                  Export your world data, generate reports, and share your creations with the community. Perfect for D&D campaigns and storytelling projects.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -904,7 +1345,7 @@ const WorldBuilderLandingPage = () => {
             style={{
               display: 'flex',
               gap: '2rem',
-              animation: contentVisible.additionalFeatures ? 'carouselMove 15s linear infinite' : 'none',
+              animation: contentVisible.additionalFeatures ? 'carouselMoveWide 28s linear infinite' : 'none',
               animationPlayState: 'running'
             }}
             className="carousel-container"
@@ -933,18 +1374,18 @@ const WorldBuilderLandingPage = () => {
               onMouseOver={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'paused';
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.25)';
-                e.currentTarget.style.width = '480px';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
               }}
               onMouseOut={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'running';
-                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                 e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
-                e.currentTarget.style.width = '400px';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
               }}
             >
               <Clock 
@@ -997,18 +1438,18 @@ const WorldBuilderLandingPage = () => {
               onMouseOver={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'paused';
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.25)';
-                e.currentTarget.style.width = '480px';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
               }}
               onMouseOut={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'running';
-                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                 e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
-                e.currentTarget.style.width = '400px';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
               }}
             >
               <Sparkles 
@@ -1061,18 +1502,18 @@ const WorldBuilderLandingPage = () => {
               onMouseOver={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'paused';
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.25)';
-                e.currentTarget.style.width = '480px';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
               }}
               onMouseOut={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'running';
-                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                 e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
-                e.currentTarget.style.width = '400px';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
               }}
             >
               <Map 
@@ -1101,7 +1542,7 @@ const WorldBuilderLandingPage = () => {
               </p>
             </div>
 
-            {/* Duplicate cards for seamless loop */}
+            {/* Card 4: Data Analytics */}
             <div 
               className="carousel-card transition-all duration-500"
               style={{
@@ -1125,18 +1566,213 @@ const WorldBuilderLandingPage = () => {
               onMouseOver={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'paused';
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.6)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.25)';
-                e.currentTarget.style.width = '480px';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
               }}
               onMouseOut={(e) => {
                 const container = e.currentTarget.closest('.carousel-container');
                 container.style.animationPlayState = 'running';
-                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
                 e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
-                e.currentTarget.style.width = '400px';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Database 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#06b6d4',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Data Analytics
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Deep insights into population growth, economic trends, and social dynamics. Track the evolution of your civilization with comprehensive analytics.
+              </p>
+            </div>
+
+            {/* Card 5: Security & Privacy */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Shield 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#ef4444',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Security & Privacy
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Your worlds are securely stored with enterprise-grade encryption. Share publicly or keep private - you control who sees your creations.
+              </p>
+            </div>
+
+            {/* Card 6: Community & Sharing */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Share2 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#8b5cf6',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Community & Sharing
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Join a thriving community of world builders. Share your creations, discover new templates, and collaborate on epic storytelling projects.
+              </p>
+            </div>
+
+            {/* Spacer for visual separation */}
+            <div style={{ width: '200px', flex: 'none' }} />
+
+            {/* Second set of cards for seamless loop */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
               }}
             >
               <Clock 
@@ -1162,6 +1798,326 @@ const WorldBuilderLandingPage = () => {
                 }}
               >
                 Watch civilizations rise and fall through procedurally generated history. Settlements grow organically based on resources and environment.
+              </p>
+            </div>
+
+            {/* Duplicate card 2 for seamless loop */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Sparkles 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#34d399',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Emergent Stories
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Every simulation creates unique narratives and memorable characters. NPCs develop relationships, form alliances, and create unexpected plot twists.
+              </p>
+            </div>
+
+            {/* Duplicate card 3 for seamless loop */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Map 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#fbbf24',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Flexible Templates
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Customizable templates for any world type. From fantasy realms to sci-fi colonies, create and modify templates to match your vision perfectly.
+              </p>
+            </div>
+
+            {/* Duplicate card 4 for seamless loop */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Database 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#06b6d4',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Data Analytics
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Deep insights into population growth, economic trends, and social dynamics. Track the evolution of your civilization with comprehensive analytics.
+              </p>
+            </div>
+
+            {/* Duplicate card 5 for seamless loop */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Shield 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#ef4444',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Security & Privacy
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Your worlds are securely stored with enterprise-grade encryption. Share publicly or keep private - you control who sees your creations.
+              </p>
+            </div>
+
+            {/* Duplicate card 6 for seamless loop */}
+            <div 
+              className="carousel-card transition-all duration-500"
+              style={{
+                background: 'rgba(30, 41, 59, 0.4)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(71, 85, 105, 0.3)',
+                borderRadius: '1rem',
+                width: '400px',
+                height: '240px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+                padding: '2rem',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                transformOrigin: 'center',
+                transition: 'all 0.5s ease-out'
+              }}
+              onMouseOver={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'paused';
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = 'rgba(129, 140, 248, 0.5)';
+                e.currentTarget.style.boxShadow = '0 25px 80px rgba(0, 0, 0, 0.4), 0 0 40px rgba(129, 140, 248, 0.2)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                const container = e.currentTarget.closest('.carousel-container');
+                container.style.animationPlayState = 'running';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.3)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.background = 'rgba(30, 41, 59, 0.4)';
+              }}
+            >
+              <Share2 
+                className="mx-auto mb-4"
+                style={{ 
+                  color: '#8b5cf6',
+                  width: '3rem',
+                  height: '3rem'
+                }}
+              />
+              <h4 
+                className="font-bold mb-4"
+                style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}
+              >
+                Community & Sharing
+              </h4>
+              <p 
+                style={{ 
+                  color: '#cbd5e1', 
+                  fontSize: '1rem',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}
+              >
+                Join a thriving community of world builders. Share your creations, discover new templates, and collaborate on epic storytelling projects.
               </p>
             </div>
           </div>

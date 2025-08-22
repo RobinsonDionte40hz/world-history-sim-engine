@@ -11,7 +11,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Globe, 
   Search, 
   Star,
   Clock
@@ -185,31 +184,31 @@ const Navigation = ({
             {/* Logo Button (Hamburger) */}
             <button
               onClick={handleLogoClick}
-              className="transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
+              className="transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-transparent rounded-xl"
               style={{
-                background: 'rgba(129, 140, 248, 0.1)',
-                border: '1px solid rgba(129, 140, 248, 0.3)',
-                borderRadius: '0.75rem',
-                padding: '0.75rem',
+                background: 'transparent',
+                border: 'none',
+                padding: '0',
                 cursor: 'pointer'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = 'rgba(129, 140, 248, 0.2)';
-                e.target.style.borderColor = 'rgba(129, 140, 248, 0.5)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'rgba(129, 140, 248, 0.1)';
-                e.target.style.borderColor = 'rgba(129, 140, 248, 0.3)';
               }}
               aria-label="Toggle sidebar menu"
             >
-              <Globe 
-                className="w-6 h-6 md:w-8 md:h-8" 
+              <img 
+                src="/images/logo.png"
+                alt="World History Simulator Logo"
+                className="w-12 h-12 md:w-16 md:h-16 object-contain" 
                 style={{ 
-                  color: '#818cf8',
                   animation: logoSpinning ? 'logoSpin 0.6s ease-in-out' : 'none',
-                  transition: 'transform 0.3s ease'
+                  transition: 'transform 0.3s ease',
+                  filter: 'brightness(1.1) saturate(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
                 }} 
+                onError={(e) => {
+                  // Fallback to Globe icon if image fails to load
+                  e.target.style.display = 'none';
+                  const fallbackIcon = document.createElement('div');
+                  fallbackIcon.innerHTML = `<svg class="w-12 h-12 md:w-16 md:h-16" style="color: #818cf8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="m12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+                  e.target.parentNode.appendChild(fallbackIcon.firstChild);
+                }}
               />
             </button>
             
