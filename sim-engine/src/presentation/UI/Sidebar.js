@@ -659,6 +659,15 @@ const Sidebar = ({
       hoverBorder: 'rgba(239, 68, 68, 0.4)'
     },
     {
+      id: 'template-library',
+      label: '📚 Template Library',
+      path: '/templates',
+      onClick: () => navigate('/templates'),
+      description: 'Browse & manage templates',
+      hoverColor: 'rgba(129, 140, 248, 0.15)',
+      hoverBorder: 'rgba(129, 140, 248, 0.4)'
+    },
+    {
       id: 'divider-simulation',
       type: 'divider',
       label: '⚡ Simulation'
