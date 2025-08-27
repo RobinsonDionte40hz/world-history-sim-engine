@@ -1,4 +1,7 @@
 import React, { useState, useCallback } from 'react';
+import { Save, Upload } from 'lucide-react';
+import useTemplates from '../hooks/useTemplates';
+import TemplateLibraryPanel from './TemplateLibraryPanel';
 
 // Note: Redux integration will need to be implemented when store is available
 // import { useDispatch } from 'react-redux';
@@ -589,6 +592,9 @@ const InteractionEditor = ({
 
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  
+  const { saveTemplate, loadTemplate } = useTemplates();
 
   // Validation
   const validateInteraction = useCallback(() => {
@@ -626,6 +632,57 @@ const InteractionEditor = ({
       onSave(interactionData);
     }
   }, [interactionData, mode, dispatch, onSave, validateInteraction]);
+
+  // Template functions
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!validateInteraction()) {
+      return;
+    }
+
+    const templateName = prompt('Enter template name:', `${interactionData.name} Template`);
+    if (!templateName) return;
+
+    const templateDescription = prompt('Enter template description (optional):', 
+      `Template based on ${interactionData.name}`);
+
+    try {
+      const templateData = {
+        ...interactionData,
+        name: templateName,
+        description: templateDescription || `Template based on ${interactionData.name}`,
+        metadata: {
+          ...interactionData.metadata,
+          isTemplate: true,
+          originalInteractionId: interactionData.id,
+          category: interactionData.category || 'general',
+          difficulty: 'intermediate',
+          author: 'User',
+          version: '1.0.0'
+        }
+      };
+
+      await saveTemplate('interactions', templateData);
+      alert('Template saved successfully!');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      alert(`Failed to save template: ${error.message}`);
+    }
+  }, [interactionData, validateInteraction, saveTemplate]);
+
+  const handleLoadFromTemplate = useCallback((template) => {
+    try {
+      const instance = loadTemplate('interactions', template.id, {
+        name: `${template.name} Instance`,
+        id: `interaction_${Date.now()}`
+      });
+
+      setInteractionData(instance);
+      setShowTemplateLibrary(false);
+    } catch (error) {
+      console.error('Failed to load template:', error);
+      alert(`Failed to load template: ${error.message}`);
+    }
+  }, [loadTemplate]);
 
   // Tabs configuration
   const tabs = [
@@ -955,20 +1012,69 @@ const InteractionEditor = ({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          {mode === 'create' ? 'Create Interaction' : 'Save Changes'}
-        </button>
+      <div className="flex justify-between items-center mt-6">
+        {/* Template Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowTemplateLibrary(true)}
+            className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Load Template
+          </button>
+          {mode !== 'create' && (
+            <button
+              onClick={handleSaveAsTemplate}
+              className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save as Template
+            </button>
+          )}
+        </div>
+
+        {/* Main Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            {mode === 'create' ? 'Create Interaction' : 'Save Changes'}
+          </button>
+        </div>
       </div>
+
+      {/* Template Library Modal */}
+      {showTemplateLibrary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-white/20 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Interaction Templates</h3>
+              <button
+                onClick={() => setShowTemplateLibrary(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+              <TemplateLibraryPanel
+                selectedType="interactions"
+                onTemplateSelect={handleLoadFromTemplate}
+                showRecommendations={true}
+                enableBulkOperations={false}
+                className="border-0 bg-transparent"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

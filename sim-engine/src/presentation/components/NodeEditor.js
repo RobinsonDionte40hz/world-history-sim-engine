@@ -1,5 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import WorldValidator from '../../domain/services/WorldValidator';
+import { Save, Upload } from 'lucide-react';
+import useTemplates from '../hooks/useTemplates';
+import TemplateLibraryPanel from './TemplateLibraryPanel';
 
 // Node types with their characteristics
 const NODE_TYPES = [
@@ -424,6 +427,9 @@ const NodeEditor = ({
 
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  
+  const { saveTemplate, loadTemplate } = useTemplates();
 
   // Notify parent of changes
   useEffect(() => {
@@ -461,6 +467,57 @@ const NodeEditor = ({
       onSave(nodeData);
     }
   }, [nodeData, onSave, validateNode]);
+
+  // Template functions
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!validateNode()) {
+      return;
+    }
+
+    const templateName = prompt('Enter template name:', `${nodeData.name} Template`);
+    if (!templateName) return;
+
+    const templateDescription = prompt('Enter template description (optional):', 
+      `Template based on ${nodeData.name}`);
+
+    try {
+      const templateData = {
+        ...nodeData,
+        name: templateName,
+        description: templateDescription || `Template based on ${nodeData.name}`,
+        metadata: {
+          ...nodeData.metadata,
+          isTemplate: true,
+          originalNodeId: nodeData.id,
+          category: nodeData.type || 'general',
+          difficulty: 'intermediate',
+          author: 'User',
+          version: '1.0.0'
+        }
+      };
+
+      await saveTemplate('nodes', templateData);
+      alert('Template saved successfully!');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      alert(`Failed to save template: ${error.message}`);
+    }
+  }, [nodeData, validateNode, saveTemplate]);
+
+  const handleLoadFromTemplate = useCallback((template) => {
+    try {
+      const instance = loadTemplate('nodes', template.id, {
+        name: `${template.name} Instance`,
+        id: `node_${Date.now()}`
+      });
+
+      setNodeData(instance);
+      setShowTemplateLibrary(false);
+    } catch (error) {
+      console.error('Failed to load template:', error);
+      alert(`Failed to load template: ${error.message}`);
+    }
+  }, [loadTemplate]);
 
   // Handle type selection
   const handleTypeSelect = (typeId) => {
@@ -824,20 +881,69 @@ const NodeEditor = ({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          {mode === 'create' ? 'Create Node' : 'Save Changes'}
-        </button>
+      <div className="flex justify-between items-center mt-6">
+        {/* Template Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowTemplateLibrary(true)}
+            className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Load Template
+          </button>
+          {mode !== 'create' && (
+            <button
+              onClick={handleSaveAsTemplate}
+              className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save as Template
+            </button>
+          )}
+        </div>
+
+        {/* Main Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            {mode === 'create' ? 'Create Node' : 'Save Changes'}
+          </button>
+        </div>
       </div>
+
+      {/* Template Library Modal */}
+      {showTemplateLibrary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-white/20 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Node Templates</h3>
+              <button
+                onClick={() => setShowTemplateLibrary(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+              <TemplateLibraryPanel
+                selectedType="nodes"
+                onTemplateSelect={handleLoadFromTemplate}
+                showRecommendations={true}
+                enableBulkOperations={false}
+                className="border-0 bg-transparent"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

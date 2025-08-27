@@ -1,514 +1,528 @@
 /**
- * TemplateIntegrationService - Service for six-step world building with template integration
- * 
- * Creates content from templates with customizations for all component types.
- * Implements template customization application logic for world, node, interaction, character templates.
- * Adds methods to save world content as new templates (individual components and complete worlds).
- * Connects to existing TemplateManager and adds support for composite templates and role sets.
- * Adds template dependency validation and resolution for mappless world components.
- * 
- * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7
+ * TemplateIntegrationService - Integrates template system with existing editors and components
+ * Provides seamless data flow between template customization and character/node/interaction editors
  */
+import TextTemplateEngine from '../../domain/services/TextTemplateEngine';
 
 class TemplateIntegrationService {
-  constructor(templateManager) {
-    this.templateManager = templateManager;
-    this.customizationHistory = new Map(); // Track applied customizations
-    this.templateDependencies = new Map(); // Track template dependencies
+  constructor() {
+    this.templateEngine = new TextTemplateEngine();
+    this.contextProviders = new Map();
+    this.templateSubscribers = new Set();
   }
 
   /**
-   * Creates world content from template with customizations
-   * @param {string} templateId - Template identifier
-   * @param {Object} customizations - Customization overrides
-   * @param {string} contentType - Type of content (world, node, interaction, character, composite)
-   * @returns {Object} Created content with applied customizations
+   * Register a context provider for template resolution
+   * @param {string} type - Context type (character, node, world, etc.)
+   * @param {function} provider - Function that returns context data
    */
-  async createFromTemplate(templateId, customizations = {}, contentType) {
-    try {
-      // Get template from manager
-      const template = await this.templateManager.getTemplate(templateId, contentType);
-      if (!template) {
-        throw new Error(`Template '${templateId}' not found for type '${contentType}'`);
+  registerContextProvider(type, provider) {
+    this.contextProviders.set(type, provider);
+  }
+
+  /**
+   * Subscribe to template updates
+   * @param {function} callback - Callback function for template updates
+   */
+  subscribeToTemplateUpdates(callback) {
+    this.templateSubscribers.add(callback);
+  }
+
+  /**
+   * Unsubscribe from template updates
+   * @param {function} callback - Callback function to remove
+   */
+  unsubscribeFromTemplateUpdates(callback) {
+    this.templateSubscribers.delete(callback);
+  }
+
+  /**
+   * Notify all subscribers of template updates
+   * @param {object} updateData - Data about the template update
+   */
+  notifyTemplateUpdate(updateData) {
+    this.templateSubscribers.forEach(callback => {
+      try {
+        callback(updateData);
+      } catch (error) {
+        console.error('Error in template update callback:', error);
       }
-
-      // Validate template dependencies
-      await this.validateTemplateDependencies(template, contentType);
-
-      // Apply customizations based on content type
-      let customizedContent;
-      switch (contentType) {
-        case 'world':
-          customizedContent = this.createWorldFromTemplate(template, customizations);
-          break;
-        case 'node':
-          customizedContent = this.createNodeFromTemplate(template, customizations);
-          break;
-        case 'interaction':
-          customizedContent = this.createInteractionFromTemplate(template, customizations);
-          break;
-        case 'character':
-          customizedContent = this.createCharacterFromTemplate(template, customizations);
-          break;
-        case 'composite':
-          customizedContent = await this.createCompositeFromTemplate(template, customizations);
-          break;
-        default:
-          throw new Error(`Unknown content type: ${contentType}`);
-      }
-
-      // Track customization history
-      this.trackCustomization(templateId, contentType, customizations, customizedContent.id);
-
-      return customizedContent;
-    } catch (error) {
-      throw new Error(`Failed to create content from template: ${error.message}`);
-    }
-  }
-
-  /**
-   * Creates world content from world template
-   * @param {Object} template - World template
-   * @param {Object} customizations - World customizations
-   * @returns {Object} Customized world configuration
-   */
-  createWorldFromTemplate(template, customizations) {
-    const worldConfig = {
-      id: this.generateId(),
-      templateId: template.id,
-      isTemplateInstance: true,
-      
-      // Apply basic properties with customizations
-      name: customizations.name || template.name || 'Untitled World',
-      description: customizations.description || template.description || '',
-      
-      // Apply rules with deep merge
-      rules: this.mergeObjects(template.rules || {}, customizations.rules || {}),
-      
-      // Apply initial conditions with deep merge
-      initialConditions: this.mergeObjects(template.initialConditions || {}, customizations.initialConditions || {}),
-      
-      // Initialize empty collections (will be populated through six-step process)
-      nodes: [],
-      interactions: [],
-      characters: [],
-      nodePopulations: {},
-      
-      // Metadata
-      createdAt: new Date(),
-      modifiedAt: new Date(),
-      version: '1.0.0'
-    };
-
-    // Apply any additional customizations
-    if (customizations.metadata) {
-      worldConfig.metadata = { ...template.metadata, ...customizations.metadata };
-    }
-
-    return worldConfig;
-  }
-
-  /**
-   * Creates node content from node template (mappless - no coordinates)
-   * @param {Object} template - Node template
-   * @param {Object} customizations - Node customizations
-   * @returns {Object} Customized node configuration
-   */
-  createNodeFromTemplate(template, customizations) {
-    const nodeConfig = {
-      id: customizations.id || this.generateId(),
-      templateId: template.id,
-      isTemplateInstance: true,
-      
-      // Apply basic properties
-      name: customizations.name || template.name || 'Untitled Node',
-      type: customizations.type || template.type || 'settlement',
-      description: customizations.description || template.description || '',
-      
-      // Apply environmental properties (mappless - no coordinates)
-      environment: this.mergeObjects(template.environment || {}, customizations.environment || {}),
-      
-      // Apply resources
-      resources: customizations.resources || template.resources || [],
-      
-      // Apply capacity
-      capacity: customizations.capacity !== undefined ? customizations.capacity : template.capacity,
-      
-      // Apply special properties
-      specialProperties: this.mergeObjects(template.specialProperties || {}, customizations.specialProperties || {}),
-      
-      // Metadata
-      createdAt: new Date()
-    };
-
-    return nodeConfig;
-  }
-
-  /**
-   * Creates interaction content from interaction template (character capabilities)
-   * @param {Object} template - Interaction template
-   * @param {Object} customizations - Interaction customizations
-   * @returns {Object} Customized interaction configuration
-   */
-  createInteractionFromTemplate(template, customizations) {
-    const interactionConfig = {
-      id: customizations.id || this.generateId(),
-      templateId: template.id,
-      isTemplateInstance: true,
-      
-      // Apply basic properties
-      name: customizations.name || template.name || 'Untitled Interaction',
-      type: customizations.type || template.type || 'social',
-      category: customizations.category || template.category || 'social',
-      description: customizations.description || template.description || '',
-      
-      // Apply capability requirements
-      requirements: this.mergeObjects(template.requirements || {}, customizations.requirements || {}),
-      
-      // Apply effects
-      effects: this.mergeObjects(template.effects || {}, customizations.effects || {}),
-      
-      // Apply conditions
-      conditions: this.mergeObjects(template.conditions || {}, customizations.conditions || {}),
-      
-      // Apply modifiers
-      modifiers: this.mergeObjects(template.modifiers || {}, customizations.modifiers || {}),
-      
-      // Metadata
-      createdAt: new Date()
-    };
-
-    return interactionConfig;
-  }
-
-  /**
-   * Creates character content from character template with capability assignment
-   * @param {Object} template - Character template
-   * @param {Object} customizations - Character customizations
-   * @returns {Object} Customized character configuration
-   */
-  createCharacterFromTemplate(template, customizations) {
-    const characterConfig = {
-      id: customizations.id || this.generateId(),
-      templateId: template.id,
-      isTemplateInstance: true,
-      
-      // Apply basic properties
-      name: customizations.name || template.name || 'Untitled Character',
-      description: customizations.description || template.description || '',
-      
-      // Apply attributes with deep merge
-      attributes: this.mergeObjects(template.attributes || {}, customizations.attributes || {}),
-      
-      // Apply personality profile
-      personality: this.mergeObjects(template.personality || {}, customizations.personality || {}),
-      
-      // Apply capabilities (assigned interactions)
-      capabilities: customizations.capabilities || template.capabilities || [],
-      
-      // Apply background and history
-      background: customizations.background || template.background || '',
-      history: customizations.history || template.history || [],
-      
-      // Apply relationships
-      relationships: customizations.relationships || template.relationships || [],
-      
-      // Apply goals and motivations
-      goals: customizations.goals || template.goals || [],
-      motivations: this.mergeObjects(template.motivations || {}, customizations.motivations || {}),
-      
-      // Metadata
-      createdAt: new Date()
-    };
-
-    return characterConfig;
-  }
-
-  /**
-   * Creates composite content from composite template (multiple component types)
-   * @param {Object} template - Composite template
-   * @param {Object} customizations - Composite customizations
-   * @returns {Object} Customized composite configuration
-   */
-  async createCompositeFromTemplate(template, customizations) {
-    const compositeConfig = {
-      id: this.generateId(),
-      templateId: template.id,
-      isTemplateInstance: true,
-      type: 'composite',
-      name: customizations.name || template.name || 'Untitled Composite',
-      components: {},
-      
-      // Metadata
-      createdAt: new Date()
-    };
-
-    // Process each component type in the composite
-    if (template.components) {
-      for (const [componentType, componentTemplates] of Object.entries(template.components)) {
-        compositeConfig.components[componentType] = [];
-        
-        for (const componentTemplate of componentTemplates) {
-          const componentCustomizations = customizations.components?.[componentType]?.[componentTemplate.id] || {};
-          const customizedComponent = await this.createFromTemplate(
-            componentTemplate.id, 
-            componentCustomizations, 
-            componentType
-          );
-          compositeConfig.components[componentType].push(customizedComponent);
-        }
-      }
-    }
-
-    return compositeConfig;
-  }
-
-  /**
-   * Saves world content as new template
-   * @param {Object} content - Content to save as template
-   * @param {string} contentType - Type of content
-   * @param {Object} templateMetadata - Template metadata
-   * @returns {string} New template ID
-   */
-  async saveAsTemplate(content, contentType, templateMetadata) {
-    try {
-      // Remove instance-specific data
-      const templateData = this.sanitizeForTemplate(content, contentType);
-      
-      // Add template metadata
-      templateData.templateMetadata = {
-        ...templateMetadata,
-        sourceContentId: content.id,
-        contentType,
-        createdAt: new Date(),
-        version: '1.0.0'
-      };
-
-      // Save through template manager
-      const templateId = await this.templateManager.saveTemplate(templateData, contentType);
-      
-      return templateId;
-    } catch (error) {
-      throw new Error(`Failed to save content as template: ${error.message}`);
-    }
-  }
-
-  /**
-   * Saves complete world as composite template
-   * @param {Object} worldConfig - Complete world configuration
-   * @param {Object} templateMetadata - Template metadata
-   * @returns {string} New composite template ID
-   */
-  async saveWorldAsCompositeTemplate(worldConfig, templateMetadata) {
-    try {
-      const compositeTemplate = {
-        id: this.generateId(),
-        name: templateMetadata.name || `${worldConfig.name} Template`,
-        description: templateMetadata.description || `Complete world template based on ${worldConfig.name}`,
-        type: 'composite',
-        
-        // Include all world components
-        components: {
-          world: [this.sanitizeForTemplate(worldConfig, 'world')],
-          nodes: worldConfig.nodes.map(node => this.sanitizeForTemplate(node, 'node')),
-          interactions: worldConfig.interactions.map(interaction => this.sanitizeForTemplate(interaction, 'interaction')),
-          characters: worldConfig.characters.map(character => this.sanitizeForTemplate(character, 'character'))
-        },
-        
-        // Include node populations structure
-        nodePopulationStructure: worldConfig.nodePopulations,
-        
-        templateMetadata: {
-          ...templateMetadata,
-          sourceWorldId: worldConfig.id,
-          createdAt: new Date(),
-          version: '1.0.0'
-        }
-      };
-
-      const templateId = await this.templateManager.saveTemplate(compositeTemplate, 'composite');
-      return templateId;
-    } catch (error) {
-      throw new Error(`Failed to save world as composite template: ${error.message}`);
-    }
-  }
-
-  /**
-   * Validates template dependencies and resolves them
-   * @param {Object} template - Template to validate
-   * @param {string} contentType - Type of content
-   * @returns {Promise<boolean>} Validation result
-   */
-  async validateTemplateDependencies(template, contentType) {
-    if (!template.dependencies || template.dependencies.length === 0) {
-      return true; // No dependencies to validate
-    }
-
-    for (const dependency of template.dependencies) {
-      const dependencyTemplate = await this.templateManager.getTemplate(dependency.id, dependency.type);
-      if (!dependencyTemplate) {
-        throw new Error(`Missing dependency: ${dependency.id} (${dependency.type})`);
-      }
-      
-      // Recursively validate dependency's dependencies
-      await this.validateTemplateDependencies(dependencyTemplate, dependency.type);
-    }
-
-    return true;
-  }
-
-  /**
-   * Tracks template customization history
-   * @param {string} templateId - Template ID
-   * @param {string} contentType - Content type
-   * @param {Object} customizations - Applied customizations
-   * @param {string} resultId - Result content ID
-   */
-  trackCustomization(templateId, contentType, customizations, resultId) {
-    const historyKey = `${templateId}:${contentType}`;
-    if (!this.customizationHistory.has(historyKey)) {
-      this.customizationHistory.set(historyKey, []);
-    }
-    
-    this.customizationHistory.get(historyKey).push({
-      customizations,
-      resultId,
-      timestamp: new Date()
     });
   }
 
   /**
-   * Gets customization history for a template
-   * @param {string} templateId - Template ID
-   * @param {string} contentType - Content type
-   * @returns {Array} Customization history
+   * Get comprehensive context for template resolution
+   * @param {object} options - Options for context generation
+   * @returns {object} - Complete context object
    */
-  getCustomizationHistory(templateId, contentType) {
-    const historyKey = `${templateId}:${contentType}`;
-    return this.customizationHistory.get(historyKey) || [];
-  }
+  getTemplateContext(options = {}) {
+    const context = {};
 
-  /**
-   * Deep merges two objects, with the second object taking precedence
-   * @param {Object} target - Target object
-   * @param {Object} source - Source object
-   * @returns {Object} Merged object
-   */
-  mergeObjects(target, source) {
-    const result = { ...target };
-    
-    for (const [key, value] of Object.entries(source)) {
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        result[key] = this.mergeObjects(result[key] || {}, value);
-      } else {
-        result[key] = value;
+    // Gather context from all registered providers
+    this.contextProviders.forEach((provider, type) => {
+      try {
+        const typeContext = provider(options);
+        if (typeContext) {
+          context[type] = typeContext;
+        }
+      } catch (error) {
+        console.error(`Error getting context from ${type} provider:`, error);
       }
+    });
+
+    // Add default context if none provided
+    if (Object.keys(context).length === 0) {
+      context.character = this.getDefaultCharacterContext();
+      context.node = this.getDefaultNodeContext();
+      context.world = this.getDefaultWorldContext();
     }
-    
-    return result;
+
+    return context;
   }
 
   /**
-   * Sanitizes content for use as template (removes instance-specific data)
-   * @param {Object} content - Content to sanitize
-   * @param {string} contentType - Type of content
-   * @returns {Object} Sanitized content
+   * Apply template customizations to an entity
+   * @param {object} template - Template with customizations
+   * @param {object} entity - Entity to apply template to
+   * @param {object} context - Context for template resolution
+   * @returns {object} - Entity with applied template
    */
-  sanitizeForTemplate(content, contentType) {
-    const sanitized = { ...content };
-    
-    // Remove instance-specific fields
-    delete sanitized.id;
-    delete sanitized.createdAt;
-    delete sanitized.modifiedAt;
-    delete sanitized.isTemplateInstance;
-    delete sanitized.templateId;
-    
-    // Remove populated data for world templates
-    if (contentType === 'world') {
-      sanitized.nodes = [];
-      sanitized.interactions = [];
-      sanitized.characters = [];
-      sanitized.nodePopulations = {};
+  applyTemplateToEntity(template, entity, context = null) {
+    if (!template || !entity) return entity;
+
+    const resolveContext = context || this.getTemplateContext({ entity });
+    const appliedEntity = { ...entity };
+
+    // Apply structural customizations
+    Object.keys(template).forEach(key => {
+      if (key !== 'textTemplates' && key !== 'metadata' && template[key] !== undefined) {
+        appliedEntity[key] = template[key];
+      }
+    });
+
+    // Apply text template customizations
+    if (template.textTemplates) {
+      Object.entries(template.textTemplates).forEach(([key, textTemplate]) => {
+        if (textTemplate) {
+          const resolution = this.templateEngine.resolve(textTemplate, resolveContext);
+          if (resolution.errors.length === 0) {
+            appliedEntity[key] = resolution.resolved;
+          } else {
+            console.warn(`Template resolution errors for ${key}:`, resolution.errors);
+            appliedEntity[key] = textTemplate; // Fallback to original template
+          }
+        }
+      });
     }
-    
-    return sanitized;
+
+    // Add metadata about template application
+    appliedEntity.metadata = {
+      ...appliedEntity.metadata,
+      appliedTemplate: template.id,
+      appliedAt: new Date().toISOString(),
+      templateResolutionErrors: this.getTemplateResolutionErrors(template, resolveContext)
+    };
+
+    return appliedEntity;
   }
 
   /**
-   * Generates a unique identifier
-   * @returns {string} Unique identifier
+   * Get template resolution errors for all text templates
+   * @param {object} template - Template to check
+   * @param {object} context - Context for resolution
+   * @returns {object} - Map of field names to error arrays
    */
-  generateId() {
-    return 'id_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
-  }
+  getTemplateResolutionErrors(template, context) {
+    const errors = {};
 
-  /**
-   * Gets available templates by content type
-   * @param {string} contentType - Type of content
-   * @returns {Promise<Array>} Available templates
-   */
-  async getAvailableTemplates(contentType) {
-    try {
-      return await this.templateManager.getTemplatesByType(contentType);
-    } catch (error) {
-      throw new Error(`Failed to get available templates: ${error.message}`);
+    if (template.textTemplates) {
+      Object.entries(template.textTemplates).forEach(([key, textTemplate]) => {
+        if (textTemplate) {
+          const resolution = this.templateEngine.resolve(textTemplate, context);
+          if (resolution.errors.length > 0) {
+            errors[key] = resolution.errors;
+          }
+        }
+      });
     }
+
+    return errors;
   }
 
   /**
-   * Validates template customizations
-   * @param {Object} template - Template to validate against
-   * @param {Object} customizations - Customizations to validate
-   * @param {string} contentType - Type of content
-   * @returns {Object} Validation result
+   * Validate template compatibility with entity type
+   * @param {object} template - Template to validate
+   * @param {string} entityType - Type of entity (character, node, interaction)
+   * @param {object} context - Context for validation
+   * @returns {object} - Validation result
    */
-  validateCustomizations(template, customizations, contentType) {
+  validateTemplateCompatibility(template, entityType, context = null) {
     const errors = [];
     const warnings = [];
+    const resolveContext = context || this.getTemplateContext();
 
-    // Validate required fields are not removed
-    const requiredFields = this.getRequiredFields(contentType);
-    for (const field of requiredFields) {
-      if (customizations.hasOwnProperty(field) && !customizations[field]) {
-        errors.push(`Required field '${field}' cannot be empty`);
-      }
+    // Check if template type matches entity type
+    if (template.type && template.type !== entityType) {
+      warnings.push(`Template type '${template.type}' doesn't match entity type '${entityType}'`);
     }
 
-    // Validate data types match template expectations
-    for (const [key, value] of Object.entries(customizations)) {
-      if (template.hasOwnProperty(key) && template[key] !== null) {
-        const templateType = typeof template[key];
-        const customizationType = typeof value;
-        
-        if (templateType !== customizationType && value !== null) {
-          warnings.push(`Type mismatch for '${key}': expected ${templateType}, got ${customizationType}`);
+    // Validate text templates
+    if (template.textTemplates) {
+      Object.entries(template.textTemplates).forEach(([key, textTemplate]) => {
+        if (textTemplate) {
+          const validation = this.templateEngine.validateTemplate(textTemplate);
+          if (!validation.isValid) {
+            errors.push(`Text template '${key}' has validation errors: ${validation.errors.join(', ')}`);
+          }
+
+          const resolution = this.templateEngine.resolve(textTemplate, resolveContext);
+          if (resolution.errors.length > 0) {
+            warnings.push(`Text template '${key}' has resolution warnings: ${resolution.errors.join(', ')}`);
+          }
         }
-      }
+      });
+    }
+
+    // Check required fields for entity type
+    const requiredFields = this.getRequiredFieldsForEntityType(entityType);
+    const missingFields = requiredFields.filter(field =>
+      template[field] === undefined || template[field] === null
+    );
+
+    if (missingFields.length > 0) {
+      warnings.push(`Missing recommended fields: ${missingFields.join(', ')}`);
     }
 
     return {
-      isValid: errors.length === 0,
+      isCompatible: errors.length === 0,
       errors,
       warnings
     };
   }
 
   /**
-   * Gets required fields for content type
-   * @param {string} contentType - Type of content
-   * @returns {Array} Required fields
+   * Get required fields for an entity type
+   * @param {string} entityType - Type of entity
+   * @returns {string[]} - Array of required field names
    */
-  getRequiredFields(contentType) {
+  getRequiredFieldsForEntityType(entityType) {
     const requiredFields = {
-      world: ['name'],
+      character: ['name', 'attributes'],
       node: ['name', 'type'],
       interaction: ['name', 'type'],
-      character: ['name'],
-      composite: ['name']
+      world: ['name']
     };
 
-    return requiredFields[contentType] || [];
+    return requiredFields[entityType] || [];
+  }
+
+  /**
+   * Enhance editor data with template context
+   * @param {string} editorType - Type of editor (character, node, interaction)
+   * @param {object} editorData - Current editor data
+   * @returns {object} - Enhanced context for template system
+   */
+  enhanceEditorContext(editorType, editorData) {
+    const baseContext = this.getTemplateContext();
+
+    // Add current editor data to context
+    baseContext[editorType] = {
+      ...baseContext[editorType],
+      ...editorData
+    };
+
+    // Add editor-specific enhancements
+    switch (editorType) {
+      case 'character':
+        baseContext.character = this.enhanceCharacterContext(baseContext.character);
+        break;
+      case 'node':
+        baseContext.node = this.enhanceNodeContext(baseContext.node);
+        break;
+      case 'interaction':
+        baseContext.interaction = this.enhanceInteractionContext(baseContext.interaction);
+        break;
+      default:
+        // No specific enhancement for unknown editor types
+        console.warn(`Unknown editor type: ${editorType}`);
+        break;
+    }
+
+    return baseContext;
+  }
+
+  /**
+   * Enhance character context with computed properties
+   * @param {object} characterData - Character data
+   * @returns {object} - Enhanced character context
+   */
+  enhanceCharacterContext(characterData) {
+    if (!characterData) return this.getDefaultCharacterContext();
+
+    const enhanced = { ...characterData };
+
+    // Add computed attribute modifiers
+    if (enhanced.attributes) {
+      enhanced.modifiers = {};
+      Object.entries(enhanced.attributes).forEach(([attr, value]) => {
+        enhanced.modifiers[attr] = Math.floor((value - 10) / 2);
+      });
+    }
+
+    // Add personality descriptors
+    if (enhanced.personality) {
+      enhanced.personalityDescriptors = this.getPersonalityDescriptors(enhanced.personality);
+    }
+
+    // Add archetype information
+    if (enhanced.archetype) {
+      enhanced.archetypeInfo = this.getArchetypeInfo(enhanced.archetype);
+    }
+
+    return enhanced;
+  }
+
+  /**
+   * Enhance node context with computed properties
+   * @param {object} nodeData - Node data
+   * @returns {object} - Enhanced node context
+   */
+  enhanceNodeContext(nodeData) {
+    if (!nodeData) return this.getDefaultNodeContext();
+
+    const enhanced = { ...nodeData };
+
+    // Add environment descriptors
+    if (enhanced.environmentalProperties) {
+      enhanced.environmentDescriptors = this.getEnvironmentDescriptors(enhanced.environmentalProperties);
+    }
+
+    // Add cultural descriptors
+    if (enhanced.culturalContext) {
+      enhanced.culturalDescriptors = this.getCulturalDescriptors(enhanced.culturalContext);
+    }
+
+    return enhanced;
+  }
+
+  /**
+   * Enhance interaction context with computed properties
+   * @param {object} interactionData - Interaction data
+   * @returns {object} - Enhanced interaction context
+   */
+  enhanceInteractionContext(interactionData) {
+    if (!interactionData) return {};
+
+    const enhanced = { ...interactionData };
+
+    // Add difficulty descriptors
+    if (enhanced.requirements) {
+      enhanced.difficultyLevel = this.calculateInteractionDifficulty(enhanced.requirements);
+    }
+
+    return enhanced;
+  }
+
+  /**
+   * Get personality descriptors from personality values
+   * @param {object} personality - Personality object
+   * @returns {object} - Descriptive personality traits
+   */
+  getPersonalityDescriptors(personality) {
+    const descriptors = {};
+
+    if (personality.aggression !== undefined) {
+      if (personality.aggression > 0.7) descriptors.aggression = 'very aggressive';
+      else if (personality.aggression > 0.4) descriptors.aggression = 'somewhat aggressive';
+      else descriptors.aggression = 'peaceful';
+    }
+
+    if (personality.curiosity !== undefined) {
+      if (personality.curiosity > 0.7) descriptors.curiosity = 'very curious';
+      else if (personality.curiosity > 0.4) descriptors.curiosity = 'somewhat curious';
+      else descriptors.curiosity = 'incurious';
+    }
+
+    if (personality.empathy !== undefined) {
+      if (personality.empathy > 0.7) descriptors.empathy = 'very empathetic';
+      else if (personality.empathy > 0.4) descriptors.empathy = 'somewhat empathetic';
+      else descriptors.empathy = 'cold';
+    }
+
+    return descriptors;
+  }
+
+  /**
+   * Get archetype information
+   * @param {string} archetype - Archetype name
+   * @returns {object} - Archetype information
+   */
+  getArchetypeInfo(archetype) {
+    const archetypes = {
+      warrior: { primaryAttribute: 'strength', description: 'A skilled combatant' },
+      mage: { primaryAttribute: 'intelligence', description: 'A wielder of magic' },
+      rogue: { primaryAttribute: 'dexterity', description: 'A stealthy infiltrator' },
+      cleric: { primaryAttribute: 'wisdom', description: 'A divine spellcaster' },
+      bard: { primaryAttribute: 'charisma', description: 'A performer and storyteller' }
+    };
+
+    return archetypes[archetype.toLowerCase()] || { description: 'Unknown archetype' };
+  }
+
+  /**
+   * Get environment descriptors
+   * @param {object} environmentalProperties - Environmental properties
+   * @returns {string[]} - Array of descriptive terms
+   */
+  getEnvironmentDescriptors(environmentalProperties) {
+    const descriptors = [];
+
+    Object.entries(environmentalProperties).forEach(([key, value]) => {
+      if (value === true) {
+        descriptors.push(key);
+      }
+    });
+
+    return descriptors;
+  }
+
+  /**
+   * Get cultural descriptors
+   * @param {object} culturalContext - Cultural context
+   * @returns {object} - Cultural descriptors
+   */
+  getCulturalDescriptors(culturalContext) {
+    return {
+      ...culturalContext,
+      formality: culturalContext.customs?.includes('formal') ? 'formal' : 'informal'
+    };
+  }
+
+  /**
+   * Calculate interaction difficulty
+   * @param {object} requirements - Interaction requirements
+   * @returns {string} - Difficulty level
+   */
+  calculateInteractionDifficulty(requirements) {
+    if (!requirements.attributes) return 'easy';
+
+    const totalRequirement = Object.values(requirements.attributes).reduce((sum, val) => sum + val, 0);
+    const averageRequirement = totalRequirement / Object.keys(requirements.attributes).length;
+
+    if (averageRequirement > 15) return 'very hard';
+    if (averageRequirement > 12) return 'hard';
+    if (averageRequirement > 10) return 'moderate';
+    return 'easy';
+  }
+
+  /**
+   * Get default character context
+   * @returns {object} - Default character context
+   */
+  getDefaultCharacterContext() {
+    return {
+      name: 'Sample Character',
+      attributes: {
+        strength: 12,
+        dexterity: 12,
+        constitution: 12,
+        intelligence: 12,
+        wisdom: 12,
+        charisma: 12
+      },
+      personality: {
+        aggression: 0.5,
+        curiosity: 0.5,
+        empathy: 0.5
+      },
+      archetype: 'adventurer'
+    };
+  }
+
+  /**
+   * Get default node context
+   * @returns {object} - Default node context
+   */
+  getDefaultNodeContext() {
+    return {
+      name: 'Sample Location',
+      type: 'settlement',
+      environmentalProperties: {
+        populated: true,
+        safe: true
+      },
+      culturalContext: {
+        language: 'common',
+        customs: 'friendly'
+      }
+    };
+  }
+
+  /**
+   * Get default world context
+   * @returns {object} - Default world context
+   */
+  getDefaultWorldContext() {
+    return {
+      name: 'Sample World',
+      theme: 'fantasy',
+      era: 'medieval'
+    };
+  }
+
+  /**
+   * Batch apply templates to multiple entities
+   * @param {object[]} templates - Array of templates
+   * @param {object[]} entities - Array of entities
+   * @param {object} context - Context for template resolution
+   * @returns {object[]} - Array of entities with applied templates
+   */
+  batchApplyTemplates(templates, entities, context = null) {
+    const resolveContext = context || this.getTemplateContext();
+
+    return entities.map((entity, index) => {
+      const template = templates[index] || templates[0]; // Use first template as fallback
+      return this.applyTemplateToEntity(template, entity, resolveContext);
+    });
+  }
+
+  /**
+   * Export template integration data
+   * @param {object} options - Export options
+   * @returns {object} - Exportable data
+   */
+  exportIntegrationData(options = {}) {
+    return {
+      contextProviders: Array.from(this.contextProviders.keys()),
+      defaultContexts: {
+        character: this.getDefaultCharacterContext(),
+        node: this.getDefaultNodeContext(),
+        world: this.getDefaultWorldContext()
+      },
+      exportedAt: new Date().toISOString(),
+      version: '1.0.0'
+    };
+  }
+
+  /**
+   * Import template integration data
+   * @param {object} data - Import data
+   * @returns {boolean} - Success status
+   */
+  importIntegrationData(data) {
+    try {
+      // Validate import data
+      if (!data || !data.version) {
+        throw new Error('Invalid import data');
+      }
+
+      // Import would restore context providers and settings
+      // For now, just validate the structure
+      return true;
+    } catch (error) {
+      console.error('Failed to import integration data:', error);
+      return false;
+    }
   }
 }
 

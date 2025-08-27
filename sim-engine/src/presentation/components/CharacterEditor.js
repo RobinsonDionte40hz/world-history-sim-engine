@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
-import { Users, User } from 'lucide-react';
+import { Users, User, Save, Download, Upload } from 'lucide-react';
+import useTemplates from '../hooks/useTemplates';
+import TemplateLibraryPanel from './TemplateLibraryPanel';
 
 // Character creation modes
 const CHARACTER_CREATION_MODES = {
@@ -1188,6 +1190,9 @@ const CharacterEditor = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [creationMode, setCreationMode] = useState(CHARACTER_CREATION_MODES.TEMPLATE);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  
+  const { saveTemplate, loadTemplate } = useTemplates();
 
   // Validation using unified utility with mode-specific requirements
   const validateCharacter = useCallback(() => {
@@ -1313,6 +1318,57 @@ const CharacterEditor = ({
       assignedInteractions: characterData.assignedInteractions.filter(id => id !== interactionId)
     });
   }, [characterData]);
+
+  // Template functions
+  const handleSaveAsTemplate = useCallback(async () => {
+    if (!validateCharacter()) {
+      return;
+    }
+
+    const templateName = prompt('Enter template name:', `${characterData.name} Template`);
+    if (!templateName) return;
+
+    const templateDescription = prompt('Enter template description (optional):', 
+      `Template based on ${characterData.name}`);
+
+    try {
+      const templateData = {
+        ...characterData,
+        name: templateName,
+        description: templateDescription || `Template based on ${characterData.name}`,
+        metadata: {
+          ...characterData.metadata,
+          isTemplate: true,
+          originalCharacterId: characterData.id,
+          category: characterData.archetype || 'general',
+          difficulty: 'intermediate',
+          author: 'User',
+          version: '1.0.0'
+        }
+      };
+
+      await saveTemplate('characters', templateData);
+      alert('Template saved successfully!');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      alert(`Failed to save template: ${error.message}`);
+    }
+  }, [characterData, validateCharacter, saveTemplate]);
+
+  const handleLoadFromTemplate = useCallback((template) => {
+    try {
+      const instance = loadTemplate('characters', template.id, {
+        name: `${template.name} Instance`,
+        id: `character_${Date.now()}`
+      });
+
+      setCharacterData(instance);
+      setShowTemplateLibrary(false);
+    } catch (error) {
+      console.error('Failed to load template:', error);
+      alert(`Failed to load template: ${error.message}`);
+    }
+  }, [loadTemplate]);
 
   // Get assigned interaction objects
   const getAssignedInteractions = useCallback(() => {
@@ -1964,26 +2020,76 @@ const CharacterEditor = ({
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={onCancel}
-          disabled={isSaving}
-          className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
-          {mode === 'create' 
-            ? (creationMode === CHARACTER_CREATION_MODES.TEMPLATE ? 'Create NPC Template' : 'Create Character')
-            : 'Save Changes'
-          }
-        </button>
+      <div className="flex justify-between items-center mt-6">
+        {/* Template Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowTemplateLibrary(true)}
+            className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Load Template
+          </button>
+          {mode !== 'create' && (
+            <button
+              onClick={handleSaveAsTemplate}
+              disabled={isSaving}
+              className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save as Template
+            </button>
+          )}
+        </div>
+
+        {/* Main Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isSaving}
+            className="px-6 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+            {mode === 'create' 
+              ? (creationMode === CHARACTER_CREATION_MODES.TEMPLATE ? 'Create NPC Template' : 'Create Character')
+              : 'Save Changes'
+            }
+          </button>
+        </div>
       </div>
+
+      {/* Template Library Modal */}
+      {showTemplateLibrary && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-white/20 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Character Templates</h3>
+              <button
+                onClick={() => setShowTemplateLibrary(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+              <TemplateLibraryPanel
+                selectedType="characters"
+                onTemplateSelect={handleLoadFromTemplate}
+                showRecommendations={true}
+                enableBulkOperations={false}
+                className="border-0 bg-transparent"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

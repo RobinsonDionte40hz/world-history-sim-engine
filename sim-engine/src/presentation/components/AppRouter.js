@@ -24,7 +24,7 @@ import CharacterEditorPage from '../pages/CharacterEditorPage';
 import CharacterManagerPage from '../pages/CharacterManagerPage';
 import InteractionEditorPage from '../pages/InteractionEditorPage';
 import EncounterEditorPage from '../pages/EncounterEditorPage';
-import TemplateLibraryPage from '../pages/TemplateLibraryPage';
+import TemplatePage from '../pages/TemplatePage';
 
 // World foundation editor
 import WorldNodeEditorPage from '../pages/WorldNodeEditorPage';
@@ -62,8 +62,9 @@ const AppRouter = () => {
             <Route path="/editors/encounters" element={<EncounterEditorPage />} />
             
             {/* Template Library */}
-            <Route path="/templates" element={<TemplateLibraryPage />} />
-            <Route path="/template-library" element={<TemplateLibraryPage />} />
+            <Route path="/templates" element={<TemplatePage />} />
+            <Route path="/template-library" element={<TemplatePage />} />
+            <Route path="/template-customization" element={<TemplatePage />} />
             
             {/* Simulation route - Optional, with prerequisites */}
             <Route path="/simulation" element={<HistoryPage />} />

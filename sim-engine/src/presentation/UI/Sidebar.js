@@ -119,30 +119,57 @@ const Sidebar = ({
         {
           id: 'village-template',
           label: '🏘️ Village Template',
-          onClick: () => console.log('Village Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'village', entityType: 'nodes' } 
+            }));
+          },
           hoverColor: 'rgba(251, 191, 36, 0.1)',
           hoverBorder: 'rgba(251, 191, 36, 0.3)'
         },
         {
           id: 'city-template',
           label: '🏙️ City Template',
-          onClick: () => console.log('City Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'city', entityType: 'nodes' } 
+            }));
+          },
           hoverColor: 'rgba(251, 191, 36, 0.1)',
           hoverBorder: 'rgba(251, 191, 36, 0.3)'
         },
         {
           id: 'wilderness-template',
           label: '🌲 Wilderness Template',
-          onClick: () => console.log('Wilderness Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'wilderness', entityType: 'nodes' } 
+            }));
+          },
           hoverColor: 'rgba(251, 191, 36, 0.1)',
           hoverBorder: 'rgba(251, 191, 36, 0.3)'
         },
         {
           id: 'dungeon-template',
           label: '🏰 Dungeon Template',
-          onClick: () => console.log('Dungeon Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'dungeon', entityType: 'nodes' } 
+            }));
+          },
           hoverColor: 'rgba(251, 191, 36, 0.1)',
           hoverBorder: 'rgba(251, 191, 36, 0.3)'
+        },
+        {
+          id: 'customize-node-template',
+          label: '🎨 Customize Template',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateLibrary', { 
+              detail: { tab: 'nodes', action: 'customize' } 
+            }));
+          },
+          hoverColor: 'rgba(129, 140, 248, 0.1)',
+          hoverBorder: 'rgba(129, 140, 248, 0.3)'
         }
       ];
     }
@@ -199,32 +226,11 @@ const Sidebar = ({
           label: 'Character Templates'
         },
         {
-          id: 'warrior-template',
-          label: '⚔️ Warrior Template',
-          onClick: () => console.log('Warrior Template'),
-          hoverColor: 'rgba(239, 68, 68, 0.1)',
-          hoverBorder: 'rgba(239, 68, 68, 0.3)'
-        },
-        {
-          id: 'merchant-template',
-          label: '💰 Merchant Template',
-          onClick: () => console.log('Merchant Template'),
-          hoverColor: 'rgba(251, 191, 36, 0.1)',
-          hoverBorder: 'rgba(251, 191, 36, 0.3)'
-        },
-        {
-          id: 'scholar-template',
-          label: '📚 Scholar Template',
-          onClick: () => console.log('Scholar Template'),
+          id: 'customize-character-template',
+          label: '🎨 Browse Character Templates',
+          onClick: () => navigate('/templates?tab=characters'),
           hoverColor: 'rgba(129, 140, 248, 0.1)',
           hoverBorder: 'rgba(129, 140, 248, 0.3)'
-        },
-        {
-          id: 'noble-template',
-          label: '👑 Noble Template',
-          onClick: () => console.log('Noble Template'),
-          hoverColor: 'rgba(168, 85, 247, 0.1)',
-          hoverBorder: 'rgba(168, 85, 247, 0.3)'
         },
         {
           id: 'attributes-divider',
@@ -314,30 +320,57 @@ const Sidebar = ({
         {
           id: 'dialogue-template',
           label: '💬 Dialogue Template',
-          onClick: () => console.log('Dialogue Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'dialogue', entityType: 'interactions' } 
+            }));
+          },
           hoverColor: 'rgba(129, 140, 248, 0.1)',
           hoverBorder: 'rgba(129, 140, 248, 0.3)'
         },
         {
           id: 'trade-template',
           label: '💰 Trade Template',
-          onClick: () => console.log('Trade Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'trade', entityType: 'interactions' } 
+            }));
+          },
           hoverColor: 'rgba(251, 191, 36, 0.1)',
           hoverBorder: 'rgba(251, 191, 36, 0.3)'
         },
         {
           id: 'combat-template',
           label: '⚔️ Combat Template',
-          onClick: () => console.log('Combat Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'combat', entityType: 'interactions' } 
+            }));
+          },
           hoverColor: 'rgba(239, 68, 68, 0.1)',
           hoverBorder: 'rgba(239, 68, 68, 0.3)'
         },
         {
           id: 'quest-template',
           label: '🎯 Quest Template',
-          onClick: () => console.log('Quest Template'),
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateCustomization', { 
+              detail: { templateType: 'quest', entityType: 'interactions' } 
+            }));
+          },
           hoverColor: 'rgba(168, 85, 247, 0.1)',
           hoverBorder: 'rgba(168, 85, 247, 0.3)'
+        },
+        {
+          id: 'customize-interaction-template',
+          label: '🎨 Customize Template',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('openTemplateLibrary', { 
+              detail: { tab: 'interactions', action: 'customize' } 
+            }));
+          },
+          hoverColor: 'rgba(129, 140, 248, 0.1)',
+          hoverBorder: 'rgba(129, 140, 248, 0.3)'
         },
         {
           id: 'effect-types-divider',

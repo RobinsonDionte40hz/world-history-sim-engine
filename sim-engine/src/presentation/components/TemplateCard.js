@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, MapPin, MessageSquare, Globe, Package, Trash2, Edit, Copy } from 'lucide-react';
+import { User, MapPin, MessageSquare, Globe, Package, Trash2, Edit, Copy, Clock, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const TemplateCard = ({ 
   template, 
@@ -9,6 +9,9 @@ const TemplateCard = ({
   onDelete, 
   onDuplicate,
   showActions = true,
+  showUsageStats = true,
+  showValidationStatus = true,
+  isSelected = false,
   className = '' 
 }) => {
   const getTypeIcon = (templateType) => {
@@ -65,6 +68,47 @@ const TemplateCard = ({
       .join(', ');
   };
 
+  const getValidationStatus = (template) => {
+    // Check for validation errors in metadata
+    const errors = template.metadata?.validationErrors || [];
+    const warnings = template.metadata?.validationWarnings || [];
+    
+    if (errors.length > 0) {
+      return { status: 'error', count: errors.length, icon: AlertTriangle, color: 'text-red-500' };
+    }
+    if (warnings.length > 0) {
+      return { status: 'warning', count: warnings.length, icon: AlertTriangle, color: 'text-yellow-500' };
+    }
+    return { status: 'valid', count: 0, icon: CheckCircle, color: 'text-green-500' };
+  };
+
+  const formatUsageStats = (metadata) => {
+    const usageCount = metadata?.usageCount || 0;
+    const lastUsed = metadata?.lastUsed;
+    
+    return {
+      usageCount,
+      lastUsed: lastUsed ? new Date(lastUsed) : null,
+      isPopular: usageCount >= 10,
+      isRecent: lastUsed && (Date.now() - new Date(lastUsed).getTime()) < (7 * 24 * 60 * 60 * 1000) // Used in last 7 days
+    };
+  };
+
+  const formatRelativeTime = (date) => {
+    if (!date) return 'Never used';
+    
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+    return `${Math.floor(diffDays / 365)} years ago`;
+  };
+
   const handleCardClick = (e) => {
     // Don't trigger card click if clicking on action buttons
     if (e.target.closest('.template-actions')) return;
@@ -86,12 +130,20 @@ const TemplateCard = ({
     onDuplicate?.(template);
   };
 
+  const validationStatus = getValidationStatus(template);
+  const usageStats = formatUsageStats(template.metadata);
+
   return (
     <div 
       className={`
-        relative bg-white rounded-lg border-2 border-gray-200 
-        hover:border-blue-300 hover:shadow-md transition-all duration-200 
+        relative bg-white rounded-lg border-2 transition-all duration-200 
         cursor-pointer group ${className}
+        ${isSelected 
+          ? 'border-blue-500 shadow-md ring-2 ring-blue-200' 
+          : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+        }
+        ${validationStatus.status === 'error' ? 'border-red-200 bg-red-50' : ''}
+        ${validationStatus.status === 'warning' ? 'border-yellow-200 bg-yellow-50' : ''}
       `}
       onClick={handleCardClick}
     >
@@ -105,14 +157,26 @@ const TemplateCard = ({
           <span className="font-medium text-sm capitalize">{type.slice(0, -1)}</span>
         </div>
         
-        {template.metadata?.difficulty && (
-          <span className={`
-            px-2 py-1 rounded-full text-xs font-medium
-            ${getDifficultyColor(template.metadata.difficulty)}
-          `}>
-            {template.metadata.difficulty}
-          </span>
-        )}
+        <div className="flex items-center space-x-2">
+          {template.metadata?.difficulty && (
+            <span className={`
+              px-2 py-1 rounded-full text-xs font-medium
+              ${getDifficultyColor(template.metadata.difficulty)}
+            `}>
+              {template.metadata.difficulty}
+            </span>
+          )}
+          
+          {showValidationStatus && (
+            <div className={`flex items-center ${validationStatus.color}`} title={
+              validationStatus.status === 'error' ? `${validationStatus.count} validation errors` :
+              validationStatus.status === 'warning' ? `${validationStatus.count} validation warnings` :
+              'Template is valid'
+            }>
+              <validationStatus.icon className="w-4 h-4" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -162,10 +226,39 @@ const TemplateCard = ({
           </div>
         )}
 
+        {/* Usage Statistics */}
+        {showUsageStats && (
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-1">
+                <TrendingUp className="w-3 h-3" />
+                <span>{usageStats.usageCount} uses</span>
+                {usageStats.isPopular && (
+                  <span className="px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs">Popular</span>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-1">
+                <Clock className="w-3 h-3" />
+                <span>{formatRelativeTime(usageStats.lastUsed)}</span>
+                {usageStats.isRecent && (
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Metadata */}
         <div className="text-xs text-gray-400 mb-2">
           {template.metadata?.category && (
             <span className="capitalize">{template.metadata.category}</span>
+          )}
+          {template.metadata?.author && (
+            <span className="ml-2">by {template.metadata.author}</span>
+          )}
+          {template.metadata?.version && (
+            <span className="ml-2">v{template.metadata.version}</span>
           )}
           {template.metadata?.createdAt && (
             <span className="ml-2">

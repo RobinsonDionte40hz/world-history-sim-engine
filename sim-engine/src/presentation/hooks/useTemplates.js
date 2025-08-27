@@ -158,6 +158,115 @@ export const useTemplates = () => {
     }
   }, []);
 
+  // Validate template
+  const validateTemplate = useCallback((type, template) => {
+    try {
+      const errors = [];
+      const warnings = [];
+
+      // Basic validation
+      if (!template.name || template.name.trim().length === 0) {
+        errors.push('Template name is required');
+      }
+
+      if (!template.description || template.description.trim().length === 0) {
+        warnings.push('Template description is recommended');
+      }
+
+      // Type-specific validation
+      switch (type) {
+        case 'characters':
+          if (!template.attributes) {
+            errors.push('Character template must have attributes');
+          } else {
+            const requiredAttributes = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+            const missingAttributes = requiredAttributes.filter(attr => 
+              template.attributes[attr] === undefined || template.attributes[attr] === null
+            );
+            if (missingAttributes.length > 0) {
+              errors.push(`Missing required attributes: ${missingAttributes.join(', ')}`);
+            }
+          }
+          
+          if (!template.consciousness) {
+            warnings.push('Character template should have consciousness settings');
+          }
+          break;
+
+        case 'nodes':
+          if (!template.environmentalProperties && !template.culturalContext) {
+            warnings.push('Node template should have environmental or cultural properties');
+          }
+          break;
+
+        case 'interactions':
+          if (!template.requirements && !template.effects) {
+            warnings.push('Interaction template should have requirements or effects');
+          }
+          break;
+
+        case 'worlds':
+          if (!template.nodes || template.nodes.length === 0) {
+            warnings.push('World template should contain nodes');
+          }
+          if (!template.characters || template.characters.length === 0) {
+            warnings.push('World template should contain characters');
+          }
+          break;
+      }
+
+      // Update template with validation results
+      const validatedTemplate = {
+        ...template,
+        metadata: {
+          ...template.metadata,
+          validationErrors: errors,
+          validationWarnings: warnings,
+          lastValidated: new Date().toISOString(),
+          isValid: errors.length === 0
+        }
+      };
+
+      return {
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        template: validatedTemplate
+      };
+    } catch (err) {
+      setError(err.message);
+      console.error('Failed to validate template:', err);
+      return {
+        isValid: false,
+        errors: ['Validation failed: ' + err.message],
+        warnings: [],
+        template
+      };
+    }
+  }, []);
+
+  // Update template usage statistics
+  const updateUsageStats = useCallback(async (type, templateId) => {
+    try {
+      const template = templateManager.getTemplate(type, templateId);
+      if (!template) return;
+
+      const updatedTemplate = {
+        ...template,
+        metadata: {
+          ...template.metadata,
+          usageCount: (template.metadata?.usageCount || 0) + 1,
+          lastUsed: new Date().toISOString()
+        }
+      };
+
+      templateManager.updateTemplate(type, templateId, updatedTemplate);
+      await loadTemplates(); // Refresh templates
+    } catch (err) {
+      console.error('Failed to update usage stats:', err);
+    }
+  }, [loadTemplates]);
+
   // Initialize templates on mount
   useEffect(() => {
     loadTemplates();
@@ -173,7 +282,9 @@ export const useTemplates = () => {
     searchTemplates,
     deleteTemplate,
     getTemplatesByCategory,
-    getTemplatesByTag
+    getTemplatesByTag,
+    validateTemplate,
+    updateUsageStats
   };
 };
 
