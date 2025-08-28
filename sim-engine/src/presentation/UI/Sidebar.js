@@ -25,6 +25,7 @@ const Sidebar = ({
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('worlds'); // 'worlds' | 'tools'
+  const [expandedCategories, setExpandedCategories] = useState(new Set()); // Track expanded categories
   
   // World context integration
   const { 
@@ -48,6 +49,21 @@ const Sidebar = ({
       refreshWorldContext();
     }
   }, [isOpen, hasWorld, refreshWorldContext]);
+
+  // Prevent body scrolling when sidebar is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store original overflow value
+      const originalOverflow = document.body.style.overflow;
+      // Prevent scrolling
+      document.body.style.overflow = 'hidden';
+      
+      // Cleanup function to restore original overflow
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   // Quick action handlers
   const handleQuickNavigate = async (editorType) => {
@@ -639,7 +655,10 @@ const Sidebar = ({
       id: 'world-builder',
       label: '🌍 World Foundation',
       path: '/builder',
-      onClick: () => navigate('/builder'),
+      onClick: () => {
+        navigate('/builder');
+        onClose();
+      },
       description: 'Start with world basics',
       hoverColor: 'rgba(59, 130, 246, 0.15)',
       hoverBorder: 'rgba(59, 130, 246, 0.4)'
@@ -648,7 +667,10 @@ const Sidebar = ({
       id: 'node-editor',
       label: '📍 Node Editor',
       path: '/editors/nodes',
-      onClick: () => navigate('/editors/nodes'),
+      onClick: () => {
+        navigate('/editors/nodes');
+        onClose();
+      },
       description: 'Create locations & places',
       hoverColor: 'rgba(34, 197, 94, 0.15)',
       hoverBorder: 'rgba(34, 197, 94, 0.4)'
@@ -657,7 +679,10 @@ const Sidebar = ({
       id: 'character-editor',
       label: '👤 Character Editor',
       path: '/editors/characters',
-      onClick: () => navigate('/editors/characters'),
+      onClick: () => {
+        navigate('/editors/characters');
+        onClose();
+      },
       description: 'Design people & NPCs',
       hoverColor: 'rgba(168, 85, 247, 0.15)',
       hoverBorder: 'rgba(168, 85, 247, 0.4)',
@@ -666,7 +691,10 @@ const Sidebar = ({
           id: 'character-manager',
           label: '👥 Character Manager',
           path: '/editors/character-manager',
-          onClick: () => navigate('/editors/character-manager'),
+          onClick: () => {
+            navigate('/editors/character-manager');
+            onClose();
+          },
           description: 'Manage all characters',
           hoverColor: 'rgba(147, 51, 234, 0.15)',
           hoverBorder: 'rgba(147, 51, 234, 0.4)'
@@ -677,7 +705,10 @@ const Sidebar = ({
       id: 'interaction-editor',
       label: '💬 Interaction Editor',
       path: '/editors/interactions',
-      onClick: () => navigate('/editors/interactions'),
+      onClick: () => {
+        navigate('/editors/interactions');
+        onClose();
+      },
       description: 'Build conversations',
       hoverColor: 'rgba(251, 191, 36, 0.15)',
       hoverBorder: 'rgba(251, 191, 36, 0.4)'
@@ -686,7 +717,10 @@ const Sidebar = ({
       id: 'encounter-editor',
       label: '⚔️ Encounter Editor',
       path: '/editors/encounters',
-      onClick: () => navigate('/editors/encounters'),
+      onClick: () => {
+        navigate('/editors/encounters');
+        onClose();
+      },
       description: 'Design events & battles',
       hoverColor: 'rgba(239, 68, 68, 0.15)',
       hoverBorder: 'rgba(239, 68, 68, 0.4)'
@@ -695,7 +729,10 @@ const Sidebar = ({
       id: 'template-library',
       label: '📚 Template Library',
       path: '/templates',
-      onClick: () => navigate('/templates'),
+      onClick: () => {
+        navigate('/templates');
+        onClose();
+      },
       description: 'Browse & manage templates',
       hoverColor: 'rgba(129, 140, 248, 0.15)',
       hoverBorder: 'rgba(129, 140, 248, 0.4)'
@@ -709,7 +746,10 @@ const Sidebar = ({
       id: 'simulation',
       label: '🚀 Run Simulation',
       path: '/simulation',
-      onClick: () => navigate('/simulation'),
+      onClick: () => {
+        navigate('/simulation');
+        onClose();
+      },
       description: 'Watch history unfold',
       hoverColor: 'rgba(34, 197, 94, 0.15)',
       hoverBorder: 'rgba(34, 197, 94, 0.4)',
@@ -725,7 +765,10 @@ const Sidebar = ({
       id: 'features',
       label: '✨ Features',
       path: '/features',
-      onClick: () => navigate('/features'),
+      onClick: () => {
+        navigate('/features');
+        onClose();
+      },
       description: 'Discover capabilities',
       hoverColor: 'rgba(129, 140, 248, 0.15)',
       hoverBorder: 'rgba(129, 140, 248, 0.4)'
@@ -754,15 +797,79 @@ const Sidebar = ({
   const contextItems = getContextMenuItems();
   const allItems = menuItems.length > 0 ? menuItems : [...defaultMenuItems, ...contextItems];
 
+  // Auto-expand categories that have active subcategories
+  useEffect(() => {
+    const newExpanded = new Set(expandedCategories);
+    
+    // Auto-expand categories with active subcategories
+    allItems.forEach(item => {
+      if (item.subItems && item.subItems.some(subItem => isActiveItem(subItem.path))) {
+        newExpanded.add(item.id);
+      }
+    });
+    
+    setExpandedCategories(newExpanded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]); // Intentionally limited dependencies
+
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryId) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle category click (navigates and closes sidebar)
+  const handleCategoryClick = (item) => {
+    if (item.disabled) return;
+    
+    // Execute the item's onClick if it exists
+    if (item.onClick) {
+      item.onClick();
+    }
+  };
+
+  // Handle arrow click (toggles expansion only)
+  const handleArrowClick = (e, categoryId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleCategoryExpansion(categoryId);
+  };
+
   return (
     <>
+      {/* CSS for hiding scrollbars */}
+      <style>
+        {`
+          .sidebar-container::-webkit-scrollbar,
+          .tab-content-container::-webkit-scrollbar {
+            display: none;
+          }
+          .sidebar-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .tab-content-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}
+      </style>
+      
       {/* Sidebar */}
       <div
+        className="sidebar-container"
         style={{
           position: 'fixed',
           top: '0',
           left: '0',
-          width: '380px',
+          width: '400px', // Increased from 380px to accommodate content
           height: '100vh',
           background: 'rgba(15, 23, 42, 0.98)',
           backdropFilter: 'blur(20px)',
@@ -770,12 +877,15 @@ const Sidebar = ({
           borderLeft: 'none',
           borderRight: '3px solid rgba(129, 140, 248, 0.6)',
           zIndex: 2000,
-          padding: '1.5rem',
+          padding: '0.72rem', // Reduced from 0.9rem to 0.72rem (another 20% smaller)
           display: isOpen ? 'flex' : 'none',
           flexDirection: 'column',
           boxShadow: '8px 0 32px rgba(0, 0, 0, 0.4)',
           overflowY: 'auto',
           overflowX: 'hidden',
+          // Hide scrollbars while keeping scroll functionality
+          scrollbarWidth: 'none', // Firefox
+          msOverflowStyle: 'none', // IE and Edge
           transform: 'none',
           transition: 'none'
         }}
@@ -850,7 +960,16 @@ const Sidebar = ({
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div 
+          className="flex-1 tab-content-container"
+          style={{
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            // Hide scrollbars while keeping scroll functionality
+            scrollbarWidth: 'none', // Firefox
+            msOverflowStyle: 'none' // IE and Edge
+          }}
+        >
           {activeTab === 'worlds' && (
             <div className="space-y-4">
               {/* Current World Info */}
@@ -1054,7 +1173,14 @@ const Sidebar = ({
           )}
           
           {activeTab === 'tools' && (
-            <div className="space-y-2">
+            <div 
+              className="space-y-1.5"
+              style={{
+                // Ensure content doesn't overflow horizontally
+                maxWidth: '100%',
+                overflow: 'hidden'
+              }}
+            > {/* Reduced from space-y-2 to space-y-1.5 */}
               {/* World Context Quick Actions */}
               {hasWorld && (
                 <>
@@ -1276,60 +1402,100 @@ const Sidebar = ({
                 const isActive = isActiveItem(item.path);
                 const hasSubItems = item.subItems && item.subItems.length > 0;
                 const isSubItemActive = hasSubItems && item.subItems.some(subItem => isActiveItem(subItem.path));
-                const shouldShowExpanded = isActive || isSubItemActive;
+                const shouldShowExpanded = expandedCategories.has(item.id) || isActive || isSubItemActive;
 
                 return (
                   <div key={item.id}>
                     <button
-                      onClick={item.disabled ? undefined : item.onClick}
+                      onClick={() => handleCategoryClick(item)}
                       disabled={item.disabled}
                       title={item.disabled ? item.tooltip : undefined}
-                      className={`w-full text-left p-4 rounded-xl transition-all duration-300 font-medium group ${
-                        item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.02]'
+                      className={`text-left rounded-xl transition-all duration-300 font-medium group ${
+                        item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.01]'
                       }`}
                       style={{
+                        width: '98%', // 2% shorter than full width
                         color: item.disabled ? '#94a3b8' : (isActive ? 'white' : '#e2e8f0'),
                         border: (isActive || isSubItemActive) && !item.disabled 
                           ? `2px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.6)'}` 
                           : '2px solid transparent',
-                        fontSize: '0.95rem',
+                        fontSize: '0.85rem', // Reduced from 0.95rem (about 11% smaller)
                         background: item.disabled 
                           ? 'rgba(71, 85, 105, 0.05)' 
                           : ((isActive || isSubItemActive)
                             ? `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`
                             : 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))'),
-                        transform: (isActive || isSubItemActive) && !item.disabled ? 'translateX(12px)' : 'translateX(0)',
+                        transform: (isActive || isSubItemActive) && !item.disabled ? 'translateX(2px)' : 'translateX(0)', // Reduced from 6px to 2px
                         boxShadow: (isActive || isSubItemActive) && !item.disabled 
                           ? `0 8px 25px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.05)` 
                           : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                        backdropFilter: 'blur(12px)'
+                        backdropFilter: 'blur(12px)',
+                        padding: '0.5rem 0.36rem', // Reduced horizontal padding from 0.45rem to 0.36rem (another 20% smaller)
+                        // Ensure text doesn't overflow
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                        maxWidth: '100%'
                       }}
-                      onMouseOver={(e) => {
+                      onMouseEnter={(e) => {
                         if (!isActive && !isSubItemActive && !item.disabled) {
-                          e.target.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
-                          e.target.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
-                          e.target.style.transform = 'translateX(12px) scale(1.02)';
-                          e.target.style.color = 'white';
-                          e.target.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
+                          // Only apply styles to the button itself, not child elements
+                          const button = e.currentTarget;
+                          button.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
+                          button.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
+                          button.style.transform = 'translateX(2px) scale(1.01)'; // Reduced from 6px to 2px
+                          button.style.color = 'white';
+                          button.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
                         }
                       }}
-                      onMouseOut={(e) => {
+                      onMouseLeave={(e) => {
                         if (!isActive && !isSubItemActive && !item.disabled) {
-                          e.target.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
-                          e.target.style.borderColor = 'transparent';
-                          e.target.style.transform = 'translateX(0) scale(1)';
-                          e.target.style.color = '#e2e8f0';
-                          e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                          // Only apply styles to the button itself, not child elements
+                          const button = e.currentTarget;
+                          button.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
+                          button.style.borderColor = 'transparent';
+                          button.style.transform = 'translateX(0) scale(1)';
+                          button.style.color = '#e2e8f0';
+                          button.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                         }
                       }}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm mb-1">
+                        <div className="flex-1 min-w-0"> {/* Added min-w-0 for proper text truncation */}
+                          <div 
+                            className="font-semibold mb-1"
+                            style={{
+                              // Prevent inheritance of hover styles
+                              background: 'transparent !important',
+                              border: 'none !important',
+                              transform: 'none !important',
+                              boxShadow: 'none !important',
+                              // Ensure text doesn't overflow
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.8rem' // Reduced from text-sm (0.875rem) to 0.8rem
+                            }}
+                          >
                             {item.label}
                           </div>
                           {item.description && (
-                            <div className="text-xs opacity-75 leading-relaxed">
+                            <div 
+                              className="opacity-75 leading-relaxed"
+                              style={{
+                                // Prevent inheritance of hover styles
+                                background: 'transparent !important',
+                                border: 'none !important',
+                                transform: 'none !important',
+                                boxShadow: 'none !important',
+                                // Allow description to wrap but limit lines
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                wordBreak: 'break-word',
+                                fontSize: '0.7rem' // Reduced from text-xs (0.75rem) to 0.7rem
+                              }}
+                            >
                               {item.description}
                             </div>
                           )}
@@ -1340,9 +1506,24 @@ const Sidebar = ({
                           </div>
                         )}
                         {hasSubItems && (
-                          <div className="ml-2 text-sm opacity-60">
+                          <button
+                            onClick={(e) => handleArrowClick(e, item.id)}
+                            className="ml-2 text-sm opacity-60 hover:opacity-100 transition-opacity p-1 rounded"
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'inherit'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = 'transparent';
+                            }}
+                          >
                             {shouldShowExpanded ? '▼' : '▶'}
-                          </div>
+                          </button>
                         )}
                         {(isActive || isSubItemActive) && !item.disabled && (
                           <div className="ml-2 text-sm opacity-80">
@@ -1354,7 +1535,7 @@ const Sidebar = ({
                     
                     {/* Sub-items */}
                     {hasSubItems && shouldShowExpanded && (
-                      <div className="ml-4 mt-2 space-y-1">
+                      <div className="ml-1.5 mt-1.5 space-y-0.5"> {/* Reduced ml-2 to ml-1.5 (another 25% smaller margin) */}
                         {item.subItems.map((subItem) => {
                           const isSubActive = isActiveItem(subItem.path);
                           return (
@@ -1362,10 +1543,11 @@ const Sidebar = ({
                               key={subItem.id}
                               onClick={subItem.disabled ? undefined : subItem.onClick}
                               disabled={subItem.disabled}
-                              className={`w-full text-left p-3 rounded-lg transition-all duration-200 text-sm ${
+                              className={`text-left rounded-lg transition-all duration-200 ${
                                 subItem.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.01]'
                               }`}
                               style={{
+                                width: '98%', // 2% shorter than full width
                                 color: subItem.disabled ? '#94a3b8' : (isSubActive ? 'white' : '#cbd5e1'),
                                 border: isSubActive && !subItem.disabled 
                                   ? `1px solid ${subItem.hoverBorder || 'rgba(147, 51, 234, 0.6)'}` 
@@ -1375,35 +1557,75 @@ const Sidebar = ({
                                   : (isSubActive 
                                     ? `linear-gradient(135deg, ${subItem.hoverColor || 'rgba(147, 51, 234, 0.2)'}, rgba(15, 23, 42, 0.6))`
                                     : 'rgba(71, 85, 105, 0.1)'),
-                                transform: isSubActive && !subItem.disabled ? 'translateX(8px)' : 'translateX(0)',
+                                transform: isSubActive && !subItem.disabled ? 'translateX(1px)' : 'translateX(0)', // Reduced from 4px to 1px
                                 boxShadow: isSubActive && !subItem.disabled 
                                   ? `0 4px 15px -3px ${subItem.hoverColor || 'rgba(147, 51, 234, 0.3)'}` 
-                                  : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                                  : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                                padding: '0.4rem 0.29rem', // Reduced horizontal padding from 0.36rem to 0.29rem (another 20% smaller)
+                                fontSize: '0.8rem', // Reduced from text-sm (0.875rem) to 0.8rem
+                                // Ensure text doesn't overflow
+                                wordWrap: 'break-word',
+                                overflowWrap: 'break-word',
+                                maxWidth: '100%'
                               }}
-                              onMouseOver={(e) => {
+                              onMouseEnter={(e) => {
                                 if (!isSubActive && !subItem.disabled) {
-                                  e.target.style.background = `linear-gradient(135deg, ${subItem.hoverColor || 'rgba(147, 51, 234, 0.2)'}, rgba(15, 23, 42, 0.6))`;
-                                  e.target.style.borderColor = subItem.hoverBorder || 'rgba(147, 51, 234, 0.6)';
-                                  e.target.style.transform = 'translateX(8px) scale(1.01)';
-                                  e.target.style.color = 'white';
+                                  // Only apply styles to the button itself, not child elements
+                                  const button = e.currentTarget;
+                                  button.style.background = `linear-gradient(135deg, ${subItem.hoverColor || 'rgba(147, 51, 234, 0.2)'}, rgba(15, 23, 42, 0.6))`;
+                                  button.style.borderColor = subItem.hoverBorder || 'rgba(147, 51, 234, 0.6)';
+                                  button.style.transform = 'translateX(1px) scale(1.01)'; // Reduced from 4px to 1px
+                                  button.style.color = 'white';
                                 }
                               }}
-                              onMouseOut={(e) => {
+                              onMouseLeave={(e) => {
                                 if (!isSubActive && !subItem.disabled) {
-                                  e.target.style.background = 'rgba(71, 85, 105, 0.1)';
-                                  e.target.style.borderColor = 'transparent';
-                                  e.target.style.transform = 'translateX(0) scale(1)';
-                                  e.target.style.color = '#cbd5e1';
+                                  // Only apply styles to the button itself, not child elements
+                                  const button = e.currentTarget;
+                                  button.style.background = 'rgba(71, 85, 105, 0.1)';
+                                  button.style.borderColor = 'transparent';
+                                  button.style.transform = 'translateX(0) scale(1)';
+                                  button.style.color = '#cbd5e1';
                                 }
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="font-medium">
+                                <div className="flex-1 min-w-0"> {/* Added min-w-0 for proper text truncation */}
+                                  <div 
+                                    className="font-medium"
+                                    style={{
+                                      // Prevent inheritance of hover styles
+                                      background: 'transparent !important',
+                                      border: 'none !important',
+                                      transform: 'none !important',
+                                      boxShadow: 'none !important',
+                                      // Ensure text doesn't overflow
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      fontSize: '0.75rem' // Slightly smaller than main button text
+                                    }}
+                                  >
                                     {subItem.label}
                                   </div>
                                   {subItem.description && (
-                                    <div className="text-xs opacity-75 mt-1">
+                                    <div 
+                                      className="opacity-75 mt-1"
+                                      style={{
+                                        // Prevent inheritance of hover styles
+                                        background: 'transparent !important',
+                                        border: 'none !important',
+                                        transform: 'none !important',
+                                        boxShadow: 'none !important',
+                                        // Allow description to wrap but limit lines
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        wordBreak: 'break-word',
+                                        fontSize: '0.65rem' // Reduced from text-xs to smaller
+                                      }}
+                                    >
                                       {subItem.description}
                                     </div>
                                   )}
