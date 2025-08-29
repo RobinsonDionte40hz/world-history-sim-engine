@@ -129,8 +129,13 @@ const TemplateLibraryPage = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Template Library</h1>
                 <p className="mt-1 text-sm text-gray-600">
-                  Browse, create, and manage reusable templates for your world building
+                  Browse, create, and manage structural templates for character attributes, node properties, and interaction mechanics
                 </p>
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Looking for text templating?</strong> Dynamic text with placeholders like <code className="bg-blue-100 px-1 rounded">{{character.name}}</code> is now integrated directly into the InteractionEditor and EncounterEditor.
+                  </p>
+                </div>
               </div>
               
               <div className="flex items-center space-x-3">

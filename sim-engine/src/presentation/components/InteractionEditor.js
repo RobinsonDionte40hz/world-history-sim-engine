@@ -1,7 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Save, Upload } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
+import PlaceholderEditor from './text-templating/PlaceholderEditor';
+import DialoguePatterns from './text-templating/DialoguePatterns';
+import EditorContextService from '../../application/services/EditorContextService';
 
 // Note: Redux integration will need to be implemented when store is available
 // import { useDispatch } from 'react-redux';
@@ -431,7 +434,7 @@ const TriggerEffectForm = ({ onAdd }) => {
 };
 
 // Choice editor component
-const ChoiceEditor = ({ choices, onChange }) => {
+const ChoiceEditor = ({ choices, onChange, context = {} }) => {
   const [editingChoice, setEditingChoice] = useState(null);
 
   const handleAddChoice = () => {
@@ -513,6 +516,7 @@ const ChoiceEditor = ({ choices, onChange }) => {
           <ChoiceDetailEditor
             choice={choices.find(c => c.id === editingChoice)}
             onUpdate={(updates) => handleUpdateChoice(editingChoice, updates)}
+            context={context}
           />
         </div>
       )}
@@ -520,18 +524,113 @@ const ChoiceEditor = ({ choices, onChange }) => {
   );
 };
 
-// Choice detail editor
-const ChoiceDetailEditor = ({ choice, onUpdate }) => {
+// Choice detail editor with text templating integration
+const ChoiceDetailEditor = ({ choice, onUpdate, context = {} }) => {
+  const [showDialoguePatterns, setShowDialoguePatterns] = useState(false);
+  const [selectedPatternCategory, setSelectedPatternCategory] = useState('greetings');
+
+  // Handle dialogue pattern insertion that appends to existing text
+  const handlePatternInsert = (patternTemplate) => {
+    const currentText = choice.text || '';
+    let newText;
+    
+    if (currentText.trim()) {
+      // If there's existing text, append with a space
+      newText = `${currentText.trim()} ${patternTemplate}`;
+    } else {
+      // If no existing text, just use the pattern
+      newText = patternTemplate;
+    }
+    
+    onUpdate({ text: newText });
+  };
+
+  // Get contextual pattern categories based on interaction type
+  const getRelevantCategories = () => {
+    const baseCategories = ['greetings', 'farewells', 'questions', 'reactions'];
+    
+    // Add category-specific patterns based on interaction category
+    if (context.interactionCategory) {
+      switch (context.interactionCategory) {
+        case 'dialogue':
+          return ['greetings', 'questions', 'reactions', 'farewells'];
+        case 'trade':
+          return ['greetings', 'questions', 'reactions'];
+        case 'social':
+          return ['greetings', 'reactions', 'questions', 'farewells'];
+        default:
+          return baseCategories;
+      }
+    }
+    
+    return baseCategories;
+  };
+
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-white mb-2">Choice Text</label>
-        <input
-          type="text"
-          value={choice.text}
-          onChange={(e) => onUpdate({ text: e.target.value })}
-          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-white">Choice Text</label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDialoguePatterns(!showDialoguePatterns)}
+              className={`text-xs flex items-center gap-1 px-2 py-1 rounded transition-colors ${
+                showDialoguePatterns 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-blue-400 hover:text-blue-300 hover:bg-blue-600/20'
+              }`}
+            >
+              💬 Patterns
+            </button>
+          </div>
+        </div>
+        
+        <PlaceholderEditor
+          value={choice.text || ''}
+          onChange={(text) => onUpdate({ text })}
+          context={context}
+          placeholder="Enter choice text with {{placeholders}}..."
+          showPreview={true}
+          showSuggestions={true}
+          rows={3}
+          className="mb-2"
         />
+
+        {/* Enhanced Dialogue Patterns Panel */}
+        {showDialoguePatterns && (
+          <div className="mt-2 border border-white/20 rounded-lg bg-white/5">
+            <div className="p-3 border-b border-white/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white">Dialogue Patterns</span>
+                <select
+                  value={selectedPatternCategory}
+                  onChange={(e) => setSelectedPatternCategory(e.target.value)}
+                  className="text-xs bg-white/10 border border-white/20 rounded px-2 py-1 text-white"
+                >
+                  {getRelevantCategories().map(category => (
+                    <option key={category} value={category} className="bg-gray-800">
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-400">
+                Click a pattern to append it to your choice text
+              </p>
+            </div>
+            
+            <div className="max-h-60 overflow-y-auto">
+              <DialoguePatterns
+                onInsert={handlePatternInsert}
+                context={context}
+                categories={[selectedPatternCategory]}
+                compact={true}
+                showSearch={false}
+                className="border-0 bg-transparent"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div>
@@ -569,7 +668,14 @@ const InteractionEditor = ({
   initialInteraction = null, 
   onSave,
   onCancel,
-  mode = 'create' // 'create' or 'edit'
+  onChange, // For real-time updates to parent component
+  mode = 'create', // 'create' or 'edit'
+  // Context props for text templating
+  character = null,
+  node = null,
+  world = null,
+  // Additional context from parent components
+  editorContext = {}
 }) => {
   const dispatch = useDispatch();
   
@@ -595,6 +701,43 @@ const InteractionEditor = ({
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   
   const { saveTemplate, loadTemplate } = useTemplates();
+
+  // Detect context for text templating with enhanced interaction-specific context
+  const detectedContext = useMemo(() => {
+    const baseContext = EditorContextService.detectContext('interaction', {
+      character,
+      node,
+      world,
+      interaction: interactionData,
+      ...editorContext
+    });
+
+    // Add interaction-specific context enhancements
+    const enhancedContext = {
+      ...baseContext,
+      // Add interaction category-specific suggestions
+      interactionCategory: interactionData.category,
+      // Add available D&D attributes for checks
+      availableAttributes: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'],
+      // Add personality traits for conditional logic
+      personalityTraits: ['aggression', 'curiosity', 'empathy'],
+      // Add consciousness aspects
+      consciousnessAspects: ['frequency', 'coherence'],
+      // Add relationship context
+      relationshipLevels: ['hostile', 'unfriendly', 'neutral', 'friendly', 'allied']
+    };
+
+    return enhancedContext;
+  }, [character, node, world, interactionData, editorContext]);
+
+  // Notify parent of changes
+  const handleDataChange = useCallback((updates) => {
+    const newData = { ...interactionData, ...updates };
+    setInteractionData(newData);
+    if (onChange) {
+      onChange(newData);
+    }
+  }, [interactionData, onChange]);
 
   // Validation
   const validateInteraction = useCallback(() => {
@@ -677,12 +820,15 @@ const InteractionEditor = ({
       });
 
       setInteractionData(instance);
+      if (onChange) {
+        onChange(instance);
+      }
       setShowTemplateLibrary(false);
     } catch (error) {
       console.error('Failed to load template:', error);
       alert(`Failed to load template: ${error.message}`);
     }
-  }, [loadTemplate]);
+  }, [loadTemplate, onChange]);
 
   // Tabs configuration
   const tabs = [
@@ -750,7 +896,7 @@ const InteractionEditor = ({
                 <input
                   type="text"
                   value={interactionData.nodeId}
-                  onChange={(e) => setInteractionData({...interactionData, nodeId: e.target.value})}
+                  onChange={(e) => handleDataChange({ nodeId: e.target.value })}
                   placeholder="Node where this interaction occurs"
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
                 />
@@ -764,7 +910,7 @@ const InteractionEditor = ({
               <input
                 type="text"
                 value={interactionData.name}
-                onChange={(e) => setInteractionData({...interactionData, name: e.target.value})}
+                onChange={(e) => handleDataChange({ name: e.target.value })}
                 className={`
                   w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
                   ${errors.name ? 'border-red-500' : 'border-white/20'}
@@ -777,18 +923,26 @@ const InteractionEditor = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Description <span className="text-red-500">*</span>
-              </label>
-              <textarea
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-white">
+                  Description <span className="text-red-500">*</span>
+                </label>
+                <button
+                  onClick={() => setShowTemplateLibrary(true)}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                >
+                  📚 Templates
+                </button>
+              </div>
+              <PlaceholderEditor
                 value={interactionData.description}
-                onChange={(e) => setInteractionData({...interactionData, description: e.target.value})}
-                rows={4}
-                className={`
-                  w-full px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
-                  ${errors.description ? 'border-red-500' : 'border-white/20'}
-                `}
+                onChange={(description) => handleDataChange({ description })}
+                context={detectedContext}
                 placeholder="Describe what happens in this interaction..."
+                showPreview={true}
+                showSuggestions={true}
+                rows={4}
+                className={errors.description ? 'border-red-500' : ''}
               />
               {errors.description && (
                 <p className="text-red-500 text-sm mt-1">{errors.description}</p>
@@ -828,7 +982,7 @@ const InteractionEditor = ({
                   return (
                     <button
                       key={cat.id}
-                      onClick={() => setInteractionData({...interactionData, category: cat.id})}
+                      onClick={() => handleDataChange({ category: cat.id })}
                       className={`
                         p-3 rounded-lg border-2 transition-all
                         ${interactionData.category === cat.id
@@ -853,8 +1007,7 @@ const InteractionEditor = ({
                 type="text"
                 placeholder="Add tags separated by commas..."
                 value={interactionData.tags.join(', ')}
-                onChange={(e) => setInteractionData({
-                  ...interactionData, 
+                onChange={(e) => handleDataChange({
                   tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                 })}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
@@ -871,7 +1024,7 @@ const InteractionEditor = ({
             </p>
             <PrerequisiteEditor
               prerequisites={interactionData.prerequisites}
-              onChange={(prerequisites) => setInteractionData({...interactionData, prerequisites})}
+              onChange={(prerequisites) => handleDataChange({ prerequisites })}
             />
           </div>
         )}
@@ -887,7 +1040,8 @@ const InteractionEditor = ({
             )}
             <ChoiceEditor
               choices={interactionData.choices}
-              onChange={(choices) => setInteractionData({...interactionData, choices})}
+              onChange={(choices) => handleDataChange({ choices })}
+              context={detectedContext}
             />
           </div>
         )}
@@ -900,7 +1054,7 @@ const InteractionEditor = ({
             </p>
             <EffectEditor
               effects={interactionData.effects}
-              onChange={(effects) => setInteractionData({...interactionData, effects})}
+              onChange={(effects) => handleDataChange({ effects })}
             />
           </div>
         )}
@@ -918,7 +1072,7 @@ const InteractionEditor = ({
                   min="0"
                   max="100"
                   value={interactionData.priority}
-                  onChange={(e) => setInteractionData({...interactionData, priority: parseInt(e.target.value) || 50})}
+                  onChange={(e) => handleDataChange({ priority: parseInt(e.target.value) || 50 })}
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 />
                 <p className="text-xs text-gray-400 mt-1">
@@ -934,7 +1088,7 @@ const InteractionEditor = ({
                   type="number"
                   min="0"
                   value={interactionData.cooldown}
-                  onChange={(e) => setInteractionData({...interactionData, cooldown: parseInt(e.target.value) || 0})}
+                  onChange={(e) => handleDataChange({ cooldown: parseInt(e.target.value) || 0 })}
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 />
                 <p className="text-xs text-gray-400 mt-1">
@@ -948,7 +1102,7 @@ const InteractionEditor = ({
                 <input
                   type="checkbox"
                   checked={interactionData.repeatable}
-                  onChange={(e) => setInteractionData({...interactionData, repeatable: e.target.checked})}
+                  onChange={(e) => handleDataChange({ repeatable: e.target.checked })}
                   className="mr-2"
                 />
                 <span className="font-medium">Repeatable</span>
@@ -967,7 +1121,7 @@ const InteractionEditor = ({
                 onChange={(e) => {
                   try {
                     const metadata = JSON.parse(e.target.value);
-                    setInteractionData({...interactionData, metadata});
+                    handleDataChange({ metadata });
                   } catch (err) {
                     // Invalid JSON, don't update
                   }

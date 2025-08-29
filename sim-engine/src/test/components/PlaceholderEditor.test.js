@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PlaceholderEditor from '../../presentation/components/PlaceholderEditor';
+import PlaceholderEditor from '../../presentation/components/text-templating/PlaceholderEditor';
 
 describe('PlaceholderEditor', () => {
   const mockContext = {

@@ -388,11 +388,11 @@ const TemplateLibraryPanel = ({
   }, [templates, activeTab, worldState, showRecommendations]);
 
   const tabs = [
-    { id: 'characters', label: 'Characters', icon: '👤' },
-    { id: 'nodes', label: 'Nodes', icon: '📍' },
-    { id: 'interactions', label: 'Interactions', icon: '💬' },
-    { id: 'worlds', label: 'Worlds', icon: '🌍' },
-    { id: 'composite', label: 'Composite', icon: '📦' }
+    { id: 'characters', label: 'Character Configs', icon: '👤' },
+    { id: 'nodes', label: 'Node Properties', icon: '📍' },
+    { id: 'interactions', label: 'Interaction Mechanics', icon: '⚙️' },
+    { id: 'worlds', label: 'World Structures', icon: '🌍' },
+    { id: 'composite', label: 'Composite Sets', icon: '📦' }
   ];
 
   if (error) {
@@ -434,7 +434,7 @@ const TemplateLibraryPanel = ({
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <h2 className="text-lg font-semibold text-gray-900">Template Library</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Structural Templates</h2>
             {enableBulkOperations && selectedTemplates.size > 0 && (
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span>{selectedTemplates.size} selected</span>
@@ -483,6 +483,38 @@ const TemplateLibraryPanel = ({
               <Plus className="w-4 h-4" />
               <span>New</span>
             </button>
+          </div>
+        </div>
+
+        {/* Template Type Guidance */}
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-blue-600 text-sm font-bold">i</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-blue-900 font-medium mb-2">Structural Templates vs Text Templating</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <h4 className="font-medium text-blue-800 mb-1">Use This Library For:</h4>
+                  <ul className="text-blue-700 space-y-1">
+                    <li>• Character attribute configurations</li>
+                    <li>• Node environmental properties</li>
+                    <li>• Interaction mechanics and effects</li>
+                    <li>• Reusable data structures</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-800 mb-1">For Dynamic Text, Use:</h4>
+                  <ul className="text-blue-700 space-y-1">
+                    <li>• <strong>InteractionEditor</strong> - for dialogue text</li>
+                    <li>• <strong>EncounterEditor</strong> - for quest descriptions</li>
+                    <li>• Built-in placeholder suggestions</li>
+                    <li>• Real-time text preview</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -552,7 +584,7 @@ const TemplateLibraryPanel = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder={`Search ${activeTab}...`}
+              placeholder={`Search ${activeTab.replace('s', '')} configurations...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -728,19 +760,22 @@ const TemplateLibraryPanel = ({
           </div>
         ) : filteredTemplates.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-gray-400 mb-2">📦</div>
-            <p className="text-sm text-gray-600 mb-4">
+            <div className="text-gray-400 mb-2">⚙️</div>
+            <p className="text-sm text-gray-600 mb-2">
               {searchQuery || selectedCategory !== 'all' || selectedTag !== 'all'
-                ? 'No templates match your filters'
-                : `No ${activeTab} templates available`
+                ? 'No structural templates match your filters'
+                : `No ${activeTab.replace('s', '')} configuration templates available`
               }
+            </p>
+            <p className="text-xs text-gray-500 mb-4">
+              Structural templates define reusable data configurations, not text content.
             </p>
             {!searchQuery && selectedCategory === 'all' && selectedTag === 'all' && (
               <button
                 onClick={handleCreateNew}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
               >
-                Create First Template
+                Create First Structural Template
               </button>
             )}
           </div>

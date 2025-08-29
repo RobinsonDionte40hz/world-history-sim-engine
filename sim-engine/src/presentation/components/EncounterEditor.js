@@ -6,17 +6,26 @@
  * - Trigger condition configuration
  * - Outcome and reward management
  * - Integration with interaction system
+ * - Text templating with PlaceholderEditor integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, X, Settings, Dice6, Clock, Users, Target, Gift, AlertTriangle, Info } from 'lucide-react';
+import PlaceholderEditor from './text-templating/PlaceholderEditor';
+import EditorContextService from '../../application/services/EditorContextService';
+import QuestTextTemplatingService from '../../application/services/QuestTextTemplatingService';
 
 const EncounterEditor = ({ 
   initialEncounter = null, 
   onChange, 
   onSave, 
   onCancel, 
-  mode = 'create' 
+  mode = 'create',
+  // Context props for text templating
+  currentNode = null,
+  currentCharacter = null,
+  currentWorld = null,
+  participants = []
 }) => {
   const [encounter, setEncounter] = useState(initialEncounter || {
     name: '',
@@ -36,11 +45,29 @@ const EncounterEditor = ({
     prerequisites: [],
     rewards: [],
     cooldown: 0,
-    nodeRestrictions: []
+    nodeRestrictions: [],
+    // Quest integration fields
+    questObjectives: [],
+    completionMessage: '',
+    questRewards: []
   });
 
   const [activeTab, setActiveTab] = useState('basic');
   const [validationErrors, setValidationErrors] = useState({});
+
+  // Context detection for text templating
+  const editorContext = useMemo(() => {
+    return EditorContextService.detectEncounterContext({
+      node: currentNode,
+      character: currentCharacter,
+      world: currentWorld,
+      participants: participants || encounter.participants,
+      encounter: encounter
+    });
+  }, [currentNode, currentCharacter, currentWorld, participants, encounter]);
+
+  // Quest text templating service
+  const questTemplatingService = useMemo(() => new QuestTextTemplatingService(), []);
 
   // Encounter types with descriptions
   const encounterTypes = [
@@ -104,6 +131,12 @@ const EncounterEditor = ({
     
     if (encounter.challengeRating < 1 || encounter.challengeRating > 30) {
       errors.challengeRating = 'Challenge rating must be between 1 and 30';
+    }
+
+    // Quest integration validation
+    const questValidation = questTemplatingService.validateQuestIntegration(encounter);
+    if (!questValidation.isValid) {
+      errors.questIntegration = questValidation.errors.join('; ');
     }
     
     setValidationErrors(errors);
@@ -212,6 +245,31 @@ const EncounterEditor = ({
     updateEncounter({ rewards: updatedRewards });
   };
 
+  // Quest objective management
+  const addQuestObjective = () => {
+    const newObjective = {
+      id: Date.now(),
+      text: '',
+      type: 'primary',
+      completed: false
+    };
+    updateEncounter({
+      questObjectives: [...(encounter.questObjectives || []), newObjective]
+    });
+  };
+
+  const updateQuestObjective = (index, updates) => {
+    const updatedObjectives = (encounter.questObjectives || []).map((objective, i) => 
+      i === index ? { ...objective, ...updates } : objective
+    );
+    updateEncounter({ questObjectives: updatedObjectives });
+  };
+
+  const removeQuestObjective = (index) => {
+    const updatedObjectives = (encounter.questObjectives || []).filter((_, i) => i !== index);
+    updateEncounter({ questObjectives: updatedObjectives });
+  };
+
   const renderBasicTab = () => (
     <div className="space-y-6">
       {/* Name and Description */}
@@ -236,12 +294,16 @@ const EncounterEditor = ({
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Description *
           </label>
-          <textarea
+          <PlaceholderEditor
             value={encounter.description}
-            onChange={(e) => updateEncounter({ description: e.target.value })}
+            onChange={(description) => updateEncounter({ description })}
+            context={editorContext}
+            placeholder="Describe what happens in this encounter... Use {{placeholders}} for dynamic content."
+            className="text-templating-editor"
             rows={3}
-            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Describe what happens in this encounter..."
+            showSuggestions={true}
+            showPreview={true}
+            showValidation={true}
           />
           {validationErrors.description && (
             <p className="mt-1 text-sm text-red-400">{validationErrors.description}</p>
@@ -323,6 +385,171 @@ const EncounterEditor = ({
             0 = Can only happen once, &gt;0 = Can repeat after cooldown
           </p>
         </div>
+      </div>
+
+      {/* Quest Integration */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Quest Integration</h3>
+            <p className="text-sm text-gray-400">Connect this encounter with quest objectives</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const sampleQuest = questTemplatingService.generateSampleQuestTemplates(encounter.type);
+                updateEncounter({
+                  questObjectives: sampleQuest.objectives,
+                  completionMessage: sampleQuest.completionMessage,
+                  questRewards: sampleQuest.rewards
+                });
+              }}
+              className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <Settings className="w-4 h-4" />
+              Generate Sample
+            </button>
+            <button
+              onClick={addQuestObjective}
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Objective
+            </button>
+          </div>
+        </div>
+
+        {/* Quest Objectives */}
+        {encounter.questObjectives && encounter.questObjectives.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-md font-medium text-gray-300">Quest Objectives</h4>
+            {encounter.questObjectives.map((objective, index) => (
+              <div key={objective.id} className="bg-white/10 border border-white/20 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h5 className="font-medium text-white">Objective {index + 1}</h5>
+                  <button
+                    onClick={() => removeQuestObjective(index)}
+                    className="text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Objective Text
+                    </label>
+                    <PlaceholderEditor
+                      value={objective.text}
+                      onChange={(text) => updateQuestObjective(index, { text })}
+                      context={editorContext}
+                      placeholder="Enter quest objective... Use {{placeholders}} for dynamic content."
+                      rows={2}
+                      showSuggestions={true}
+                      showPreview={true}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Type
+                      </label>
+                      <select
+                        value={objective.type || 'primary'}
+                        onChange={(e) => updateQuestObjective(index, { type: e.target.value })}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="primary">Primary</option>
+                        <option value="secondary">Secondary</option>
+                        <option value="optional">Optional</option>
+                        <option value="hidden">Hidden</option>
+                      </select>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={objective.completed || false}
+                          onChange={(e) => updateQuestObjective(index, { completed: e.target.checked })}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-gray-300">Completed by default</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Completion Message */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Completion Message
+          </label>
+          <PlaceholderEditor
+            value={encounter.completionMessage || ''}
+            onChange={(completionMessage) => updateEncounter({ completionMessage })}
+            context={editorContext}
+            placeholder="Message shown when encounter completes... Use {{placeholders}} for dynamic content."
+            rows={2}
+            showSuggestions={true}
+            showPreview={true}
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            This message will be displayed when the encounter is completed
+          </p>
+        </div>
+
+        {/* Quest Rewards */}
+        {encounter.questRewards && encounter.questRewards.length > 0 && (
+          <div>
+            <h4 className="text-md font-medium text-gray-300 mb-3">Quest Rewards</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {encounter.questRewards.map((reward, index) => (
+                <div key={index} className="bg-white/10 border border-white/20 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-white capitalize">{reward.type}</span>
+                    <button
+                      onClick={() => {
+                        const updatedRewards = encounter.questRewards.filter((_, i) => i !== index);
+                        updateEncounter({ questRewards: updatedRewards });
+                      }}
+                      className="text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  {reward.value !== undefined && (
+                    <div className="text-sm text-gray-300">
+                      Value: {reward.value}
+                    </div>
+                  )}
+                  {reward.description && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {reward.description}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quest Integration Validation */}
+        {validationErrors.questIntegration && (
+          <div className="p-3 bg-red-600/10 border border-red-600/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <span className="text-red-400 text-sm font-medium">Quest Integration Issues:</span>
+            </div>
+            <p className="text-red-300 text-sm mt-1">{validationErrors.questIntegration}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -570,12 +797,14 @@ const EncounterEditor = ({
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Description
                   </label>
-                  <textarea
+                  <PlaceholderEditor
                     value={outcome.description}
-                    onChange={(e) => updateOutcome(index, { description: e.target.value })}
+                    onChange={(description) => updateOutcome(index, { description })}
+                    context={editorContext}
+                    placeholder="Describe what happens with this outcome... Use {{placeholders}} for dynamic content."
                     rows={2}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Describe what happens with this outcome..."
+                    showSuggestions={true}
+                    showPreview={true}
                   />
                 </div>
                 

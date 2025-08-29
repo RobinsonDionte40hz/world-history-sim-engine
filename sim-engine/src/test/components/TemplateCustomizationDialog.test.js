@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TemplateCustomizationDialog from '../../presentation/components/TemplateCustomizationDialog';
 
@@ -79,7 +79,7 @@ describe('TemplateCustomizationDialog', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
       expect(screen.getByText('Customize Template: Test Template')).toBeInTheDocument();
-      expect(screen.getByText('A test template for characters')).toBeInTheDocument();
+      expect(screen.getAllByText('A test template for characters')[0]).toBeInTheDocument();
     });
 
     test('should not render when closed', () => {
@@ -96,29 +96,25 @@ describe('TemplateCustomizationDialog', () => {
   });
 
   describe('Tab Navigation', () => {
-    test('should show structural tab by default', () => {
+    test('should show configuration tab by default', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
-      const structuralTab = screen.getByText('Structure');
-      expect(structuralTab).toHaveClass('text-blue-600');
+      const configTab = screen.getByRole('button', { name: /Configuration/ });
+      expect(configTab).toHaveClass('text-blue-600');
     });
 
-    test('should switch to text templates tab', async () => {
-      const user = userEvent.setup();
+    test('should show text templating guidance', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
-      const textTab = screen.getByText('Text Templates');
-      await user.click(textTab);
-      
-      expect(textTab).toHaveClass('text-blue-600');
-      expect(screen.getByText('Preview Context')).toBeInTheDocument();
+      expect(screen.getByText('Looking for Text Templating?')).toBeInTheDocument();
+      expect(screen.getByText(/Dynamic text with placeholders/)).toBeInTheDocument();
     });
 
-    test('should show both tabs', () => {
+    test('should show only configuration tab', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
-      expect(screen.getByText('Structure')).toBeInTheDocument();
-      expect(screen.getByText('Text Templates')).toBeInTheDocument();
+      expect(screen.getByText('Configuration')).toBeInTheDocument();
+      expect(screen.queryByText('Text Templates')).not.toBeInTheDocument();
     });
   });
 
@@ -155,8 +151,9 @@ describe('TemplateCustomizationDialog', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
       const strengthInput = screen.getByLabelText('Strength');
-      await user.clear(strengthInput);
-      await user.type(strengthInput, '18');
+      
+      // Use fireEvent to directly change the value
+      fireEvent.change(strengthInput, { target: { value: '18' } });
       
       expect(strengthInput).toHaveValue(18);
     });
@@ -182,41 +179,19 @@ describe('TemplateCustomizationDialog', () => {
     });
   });
 
-  describe('Text Template Customization', () => {
-    test('should show text template fields', async () => {
-      const user = userEvent.setup();
+  describe('Text Template Guidance', () => {
+    test('should show text templating guidance', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
-      const textTab = screen.getByText('Text Templates');
-      await user.click(textTab);
-      
-      expect(screen.getByText('Character Description Template')).toBeInTheDocument();
-      expect(screen.getByText('Character Background Template')).toBeInTheDocument();
-      expect(screen.getByText('Greeting Message')).toBeInTheDocument();
+      expect(screen.getByText('Looking for Text Templating?')).toBeInTheDocument();
+      expect(screen.getByText(/Dynamic text with placeholders/)).toBeInTheDocument();
+      expect(screen.getByText(/InteractionEditor/)).toBeInTheDocument();
     });
 
-    test('should show context selector', async () => {
-      const user = userEvent.setup();
+    test('should explain where text templating is now handled', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
-      const textTab = screen.getByText('Text Templates');
-      await user.click(textTab);
-      
-      expect(screen.getByText('Preview Context')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Sample Character 1')).toBeInTheDocument();
-    });
-
-    test('should switch preview context', async () => {
-      const user = userEvent.setup();
-      render(<TemplateCustomizationDialog {...defaultProps} />);
-      
-      const textTab = screen.getByText('Text Templates');
-      await user.click(textTab);
-      
-      const contextSelect = screen.getByDisplayValue('Sample Character 1');
-      await user.selectOptions(contextSelect, '1');
-      
-      expect(contextSelect).toHaveValue('1');
+      expect(screen.getByText(/This dialog focuses on structural configuration only/)).toBeInTheDocument();
     });
   });
 
@@ -327,7 +302,7 @@ describe('TemplateCustomizationDialog', () => {
       
       render(<TemplateCustomizationDialog {...defaultProps} onClose={onClose} />);
       
-      const closeButton = screen.getByRole('button', { name: /×/ });
+      const closeButton = screen.getByRole('button', { name: /Close dialog/ });
       await user.click(closeButton);
       
       expect(onClose).toHaveBeenCalled();
@@ -467,7 +442,7 @@ describe('TemplateCustomizationDialog', () => {
       
       render(<TemplateCustomizationDialog {...defaultProps} template={templateWithoutText} />);
       
-      expect(screen.getByText('Structure')).toBeInTheDocument();
+      expect(screen.getByText('Configuration')).toBeInTheDocument();
     });
 
     test('should handle empty context', () => {
@@ -487,8 +462,10 @@ describe('TemplateCustomizationDialog', () => {
     test('should have proper ARIA labels', () => {
       render(<TemplateCustomizationDialog {...defaultProps} />);
       
-      const dialog = screen.getByRole('dialog', { hidden: true });
+      const dialog = screen.getByRole('dialog');
       expect(dialog).toBeInTheDocument();
+      expect(dialog).toHaveAttribute('aria-labelledby', 'dialog-title');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
     });
 
     test('should support keyboard navigation', async () => {

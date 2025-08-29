@@ -24,212 +24,151 @@ const TemplatePage = () => {
 
   const { saveTemplate } = useTemplates();
 
-  // Demo templates for showcasing the system - memoized to prevent useEffect dependency issues
-  const demoTemplates = useMemo(() => ({
+  // Structural templates for showcasing the system - focused on data configuration, not text content
+  const structuralTemplates = useMemo(() => ({
     characters: {
-      id: 'demo_warrior',
-      name: 'Heroic Warrior',
-      description: 'A brave warrior ready for adventure with customizable attributes and background.',
+      id: 'structural_balanced_character',
+      name: 'Balanced Character Attributes',
+      description: 'A character template with balanced D&D attributes and personality traits for general use.',
       type: 'characters',
-      tags: ['warrior', 'combat', 'heroic'],
+      tags: ['balanced', 'attributes', 'structural'],
       attributes: {
-        strength: 16,
-        dexterity: 12,
-        constitution: 15,
-        intelligence: 10,
+        strength: 13,
+        dexterity: 13,
+        constitution: 13,
+        intelligence: 13,
         wisdom: 13,
-        charisma: 14
+        charisma: 13
+      },
+      consciousness: {
+        frequency: 45,
+        coherence: 0.7
+      },
+      personality: {
+        aggression: 0.4,
+        curiosity: 0.6,
+        empathy: 0.5
       },
       customizationOptions: {
-        strength: {
-          type: 'number',
-          label: 'Strength',
-          min: 8,
-          max: 18,
-          default: 16,
-          description: 'Physical power and combat prowess'
-        },
-        weaponSpecialty: {
+        attributeBonus: {
           type: 'select',
-          label: 'Weapon Specialty',
-          options: ['Sword', 'Axe', 'Bow', 'Spear', 'Mace'],
-          default: 'Sword',
-          description: 'Preferred weapon type'
+          label: 'Primary Attribute',
+          options: ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'],
+          default: 'Strength',
+          description: 'Which attribute gets a +3 bonus'
         },
-        isVeteran: {
-          type: 'boolean',
-          label: 'Veteran Warrior',
-          default: false,
-          description: 'Has extensive combat experience'
-        },
-        personalityTrait: {
+        personalityFocus: {
           type: 'select',
-          label: 'Personality Trait',
-          options: ['Brave', 'Cautious', 'Reckless', 'Noble', 'Pragmatic'],
-          default: 'Brave',
-          description: 'Dominant personality characteristic'
+          label: 'Personality Focus',
+          options: ['Aggressive', 'Curious', 'Empathetic', 'Balanced'],
+          default: 'Balanced',
+          description: 'Dominant personality trait'
         }
       },
-      textTemplates: {
-        description: '{{character.name}} is a {{#if isVeteran}}veteran{{/if}} warrior specializing in {{weaponSpecialty}} combat. {{#if character.attributes.strength > 15}}Their impressive strength makes them formidable in battle.{{/if}} Known for being {{personalityTrait}}, they approach conflicts with {{#if personalityTrait == "Cautious"}}careful planning{{/if}}{{#if personalityTrait == "Reckless"}}bold aggression{{/if}}{{#if personalityTrait == "Brave"}}unwavering courage{{/if}}{{#if personalityTrait == "Noble"}}honor and dignity{{/if}}{{#if personalityTrait == "Pragmatic"}}practical efficiency{{/if}}.',
-        background: 'Born in {{node.name}}, {{character.name}} {{#if isVeteran}}has seen many battles and earned their reputation through years of service{{/if}}{{#if !isVeteran}}is eager to prove themselves and make their mark on the world{{/if}}. Their {{weaponSpecialty}} has become an extension of their will, and their {{personalityTrait}} nature has shaped their approach to both combat and life.',
-        greeting: '{{random:Greetings,Hail,Well met}}, {{#if character.attributes.charisma > 14}}friend{{/if}}{{#if character.attributes.charisma <= 14}}traveler{{/if}}! I am {{character.name}}, {{#if isVeteran}}a seasoned warrior{{/if}}{{#if !isVeteran}}a warrior seeking adventure{{/if}}.'
-      },
-      textTemplateFields: [
-        {
-          key: 'battleCry',
-          label: 'Battle Cry',
-          placeholder: 'Enter a battle cry with {{placeholders}}...'
-        },
-        {
-          key: 'motto',
-          label: 'Personal Motto',
-          placeholder: 'Enter a personal motto...'
-        }
-      ],
       metadata: {
-        category: 'combat',
+        category: 'structural',
         difficulty: 'beginner',
         author: 'System',
         version: '1.0.0',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isStructural: true
       }
     },
     nodes: {
-      id: 'demo_tavern',
-      name: 'The Prancing Pony',
-      description: 'A cozy tavern where travelers gather to share stories and information.',
+      id: 'structural_settlement_node',
+      name: 'Settlement Node Properties',
+      description: 'A node template with configurable environmental and cultural properties for settlements.',
       type: 'nodes',
-      tags: ['tavern', 'social', 'information'],
-      nodeType: 'tavern',
+      tags: ['settlement', 'properties', 'structural'],
+      nodeType: 'settlement',
       environmentalProperties: {
-        warm: true,
-        noisy: true,
-        crowded: true,
-        safe: true
+        crowded: false,
+        noisy: false,
+        prosperous: true,
+        safe: true,
+        clean: true
       },
       culturalContext: {
         language: 'common',
-        customs: 'friendly',
-        law: 'tavern rules'
+        customs: 'traditional',
+        law: 'moderate',
+        religion: 'diverse'
+      },
+      resourceAvailability: {
+        food: 'abundant',
+        water: 'clean',
+        materials: 'available',
+        information: 'flowing'
       },
       customizationOptions: {
-        atmosphere: {
+        settlementSize: {
           type: 'select',
-          label: 'Atmosphere',
-          options: ['Cozy', 'Rowdy', 'Mysterious', 'Elegant', 'Rough'],
-          default: 'Cozy',
-          description: 'Overall feel of the establishment'
+          label: 'Settlement Size',
+          options: ['Village', 'Town', 'City', 'Metropolis'],
+          default: 'Town',
+          description: 'Size and population of the settlement'
         },
-        priceLevel: {
+        economicFocus: {
           type: 'select',
-          label: 'Price Level',
-          options: ['Cheap', 'Moderate', 'Expensive', 'Luxury'],
-          default: 'Moderate',
-          description: 'Cost of food and lodging'
-        },
-        hasRooms: {
-          type: 'boolean',
-          label: 'Has Lodging',
-          default: true,
-          description: 'Offers rooms for rent'
-        },
-        specialFeature: {
-          type: 'select',
-          label: 'Special Feature',
-          options: ['Live Music', 'Gaming Tables', 'Private Booths', 'Fireplace', 'Garden'],
-          default: 'Fireplace',
-          description: 'Unique attraction'
+          label: 'Economic Focus',
+          options: ['Agriculture', 'Trade', 'Crafting', 'Military', 'Academic'],
+          default: 'Trade',
+          description: 'Primary economic activity'
         }
       },
-      textTemplates: {
-        description: '{{node.name}} is a {{atmosphere}} tavern in {{world.name}}. {{#if hasRooms}}It offers both food and lodging{{/if}}{{#if !hasRooms}}It serves food and drink but no lodging{{/if}} at {{priceLevel}} prices. The {{specialFeature}} adds to its charm, making it {{#if atmosphere == "Cozy"}}a welcoming refuge{{/if}}{{#if atmosphere == "Rowdy"}}a lively gathering place{{/if}}{{#if atmosphere == "Mysterious"}}an intriguing establishment{{/if}}{{#if atmosphere == "Elegant"}}a refined venue{{/if}}{{#if atmosphere == "Rough"}}a place for hardy folk{{/if}}.',
-        ambiance: 'The {{atmosphere}} atmosphere is enhanced by {{#if specialFeature == "Live Music"}}melodic tunes that fill the air{{/if}}{{#if specialFeature == "Gaming Tables"}}the sounds of dice and cards{{/if}}{{#if specialFeature == "Private Booths"}}intimate seating arrangements{{/if}}{{#if specialFeature == "Fireplace"}}the warm glow of crackling flames{{/if}}{{#if specialFeature == "Garden"}}the peaceful view of greenery{{/if}}. {{#if node.environmentalProperties.crowded}}The place bustles with activity{{/if}}{{#if !node.environmentalProperties.crowded}}It maintains a quieter ambiance{{/if}}.'
-      },
-      textTemplateFields: [
-        {
-          key: 'welcomeMessage',
-          label: 'Welcome Message',
-          placeholder: 'What the innkeeper says to new guests...'
-        },
-        {
-          key: 'specialtyDrink',
-          label: 'Specialty Drink',
-          placeholder: 'Describe the tavern\'s signature beverage...'
-        }
-      ],
       metadata: {
-        category: 'social',
+        category: 'structural',
         difficulty: 'beginner',
         author: 'System',
         version: '1.0.0',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isStructural: true
       }
     },
     interactions: {
-      id: 'demo_negotiation',
-      name: 'Merchant Negotiation',
-      description: 'A flexible negotiation interaction with customizable outcomes.',
+      id: 'structural_skill_check',
+      name: 'Attribute-Based Skill Check',
+      description: 'A structural interaction template for attribute-based skill checks with configurable difficulty.',
       type: 'interactions',
-      tags: ['social', 'trade', 'negotiation'],
-      interactionType: 'dialogue',
+      tags: ['skill-check', 'attributes', 'structural'],
+      interactionType: 'skill_check',
       requirements: {
         attributes: {
-          charisma: 12
+          // Will be set based on customization
+        }
+      },
+      effects: {
+        success: {
+          attribute_bonus: 1,
+          reputation: 2
+        },
+        failure: {
+          reputation: -1
         }
       },
       customizationOptions: {
+        primaryAttribute: {
+          type: 'select',
+          label: 'Primary Attribute',
+          options: ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'],
+          default: 'Charisma',
+          description: 'Which attribute is tested'
+        },
         difficulty: {
           type: 'select',
-          label: 'Difficulty',
-          options: ['Easy', 'Moderate', 'Hard', 'Very Hard'],
-          default: 'Moderate',
-          description: 'How challenging the negotiation is'
-        },
-        tradeGood: {
-          type: 'select',
-          label: 'Trade Good',
-          options: ['Weapons', 'Armor', 'Supplies', 'Information', 'Services'],
-          default: 'Supplies',
-          description: 'What is being negotiated'
-        },
-        merchantPersonality: {
-          type: 'select',
-          label: 'Merchant Personality',
-          options: ['Greedy', 'Fair', 'Suspicious', 'Friendly', 'Desperate'],
-          default: 'Fair',
-          description: 'Merchant\'s approach to business'
-        },
-        hasAlternative: {
-          type: 'boolean',
-          label: 'Has Alternative Offer',
-          default: true,
-          description: 'Merchant can offer something else if first deal fails'
+          label: 'Difficulty Class',
+          options: ['Easy (DC 10)', 'Moderate (DC 15)', 'Hard (DC 20)', 'Very Hard (DC 25)'],
+          default: 'Moderate (DC 15)',
+          description: 'Difficulty of the skill check'
         }
       },
-      textTemplates: {
-        description: 'Negotiate with a {{merchantPersonality}} merchant over {{tradeGood}}. {{#if difficulty == "Easy"}}They seem eager to make a deal.{{/if}}{{#if difficulty == "Moderate"}}They appear open to reasonable offers.{{/if}}{{#if difficulty == "Hard"}}They drive a hard bargain.{{/if}}{{#if difficulty == "Very Hard"}}They seem almost unwilling to negotiate.{{/if}}',
-        successMessage: '{{#if merchantPersonality == "Greedy"}}The merchant\'s eyes light up with greed as they accept your offer{{/if}}{{#if merchantPersonality == "Fair"}}The merchant nods approvingly at your fair proposal{{/if}}{{#if merchantPersonality == "Suspicious"}}Despite their suspicion, the merchant agrees to your terms{{/if}}{{#if merchantPersonality == "Friendly"}}The merchant smiles warmly and shakes your hand{{/if}}{{#if merchantPersonality == "Desperate"}}The merchant eagerly accepts, clearly needing the deal{{/if}}. You successfully acquire the {{tradeGood}}.',
-        failureMessage: '{{#if hasAlternative}}The merchant shakes their head but offers an alternative deal{{/if}}{{#if !hasAlternative}}The merchant firmly refuses your offer and turns away{{/if}}. {{#if merchantPersonality == "Greedy"}}Their greed prevents them from seeing reason{{/if}}{{#if merchantPersonality == "Suspicious"}}Their suspicion gets the better of them{{/if}}{{#if merchantPersonality == "Fair"}}They maintain their fair but firm position{{/if}}.'
-      },
-      textTemplateFields: [
-        {
-          key: 'openingLine',
-          label: 'Opening Line',
-          placeholder: 'What the merchant says to start the negotiation...'
-        },
-        {
-          key: 'alternativeOffer',
-          label: 'Alternative Offer',
-          placeholder: 'What the merchant offers if the main deal fails...'
-        }
-      ],
       metadata: {
-        category: 'social',
+        category: 'structural',
         difficulty: 'intermediate',
         author: 'System',
         version: '1.0.0',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isStructural: true
       }
     }
   }), []);
@@ -239,8 +178,8 @@ const TemplatePage = () => {
     const handleTemplateCustomization = (event) => {
       const { entityType } = event.detail;
 
-      // Find or create a demo template for this type
-      const template = demoTemplates[entityType];
+      // Find or create a structural template for this type
+      const template = structuralTemplates[entityType];
       if (template) {
         const context = getEnhancedContext(entityType, {
           character: { name: 'Demo Character', attributes: { strength: 16, charisma: 14 } },
@@ -269,7 +208,7 @@ const TemplatePage = () => {
       window.removeEventListener('openTemplateCustomization', handleTemplateCustomization);
       window.removeEventListener('openTemplateLibrary', handleTemplateLibrary);
     };
-  }, [getEnhancedContext, openCustomizationDialog, demoTemplates]);
+  }, [getEnhancedContext, openCustomizationDialog, structuralTemplates]);
 
   const handleTemplateSelect = (template, type) => {
     console.log('Template selected:', template, type);
@@ -307,8 +246,8 @@ const TemplatePage = () => {
     }
   };
 
-  const handleDemoTemplate = (type) => {
-    const template = demoTemplates[type];
+  const handleStructuralTemplate = (type) => {
+    const template = structuralTemplates[type];
     if (template) {
       const context = getEnhancedContext(type, {
         character: {
@@ -366,23 +305,44 @@ const TemplatePage = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Demo Section */}
+        {/* Guidance Section */}
         <div className="mb-8">
           <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 p-6">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Wand2 className="w-5 h-5 mr-2 text-indigo-400" />
-              Try Template Customization
+              <FileText className="w-5 h-5 mr-2 text-indigo-400" />
+              Template Library - Structural Templates
             </h2>
+            
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-blue-400 text-sm font-bold">i</span>
+                </div>
+                <div>
+                  <h3 className="text-blue-300 font-medium mb-2">Text Templating is Now in Editors</h3>
+                  <p className="text-slate-300 text-sm mb-3">
+                    Dynamic text templating with placeholders like <code className="bg-slate-700 px-1 rounded text-blue-300">{'{{character.name}}'}</code> and 
+                    conditionals like <code className="bg-slate-700 px-1 rounded text-blue-300">{'{{#if condition}}'}</code> is now integrated 
+                    directly into the InteractionEditor and EncounterEditor.
+                  </p>
+                  <p className="text-slate-300 text-sm">
+                    This template library focuses on <strong>structural templates</strong> - reusable configurations for 
+                    character attributes, node properties, and interaction mechanics.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <h3 className="text-white font-medium mb-4">Try Structural Templates</h3>
             <p className="text-slate-300 mb-6">
-              Experience the power of dynamic text templating with these interactive demos.
-              Each template showcases different customization options and text templating features.
+              These templates provide pre-configured data structures and attribute combinations that you can customize and reuse across your world.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => handleDemoTemplate(tab.id)}
+                  onClick={() => handleStructuralTemplate(tab.id)}
                   className={`
                     p-4 rounded-lg border-2 transition-all duration-200 text-left
                     hover:scale-105 hover:shadow-lg
@@ -399,9 +359,9 @@ const TemplatePage = () => {
                     <span className="font-medium text-white">{tab.label}</span>
                   </div>
                   <p className="text-sm text-slate-300">
-                    {tab.id === 'characters' && 'Customize warrior attributes, personality, and dynamic descriptions'}
-                    {tab.id === 'nodes' && 'Configure tavern atmosphere, features, and contextual text'}
-                    {tab.id === 'interactions' && 'Adjust negotiation difficulty, outcomes, and dialogue'}
+                    {tab.id === 'characters' && 'Configure D&D attributes, consciousness, and personality traits'}
+                    {tab.id === 'nodes' && 'Set environmental properties, cultural context, and resources'}
+                    {tab.id === 'interactions' && 'Define skill checks, requirements, and mechanical effects'}
                   </p>
                 </button>
               ))}

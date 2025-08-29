@@ -1,74 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, Save, RotateCcw, Eye, EyeOff, Settings, FileText, 
-  ChevronDown, ChevronRight, AlertTriangle, CheckCircle,
-  Shuffle, Copy, Download, Upload
+  ChevronDown, ChevronRight, AlertTriangle,
+  Shuffle
 } from 'lucide-react';
-import PlaceholderEditor from './PlaceholderEditor';
-import TextTemplateEngine from '../../domain/services/TextTemplateEngine';
+// PlaceholderEditor and TextTemplateEngine removed - text templating now in editors
 
 const TemplateCustomizationDialog = ({
   template,
-  type,
   isOpen,
   onClose,
   onConfirm,
   presetCustomizations = {},
-  context = {},
   className = ''
 }) => {
   const [activeTab, setActiveTab] = useState('structural');
   const [customizations, setCustomizations] = useState({});
-  const [textTemplates, setTextTemplates] = useState({});
   const [collapsedSections, setCollapsedSections] = useState(new Set());
   const [showPreview, setShowPreview] = useState(true);
-  const [sampleContextIndex, setSampleContextIndex] = useState(0);
-  const [validationResults, setValidationResults] = useState({});
   const [isDirty, setIsDirty] = useState(false);
 
-  const templateEngine = useMemo(() => new TextTemplateEngine(), []);
+  // Context removed - text templating now handled in editors
 
-  // Sample contexts for testing templates
-  const sampleContexts = useMemo(() => [
-    {
-      name: 'Sample Character 1',
-      character: {
-        name: 'Aria Blackwood',
-        attributes: { strength: 16, dexterity: 14, constitution: 13, intelligence: 12, wisdom: 15, charisma: 18 },
-        personality: { aggression: 0.3, curiosity: 0.8, empathy: 0.7 },
-        archetype: 'Noble'
-      },
-      node: {
-        name: 'Royal Court',
-        type: 'palace',
-        environmentalProperties: { formal: true, crowded: true, luxurious: true },
-        culturalContext: { language: 'common', customs: 'courtly', law: 'royal decree' }
-      },
-      world: { name: 'Eldoria', theme: 'medieval fantasy' }
-    },
-    {
-      name: 'Sample Character 2',
-      character: {
-        name: 'Grimjaw Ironbeard',
-        attributes: { strength: 18, dexterity: 10, constitution: 16, intelligence: 8, wisdom: 12, charisma: 6 },
-        personality: { aggression: 0.8, curiosity: 0.2, empathy: 0.4 },
-        archetype: 'Warrior'
-      },
-      node: {
-        name: 'Tavern Brawl',
-        type: 'tavern',
-        environmentalProperties: { noisy: true, smoky: true, rough: true },
-        culturalContext: { language: 'common', customs: 'working class', law: 'might makes right' }
-      },
-      world: { name: 'Eldoria', theme: 'medieval fantasy' }
-    },
-    {
-      name: 'Custom Context',
-      ...context
-    }
-  ], [context]);
-
-  const currentContext = sampleContexts[sampleContextIndex];
+  // Memoize preset customizations to avoid unnecessary re-renders
+  const presetCustomizationsString = JSON.stringify(presetCustomizations);
+  const memoizedPresetCustomizations = useMemo(() => presetCustomizations, [presetCustomizations]);
 
   // Initialize customizations when template changes
   useEffect(() => {
@@ -78,7 +34,7 @@ const TemplateCustomizationDialog = ({
       name: template.name,
       description: template.description,
       tags: [...(template.tags || [])],
-      ...presetCustomizations
+      ...memoizedPresetCustomizations
     };
 
     // Add customizable fields based on template type
@@ -90,27 +46,9 @@ const TemplateCustomizationDialog = ({
       });
     }
 
-    // Initialize text templates
-    const initialTextTemplates = {};
-    if (template.textTemplates) {
-      Object.entries(template.textTemplates).forEach(([key, value]) => {
-        initialTextTemplates[key] = value;
-      });
-    }
-
     setCustomizations(initialCustomizations);
-    setTextTemplates(initialTextTemplates);
     setIsDirty(false);
-  }, [template, presetCustomizations]);
-
-  // Validate templates when they change
-  useEffect(() => {
-    const results = {};
-    Object.entries(textTemplates).forEach(([key, template]) => {
-      results[key] = templateEngine.validateTemplate(template);
-    });
-    setValidationResults(results);
-  }, [textTemplates, templateEngine]);
+  }, [template, memoizedPresetCustomizations]);
 
   if (!isOpen || !template) return null;
 
@@ -122,13 +60,7 @@ const TemplateCustomizationDialog = ({
     setIsDirty(true);
   };
 
-  const handleTextTemplateChange = (key, value) => {
-    setTextTemplates(prev => ({
-      ...prev,
-      [key]: value
-    }));
-    setIsDirty(true);
-  };
+  // Text template handling removed - now in editors
 
   const handleSectionToggle = (sectionId) => {
     setCollapsedSections(prev => {
@@ -149,17 +81,15 @@ const TemplateCustomizationDialog = ({
         description: template.description,
         tags: [...(template.tags || [])]
       });
-      setTextTemplates(template.textTemplates || {});
       setIsDirty(false);
     }
   };
 
   const handleConfirm = () => {
-    // Create the customized template
+    // Create the customized template (structural configuration only)
     const customizedTemplate = {
       ...template,
       ...customizations,
-      textTemplates,
       metadata: {
         ...template.metadata,
         customizedAt: new Date().toISOString(),
@@ -207,6 +137,7 @@ const TemplateCustomizationDialog = ({
         return (
           <div className="flex items-center space-x-2">
             <input
+              id={`customization-${key}`}
               type="number"
               value={value || option.default || 0}
               onChange={(e) => handleCustomizationChange(key, parseInt(e.target.value))}
@@ -243,6 +174,7 @@ const TemplateCustomizationDialog = ({
       case 'select':
         return (
           <select
+            id={`customization-${key}`}
             value={value || option.default || ''}
             onChange={(e) => handleCustomizationChange(key, e.target.value)}
             className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -293,17 +225,21 @@ const TemplateCustomizationDialog = ({
   };
 
   const tabs = [
-    { id: 'structural', label: 'Structure', icon: <Settings className="w-4 h-4" /> },
-    { id: 'text', label: 'Text Templates', icon: <FileText className="w-4 h-4" /> }
+    { id: 'structural', label: 'Configuration', icon: <Settings className="w-4 h-4" /> }
   ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col ${className}`}>
+      <div 
+        className={`bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col ${className}`}
+        role="dialog"
+        aria-labelledby="dialog-title"
+        aria-modal="true"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 id="dialog-title" className="text-xl font-semibold text-gray-900">
               Customize Template: {template.name}
             </h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -339,9 +275,28 @@ const TemplateCustomizationDialog = ({
             <button
               onClick={onClose}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
+              aria-label="Close dialog"
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+
+        {/* Text Templating Guidance */}
+        <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
+          <div className="flex items-start space-x-3">
+            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-blue-600 text-sm font-bold">i</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-blue-900 font-medium mb-1">Looking for Text Templating?</h3>
+              <p className="text-blue-800 text-sm">
+                Dynamic text with placeholders like <code className="bg-blue-100 px-1 rounded">{'{{character.name}}'}</code> and 
+                conditionals like <code className="bg-blue-100 px-1 rounded">{'{{#if condition}}'}</code> is now integrated 
+                directly into the <strong>InteractionEditor</strong> and <strong>EncounterEditor</strong>. 
+                This dialog focuses on structural configuration only.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -424,7 +379,7 @@ const TemplateCustomizationDialog = ({
                     <div className="space-y-4">
                       {Object.entries(template.customizationOptions).map(([key, option]) => (
                         <div key={key}>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label htmlFor={`customization-${key}`} className="block text-sm font-medium text-gray-700 mb-1">
                             {option.label || key}
                           </label>
                           {option.description && (
@@ -439,133 +394,7 @@ const TemplateCustomizationDialog = ({
               </div>
             )}
 
-            {activeTab === 'text' && (
-              <div className="space-y-6">
-                {/* Context Selector */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-blue-900">Preview Context</h3>
-                    <select
-                      value={sampleContextIndex}
-                      onChange={(e) => setSampleContextIndex(parseInt(e.target.value))}
-                      className="text-sm border border-blue-300 rounded px-2 py-1"
-                    >
-                      {sampleContexts.map((ctx, index) => (
-                        <option key={index} value={index}>{ctx.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <p className="text-sm text-blue-700">
-                    Use this context to test your text templates. Switch between different contexts to see how your templates adapt.
-                  </p>
-                </div>
 
-                {/* Text Template Fields */}
-                <div className="space-y-4">
-                  {/* Default text template fields based on type */}
-                  {type === 'characters' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Character Description Template
-                        </label>
-                        <PlaceholderEditor
-                          value={textTemplates.description || ''}
-                          onChange={(value) => handleTextTemplateChange('description', value)}
-                          context={currentContext}
-                          placeholder="Enter character description with {{placeholders}}..."
-                          showSuggestions={true}
-                          showValidation={true}
-                          showPreview={true}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Character Background Template
-                        </label>
-                        <PlaceholderEditor
-                          value={textTemplates.background || ''}
-                          onChange={(value) => handleTextTemplateChange('background', value)}
-                          context={currentContext}
-                          placeholder="Enter character background with {{placeholders}}..."
-                          showSuggestions={true}
-                          showValidation={true}
-                          showPreview={true}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {type === 'interactions' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Interaction Description Template
-                        </label>
-                        <PlaceholderEditor
-                          value={textTemplates.description || ''}
-                          onChange={(value) => handleTextTemplateChange('description', value)}
-                          context={currentContext}
-                          placeholder="Enter interaction description with {{placeholders}}..."
-                          showSuggestions={true}
-                          showValidation={true}
-                          showPreview={true}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Success Message Template
-                        </label>
-                        <PlaceholderEditor
-                          value={textTemplates.successMessage || ''}
-                          onChange={(value) => handleTextTemplateChange('successMessage', value)}
-                          context={currentContext}
-                          placeholder="Enter success message with {{placeholders}}..."
-                          showSuggestions={true}
-                          showValidation={true}
-                          showPreview={true}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Failure Message Template
-                        </label>
-                        <PlaceholderEditor
-                          value={textTemplates.failureMessage || ''}
-                          onChange={(value) => handleTextTemplateChange('failureMessage', value)}
-                          context={currentContext}
-                          placeholder="Enter failure message with {{placeholders}}..."
-                          showSuggestions={true}
-                          showValidation={true}
-                          showPreview={true}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Custom text template fields from template */}
-                  {template.textTemplateFields && template.textTemplateFields.map(field => (
-                    <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label}
-                      </label>
-                      <PlaceholderEditor
-                        value={textTemplates[field.key] || ''}
-                        onChange={(value) => handleTextTemplateChange(field.key, value)}
-                        context={currentContext}
-                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()} with {{placeholders}}...`}
-                        showSuggestions={true}
-                        showValidation={true}
-                        showPreview={true}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Preview Panel */}
@@ -574,27 +403,10 @@ const TemplateCustomizationDialog = ({
               <div className="p-4">
                 <h3 className="font-medium text-gray-900 mb-4">Live Preview</h3>
                 
-                {/* Validation Status */}
-                <div className="mb-4">
-                  {Object.entries(validationResults).map(([key, result]) => (
-                    <div key={key} className="flex items-center space-x-2 text-sm mb-1">
-                      {result.isValid ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                      )}
-                      <span className="font-medium">{key}:</span>
-                      <span className={result.isValid ? 'text-green-600' : 'text-red-600'}>
-                        {result.isValid ? 'Valid' : `${result.errors.length} errors`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
                 {/* Preview Content */}
                 <div className="space-y-4">
                   <div className="bg-white border border-gray-200 rounded-lg p-3">
-                    <h4 className="font-medium text-gray-900 mb-2">Basic Information</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">Configuration Preview</h4>
                     <div className="space-y-2 text-sm">
                       <div><strong>Name:</strong> {customizations.name}</div>
                       <div><strong>Description:</strong> {customizations.description}</div>
@@ -602,22 +414,18 @@ const TemplateCustomizationDialog = ({
                     </div>
                   </div>
 
-                  {Object.entries(textTemplates).map(([key, template]) => {
-                    const resolution = templateEngine.resolve(template, currentContext);
-                    return (
-                      <div key={key} className="bg-white border border-gray-200 rounded-lg p-3">
-                        <h4 className="font-medium text-gray-900 mb-2 capitalize">{key}</h4>
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {resolution.resolved || 'Empty'}
-                        </div>
-                        {resolution.errors.length > 0 && (
-                          <div className="mt-2 text-xs text-red-600">
-                            Errors: {resolution.errors.join(', ')}
+                  {template.customizationOptions && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-3">
+                      <h4 className="font-medium text-gray-900 mb-2">Customized Values</h4>
+                      <div className="space-y-2 text-sm">
+                        {Object.entries(template.customizationOptions).map(([key, option]) => (
+                          <div key={key}>
+                            <strong>{option.label || key}:</strong> {customizations[key] || option.default || 'Not set'}
                           </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
