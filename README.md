@@ -60,10 +60,19 @@ Before you can start the simulation, ensure your world has:
 - **Goal-Driven Behavior**: Autonomous decision-making based on objectives
 
 ### Template System
-- **Save Everything**: Any component can become a reusable template
-- **Template Library**: Build collections of characters, nodes, and interactions
-- **Rapid Prototyping**: Quickly create variations from base templates
+- **Structural Templates**: Save characters, nodes, and interactions as reusable templates
+- **Text Templating**: Dynamic content creation directly in editors with placeholders
+- **Template Library**: Build collections of structural components for rapid building
+- **Editor Integration**: Text templating built into InteractionEditor and EncounterEditor
 - **Share and Import**: Exchange templates with other users
+
+### Text Templating System
+- **Dynamic Dialogue**: Create personalized conversations with `{{character.name}}` placeholders
+- **Conditional Logic**: Use `{{#if character.reputation > 10}}` for context-aware content
+- **Random Selection**: Add variety with `{{random:option1,option2,option3}}` patterns
+- **Editor Integration**: Text templating built into InteractionEditor and EncounterEditor
+- **Real-Time Preview**: See resolved content as you type
+- **Contextual Suggestions**: Smart placeholder recommendations based on available data
 
 ### Historical Simulation
 - **Emergent Events**: History unfolds from character interactions
@@ -126,12 +135,21 @@ Define what characters can do in your world:
 - **Branching**: Multiple outcomes based on attributes
 
 ### Templates (Reusable Components)
-Everything can be saved as a template:
+The system supports two types of templates:
+
+#### Structural Templates
 - **World Templates**: Complete world configurations
-- **Node Templates**: Location archetypes
-- **Character Templates**: Character archetypes
-- **Interaction Templates**: Action patterns
-- **Composite Templates**: Combined elements
+- **Node Templates**: Location archetypes with environmental properties
+- **Character Templates**: Character archetypes with attributes and consciousness
+- **Interaction Templates**: Action patterns and frameworks
+- **Composite Templates**: Combined structural elements
+
+#### Text Templating
+- **Dynamic Content**: Use placeholders like `{{character.name}}` for personalized text
+- **Editor Integration**: Built directly into InteractionEditor and EncounterEditor
+- **Contextual Suggestions**: Smart placeholder recommendations based on current context
+- **Real-Time Preview**: See resolved text as you type
+- **Dialogue Patterns**: Quick-insert common conversation templates
 
 ## 🎯 Use Cases
 
@@ -187,16 +205,26 @@ The codebase follows Domain-Driven Design principles with clear separation of co
 
 ## 📖 Documentation
 
+### User Guides
+- **[Text Templating Guide](sim-engine/docs/TextTemplatingGuide.md)**: Complete guide to using dynamic text features
+- **[Dialogue Patterns Reference](sim-engine/docs/DialoguePatternsReference.md)**: Common dialogue patterns and examples
+- **[Text Templating Troubleshooting](sim-engine/docs/TextTemplatingTroubleshooting.md)**: Solutions for common issues
+- **[Migration Guide](sim-engine/docs/TextTemplatingMigrationGuide.md)**: Transitioning from old template system
+- **[Best Practices Guide](sim-engine/docs/TextTemplatingBestPractices.md)**: Effective text templating strategies
+
 ### API Reference
 - `SimulationService`: Core simulation engine
 - `WorldBuilder`: World construction service
-- `TemplateManager`: Template management system
+- `TemplateManager`: Template management system (structural templates)
+- `TextTemplateEngine`: Dynamic text resolution engine
 - `HistoryGenerator`: Historical event generation
 
 ### Hooks
 - `useSimulation`: Simulation state and controls
 - `useWorldBuilder`: World building operations
-- `useTemplates`: Template management
+- `useTemplates`: Structural template management
+- `useTextTemplating`: Text templating functionality
+- `useContextualSuggestions`: Smart placeholder suggestions
 
 ### Context
 - `SimulationContext`: Global simulation state
@@ -212,8 +240,9 @@ We welcome contributions! The architecture is designed for extensibility:
 
 ### Key Areas for Contribution
 - Additional node types and properties
-- New interaction patterns
+- New interaction patterns and dialogue templates
 - Enhanced consciousness algorithms
+- Text templating features and patterns
 - Historical analysis tools
 - UI/UX improvements
 
