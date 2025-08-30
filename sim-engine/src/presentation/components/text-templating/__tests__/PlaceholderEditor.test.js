@@ -7,11 +7,11 @@ import PlaceholderEditor from '../PlaceholderEditor';
 // Mock the hooks
 jest.mock('../../../hooks/useContextualSuggestions');
 jest.mock('../../../hooks/useTemplatePreview');
-jest.mock('../../../domain/services/TextTemplateEngine');
+jest.mock('../../../../domain/services/TextTemplateEngine');
 
 import useContextualSuggestions from '../../../hooks/useContextualSuggestions';
 import useTemplatePreview from '../../../hooks/useTemplatePreview';
-import TextTemplateEngine from '../../../domain/services/TextTemplateEngine';
+import TextTemplateEngine from '../../../../domain/services/TextTemplateEngine';
 
 describe('PlaceholderEditor Component', () => {
   const mockOnChange = jest.fn();

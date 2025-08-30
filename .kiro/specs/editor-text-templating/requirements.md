@@ -36,7 +36,7 @@ The Editor Text Templating feature integrates dialogue and quest text templating
 
 ### Requirement 3
 
-**User Story:** As a world builder, I want text templating in the EncounterEditor for descriptions and quest text, so that I can create dynamic encounters that adapt to the current context.
+**User Story:** As a world builder, I want text templating in the EncounterEditor for descriptions and encounter text, so that I can create dynamic encounters that adapt to the current context.
 
 #### Acceptance Criteria
 

@@ -2,10 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DialoguePatterns from '../DialoguePatterns';
-import dialoguePatternLibrary from '../../../../application/services/DialoguePatternLibrary';
+import dialoguePatternLibrary from '../../../application/services/DialoguePatternLibrary';
 
 // Mock the dialogue pattern library
-jest.mock('../../../../application/services/DialoguePatternLibrary', () => ({
+jest.mock('../../../application/services/DialoguePatternLibrary', () => ({
   getAllPatterns: jest.fn(),
   createCustomPattern: jest.fn(),
   calculateRelevanceScore: jest.fn()

@@ -32,7 +32,7 @@ const ContextualSuggestions = ({
 
   // Filter and categorize suggestions
   const { filteredSuggestions, categories, suggestionsByCategory } = useMemo(() => {
-    let filtered = suggestions;
+    let filtered = suggestions || [];
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -55,7 +55,7 @@ const ContextualSuggestions = ({
     }
 
     // Get unique categories
-    const categorySet = new Set(suggestions.map(s => s.category));
+    const categorySet = new Set((suggestions || []).map(s => s.category));
     const categoryList = Array.from(categorySet).sort((a, b) => {
       const order = { character: 0, node: 1, world: 2, system: 3 };
       return (order[a] || 4) - (order[b] || 4);

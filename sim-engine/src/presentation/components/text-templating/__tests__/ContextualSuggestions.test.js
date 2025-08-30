@@ -108,7 +108,7 @@ describe('ContextualSuggestions Component', () => {
         />
       );
 
-      expect(screen.getByText(`(${mockSuggestions.length} suggestions)`)).toBeInTheDocument();
+      expect(screen.getByText(`(${mockSuggestions.length} of ${mockSuggestions.length})`)).toBeInTheDocument();
     });
   });
 
@@ -246,7 +246,7 @@ describe('ContextualSuggestions Component', () => {
       const searchInput = screen.getByPlaceholderText('Search placeholders...');
       await user.type(searchInput, 'nonexistent');
 
-      expect(screen.getByText('No matching suggestions')).toBeInTheDocument();
+      expect(screen.getByText('No suggestions match your search')).toBeInTheDocument();
     });
 
     it('clears search when input is cleared', async () => {
@@ -336,7 +336,7 @@ describe('ContextualSuggestions Component', () => {
       );
 
       expect(screen.getByText('Character')).toBeInTheDocument();
-      expect(screen.getByText('Node')).toBeInTheDocument();
+      expect(screen.getByText('Location')).toBeInTheDocument();
       expect(screen.getByText('World')).toBeInTheDocument();
       expect(screen.getByText('System')).toBeInTheDocument();
     });
@@ -353,7 +353,7 @@ describe('ContextualSuggestions Component', () => {
       );
 
       expect(screen.getByText('Character (3)')).toBeInTheDocument();
-      expect(screen.getByText('Node (2)')).toBeInTheDocument();
+      expect(screen.getByText('Location (2)')).toBeInTheDocument();
       expect(screen.getByText('World (1)')).toBeInTheDocument();
       expect(screen.getByText('System (1)')).toBeInTheDocument();
     });
@@ -441,7 +441,7 @@ describe('ContextualSuggestions Component', () => {
       const searchInput = screen.getByPlaceholderText('Search placeholders...');
       await user.type(searchInput, 'xyz123');
 
-      expect(screen.getByText('No matching suggestions')).toBeInTheDocument();
+      expect(screen.getByText('No suggestions match your search')).toBeInTheDocument();
     });
   });
 
