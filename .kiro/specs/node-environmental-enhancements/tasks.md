@@ -140,7 +140,7 @@
   - Write unit tests for cache functionality and performance validation
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7_
 
-- [ ] 11. Enhance NodeEditor component with environmental controls
+- [x] 11. Enhance NodeEditor component with environmental controls
   - Add environmental preset selector component to NodeEditor
   - Create environmental property input controls (sliders, dropdowns, etc.)
   - Implement hazard management interface for adding/removing environmental hazards
@@ -150,16 +150,9 @@
   - Write component tests for all new environmental editing functionality
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 3.1, 6.1, 6.2_
 
-- [ ] 12. Update SimulationService with environmental integration
-  - Modify processTurn method to apply environmental effects to characters
-  - Implement environmental damage calculation and application logic
-  - Add environmental modifier application to character interactions
-  - Create environmental state update methods for dynamic environmental changes
-  - Implement environmental effect logging for historical tracking
-  - Write integration tests for simulation with environmental effects
-  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 5.6, 5.7_
 
-- [ ] 13. Enhance TemplateService with environmental template support
+
+- [x] 13. Enhance TemplateService with environmental template support
   - Update instantiateNodeTemplate method to handle environmental data
   - Add environmental preset application during template instantiation
   - Implement environmental data validation during template creation
