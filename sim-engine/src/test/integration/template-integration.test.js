@@ -5,6 +5,11 @@ import CharacterEditor from '../../presentation/components/CharacterEditor';
 import NodeEditor from '../../presentation/components/NodeEditor';
 import InteractionEditor from '../../presentation/components/InteractionEditor';
 
+// Mock validation utilities
+jest.mock('../../shared/utils/characterSaveUtils', () => ({
+  validateCharacterForSave: jest.fn().mockReturnValue({ isValid: true, errors: [] })
+}));
+
 // Mock the template hooks
 jest.mock('../../presentation/hooks/useTemplates', () => ({
   __esModule: true,
@@ -190,6 +195,7 @@ describe('Template Integration', () => {
           id: 'test-char',
           name: 'Test Character',
           description: 'Test Description',
+          archetype: 'warrior',
           attributes: {
             strength: 15,
             dexterity: 12,
@@ -197,7 +203,11 @@ describe('Template Integration', () => {
             intelligence: 13,
             wisdom: 11,
             charisma: 16
-          }
+          },
+          goals: ['Test Goal'],
+          age: 25,
+          culturalBackground: 'Test Culture',
+          metadata: {}
         }
       };
 

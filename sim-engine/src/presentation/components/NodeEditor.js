@@ -3,6 +3,14 @@ import WorldValidator from '../../domain/services/WorldValidator';
 import { Save, Upload } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
+import EnvironmentalPresetSelector from './EnvironmentalPresetSelector';
+import EnvironmentalPresetService from '../../domain/services/EnvironmentalPresetService';
+import Environment from '../../domain/value-objects/Environment';
+import { TerrainTypes, TERRAIN_DESCRIPTIONS } from '../../shared/constants/TerrainTypes';
+import { ClimateTypes, CLIMATE_DESCRIPTIONS } from '../../shared/constants/ClimateTypes';
+import { LightingTypes, LIGHTING_DESCRIPTIONS } from '../../shared/constants/LightingTypes';
+import { HazardTypes, HAZARD_DESCRIPTIONS, getHazardCategory } from '../../shared/constants/HazardTypes';
+import EnvironmentalHazard from '../../domain/entities/EnvironmentalHazard';
 
 // Node types with their characteristics
 const NODE_TYPES = [
@@ -48,18 +56,6 @@ const NODE_TYPES = [
     description: 'Temples, shrines, holy sites',
     defaultCapacity: 100
   }
-];
-
-// Environment types
-const ENVIRONMENT_TYPES = [
-  { id: 'temperate', label: 'Temperate', icon: '🌳', color: 'green' },
-  { id: 'desert', label: 'Desert', icon: '🏜️', color: 'yellow' },
-  { id: 'arctic', label: 'Arctic', icon: '❄️', color: 'blue' },
-  { id: 'tropical', label: 'Tropical', icon: '🌴', color: 'lime' },
-  { id: 'mountain', label: 'Mountain', icon: '⛰️', color: 'gray' },
-  { id: 'coastal', label: 'Coastal', icon: '🏖️', color: 'cyan' },
-  { id: 'underground', label: 'Underground', icon: '⛏️', color: 'stone' },
-  { id: 'magical', label: 'Magical', icon: '✨', color: 'purple' }
 ];
 
 // Node features
@@ -270,6 +266,227 @@ const ResourceSelector = ({ resources, onChange }) => {
   );
 };
 
+// Hazard management component
+const HazardManager = ({ hazards, onChange }) => {
+  const [newHazard, setNewHazard] = useState({
+    type: HazardTypes.EXTREME_HEAT,
+    severity: 0.3,
+    description: ''
+  });
+
+  const hazardTypes = Object.values(HazardTypes);
+
+  const handleAddHazard = () => {
+    if (newHazard.type) {
+      try {
+        const hazardInstance = new EnvironmentalHazard({
+          type: newHazard.type,
+          severity: newHazard.severity,
+          description: newHazard.description || HAZARD_DESCRIPTIONS[newHazard.type]
+        });
+        
+        onChange([...hazards, hazardInstance]);
+        setNewHazard({
+          type: HazardTypes.EXTREME_HEAT,
+          severity: 0.3,
+          description: ''
+        });
+      } catch (error) {
+        console.error('Failed to create hazard:', error);
+        alert(`Failed to create hazard: ${error.message}`);
+      }
+    }
+  };
+
+  const handleRemoveHazard = (index) => {
+    onChange(hazards.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateHazard = (index, field, value) => {
+    const updatedHazards = [...hazards];
+    try {
+      const currentHazard = updatedHazards[index];
+      const hazardData = currentHazard.toJSON ? currentHazard.toJSON() : currentHazard;
+      
+      const newHazardData = { ...hazardData, [field]: value };
+      const updatedHazard = new EnvironmentalHazard(newHazardData);
+      
+      updatedHazards[index] = updatedHazard;
+      onChange(updatedHazards);
+    } catch (error) {
+      console.error('Failed to update hazard:', error);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h4 className="font-medium text-white mb-3">Environmental Hazards</h4>
+      
+      {/* Existing hazards */}
+      {hazards.length > 0 && (
+        <div className="space-y-3">
+          {hazards.map((hazard, index) => {
+            const hazardData = hazard.toJSON ? hazard.toJSON() : hazard;
+            const category = getHazardCategory(hazardData.type);
+            
+            return (
+              <div
+                key={index}
+                className="p-4 bg-white/10 rounded-lg border border-white/20"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className={`
+                      px-2 py-1 rounded-full text-xs font-medium
+                      ${category === 'environmental' ? 'bg-green-500/20 text-green-400' :
+                        category === 'supernatural' ? 'bg-purple-500/20 text-purple-400' :
+                        category === 'biological' ? 'bg-orange-500/20 text-orange-400' :
+                        category === 'social' ? 'bg-red-500/20 text-red-400' :
+                        'bg-gray-500/20 text-gray-400'}
+                    `}>
+                      {category}
+                    </span>
+                    <h5 className="font-medium text-white">
+                      {HAZARD_DESCRIPTIONS[hazardData.type]}
+                    </h5>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveHazard(index)}
+                    className="text-red-400 hover:text-red-300 px-2 py-1 rounded text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Hazard Type</label>
+                    <select
+                      value={hazardData.type}
+                      onChange={(e) => handleUpdateHazard(index, 'type', e.target.value)}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white text-sm"
+                    >
+                      {hazardTypes.map(type => (
+                        <option key={type} value={type} className="bg-gray-800">
+                          {HAZARD_DESCRIPTIONS[type]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Severity ({Math.round(hazardData.severity * 100)}%)
+                    </label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1.0"
+                      step="0.1"
+                      value={hazardData.severity}
+                      onChange={(e) => handleUpdateHazard(index, 'severity', parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="block text-sm text-gray-400 mb-1">Description</label>
+                  <textarea
+                    value={hazardData.description}
+                    onChange={(e) => handleUpdateHazard(index, 'description', e.target.value)}
+                    placeholder="Custom hazard description..."
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white text-sm placeholder-gray-400"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add new hazard */}
+      <div className="p-4 border-2 border-dashed border-white/20 rounded-lg">
+        <h5 className="font-medium text-white mb-3">Add New Hazard</h5>
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Hazard Type</label>
+            <select
+              value={newHazard.type}
+              onChange={(e) => setNewHazard({ ...newHazard, type: e.target.value })}
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white text-sm"
+            >
+              {hazardTypes.map(type => (
+                <option key={type} value={type} className="bg-gray-800">
+                  {HAZARD_DESCRIPTIONS[type]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
+              Severity ({Math.round(newHazard.severity * 100)}%)
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="1.0"
+              step="0.1"
+              value={newHazard.severity}
+              onChange={(e) => setNewHazard({ ...newHazard, severity: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="block text-sm text-gray-400 mb-1">Custom Description (optional)</label>
+          <textarea
+            value={newHazard.description}
+            onChange={(e) => setNewHazard({ ...newHazard, description: e.target.value })}
+            placeholder={HAZARD_DESCRIPTIONS[newHazard.type]}
+            rows={2}
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white text-sm placeholder-gray-400"
+          />
+        </div>
+
+        <button
+          onClick={handleAddHazard}
+          className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Add Hazard
+        </button>
+      </div>
+
+      {/* Hazard Summary */}
+      {hazards.length > 0 && (
+        <div className="p-3 bg-red-500/20 rounded-lg border border-red-500/30">
+          <p className="text-sm font-medium text-white mb-2">
+            Hazard Summary ({hazards.length} hazard{hazards.length !== 1 ? 's' : ''})
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {hazards.map((hazard, index) => {
+              const hazardData = hazard.toJSON ? hazard.toJSON() : hazard;
+              return (
+                <span
+                  key={index}
+                  className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs border border-red-500/30"
+                  title={hazardData.description}
+                >
+                  {hazardData.type} ({Math.round(hazardData.severity * 100)}%)
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Connection editor
 const ConnectionEditor = ({ connections, onChange, availableNodes = [] }) => {
   const [newConnection, setNewConnection] = useState({
@@ -413,7 +630,8 @@ const NodeEditor = ({
     name: initialNode?.name || '',
     description: initialNode?.description || '',
     type: initialNode?.type || 'settlement',
-    environment: initialNode?.environment || 'temperate',
+    environment: initialNode?.environment || Environment.createDefault(),
+    size: initialNode?.size || 100,
     populationCapacity: initialNode?.populationCapacity || 1000,
     currentPopulation: initialNode?.currentPopulation || 0,
     developmentLevel: initialNode?.developmentLevel || 1,
@@ -531,9 +749,82 @@ const NodeEditor = ({
     }
   };
 
+  // Handle environmental preset selection
+  const handleEnvironmentalPresetSelect = useCallback((preset) => {
+    try {
+      // Apply the preset to current node data
+      const enhancedData = EnvironmentalPresetService.applyPreset(nodeData, preset.id);
+      
+      // Create Environment instance from preset data
+      const environmentInstance = Environment.fromJSON(enhancedData.environment);
+      
+      setNodeData({
+        ...nodeData,
+        environment: environmentInstance,
+        type: enhancedData.type || nodeData.type,
+        size: enhancedData.size || nodeData.size
+      });
+    } catch (error) {
+      console.error('Failed to apply environmental preset:', error);
+      alert(`Failed to apply preset: ${error.message}`);
+    }
+  }, [nodeData]);
+
+  // Handle environmental preset preview
+  const handleEnvironmentalPresetPreview = useCallback((preset) => {
+    // For now, just show an alert with preset info
+    // In a full implementation, this could show a preview modal
+    alert(`Preview: ${preset.name}\n${preset.description}\nTerrain: ${preset.environment.terrain}\nClimate: ${preset.environment.climate}`);
+  }, []);
+
+  // Handle environmental property changes
+  const handleEnvironmentChange = useCallback((property, value) => {
+    const currentEnv = nodeData.environment instanceof Environment 
+      ? nodeData.environment.toJSON() 
+      : nodeData.environment;
+    
+    const updatedEnvData = {
+      ...currentEnv,
+      [property]: value
+    };
+    
+    try {
+      const newEnvironment = Environment.fromJSON(updatedEnvData);
+      setNodeData({
+        ...nodeData,
+        environment: newEnvironment
+      });
+    } catch (error) {
+      console.error('Failed to update environment:', error);
+    }
+  }, [nodeData]);
+
+  // Handle hazard changes
+  const handleHazardsChange = useCallback((hazards) => {
+    const currentEnv = nodeData.environment instanceof Environment 
+      ? nodeData.environment.toJSON() 
+      : nodeData.environment;
+    
+    const updatedEnvData = {
+      ...currentEnv,
+      hazards: hazards.map(hazard => hazard.toJSON ? hazard.toJSON() : hazard)
+    };
+    
+    try {
+      const newEnvironment = Environment.fromJSON(updatedEnvData);
+      setNodeData({
+        ...nodeData,
+        environment: newEnvironment
+      });
+    } catch (error) {
+      console.error('Failed to update hazards:', error);
+    }
+  }, [nodeData]);
+
   // Tabs configuration
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: '📝' },
+    { id: 'environment', label: 'Environment', icon: '🌍' },
     { id: 'features', label: 'Features', icon: '⭐' },
     { id: 'resources', label: 'Resources', icon: '💎' },
     { id: 'modifiers', label: 'Modifiers', icon: '⚙️' },
@@ -684,30 +975,6 @@ const NodeEditor = ({
 
             <div>
               <label className="block text-sm font-medium text-white mb-2">
-                Environment
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {ENVIRONMENT_TYPES.map(env => (
-                  <button
-                    key={env.id}
-                    onClick={() => setNodeData({ ...nodeData, environment: env.id })}
-                    className={`
-                      p-3 rounded-lg border-2 transition-all
-                      ${nodeData.environment === env.id
-                        ? 'border-green-500 bg-green-500/20'
-                        : 'border-white/20 hover:border-white/40 bg-white/5'
-                      }
-                    `}
-                  >
-                    <div className="text-2xl mb-1">{env.icon}</div>
-                    <div className="text-sm font-medium text-white">{env.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
                 Tags
               </label>
               <input
@@ -720,6 +987,237 @@ const NodeEditor = ({
                 })}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
               />
+            </div>
+          </div>
+        )}
+
+        {/* Environment Tab */}
+        {activeTab === 'environment' && (
+          <div className="space-y-6">
+            {/* Environmental Preset Selector */}
+            <div>
+              <EnvironmentalPresetSelector
+                currentNodeData={nodeData}
+                onPresetSelect={handleEnvironmentalPresetSelect}
+                onPresetPreview={handleEnvironmentalPresetPreview}
+                showRecommendations={true}
+              />
+            </div>
+
+            {/* Manual Environmental Controls */}
+            <div className="border-t border-white/20 pt-6">
+              <h4 className="font-medium text-white mb-4">Manual Environmental Configuration</h4>
+              
+              {/* Get current environment data */}
+              {(() => {
+                const currentEnv = nodeData.environment instanceof Environment 
+                  ? nodeData.environment.toJSON() 
+                  : nodeData.environment;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Terrain Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Terrain Type
+                      </label>
+                      <select
+                        value={currentEnv.terrain || TerrainTypes.PLAINS}
+                        onChange={(e) => handleEnvironmentChange('terrain', e.target.value)}
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      >
+                        {Object.entries(TERRAIN_DESCRIPTIONS).map(([type, description]) => (
+                          <option key={type} value={type} className="bg-gray-800">
+                            {description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Climate Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Climate Type
+                      </label>
+                      <select
+                        value={currentEnv.climate || ClimateTypes.TEMPERATE}
+                        onChange={(e) => handleEnvironmentChange('climate', e.target.value)}
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      >
+                        {Object.entries(CLIMATE_DESCRIPTIONS).map(([type, description]) => (
+                          <option key={type} value={type} className="bg-gray-800">
+                            {description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Lighting Conditions */}
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Lighting Conditions
+                      </label>
+                      <select
+                        value={currentEnv.lighting || LightingTypes.NORMAL}
+                        onChange={(e) => handleEnvironmentChange('lighting', e.target.value)}
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      >
+                        {Object.entries(LIGHTING_DESCRIPTIONS).map(([type, description]) => (
+                          <option key={type} value={type} className="bg-gray-800">
+                            {description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Environmental Properties Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Density */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Density ({Math.round((currentEnv.density || 0.5) * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={currentEnv.density || 0.5}
+                          onChange={(e) => handleEnvironmentChange('density', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Shelter Quality */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Shelter Quality ({Math.round((currentEnv.shelterQuality || 0.5) * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={currentEnv.shelterQuality || 0.5}
+                          onChange={(e) => handleEnvironmentChange('shelterQuality', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Air Quality */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Air Quality ({Math.round((currentEnv.airQuality || 0.8) * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={currentEnv.airQuality || 0.8}
+                          onChange={(e) => handleEnvironmentChange('airQuality', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Water Availability */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Water Availability ({Math.round((currentEnv.waterAvailability || 0.7) * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={currentEnv.waterAvailability || 0.7}
+                          onChange={(e) => handleEnvironmentChange('waterAvailability', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Humidity */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Humidity ({Math.round((currentEnv.humidity || 0.5) * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={currentEnv.humidity || 0.5}
+                          onChange={(e) => handleEnvironmentChange('humidity', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Wind Strength */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Wind Strength ({Math.round((currentEnv.windStrength || 0.3) * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={currentEnv.windStrength || 0.3}
+                          onChange={(e) => handleEnvironmentChange('windStrength', parseFloat(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Temperature */}
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Temperature ({currentEnv.temperature || 15}°C)
+                      </label>
+                      <input
+                        type="range"
+                        min="-30"
+                        max="50"
+                        step="1"
+                        value={currentEnv.temperature || 15}
+                        onChange={(e) => handleEnvironmentChange('temperature', parseInt(e.target.value))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Node Size */}
+                    <div>
+                      <label className="block text-sm font-medium text-white mb-2">
+                        Node Size
+                      </label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="1000"
+                        value={nodeData.size || 100}
+                        onChange={(e) => setNodeData({ ...nodeData, size: parseInt(e.target.value) || 100 })}
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Hazard Management */}
+            <div className="border-t border-white/20 pt-6">
+              {(() => {
+                const currentEnv = nodeData.environment instanceof Environment 
+                  ? nodeData.environment.toJSON() 
+                  : nodeData.environment;
+
+                return (
+                  <HazardManager
+                    hazards={currentEnv.hazards || []}
+                    onChange={handleHazardsChange}
+                  />
+                );
+              })()}
             </div>
           </div>
         )}
@@ -858,8 +1356,28 @@ const NodeEditor = ({
           <div>
             <span className="font-medium text-gray-300">Environment:</span>{' '}
             <span className="text-white">
-              {ENVIRONMENT_TYPES.find(e => e.id === nodeData.environment)?.label}
+              {(() => {
+                const env = nodeData.environment instanceof Environment 
+                  ? nodeData.environment.toJSON() 
+                  : nodeData.environment;
+                return env.terrain || 'Unknown';
+              })()}
             </span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-300">Climate:</span>{' '}
+            <span className="text-white">
+              {(() => {
+                const env = nodeData.environment instanceof Environment 
+                  ? nodeData.environment.toJSON() 
+                  : nodeData.environment;
+                return env.climate || 'Unknown';
+              })()}
+            </span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-300">Size:</span>{' '}
+            <span className="text-white">{nodeData.size || 100}</span>
           </div>
           <div>
             <span className="font-medium text-gray-300">Capacity:</span>{' '}
@@ -877,7 +1395,50 @@ const NodeEditor = ({
             <span className="font-medium text-gray-300">Connections:</span>{' '}
             <span className="text-white">{nodeData.connections.length}</span>
           </div>
+          <div>
+            <span className="font-medium text-gray-300">Temperature:</span>{' '}
+            <span className="text-white">
+              {(() => {
+                const env = nodeData.environment instanceof Environment 
+                  ? nodeData.environment.toJSON() 
+                  : nodeData.environment;
+                return `${env.temperature || 15}°C`;
+              })()}
+            </span>
+          </div>
         </div>
+        
+        {/* Environmental Status Indicators */}
+        {(() => {
+          const env = nodeData.environment instanceof Environment 
+            ? nodeData.environment 
+            : Environment.fromJSON(nodeData.environment || {});
+          
+          return (
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-2 py-1 rounded text-xs ${
+                  env.isHospitable() ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {env.isHospitable() ? 'Hospitable' : 'Inhospitable'}
+                </span>
+                <span className={`px-2 py-1 rounded text-xs ${
+                  env.isDangerous() ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                }`}>
+                  {env.isDangerous() ? 'Dangerous' : 'Safe'}
+                </span>
+                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
+                  Comfort: {Math.round(env.getComfortLevel() * 100)}%
+                </span>
+                {env.hazards && env.hazards.length > 0 && (
+                  <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs">
+                    {env.hazards.length} Hazard{env.hazards.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Actions */}

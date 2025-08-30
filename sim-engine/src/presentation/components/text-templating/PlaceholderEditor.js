@@ -47,20 +47,14 @@ const PlaceholderEditor = ({
 
   const insertPlaceholder = suggestionResult?.insertPlaceholder || (() => {});
 
-  let previewText = '';
-  let isResolved = false;
-  let previewErrors = [];
-  let validation = { isValid: true, errors: [], warnings: [] };
+  // Call useTemplatePreview hook at top level (required by React hooks rules)
+  const previewResult = useTemplatePreview(value, context);
   
-  try {
-    const previewResult = useTemplatePreview(value, context);
-    previewText = previewResult.previewText || '';
-    isResolved = previewResult.isResolved || false;
-    previewErrors = previewResult.errors || [];
-  } catch (error) {
-    console.error('Error in useTemplatePreview hook:', error);
-    // Continue with empty preview
-  }
+  // Extract values with fallbacks
+  const previewText = previewResult?.previewText || '';
+  const isResolved = previewResult?.isResolved || false;
+  const previewErrors = previewResult?.errors || [];
+  let validation = { isValid: true, errors: [], warnings: [] };
   
   // Template engine for validation with error handling
   const templateEngine = useMemo(() => {
@@ -244,6 +238,8 @@ const PlaceholderEditor = ({
           placeholder={placeholder}
           disabled={disabled}
           rows={rows}
+          aria-label="Template text editor with placeholder support"
+          aria-describedby="placeholder-editor-help"
           className={`
             w-full p-3 rounded-lg border-2 transition-all
             font-mono text-sm resize-y
@@ -252,6 +248,7 @@ const PlaceholderEditor = ({
               : 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
             }
             ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
+            ${className}
           `}
         />
 
@@ -379,7 +376,7 @@ const PlaceholderEditor = ({
 
       {/* Help Text */}
       {showSuggestions && !value && (
-        <div className="mt-2 text-xs text-gray-500">
+        <div id="placeholder-editor-help" className="mt-2 text-xs text-gray-500">
           <span className="inline-flex items-center">
             <Code className="w-3 h-3 mr-1" />
             Use <span className="font-mono mx-1">{`{{placeholder}}`}</span> for variables

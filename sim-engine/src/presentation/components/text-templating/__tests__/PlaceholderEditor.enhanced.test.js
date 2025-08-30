@@ -150,11 +150,10 @@ describe('PlaceholderEditor Enhanced Tests', () => {
     });
 
     it('handles escape key to close suggestions', async () => {
-      const user = userEvent.setup();
-      
+      // Start with a value that will trigger suggestions
       render(
         <PlaceholderEditor
-          value=""
+          value="{{" 
           onChange={mockOnChange}
           context={mockContext}
           showSuggestions={true}
@@ -163,8 +162,17 @@ describe('PlaceholderEditor Enhanced Tests', () => {
       
       const textarea = screen.getByRole('textbox');
       
-      // Type to trigger suggestions
-      await user.type(textarea, '{{');
+      // Focus the textarea 
+      textarea.focus();
+      
+      // Trigger the change handler by simulating cursor position at end of {{
+      fireEvent.change(textarea, {
+        target: {
+          value: '{{',
+          selectionStart: 2,
+          selectionEnd: 2
+        }
+      });
       
       // Should see suggestions
       await waitFor(() => {
@@ -172,7 +180,7 @@ describe('PlaceholderEditor Enhanced Tests', () => {
       });
       
       // Press escape
-      await user.keyboard('{Escape}');
+      fireEvent.keyDown(textarea, { key: 'Escape', code: 'Escape' });
       
       // Suggestions should be closed
       await waitFor(() => {

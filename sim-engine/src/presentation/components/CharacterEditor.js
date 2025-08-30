@@ -1917,11 +1917,11 @@ const CharacterEditor = ({
           </div>
           <div>
             <span className="font-medium text-gray-300">Avg. Attributes:</span> <span className="text-white">{
-              (Object.values(characterData.attributes).reduce((sum, val) => sum + val, 0) / 6).toFixed(1)
+              characterData.attributes ? (Object.values(characterData.attributes).reduce((sum, val) => sum + val, 0) / 6).toFixed(1) : '0.0'
             }</span>
           </div>
           <div>
-            <span className="font-medium text-gray-300">Goals:</span> <span className="text-white">{characterData.goals.length}</span>
+            <span className="font-medium text-gray-300">Goals:</span> <span className="text-white">{characterData.goals?.length || 0}</span>
           </div>
           <div>
             <span className="font-medium text-gray-300">Interactions:</span> <span className="text-white">{characterData.assignedInteractions.length}</span>

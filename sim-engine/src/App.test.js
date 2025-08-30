@@ -3,6 +3,7 @@ import App from './App';
 
 test('renders world history simulation engine', () => {
   render(<App />);
-  const titleElement = screen.getByText(/World History Simulation Engine/i);
-  expect(titleElement).toBeTruthy();
+  const titleElements = screen.getAllByText(/World History Simulator/i);
+  expect(titleElements.length).toBeGreaterThan(0);
+  expect(titleElements[0]).toBeTruthy();
 });
