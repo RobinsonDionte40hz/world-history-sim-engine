@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, AlertCircle, CheckCircle, Code, Lightbulb, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Code, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import TextTemplateEngine from '../../../domain/services/TextTemplateEngine';
 import useContextualSuggestions from '../../hooks/useContextualSuggestions';
 import useTemplatePreview from '../../hooks/useTemplatePreview';
@@ -28,7 +28,7 @@ const PlaceholderEditor = ({
   rows = 4,
   autoFocus = false
 }) => {
-  const [cursorPosition, setCursorPosition] = useState(0);
+  // const [cursorPosition, setCursorPosition] = useState(0); // TODO: Use for advanced cursor tracking
   const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
   const [suggestionFilter, setSuggestionFilter] = useState('');
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
@@ -37,21 +37,20 @@ const PlaceholderEditor = ({
   const textareaRef = useRef(null);
   
   // Use the new hooks for suggestions and preview with error handling
-  let suggestions = [];
-  let insertPlaceholder = () => {};
+  // Hooks must be called unconditionally
+  const suggestionResult = useContextualSuggestions(context);
+  
+  // Memoize suggestions to prevent unnecessary re-renders
+  const suggestions = useMemo(() => {
+    return suggestionResult?.suggestions || [];
+  }, [suggestionResult?.suggestions]);
+
+  const insertPlaceholder = suggestionResult?.insertPlaceholder || (() => {});
+
   let previewText = '';
   let isResolved = false;
   let previewErrors = [];
   let validation = { isValid: true, errors: [], warnings: [] };
-  
-  try {
-    const suggestionResult = useContextualSuggestions(context);
-    suggestions = suggestionResult.suggestions || [];
-    insertPlaceholder = suggestionResult.insertPlaceholder || (() => {});
-  } catch (error) {
-    console.error('Error in useContextualSuggestions hook:', error);
-    // Continue with empty suggestions
-  }
   
   try {
     const previewResult = useTemplatePreview(value, context);
@@ -126,7 +125,7 @@ const PlaceholderEditor = ({
 
   // Handle cursor position change
   const handleSelectionChange = (e) => {
-    setCursorPosition(e.target.selectionStart);
+    // setCursorPosition(e.target.selectionStart); // TODO: Use for advanced cursor tracking
   };
 
   // Handle key down for suggestion navigation
@@ -150,6 +149,9 @@ const PlaceholderEditor = ({
           break;
         case 'Escape':
           setShowSuggestionsPanel(false);
+          break;
+        default:
+          // No action needed for other keys
           break;
       }
     }
@@ -380,10 +382,10 @@ const PlaceholderEditor = ({
         <div className="mt-2 text-xs text-gray-500">
           <span className="inline-flex items-center">
             <Code className="w-3 h-3 mr-1" />
-            Use <span className="font-mono mx-1">{{placeholder}}</span> for variables
+            Use <span className="font-mono mx-1">{`{{placeholder}}`}</span> for variables
           </span>
           <span className="ml-2">•</span>
-          <span className="ml-2">Type <span className="font-mono">{{</span> to see suggestions</span>
+          <span className="ml-2">Type <span className="font-mono">{`{{`}</span> to see suggestions</span>
         </div>
       )}
     </div>

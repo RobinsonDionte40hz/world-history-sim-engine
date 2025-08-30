@@ -478,6 +478,7 @@ describe('PlaceholderEditor Enhanced Tests', () => {
           if (this.state.hasError) {
             return <div>Error occurred</div>;
           }
+          // eslint-disable-next-line testing-library/no-node-access
           return this.props.children;
         }
       }
