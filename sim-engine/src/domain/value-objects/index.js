@@ -6,6 +6,8 @@ export { BaseValueObject } from './BaseValueObject';
 // Export new value objects
 export { Alignment } from './Alignment';
 export { CharacterType } from './CharacterType';
+export { default as Environment } from './Environment';
+export { default as NodeConnection } from './NodeConnection';
 
 // Re-export existing value objects for compatibility
 export { default as PersonalitySystem } from './PersonalitySystem';
