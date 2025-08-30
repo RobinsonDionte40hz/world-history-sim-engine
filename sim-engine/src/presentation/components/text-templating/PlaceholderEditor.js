@@ -13,6 +13,7 @@ import useTemplatePreview from '../../hooks/useTemplatePreview';
  * - Progressive disclosure for advanced templating features
  * - Context-aware placeholder suggestions
  * - Syntax validation and error handling
+ * - Graceful error recovery for hooks and template engine
  */
 const PlaceholderEditor = ({
   value = '',
@@ -35,13 +36,56 @@ const PlaceholderEditor = ({
   const [previewMode, setPreviewMode] = useState('side-by-side'); // 'side-by-side', 'overlay', 'toggle'
   const textareaRef = useRef(null);
   
-  // Use the new hooks for suggestions and preview
-  const { suggestions, insertPlaceholder } = useContextualSuggestions(context);
-  const { previewText, isResolved, errors: previewErrors } = useTemplatePreview(value, context);
+  // Use the new hooks for suggestions and preview with error handling
+  let suggestions = [];
+  let insertPlaceholder = () => {};
+  let previewText = '';
+  let isResolved = false;
+  let previewErrors = [];
+  let validation = { isValid: true, errors: [], warnings: [] };
   
-  // Template engine for validation
-  const templateEngine = useMemo(() => new TextTemplateEngine(), []);
-  const validation = useMemo(() => templateEngine.validateTemplate(value), [templateEngine, value]);
+  try {
+    const suggestionResult = useContextualSuggestions(context);
+    suggestions = suggestionResult.suggestions || [];
+    insertPlaceholder = suggestionResult.insertPlaceholder || (() => {});
+  } catch (error) {
+    console.error('Error in useContextualSuggestions hook:', error);
+    // Continue with empty suggestions
+  }
+  
+  try {
+    const previewResult = useTemplatePreview(value, context);
+    previewText = previewResult.previewText || '';
+    isResolved = previewResult.isResolved || false;
+    previewErrors = previewResult.errors || [];
+  } catch (error) {
+    console.error('Error in useTemplatePreview hook:', error);
+    // Continue with empty preview
+  }
+  
+  // Template engine for validation with error handling
+  const templateEngine = useMemo(() => {
+    try {
+      return new TextTemplateEngine();
+    } catch (error) {
+      console.error('Error creating TextTemplateEngine:', error);
+      return null;
+    }
+  }, []);
+  
+  // Validate template with error handling
+  try {
+    if (templateEngine && templateEngine.validateTemplate) {
+      validation = templateEngine.validateTemplate(value);
+    }
+  } catch (error) {
+    console.error('Error validating template:', error);
+    validation = {
+      isValid: false,
+      errors: ['Template engine error'],
+      warnings: []
+    };
+  }
 
   // Filter suggestions based on current input
   const filteredSuggestions = useMemo(() => {
@@ -147,53 +191,48 @@ const PlaceholderEditor = ({
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     
-    insertPlaceholder(placeholderText, start, end, (newValue, newCursorPos) => {
+    try {
+      insertPlaceholder(placeholderText, start, end, (newValue, newCursorPos) => {
+        onChange?.(newValue);
+        
+        // Set cursor position after insertion
+        setTimeout(() => {
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+          textarea.focus();
+        }, 0);
+      });
+    } catch (error) {
+      console.error('Error inserting placeholder:', error);
+      // Fallback: simple insertion
+      const beforeText = value.substring(0, start);
+      const afterText = value.substring(end);
+      const newValue = `${beforeText}{{${placeholderText}}}${afterText}`;
       onChange?.(newValue);
-      setTimeout(() => {
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        textarea.focus();
-      }, 0);
-    });
+    }
   };
 
-  // Close suggestions when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (textareaRef.current && !textareaRef.current.contains(event.target)) {
-        setShowSuggestionsPanel(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Get context info for display
-  const contextInfo = useMemo(() => {
-    const info = [];
-    if (context && context.character) info.push(`Character: ${context.character.name || 'Unknown'}`);
-    if (context && context.node) info.push(`Node: ${context.node.name || 'Unknown'}`);
-    if (context && context.world) info.push(`World: ${context.world.name || 'Unknown'}`);
-    return info;
-  }, [context]);
-
   return (
-    <div className={`relative ${className}`}>
-      {/* Context Info */}
-      {contextInfo.length > 0 && (
-        <div className="mb-2 text-xs text-gray-500 flex items-center gap-2">
-          <span>Context:</span>
-          {contextInfo.map((info, index) => (
-            <span key={index} className="bg-gray-100 px-2 py-1 rounded">
-              {info}
-            </span>
+    <div className={`placeholder-editor ${className}`}>
+      {/* Validation Messages */}
+      {showValidation && (validation.errors.length > 0 || validation.warnings.length > 0) && (
+        <div className="mb-2 space-y-1">
+          {validation.errors.map((error, idx) => (
+            <div key={idx} className="flex items-center space-x-2 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span>{error}</span>
+            </div>
+          ))}
+          {validation.warnings.map((warning, idx) => (
+            <div key={idx} className="flex items-center space-x-2 text-sm text-yellow-600">
+              <AlertCircle className="w-4 h-4" />
+              <span>{warning}</span>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Main Editor Container */}
+      {/* Main Editor Section */}
       <div className="relative">
-        {/* Textarea */}
         <textarea
           ref={textareaRef}
           value={value}
@@ -204,7 +243,8 @@ const PlaceholderEditor = ({
           disabled={disabled}
           rows={rows}
           className={`
-            w-full p-3 border rounded-lg resize-vertical font-mono text-sm
+            w-full p-3 rounded-lg border-2 transition-all
+            font-mono text-sm resize-y
             ${validation.isValid 
               ? 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' 
               : 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
@@ -257,7 +297,7 @@ const PlaceholderEditor = ({
       </div>
 
       {/* Quick Insert Buttons */}
-      {showSuggestions && !showSuggestionsPanel && (
+      {showSuggestions && !showSuggestionsPanel && suggestions.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {suggestions.slice(0, 6).map(suggestion => (
             <button
@@ -274,114 +314,78 @@ const PlaceholderEditor = ({
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded border text-blue-700"
             >
-              {showAdvanced ? 'Less' : `+${suggestions.length - 6} more`}
+              {showAdvanced ? 'Hide' : `+${suggestions.length - 6} more`}
             </button>
           )}
         </div>
       )}
 
-      {/* Advanced Suggestions (Progressive Disclosure) */}
-      {showAdvanced && showSuggestions && (
-        <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">All Available Placeholders</span>
-            <button
-              onClick={() => setShowAdvanced(false)}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              Hide
-            </button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-1">
-            {suggestions.map(suggestion => (
+      {/* Advanced Suggestions Panel */}
+      {showAdvanced && showSuggestions && suggestions.length > 6 && (
+        <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 className="text-sm font-semibold mb-2">All Available Placeholders</h4>
+          <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto">
+            {suggestions.slice(6).map(suggestion => (
               <button
                 key={suggestion.placeholder}
                 onClick={() => insertPlaceholderAtCursor(suggestion.placeholder)}
                 className="px-2 py-1 text-xs bg-white hover:bg-gray-100 rounded border text-left"
                 title={suggestion.description}
               >
-                <div className="font-mono text-blue-600">{suggestion.placeholder}</div>
-                <div className="text-gray-500 truncate">{suggestion.description}</div>
+                <span className="font-mono">{suggestion.placeholder}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Validation Messages */}
-      {showValidation && (validation.errors.length > 0 || validation.warnings.length > 0) && (
-        <div className="mt-2 space-y-1">
-          {validation.errors.map((error, index) => (
-            <div key={`error-${index}`} className="flex items-center space-x-2 text-sm text-red-600">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          ))}
-          {validation.warnings.map((warning, index) => (
-            <div key={`warning-${index}`} className="flex items-center space-x-2 text-sm text-yellow-600">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{warning}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Preview */}
+      {/* Preview Section */}
       {showPreview && value && (
-        <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <Code className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">Preview</span>
-              {isResolved && previewErrors.length === 0 && (
-                <CheckCircle className="w-4 h-4 text-green-500" />
+            <h4 className="text-sm font-semibold">Preview</h4>
+            <button
+              onClick={() => setPreviewMode(prev => 
+                prev === 'side-by-side' ? 'overlay' : 'side-by-side'
               )}
-            </div>
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={() => setPreviewMode(previewMode === 'side-by-side' ? 'toggle' : 'side-by-side')}
-                className="text-xs text-gray-500 hover:text-gray-700"
-                title="Toggle preview mode"
-              >
-                {previewMode === 'side-by-side' ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              </button>
-            </div>
+              className="text-xs text-blue-600 hover:text-blue-700"
+            >
+              {previewMode === 'side-by-side' ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </button>
           </div>
           
-          <div className="text-sm">
-            {previewErrors.length > 0 ? (
-              <div className="text-red-600">
-                <div className="font-medium mb-1">Resolution Errors:</div>
-                <ul className="list-disc list-inside space-y-1">
-                  {previewErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
+          {isResolved ? (
+            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+              {previewText}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              {previewErrors.length > 0 ? (
+                <div>
+                  <div className="text-red-600 mb-1">Resolution Errors:</div>
+                  {previewErrors.map((error, idx) => (
+                    <div key={idx} className="ml-2">• {error}</div>
                   ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="text-gray-900 whitespace-pre-wrap">
-                {previewText || 'Empty result'}
-              </div>
-            )}
-          </div>
-          
-          {!isResolved && previewErrors.length === 0 && (
-            <div className="mt-2 text-yellow-600">
-              <div className="text-xs">Some placeholders could not be resolved with current context</div>
+                </div>
+              ) : (
+                'Enter placeholders to see preview...'
+              )}
             </div>
           )}
         </div>
       )}
 
       {/* Help Text */}
-      <div className="mt-2 text-xs text-gray-500">
-        <div className="mb-1">
-          <strong>Syntax:</strong> Use {'{{'}{'{placeholder}'}{'}}'} for variables, {'{{'}{'{#if condition}'}{'}}'} text {'{{'}{'/if}'}{'}}'} for conditionals, {'{{'}{'{random:option1,option2}'}{'}}'} for random text
+      {showSuggestions && !value && (
+        <div className="mt-2 text-xs text-gray-500">
+          <span className="inline-flex items-center">
+            <Code className="w-3 h-3 mr-1" />
+            Use <span className="font-mono mx-1">{{placeholder}}</span> for variables
+          </span>
+          <span className="ml-2">•</span>
+          <span className="ml-2">Type <span className="font-mono">{{</span> to see suggestions</span>
         </div>
-        <div>
-          <strong>Shortcuts:</strong> Type {'{{'} to see suggestions, use ↑↓ to navigate, Enter/Tab to insert
-        </div>
-      </div>
+      )}
     </div>
   );
 };

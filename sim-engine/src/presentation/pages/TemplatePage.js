@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Wand2, FileText, Users, MapPin, MessageSquare } from 'lucide-react';
 import TemplateLibraryPanel from '../components/TemplateLibraryPanel';
 import TemplateCustomizationDialog from '../components/TemplateCustomizationDialog';
@@ -312,7 +312,7 @@ const TemplatePage = () => {
               <FileText className="w-5 h-5 mr-2 text-indigo-400" />
               Template Library - Structural Templates
             </h2>
-            
+
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -321,12 +321,12 @@ const TemplatePage = () => {
                 <div>
                   <h3 className="text-blue-300 font-medium mb-2">Text Templating is Now in Editors</h3>
                   <p className="text-slate-300 text-sm mb-3">
-                    Dynamic text templating with placeholders like <code className="bg-slate-700 px-1 rounded text-blue-300">{'{{character.name}}'}</code> and 
-                    conditionals like <code className="bg-slate-700 px-1 rounded text-blue-300">{'{{#if condition}}'}</code> is now integrated 
+                    Dynamic text templating with placeholders like <code className="bg-slate-700 px-1 rounded text-blue-300">{'{{character.name}}'}</code> and
+                    conditionals like <code className="bg-slate-700 px-1 rounded text-blue-300">{'{{#if condition}}'}</code> is now integrated
                     directly into the InteractionEditor and EncounterEditor.
                   </p>
                   <p className="text-slate-300 text-sm">
-                    This template library focuses on <strong>structural templates</strong> - reusable configurations for 
+                    This template library focuses on <strong>structural templates</strong> - reusable configurations for
                     character attributes, node properties, and interaction mechanics.
                   </p>
                 </div>

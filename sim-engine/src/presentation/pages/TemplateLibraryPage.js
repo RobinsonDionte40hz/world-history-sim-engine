@@ -133,7 +133,7 @@ const TemplateLibraryPage = () => {
                 </p>
                 <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <strong>Looking for text templating?</strong> Dynamic text with placeholders like <code className="bg-blue-100 px-1 rounded">{{character.name}}</code> is now integrated directly into the InteractionEditor and EncounterEditor.
+                    <strong>Looking for text templating?</strong> Dynamic text with placeholders like <code className="bg-blue-100 px-1 rounded">{'{{'}character.name{'}'}</code> is now integrated directly into the InteractionEditor and EncounterEditor.
                   </p>
                 </div>
               </div>
