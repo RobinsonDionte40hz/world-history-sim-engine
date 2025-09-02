@@ -170,7 +170,36 @@
   - Write unit tests for all analysis and query functionality
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
 
-- [ ] 15. Update existing components for environmental compatibility
+  - [ ] 14. Create environmental perception and connectivity utilities
+  - Implement perception range calculations based on terrain and lighting
+    * Forest terrain reduces visibility range by 50%
+    * Plains terrain increases visibility range by 25% 
+    * Underground/cave terrain limits perception to immediate area
+    * Bright lighting increases awareness, dim/dark lighting reduces it
+  - Create awareness detection methods for NPCs
+    * Calculate how far NPCs can see other characters
+    * Determine audio detection ranges in different environments
+    * Implement environmental concealment calculations (hiding in forests, etc.)
+  - Add terrain connectivity analysis for logical node connections
+    * Define which terrain types can naturally connect (forest→plains, mountain→foothills)
+    * Implement connection compatibility scoring for world generation
+    * Create "makes sense" validation for node connections based on terrain
+  - Implement environmental transition logic for NPC pathfinding
+    * NPCs prefer familiar terrain types when choosing paths
+    * Characters avoid difficult terrain transitions unless necessary
+    * Environmental comfort affects route selection priority
+  - Create environmental context queries for NPC decision-making
+    * "Is this environment suitable for my character type?"
+    * "Can I easily see threats/opportunities in this terrain?"
+    * "What environmental advantages/disadvantages do I have here?"
+  - Add geographic realism utilities
+    * Validate that terrain transitions make geographic sense
+    * Suggest logical terrain types for new node connections
+    * Detect unrealistic environmental combinations in worlds
+  - Write unit tests for all perception and connectivity calculations
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
+
+- [x] 15. Update existing components for environmental compatibility
   - Modify WorldBuilder service to handle enhanced Node entities
   - Update LocalStorageWorldRepository to serialize/deserialize environmental data
   - Enhance WorldValidator to include environmental validation rules

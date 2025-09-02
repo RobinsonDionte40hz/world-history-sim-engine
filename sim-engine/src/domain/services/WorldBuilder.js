@@ -6,6 +6,8 @@
 
 import WorldValidator from './WorldValidator.js';
 import Character from '../entities/Character.js';
+import Node from '../entities/Node.js';
+import NodeMigrationService from './NodeMigrationService.js';
 import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 class WorldBuilder {
@@ -111,8 +113,14 @@ class WorldBuilder {
       throw new Error('Cannot add nodes until the world foundation is defined.');
     }
 
+    // Ensure the node has an ID before validation
+    const enhancedConfig = {
+      ...nodeConfig,
+      id: nodeConfig.id || this._generateId('node')
+    };
+
     // Use centralized validation
-    const validation = WorldValidator.validateSingleNode(nodeConfig);
+    const validation = WorldValidator.validateSingleNode(enhancedConfig);
     if (!validation.isValid) {
       const errorMessages = validation.errors.map(error => error.message).join('; ');
       throw new Error(`Node validation failed: ${errorMessages}`);
@@ -123,19 +131,17 @@ class WorldBuilder {
       console.warn('Node validation warnings:', validation.warnings);
     }
 
-    const node = {
-      id: nodeConfig.id || this._generateId('node'),
-      name: nodeConfig.name,
-      type: nodeConfig.type,
-      description: nodeConfig.description,
-      environmentalProperties: nodeConfig.environmentalProperties || {},
-      resourceAvailability: nodeConfig.resourceAvailability || {},
-      culturalContext: nodeConfig.culturalContext || {},
-      connections: nodeConfig.connections || [], // Conceptual connections
-      ...nodeConfig
-    };
+    // Create enhanced Node entity with environmental properties
+    let node;
+    try {
+      // Create Node entity which handles environmental data
+      node = new Node(enhancedConfig);
+    } catch (error) {
+      throw new ValidationError('nodeConfig', nodeConfig, `Node creation failed: ${error.message}`);
+    }
 
-    this.worldConfig.nodes.push(node);
+    // Store as JSON for serialization compatibility
+    this.worldConfig.nodes.push(node.toJSON());
     this._validatePreparationPhase('locationsDefined');
     return this;
   }
@@ -165,6 +171,90 @@ class WorldBuilder {
     };
 
     return this.addNode(nodeConfig);
+  }
+
+  /**
+   * Updates an existing node with environmental enhancements
+   * @param {string} nodeId - ID of node to update
+   * @param {Object} updates - Updates to apply
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  updateNode(nodeId, updates) {
+    if (!nodeId || typeof nodeId !== 'string') {
+      throw new ValidationError('nodeId', nodeId, 'Node ID must be a non-empty string');
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      throw new ValidationError('updates', updates, 'Updates must be an object');
+    }
+
+    const nodeIndex = this.worldConfig.nodes.findIndex(n => n.id === nodeId);
+    if (nodeIndex === -1) {
+      throw new ValidationError('nodeId', nodeId, 'Node not found');
+    }
+
+    const existingNode = this.worldConfig.nodes[nodeIndex];
+
+    try {
+      // Create updated node with validation
+      const updatedConfig = { ...existingNode, ...updates };
+      const node = Node.fromJSON(updatedConfig);
+
+      // Validate the updated node
+      const validation = WorldValidator.validateSingleNode(node.toJSON());
+      if (!validation.isValid) {
+        const errorMessages = validation.errors.map(err => err.message).join('; ');
+        throw new ValidationError('nodeValidation', updates, `Node validation failed: ${errorMessages}`);
+      }
+
+      // Update the node in storage
+      this.worldConfig.nodes[nodeIndex] = node.toJSON();
+
+      this._validatePreparationPhase('locationsDefined');
+      return this;
+    } catch (error) {
+      throw new ValidationError('nodeUpdate', updates, `Node update failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Gets a node by ID
+   * @param {string} nodeId - ID of node to retrieve
+   * @returns {Object|null} Node data or null if not found
+   */
+  getNode(nodeId) {
+    if (!nodeId || typeof nodeId !== 'string') {
+      return null;
+    }
+
+    return this.worldConfig.nodes.find(n => n.id === nodeId) || null;
+  }
+
+  /**
+   * Gets all nodes
+   * @returns {Array} Array of all node data
+   */
+  getAllNodes() {
+    return [...this.worldConfig.nodes];
+  }
+
+  /**
+   * Migrates existing nodes to enhanced environmental format
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  migrateNodesToEnvironmentalFormat() {
+    try {
+      this.worldConfig.nodes = this.worldConfig.nodes.map(nodeData => {
+        // Use NodeMigrationService to migrate old nodes
+        const migratedNode = NodeMigrationService.migrateExistingNode(nodeData);
+        return migratedNode;
+      });
+
+      this._validatePreparationPhase('locationsDefined');
+      return this;
+    } catch (error) {
+      throw new ValidationError('nodeMigration', this.worldConfig.nodes, `Node migration failed: ${error.message}`);
+    }
   }
 
   // Phase 3: Interaction creation methods (character capabilities)
@@ -314,12 +404,12 @@ class WorldBuilder {
     }
 
     const existingCharacter = this.worldConfig.characters[characterIndex];
-    
+
     try {
       // Create updated character with validation
       const updatedConfig = { ...existingCharacter, ...updates };
       const character = Character.fromJSON(updatedConfig);
-      
+
       // Validate the updated character
       const validation = character.validateAgainstType();
       if (!validation.success) {
@@ -405,7 +495,7 @@ class WorldBuilder {
     // Filter by name (partial match, case-insensitive)
     if (searchCriteria.name) {
       const nameQuery = searchCriteria.name.toLowerCase();
-      results = results.filter(character => 
+      results = results.filter(character =>
         character.name && character.name.toLowerCase().includes(nameQuery)
       );
     }
@@ -450,21 +540,21 @@ class WorldBuilder {
     if (searchCriteria.attributes) {
       results = results.filter(character => {
         if (!character.attributes) return false;
-        
+
         return Object.entries(searchCriteria.attributes).every(([attr, criteria]) => {
           const value = character.attributes[attr];
           if (value === undefined) return false;
-          
+
           if (typeof criteria === 'number') {
             return value >= criteria;
           }
-          
+
           if (typeof criteria === 'object' && criteria !== null) {
             const meetsMin = criteria.min === undefined || value >= criteria.min;
             const meetsMax = criteria.max === undefined || value <= criteria.max;
             return meetsMin && meetsMax;
           }
-          
+
           return true;
         });
       });
@@ -474,20 +564,20 @@ class WorldBuilder {
     if (searchCriteria.skills) {
       results = results.filter(character => {
         if (!character.skills) return false;
-        
+
         return Object.entries(searchCriteria.skills).every(([skill, criteria]) => {
           const value = character.skills[skill] || 0;
-          
+
           if (typeof criteria === 'number') {
             return value >= criteria;
           }
-          
+
           if (typeof criteria === 'object' && criteria !== null) {
             const meetsMin = criteria.min === undefined || value >= criteria.min;
             const meetsMax = criteria.max === undefined || value <= criteria.max;
             return meetsMin && meetsMax;
           }
-          
+
           return true;
         });
       });
@@ -497,7 +587,7 @@ class WorldBuilder {
     if (searchCriteria.hasAssignments !== undefined) {
       results = results.filter(character => {
         const assignments = character.assignments;
-        const hasAnyAssignments = assignments && Object.values(assignments).some(assignmentSet => 
+        const hasAnyAssignments = assignments && Object.values(assignments).some(assignmentSet =>
           (Array.isArray(assignmentSet) && assignmentSet.length > 0) ||
           (assignmentSet && typeof assignmentSet === 'object' && assignmentSet.size > 0)
         );
@@ -581,13 +671,13 @@ class WorldBuilder {
    */
   getUnassignedCharacters() {
     const assignedCharacterIds = new Set();
-    
+
     // Collect all assigned character IDs from node populations
     Object.values(this.worldConfig.nodePopulations).forEach(population => {
       population.forEach(characterId => assignedCharacterIds.add(characterId));
     });
-    
-    return this.worldConfig.characters.filter(character => 
+
+    return this.worldConfig.characters.filter(character =>
       !assignedCharacterIds.has(character.id)
     );
   }
@@ -604,7 +694,7 @@ class WorldBuilder {
     try {
       // Create character instance for validation
       const character = Character.fromJSON(characterData);
-      
+
       // Validate against character type
       const typeValidation = character.validateAgainstType();
       errors.push(...typeValidation.errors);
@@ -625,7 +715,7 @@ class WorldBuilder {
       }
 
       // Check for duplicate names (warning)
-      const existingCharacter = this.worldConfig.characters.find(c => 
+      const existingCharacter = this.worldConfig.characters.find(c =>
         c.id !== characterData.id && c.name === characterData.name
       );
       if (existingCharacter) {
@@ -669,7 +759,7 @@ class WorldBuilder {
 
     for (let i = 0; i < charactersData.length; i++) {
       const characterData = charactersData[i];
-      
+
       try {
         this.addCharacter(characterData);
         results.successes.push({
@@ -695,7 +785,7 @@ class WorldBuilder {
    */
   getCharacterStatistics() {
     const characters = this.worldConfig.characters;
-    
+
     if (characters.length === 0) {
       return {
         total: 0,

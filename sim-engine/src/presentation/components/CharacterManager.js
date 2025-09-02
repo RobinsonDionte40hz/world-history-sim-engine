@@ -69,7 +69,7 @@ const CharacterManager = ({
     setError(null);
     
     try {
-      const allCharacters = worldBuilder.getAllCharacters();
+      const allCharacters = worldBuilder.getAllCharacters() || [];
       setCharacters(allCharacters);
       console.log('Loaded characters:', allCharacters.length);
     } catch (err) {
@@ -87,6 +87,11 @@ const CharacterManager = ({
 
   // Real-time filtering and searching
   const applyFiltersAndSearch = useCallback(() => {
+    if (!characters || !Array.isArray(characters)) {
+      setFilteredCharacters([]);
+      return;
+    }
+    
     let filtered = [...characters];
 
     // Apply text search across multiple fields
@@ -216,7 +221,9 @@ const CharacterManager = ({
     const characterTypes = new Set();
     const categories = new Set();
     
-    characters.forEach(character => {
+    // Ensure characters is an array before calling forEach
+    const safeCharacters = characters || [];
+    safeCharacters.forEach(character => {
       const type = character.characterType?.typeId || 'generic';
       const category = character.characterType?.category || 'npc';
       characterTypes.add(type);

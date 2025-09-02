@@ -23,11 +23,11 @@ export const useTemplates = () => {
     setError(null);
     
     try {
-      const characterTemplates = templateManager.getAllTemplates('characters');
-      const nodeTemplates = templateManager.getAllTemplates('nodes');
-      const interactionTemplates = templateManager.getAllTemplates('interactions');
-      const worldTemplates = templateManager.getAllTemplates('worlds');
-      const compositeTemplates = templateManager.getAllTemplates('composite');
+      const characterTemplates = templateManager.getAllTemplates('characters') || [];
+      const nodeTemplates = templateManager.getAllTemplates('nodes') || [];
+      const interactionTemplates = templateManager.getAllTemplates('interactions') || [];
+      const worldTemplates = templateManager.getAllTemplates('worlds') || [];
+      const compositeTemplates = templateManager.getAllTemplates('composite') || [];
 
       setTemplates({
         characters: characterTemplates,
@@ -39,6 +39,14 @@ export const useTemplates = () => {
     } catch (err) {
       setError(err.message);
       console.error('Failed to load templates:', err);
+      // Set empty arrays on error to prevent undefined values
+      setTemplates({
+        characters: [],
+        nodes: [],
+        interactions: [],
+        worlds: [],
+        composite: []
+      });
     } finally {
       setLoading(false);
     }

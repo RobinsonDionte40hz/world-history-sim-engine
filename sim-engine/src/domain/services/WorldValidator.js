@@ -1,3 +1,6 @@
+import EnvironmentalValidator from './EnvironmentalValidator.js';
+import Node from '../entities/Node.js';
+
 /**
  * WorldValidator - Service for validating world configurations through preparation phases.
  * Ensures that a world is well-formed and ready for simulation.
@@ -202,7 +205,45 @@ class WorldValidator {
       });
     }
 
-    // Environmental properties validation (mappless - no coordinates)
+    // Enhanced environmental validation using EnvironmentalValidator
+    if (node.environment) {
+      try {
+        const envValidation = EnvironmentalValidator.validateEnvironment(node.environment);
+        if (!envValidation.isValid) {
+          errors.push(...envValidation.errors.map(err => ({
+            field: `environment.${err.field}`,
+            message: err.message
+          })));
+        }
+        warnings.push(...envValidation.warnings.map(warn => ({
+          field: `environment.${warn.field}`,
+          message: warn.message
+        })));
+      } catch (error) {
+        errors.push({ field: 'environment', message: `Environmental validation failed: ${error.message}` });
+      }
+    }
+
+    // Enhanced connections validation
+    if (node.connections) {
+      try {
+        const connectionsValidation = EnvironmentalValidator.validateConnections(node.connections);
+        if (!connectionsValidation.isValid) {
+          errors.push(...connectionsValidation.errors.map(err => ({
+            field: `connections.${err.field}`,
+            message: err.message
+          })));
+        }
+        warnings.push(...connectionsValidation.warnings.map(warn => ({
+          field: `connections.${warn.field}`,
+          message: warn.message
+        })));
+      } catch (error) {
+        errors.push({ field: 'connections', message: `Connections validation failed: ${error.message}` });
+      }
+    }
+
+    // Legacy environmental properties validation (for backward compatibility)
     if (node.environmentalProperties && typeof node.environmentalProperties !== 'object') {
       errors.push({ field: 'environmentalProperties', message: 'Environmental properties must be an object if provided' });
     }
@@ -215,6 +256,13 @@ class WorldValidator {
     // Cultural context validation
     if (node.culturalContext && typeof node.culturalContext !== 'object') {
       errors.push({ field: 'culturalContext', message: 'Cultural context must be an object if provided' });
+    }
+
+    // Size validation for enhanced nodes
+    if (node.size !== undefined) {
+      if (typeof node.size !== 'number' || node.size <= 0) {
+        errors.push({ field: 'size', message: 'Node size must be a positive number if provided' });
+      }
     }
 
     // Resources validation (legacy format)
@@ -1319,6 +1367,106 @@ class WorldValidator {
   }
 
   /**
+   * Validates an enhanced Node entity with environmental properties
+   * @param {Node|Object} node - Node entity or node data
+   * @returns {Object} Validation result
+   */
+  static validateEnhancedNode(node) {
+    const errors = [];
+    const warnings = [];
+
+    try {
+      // Convert to Node entity if needed
+      let nodeEntity = node;
+      if (!(node instanceof Node)) {
+        nodeEntity = Node.fromJSON(node);
+      }
+
+      // Validate basic node structure
+      const basicValidation = this.validateSingleNode(nodeEntity.toJSON());
+      errors.push(...basicValidation.errors);
+      warnings.push(...basicValidation.warnings);
+
+      // Additional enhanced node validations
+      if (nodeEntity.environment) {
+        // Validate environmental danger calculation
+        try {
+          const danger = nodeEntity.getEnvironmentalDanger();
+          if (typeof danger !== 'number' || danger < 0 || danger > 1) {
+            warnings.push({ 
+              field: 'environment', 
+              message: 'Environmental danger calculation returned invalid value' 
+            });
+          }
+        } catch (error) {
+          warnings.push({ 
+            field: 'environment', 
+            message: `Environmental danger calculation failed: ${error.message}` 
+          });
+        }
+
+        // Validate population capacity calculation
+        try {
+          const capacity = nodeEntity.getPopulationCapacity();
+          if (typeof capacity !== 'number' || capacity < 0) {
+            warnings.push({ 
+              field: 'environment', 
+              message: 'Population capacity calculation returned invalid value' 
+            });
+          }
+        } catch (error) {
+          warnings.push({ 
+            field: 'environment', 
+            message: `Population capacity calculation failed: ${error.message}` 
+          });
+        }
+      }
+
+      // Validate connections functionality
+      if (nodeEntity.connections && nodeEntity.connections.length > 0) {
+        try {
+          const connectedIds = nodeEntity.getConnectedNodeIds();
+          if (!Array.isArray(connectedIds)) {
+            errors.push({ 
+              field: 'connections', 
+              message: 'Connected node IDs should return an array' 
+            });
+          }
+        } catch (error) {
+          errors.push({ 
+            field: 'connections', 
+            message: `Connection functionality failed: ${error.message}` 
+          });
+        }
+      }
+
+      return {
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        message: errors.length === 0 ? 'Enhanced node is valid' : 'Enhanced node validation failed'
+      };
+
+    } catch (error) {
+      return {
+        isValid: false,
+        errors: [{ field: 'node', message: `Enhanced node validation failed: ${error.message}` }],
+        warnings: [],
+        message: 'Enhanced node validation error'
+      };
+    }
+  }
+
+  /**
+   * Validates abstract nodes (alias for validateLocations for backward compatibility)
+   * @param {Array} nodes - Array of node configurations
+   * @returns {Object} Validation result
+   */
+  static validateAbstractNodes(nodes) {
+    return this.validateLocations(nodes);
+  }
+
+  /**
    * Quick validation check for specific world component
    * @param {string} component - Component type to validate
    * @param {*} data - Component data
@@ -1330,6 +1478,8 @@ class WorldValidator {
         return this.validateDimensions(data);
       case 'nodes':
         return this.validateNodes(data);
+      case 'enhancedNode':
+        return this.validateEnhancedNode(data);
       case 'characters':
         return this.validateCharacters(data);
       case 'interactions':

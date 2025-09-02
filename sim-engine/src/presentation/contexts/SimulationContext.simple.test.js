@@ -84,7 +84,7 @@ const TestComponent = () => {
         {context.templateManager ? 'true' : 'false'}
       </div>
       <div data-testid="has-world-builder">
-        {context.worldBuilder ? 'true' : 'false'}
+        {context.acceptPreparedWorld ? 'true' : 'false'}
       </div>
       <div data-testid="has-simulation">
         {context.simulation ? 'true' : 'false'}

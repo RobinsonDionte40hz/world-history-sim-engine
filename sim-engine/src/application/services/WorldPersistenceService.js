@@ -8,6 +8,8 @@
  */
 
 import { EventEmitter } from 'events';
+import NodeMigrationService from '../../domain/services/NodeMigrationService.js';
+import Node from '../../domain/entities/Node.js';
 
 class WorldPersistenceService extends EventEmitter {
   constructor() {
@@ -225,23 +227,49 @@ class WorldPersistenceService extends EventEmitter {
       }));
     }
     
-    // Restructure nodes for new settlement system
+    // Enhanced node migration with environmental data
     if (migratedData.nodes) {
-      migratedData.nodes = migratedData.nodes.map(node => ({
-        ...node,
-        version: '2.0.0',
-        settlementType: node.settlementType || node.type || 'village',
-        governance: node.governance || {
-          type: 'local',
-          ruler: null,
-          laws: []
-        },
-        economy: node.economy || {
-          primaryIndustry: 'agriculture',
-          wealth: 'poor',
-          tradeRoutes: []
+      migratedData.nodes = migratedData.nodes.map(nodeData => {
+        try {
+          // Use NodeMigrationService to add environmental properties
+          const migratedNode = NodeMigrationService.migrateExistingNode(nodeData);
+          
+          // Add v2.0.0 specific enhancements
+          return {
+            ...migratedNode,
+            version: '2.0.0',
+            settlementType: migratedNode.settlementType || migratedNode.type || 'village',
+            governance: migratedNode.governance || {
+              type: 'local',
+              ruler: null,
+              laws: []
+            },
+            economy: migratedNode.economy || {
+              primaryIndustry: 'agriculture',
+              wealth: 'poor',
+              tradeRoutes: []
+            }
+          };
+        } catch (error) {
+          console.warn(`Failed to migrate node ${nodeData.id || 'unknown'} to environmental format:`, error);
+          // Fallback to basic migration
+          return {
+            ...nodeData,
+            version: '2.0.0',
+            settlementType: nodeData.settlementType || nodeData.type || 'village',
+            governance: nodeData.governance || {
+              type: 'local',
+              ruler: null,
+              laws: []
+            },
+            economy: nodeData.economy || {
+              primaryIndustry: 'agriculture',
+              wealth: 'poor',
+              tradeRoutes: []
+            }
+          };
         }
-      }));
+      });
     }
     
     migratedData.version = '2.0.0';
@@ -253,7 +281,8 @@ class WorldPersistenceService extends EventEmitter {
         'Added simulation configuration',
         'Added world rules system',
         'Enhanced character consciousness and goals',
-        'Added settlement governance and economy'
+        'Added settlement governance and economy',
+        'Migrated nodes to environmental format'
       ]
     });
     
@@ -446,7 +475,7 @@ class WorldPersistenceService extends EventEmitter {
         migratedItem.version = '1.2.0';
       }
 
-      // Migrate from 1.2.0 to 2.0.0
+      // Migrate from 1.2.0 to 2.0.0 with environmental enhancements
       if (this.compareVersions(migratedItem.version, '2.0.0') < 0) {
         switch (itemType) {
           case 'character':
@@ -459,13 +488,20 @@ class WorldPersistenceService extends EventEmitter {
             };
             break;
           case 'node':
-            migratedItem.settlementType = migratedItem.settlementType || migratedItem.type || 'village';
-            migratedItem.governance = migratedItem.governance || {
-              type: 'local', ruler: null, laws: []
-            };
-            migratedItem.economy = migratedItem.economy || {
-              primaryIndustry: 'agriculture', wealth: 'poor', tradeRoutes: []
-            };
+            // Use NodeMigrationService for comprehensive environmental migration
+            try {
+              migratedItem = NodeMigrationService.migrateExistingNode(migratedItem);
+            } catch (error) {
+              console.warn(`Failed to apply environmental migration to node ${migratedItem.id}:`, error);
+              // Fallback to basic migration
+              migratedItem.settlementType = migratedItem.settlementType || migratedItem.type || 'village';
+              migratedItem.governance = migratedItem.governance || {
+                type: 'local', ruler: null, laws: []
+              };
+              migratedItem.economy = migratedItem.economy || {
+                primaryIndustry: 'agriculture', wealth: 'poor', tradeRoutes: []
+              };
+            }
             break;
           case 'interaction':
             migratedItem.complexity = migratedItem.complexity || 'simple';
@@ -491,6 +527,157 @@ class WorldPersistenceService extends EventEmitter {
     } catch (error) {
       console.error(`Failed to migrate ${itemType}:`, error);
       return dataItem; // Return original if migration fails
+    }
+  }
+
+  /**
+   * Migrates all nodes in a world to environmental format
+   * @param {string} worldId - ID of world to migrate
+   * @returns {Promise<Object>} Migration result
+   */
+  async migrateWorldNodesToEnvironmentalFormat(worldId) {
+    try {
+      if (!worldId) {
+        throw new Error('World ID is required');
+      }
+
+      const worldData = await this.loadWorld(worldId);
+      if (!worldData) {
+        throw new Error(`World ${worldId} not found`);
+      }
+
+      const migrationResult = {
+        worldId,
+        totalNodes: worldData.nodes ? worldData.nodes.length : 0,
+        migratedNodes: 0,
+        failedNodes: 0,
+        errors: []
+      };
+
+      if (worldData.nodes && Array.isArray(worldData.nodes)) {
+        worldData.nodes = worldData.nodes.map((nodeData, index) => {
+          try {
+            // Check if node already has environmental data
+            if (nodeData.environment && nodeData.connections) {
+              migrationResult.migratedNodes++;
+              return nodeData; // Already migrated
+            }
+
+            // Apply environmental migration
+            const migratedNode = NodeMigrationService.migrateExistingNode(nodeData);
+            migrationResult.migratedNodes++;
+            return migratedNode;
+
+          } catch (error) {
+            migrationResult.failedNodes++;
+            migrationResult.errors.push({
+              nodeIndex: index,
+              nodeId: nodeData.id || 'unknown',
+              error: error.message
+            });
+            console.warn(`Failed to migrate node ${nodeData.id || index}:`, error);
+            return nodeData; // Return original if migration fails
+          }
+        });
+
+        // Save the migrated world data
+        await this.saveWorld(worldData);
+      }
+
+      this.emit('environmentalMigrationComplete', migrationResult);
+      return migrationResult;
+
+    } catch (error) {
+      const errorResult = {
+        worldId,
+        totalNodes: 0,
+        migratedNodes: 0,
+        failedNodes: 0,
+        errors: [{ error: error.message }]
+      };
+      this.emit('environmentalMigrationError', errorResult);
+      throw error;
+    }
+  }
+
+  /**
+   * Validates environmental data integrity for a world
+   * @param {string} worldId - ID of world to validate
+   * @returns {Promise<Object>} Validation result
+   */
+  async validateWorldEnvironmentalData(worldId) {
+    try {
+      if (!worldId) {
+        throw new Error('World ID is required');
+      }
+
+      const worldData = await this.loadWorld(worldId);
+      if (!worldData) {
+        throw new Error(`World ${worldId} not found`);
+      }
+
+      const validationResult = {
+        worldId,
+        totalNodes: worldData.nodes ? worldData.nodes.length : 0,
+        enhancedNodes: 0,
+        legacyNodes: 0,
+        invalidNodes: 0,
+        errors: [],
+        warnings: []
+      };
+
+      if (worldData.nodes && Array.isArray(worldData.nodes)) {
+        worldData.nodes.forEach((nodeData, index) => {
+          try {
+            // Check if node has environmental data
+            if (nodeData.environment && nodeData.connections) {
+              validationResult.enhancedNodes++;
+              
+              // Try to create Node entity to validate structure
+              try {
+                const node = Node.fromJSON(nodeData);
+                // Test environmental calculations
+                node.getEnvironmentalDanger();
+                node.getPopulationCapacity();
+              } catch (validationError) {
+                validationResult.warnings.push({
+                  nodeIndex: index,
+                  nodeId: nodeData.id || 'unknown',
+                  warning: `Environmental data validation warning: ${validationError.message}`
+                });
+              }
+            } else {
+              validationResult.legacyNodes++;
+              validationResult.warnings.push({
+                nodeIndex: index,
+                nodeId: nodeData.id || 'unknown',
+                warning: 'Node lacks environmental data'
+              });
+            }
+
+          } catch (error) {
+            validationResult.invalidNodes++;
+            validationResult.errors.push({
+              nodeIndex: index,
+              nodeId: nodeData.id || 'unknown',
+              error: error.message
+            });
+          }
+        });
+      }
+
+      return validationResult;
+
+    } catch (error) {
+      return {
+        worldId,
+        totalNodes: 0,
+        enhancedNodes: 0,
+        legacyNodes: 0,
+        invalidNodes: 0,
+        errors: [{ error: error.message }],
+        warnings: []
+      };
     }
   }
 

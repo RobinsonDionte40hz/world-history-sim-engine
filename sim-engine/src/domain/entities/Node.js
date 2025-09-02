@@ -12,15 +12,16 @@ class Node {
     this.name = config.name || 'Unnamed Node';
     this.description = config.description || '';
     this.type = config.type || 'location';
-    this.position = config.position instanceof Position ? 
-      config.position : new Position(config.position || {});
+    
+    // Mapless architecture - no spatial coordinates
+    // Position is only used for legacy compatibility, not stored
     
     // Ensure interactions is always an array
     this.interactions = Array.isArray(config.interactions) ? 
       config.interactions.map(i => i instanceof Interaction ? i : new Interaction(i)) : 
       [];
     
-    this.resources = config.resources || {};
+    this.resources = Array.isArray(config.resources) ? config.resources : [];
     
     // Enhanced environmental properties using Environment value object
     this.environment = config.environment instanceof Environment ? 
@@ -339,7 +340,7 @@ class Node {
       name: this.name,
       description: this.description,
       type: this.type,
-      position: this.position.toJSON ? this.position.toJSON() : this.position,
+      // No position in mapless architecture
       interactions: this.interactions.map(i => i.toJSON ? i.toJSON() : i),
       resources: this.resources,
       environment: this.environment.toJSON ? this.environment.toJSON() : this.environment,
