@@ -207,6 +207,20 @@ describe('Template Integration', () => {
           goals: ['Test Goal'],
           age: 25,
           culturalBackground: 'Test Culture',
+          // Add environmental data to character template in integration test
+          assignedNode: 'test-mountain-fortress',
+          preferredEnvironment: { 
+            terrain: 'mountains', 
+            climate: 'arctic',
+            preferredLighting: 'dim',
+            avoidHazards: ['avalanche']
+          },
+          environmentalAdaptations: {
+            mountains: 0.9,
+            tundra: 0.7,
+            forest: 0.4,
+            desert: 0.2
+          },
           metadata: {}
         }
       };

@@ -40,7 +40,16 @@ describe('Encounter System Integration Tests', () => {
       energy: 80,
       mood: 60,
       quests: [],
-      inventory: []
+      inventory: [],
+      // Add environmental data to test character
+      assignedNode: 'test_node',
+      preferredEnvironment: { terrain: 'forest', climate: 'temperate' },
+      environmentalAdaptations: {
+        forest: 0.8,
+        plains: 0.6,
+        mountains: 0.4,
+        urban: 0.3
+      }
     };
 
     mockContext = {

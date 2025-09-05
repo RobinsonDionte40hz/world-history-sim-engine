@@ -26,6 +26,47 @@ export const CharacterTemplate = {
     type: 'string',
     description: 'The character\'s subrace identifier',
     nullable: true
+  },
+  // Environmental data for character templates
+  assignedNode: {
+    type: 'string',
+    description: 'The ID of the node this character is assigned to',
+    nullable: true
+  },
+  preferredEnvironment: {
+    type: 'object',
+    description: 'Environmental preferences for this character',
+    properties: {
+      terrain: {
+        type: 'string',
+        description: 'Preferred terrain type (forest, plains, mountains, etc.)'
+      },
+      climate: {
+        type: 'string',
+        description: 'Preferred climate (temperate, arctic, tropical, etc.)'
+      },
+      preferredLighting: {
+        type: 'string',
+        description: 'Preferred lighting conditions (bright, normal, dim, dark)',
+        nullable: true
+      },
+      avoidHazards: {
+        type: 'array',
+        description: 'Environmental hazards this character prefers to avoid',
+        items: { type: 'string' }
+      }
+    },
+    nullable: true
+  },
+  environmentalAdaptations: {
+    type: 'object',
+    description: 'Character adaptation levels to different environments (0.0 to 1.0)',
+    additionalProperties: {
+      type: 'number',
+      minimum: 0.0,
+      maximum: 1.0
+    },
+    nullable: true
   }
 };
 

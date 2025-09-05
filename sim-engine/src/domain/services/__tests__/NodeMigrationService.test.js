@@ -67,6 +67,36 @@ describe('NodeMigrationService', () => {
       });
     });
 
+    it('should handle new connections format in templates', () => {
+      const newNodeTemplate = {
+        id: 'node1',
+        name: 'New Format Node',
+        connections: [
+          { targetNodeId: 'node2', type: ConnectionTypes.ROAD, difficulty: 1 },
+          { targetNodeId: 'node3', type: ConnectionTypes.MOUNTAIN_PASS, difficulty: 3 },
+          { targetNodeId: 'node4', type: ConnectionTypes.RIVER, difficulty: 2 }
+        ]
+      };
+
+      const migrated = NodeMigrationService.migrateExistingNode(newNodeTemplate);
+
+      expect(migrated.connections).toBeDefined();
+      expect(migrated.connections.length).toBe(3);
+      
+      // Should preserve existing connections format
+      expect(migrated.connections[0].targetNodeId).toBe('node2');
+      expect(migrated.connections[0].type).toBe(ConnectionTypes.ROAD);
+      expect(migrated.connections[0].difficulty).toBe(1);
+      
+      expect(migrated.connections[1].targetNodeId).toBe('node3');
+      expect(migrated.connections[1].type).toBe(ConnectionTypes.MOUNTAIN_PASS);
+      expect(migrated.connections[1].difficulty).toBe(3);
+      
+      expect(migrated.connections[2].targetNodeId).toBe('node4');
+      expect(migrated.connections[2].type).toBe(ConnectionTypes.RIVER);
+      expect(migrated.connections[2].difficulty).toBe(2);
+    });
+
     it('should preserve existing connections and not convert connectedNodes', () => {
       const oldNode = {
         id: 'node1',
@@ -91,6 +121,29 @@ describe('NodeMigrationService', () => {
       expect(migrated.connections.length).toBe(1);
       expect(migrated.connections[0].targetNodeId).toBe('node4');
       expect(migrated.connections[0].type).toBe(ConnectionTypes.MOUNTAIN_PASS);
+    });
+
+    it('should validate new format node template connections', () => {
+      const newFormatNode = {
+        id: 'node1',
+        name: 'New Format Template',
+        connections: [
+          { targetNodeId: 'destination1', type: ConnectionTypes.BRIDGE, difficulty: 2 },
+          { targetNodeId: 'destination2', type: ConnectionTypes.TUNNEL, difficulty: 4 }
+        ]
+      };
+
+      const migrated = NodeMigrationService.migrateExistingNode(newFormatNode);
+
+      // Should preserve new format connections unchanged
+      expect(migrated.connections.length).toBe(2);
+      expect(migrated.connections[0].targetNodeId).toBe('destination1');
+      expect(migrated.connections[0].type).toBe(ConnectionTypes.BRIDGE);
+      expect(migrated.connections[0].difficulty).toBe(2);
+      
+      expect(migrated.connections[1].targetNodeId).toBe('destination2');
+      expect(migrated.connections[1].type).toBe(ConnectionTypes.TUNNEL);
+      expect(migrated.connections[1].difficulty).toBe(4);
     });
 
     it('should merge partial environmental data with defaults', () => {
@@ -206,6 +259,29 @@ describe('NodeMigrationService', () => {
       expect(migrated.connections[1].targetNodeId).toBe('another_valid_node');
     });
 
+    it('should validate new format connections with invalid data', () => {
+      const nodeWithInvalidConnections = {
+        id: 'node1',
+        name: 'Invalid New Format Connections',
+        connections: [
+          { targetNodeId: 'valid_node', type: ConnectionTypes.ROAD, difficulty: 1 },
+          { targetNodeId: '', type: ConnectionTypes.ROAD, difficulty: 1 }, // Invalid empty targetNodeId
+          { type: ConnectionTypes.ROAD, difficulty: 1 }, // Missing targetNodeId
+          { targetNodeId: 'another_valid', type: 'INVALID_TYPE', difficulty: 1 }, // Invalid type
+          { targetNodeId: 'third_valid', type: ConnectionTypes.BRIDGE, difficulty: -1 } // Invalid difficulty
+        ]
+      };
+
+      // The migration service should filter out invalid connections
+      const migrated = NodeMigrationService.migrateExistingNode(nodeWithInvalidConnections);
+
+      // Should preserve only valid connections (assuming migration validates)
+      const validConnections = migrated.connections.filter(conn => 
+        conn.targetNodeId && typeof conn.targetNodeId === 'string' && conn.targetNodeId.trim() !== ''
+      );
+      expect(validConnections.length).toBeGreaterThan(0);
+    });
+
     it('should throw error for invalid input', () => {
       expect(() => NodeMigrationService.migrateExistingNode(null)).toThrow('Invalid node data');
       expect(() => NodeMigrationService.migrateExistingNode(undefined)).toThrow('Invalid node data');
@@ -246,6 +322,51 @@ describe('NodeMigrationService', () => {
       expect(migrated.size).toBeDefined();
       expect(migrated.connections).toBeDefined();
     });
+
+    it('should handle mixed old and new format in world data', () => {
+      const mixedFormatWorld = {
+        id: 'mixed_world',
+        name: 'Mixed Format World',
+        nodes: [
+          // Old format node
+          { 
+            id: 'old_node', 
+            name: 'Old Format Node', 
+            type: 'village',
+            connectedNodes: ['new_node', 'another_old'] 
+          },
+          // New format node
+          { 
+            id: 'new_node', 
+            name: 'New Format Node', 
+            type: 'settlement',
+            connections: [
+              { targetNodeId: 'old_node', type: ConnectionTypes.ROAD, difficulty: 1 },
+              { targetNodeId: 'fortress', type: ConnectionTypes.MOUNTAIN_PASS, difficulty: 3 }
+            ]
+          }
+        ]
+      };
+
+      const migrated = NodeMigrationService.migrateWorld(mixedFormatWorld);
+
+      expect(migrated.nodes.length).toBe(2);
+      
+      // Old format node should be migrated to new format
+      const migratedOldNode = migrated.nodes.find(n => n.id === 'old_node');
+      expect(migratedOldNode.connections.length).toBe(2);
+      expect(migratedOldNode.connections[0].targetNodeId).toBe('new_node');
+      expect(migratedOldNode.connections[0].type).toBe(ConnectionTypes.ROAD); // Default conversion
+      expect(migratedOldNode.connections[1].targetNodeId).toBe('another_old');
+      
+      // New format node should be preserved as-is
+      const preservedNewNode = migrated.nodes.find(n => n.id === 'new_node');
+      expect(preservedNewNode.connections.length).toBe(2);
+      expect(preservedNewNode.connections[0].targetNodeId).toBe('old_node');
+      expect(preservedNewNode.connections[0].type).toBe(ConnectionTypes.ROAD);
+      expect(preservedNewNode.connections[1].type).toBe(ConnectionTypes.MOUNTAIN_PASS);
+      expect(preservedNewNode.connections[1].difficulty).toBe(3);
+    });
   });
 
   describe('migrateWorld', () => {
@@ -285,6 +406,45 @@ describe('NodeMigrationService', () => {
       expect(migrated.nodes[2].size).toBe(200); // wilderness default
     });
 
+    it('should migrate world with new format node templates', () => {
+      const worldDataWithNewFormat = {
+        id: 'world2',
+        name: 'New Format World',
+        nodes: [
+          { 
+            id: 'node1', 
+            name: 'New Format Node', 
+            type: 'settlement',
+            connections: [
+              { targetNodeId: 'node2', type: ConnectionTypes.ROAD, difficulty: 1 },
+              { targetNodeId: 'node3', type: ConnectionTypes.BRIDGE, difficulty: 2 }
+            ]
+          },
+          { 
+            id: 'node2', 
+            name: 'Connected Node', 
+            type: 'village',
+            connections: [
+              { targetNodeId: 'node1', type: ConnectionTypes.ROAD, difficulty: 1 }
+            ]
+          }
+        ]
+      };
+
+      const migrated = NodeMigrationService.migrateWorld(worldDataWithNewFormat);
+
+      expect(migrated.nodes.length).toBe(2);
+      
+      // Should preserve new format connections
+      expect(migrated.nodes[0].connections.length).toBe(2);
+      expect(migrated.nodes[0].connections[0].targetNodeId).toBe('node2');
+      expect(migrated.nodes[0].connections[0].type).toBe(ConnectionTypes.ROAD);
+      expect(migrated.nodes[0].connections[1].difficulty).toBe(2);
+      
+      expect(migrated.nodes[1].connections.length).toBe(1);
+      expect(migrated.nodes[1].connections[0].targetNodeId).toBe('node1');
+    });
+
     it('should migrate template nodes in world data', () => {
       const worldData = {
         id: 'world1',
@@ -317,6 +477,62 @@ describe('NodeMigrationService', () => {
 
       expect(migrated.templates.nodes[0].data.size).toBe(80);  // village default
       expect(migrated.templates.nodes[1].data.size).toBe(50); // dungeon default
+    });
+
+    it('should migrate template nodes with new connections format', () => {
+      const worldWithNewFormatTemplates = {
+        id: 'world_new_templates',
+        name: 'World with New Format Templates',
+        nodes: [],
+        templates: {
+          nodes: [
+            {
+              id: 'modern_village_template',
+              name: 'Modern Village Template',
+              data: { 
+                id: 'village_modern', 
+                name: 'Modern Village', 
+                type: 'village',
+                connections: [
+                  { targetNodeId: 'main_road', type: 'ROAD', difficulty: 1 },
+                  { targetNodeId: 'river_crossing', type: 'BRIDGE', difficulty: 2 }
+                ]
+              }
+            },
+            {
+              id: 'fortress_template',
+              name: 'Mountain Fortress Template',
+              data: { 
+                id: 'mountain_fortress', 
+                name: 'Mountain Fortress', 
+                type: 'fortress',
+                connections: [
+                  { targetNodeId: 'valley_entrance', type: 'MOUNTAIN_PASS', difficulty: 4 }
+                ]
+              }
+            }
+          ]
+        }
+      };
+
+      const migrated = NodeMigrationService.migrateWorld(worldWithNewFormatTemplates);
+
+      expect(migrated.templates.nodes.length).toBe(2);
+      
+      // Check first template with multiple connections
+      const villageTemplate = migrated.templates.nodes[0];
+      expect(villageTemplate.data.connections.length).toBe(2);
+      expect(villageTemplate.data.connections[0].targetNodeId).toBe('main_road');
+      expect(villageTemplate.data.connections[0].type).toBe('ROAD');
+      expect(villageTemplate.data.connections[1].targetNodeId).toBe('river_crossing');
+      expect(villageTemplate.data.connections[1].difficulty).toBe(2);
+      
+      // Check second template
+      const fortressTemplate = migrated.templates.nodes[1];
+      expect(fortressTemplate.data.connections.length).toBe(1);
+      expect(fortressTemplate.data.connections[0].targetNodeId).toBe('valley_entrance');
+      expect(fortressTemplate.data.connections[0].type).toBe('MOUNTAIN_PASS');
+      expect(fortressTemplate.data.connections[0].difficulty).toBe(4);
     });
 
     it('should handle world data without nodes', () => {

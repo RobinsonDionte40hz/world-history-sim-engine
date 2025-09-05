@@ -100,7 +100,14 @@ describe('Simulation Entry Points Pipeline Enforcement', () => {
       worldBuilder.addCharacter({
         name: 'Test Character',
         attributes: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
-        assignedInteractions: [worldBuilder.worldConfig.interactions[0].id]
+        assignedInteractions: [worldBuilder.worldConfig.interactions[0].id],
+        // Add environmental data to simulation test character
+        preferredEnvironment: { terrain: 'plains', climate: 'temperate' },
+        environmentalAdaptations: {
+          plains: 0.8,
+          forest: 0.6,
+          urban: 0.4
+        }
       });
 
       const nodeId = worldBuilder.worldConfig.nodes[0].id;
@@ -278,7 +285,14 @@ describe('Simulation Entry Points Pipeline Enforcement', () => {
           worldBuilder.addCharacter({
             name: 'Readiness Character',
             attributes: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
-            assignedInteractions: [worldBuilder.worldConfig.interactions[0].id]
+            assignedInteractions: [worldBuilder.worldConfig.interactions[0].id],
+            // Add environmental data to readiness test character
+            preferredEnvironment: { terrain: 'plains', climate: 'temperate' },
+            environmentalAdaptations: {
+              plains: 0.7,
+              forest: 0.5,
+              urban: 0.6
+            }
           });
 
           const nodeId = worldBuilder.worldConfig.nodes[0].id;

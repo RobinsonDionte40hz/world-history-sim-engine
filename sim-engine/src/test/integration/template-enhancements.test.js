@@ -11,6 +11,14 @@ jest.mock('../../template/TemplateManager', () => {
         description: 'A test character',
         attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 },
         tags: ['warrior', 'human'],
+        // Add environmental data to mocked template
+        assignedNode: 'test-forest-node',
+        preferredEnvironment: { terrain: 'forest', climate: 'temperate' },
+        environmentalAdaptations: {
+          forest: 0.9,
+          plains: 0.7,
+          mountains: 0.5
+        },
         metadata: {
           category: 'combat',
           difficulty: 'beginner',
@@ -43,7 +51,10 @@ describe('Template System Enhancements Integration', () => {
         const validation = result.current.validateTemplate('characters', {
           name: 'Test Character',
           description: 'A test character',
-          attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 }
+          attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 },
+          // Add environmental data to character template
+          assignedNode: 'test-node-1', // If character is assigned to a node
+          preferredEnvironment: { terrain: 'forest', climate: 'temperate' } // Environmental preferences
         });
 
         expect(validation.isValid).toBe(true);
@@ -88,7 +99,10 @@ describe('Template System Enhancements Integration', () => {
         const validation = result.current.validateTemplate('characters', {
           name: 'Character Without Description',
           // No description provided
-          attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 }
+          attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 },
+          // Add environmental data for comprehensive template
+          assignedNode: null, // Not assigned to any node initially
+          preferredEnvironment: { terrain: 'plains', climate: 'temperate' }
         });
 
         expect(validation.isValid).toBe(true); // Still valid, just warnings
@@ -150,7 +164,10 @@ describe('Template System Enhancements Integration', () => {
         const validation = result.current.validateTemplate('characters', {
           // Missing name - should cause error
           description: 'Character without name',
-          attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 }
+          attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 },
+          // Environmental data can still be present even with validation errors
+          assignedNode: 'test-node-orphaned',
+          preferredEnvironment: { terrain: 'urban', climate: 'temperate' }
         });
 
         expect(validation.isValid).toBe(false);
@@ -199,6 +216,19 @@ describe('Template System Enhancements Integration', () => {
         description: 'A character with enhanced metadata',
         attributes: { strength: 10, dexterity: 12, constitution: 11, intelligence: 14, wisdom: 13, charisma: 15 },
         tags: ['enhanced', 'test'],
+        // Add environmental data to enhanced template
+        assignedNode: 'enhanced-test-node',
+        preferredEnvironment: { 
+          terrain: 'forest', 
+          climate: 'temperate',
+          preferredLighting: 'normal',
+          avoidHazards: ['fire', 'poison']
+        },
+        environmentalAdaptations: {
+          forest: 0.8,    // High adaptation to forest environments
+          urban: 0.4,     // Moderate adaptation to urban environments
+          desert: 0.2     // Low adaptation to desert environments
+        },
         metadata: {
           category: 'test',
           difficulty: 'intermediate',
@@ -219,9 +249,16 @@ describe('Template System Enhancements Integration', () => {
       const { result } = renderHook(() => useTemplates());
 
       act(() => {
-        const instance = result.current.loadTemplate('characters', 'test-char-1', { name: 'Custom Name' });
+        const instance = result.current.loadTemplate('characters', 'test-char-1', { 
+          name: 'Custom Name',
+          // Override environmental preferences when loading template
+          preferredEnvironment: { terrain: 'mountains', climate: 'arctic' },
+          assignedNode: 'custom-node-1'
+        });
         
         expect(instance.name).toBe('Custom Name');
+        expect(instance.preferredEnvironment.terrain).toBe('mountains');
+        expect(instance.assignedNode).toBe('custom-node-1');
         expect(instance.metadata.isTemplate).toBe(false);
         expect(instance.metadata.templateId).toBe('test-char-1');
         expect(instance.metadata.createdAt).toBeDefined();

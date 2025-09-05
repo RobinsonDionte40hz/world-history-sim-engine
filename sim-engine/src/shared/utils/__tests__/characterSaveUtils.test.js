@@ -29,6 +29,14 @@ describe('Character Save Utils', () => {
           intelligence: 14,
           wisdom: 13,
           charisma: 15
+        },
+        // Add environmental data to character
+        assignedNode: 'test-node-1', // If character is assigned to a node
+        preferredEnvironment: { terrain: 'forest', climate: 'temperate' }, // Environmental preferences
+        environmentalAdaptations: {
+          forest: 0.8,
+          plains: 0.6,
+          urban: 0.4
         }
       };
 
@@ -78,6 +86,19 @@ describe('Character Save Utils', () => {
           intelligence: 14,
           wisdom: 13,
           charisma: 15
+        },
+        // Add environmental data to valid character template
+        assignedNode: 'forest-village-1',
+        preferredEnvironment: { 
+          terrain: 'forest', 
+          climate: 'temperate',
+          preferredLighting: 'normal'
+        },
+        environmentalAdaptations: {
+          forest: 0.9,
+          plains: 0.6,
+          mountains: 0.4,
+          urban: 0.3
         }
       };
 
@@ -96,6 +117,13 @@ describe('Character Save Utils', () => {
           intelligence: 14,
           wisdom: 13,
           charisma: 15
+        },
+        // Environmental data can be present even when character is invalid
+        assignedNode: null, // No node assignment
+        preferredEnvironment: { terrain: 'plains', climate: 'temperate' },
+        environmentalAdaptations: {
+          plains: 0.7,
+          forest: 0.5
         }
       };
 
