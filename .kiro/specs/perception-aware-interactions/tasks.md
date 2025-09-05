@@ -1,6 +1,22 @@
 # Implementation Plan
 
-- [x] 1. Create core interaction architecture
+- [x] 1. Create cor- [x] 7. Implement ExamineInteraction with attribute integration
+  - Create `ExamineInteraction` class extending `SystemInteraction`
+  - Integrate with character Intelligence/Wisdom attributes
+  - Support examining characters, items, and node features
+  - Support characters having items that can not be seen or examined
+  - Implement range checking and target validation
+  - Write unit tests for different target types and character builds
+  - _Requirements: 2.5, 3.3_
+
+- [x] 8. Stub MovementInteraction for future NavigationService
+  - Create `MovementInteraction` class with basic structure
+  - Implement energy cost calculation with environmental modifiers
+  - Use `Environment.getMovementModifier()` for terrain effects
+  - Add path validation and target node checking
+  - Create placeholder for NavigationService integration
+  - Write unit tests with mocked navigation functionality
+  - _Requirements: 2.1, 3.2, 3.5_hitecture
   - Create `src/domain/entities/interactions/` directory structure
   - Implement `InteractionBase` abstract class with core interface methods
   - Create comprehensive unit tests for base class functionality
@@ -27,14 +43,14 @@
   - Verify serialization/deserialization works with existing save files
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 5. Implement WaitInteraction (simplest system interaction)
+- [x] 5. Implement WaitInteraction (simplest system interaction)
   - Create `WaitInteraction` class extending `SystemInteraction`
   - Implement always-available behavior with minimal energy cost
   - Add duration configuration and basic effects
   - Write comprehensive unit tests including edge cases
   - _Requirements: 2.4, 2.5_
 
-- [ ] 6. Implement RestInteraction with environmental integration
+- [x] 6. Implement RestInteraction with environmental integration
   - Create `RestInteraction` class with environment safety checks
   - Integrate with `Environment.isDangerous()` for availability
   - Use `Environment.getComfortLevel()` for restoration modifiers
@@ -42,15 +58,16 @@
   - Write unit tests including various environmental conditions
   - _Requirements: 2.3, 3.1, 3.4, 3.5_
 
-- [ ] 7. Implement ExamineInteraction with attribute integration
+- [x] 7. Implement ExamineInteraction with attribute integration
   - Create `ExamineInteraction` class for information gathering
   - Integrate with character Intelligence/Wisdom attributes
   - Support examining characters, items, and node features
+  - Support characters having items that can not be seen or examined
   - Implement range checking and target validation
   - Write unit tests for different target types and character builds
   - _Requirements: 2.5, 3.3_
 
-- [ ] 8. Stub MovementInteraction for future NavigationService
+- [x] 8. Stub MovementInteraction for future NavigationService
   - Create `MovementInteraction` class with basic structure
   - Implement energy cost calculation with environmental modifiers
   - Use `Environment.getMovementModifier()` for terrain effects
@@ -59,7 +76,7 @@
   - Write unit tests with mocked navigation functionality
   - _Requirements: 2.1, 3.2, 3.5_
 
-- [ ] 9. Stub PerceptionInteraction for future PerceptionService
+- [x] 9. Stub PerceptionInteraction for future PerceptionService
   - Create `PerceptionInteraction` class with perception types
   - Integrate with `Environment.getVisibilityModifier()` for effectiveness
   - Support different perception types (look, listen, sense)
@@ -68,7 +85,7 @@
   - Write unit tests with mocked perception functionality
   - _Requirements: 2.2, 3.3, 3.5_
 
-- [ ] 10. Create InteractionFactory for interaction creation
+- [x] 10. Create InteractionFactory for interaction creation
   - Implement `InteractionFactory` class with type-based creation methods
   - Add convenience methods for each system interaction type
   - Support both system and content interaction creation
@@ -76,7 +93,7 @@
   - Write unit tests for all factory methods and error cases
   - _Requirements: 1.6, 2.6_
 
-- [ ] 11. Implement InteractionManager service
+- [x] 11. Implement InteractionManager service
   - Create `InteractionManager` class to coordinate interaction types
   - Implement `getAvailableInteractions()` with system/content separation
   - Add priority-based sorting and filtering logic
@@ -84,7 +101,7 @@
   - Write comprehensive unit tests and integration tests
   - _Requirements: 4.1, 4.2, 4.3, 4.5_
 
-- [ ] 12. Update GenerateBehavior to use hierarchical system
+- [x] 12. Update GenerateBehavior to use hierarchical system
   - Modify `GenerateBehavior.js` to use `InteractionManager`
   - Implement critical needs checking (energy, safety)
   - Add weighted selection between system and content interactions
@@ -92,7 +109,7 @@
   - Write integration tests for behavior generation with new system
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 13. Update Node entity to separate interaction types
+- [x] 13. Update Node entity to separate interaction types
   - Modify Node entity to distinguish system vs content interactions
   - Ensure system interactions are always generated dynamically
   - Maintain content interaction storage and retrieval

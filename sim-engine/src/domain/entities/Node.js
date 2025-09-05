@@ -1,7 +1,6 @@
 // src/domain/entities/Node.js
 // Enhanced Node class with environmental properties and connections
 
-import Position from '../value-objects/Positions.js';
 import Interaction from './Interaction.js';
 import Environment from '../value-objects/Environment.js';
 import NodeConnection from '../value-objects/NodeConnection.js';
@@ -16,10 +15,20 @@ class Node {
     // Mapless architecture - no spatial coordinates
     // Position is only used for legacy compatibility, not stored
     
-    // Ensure interactions is always an array
-    this.interactions = Array.isArray(config.interactions) ? 
-      config.interactions.map(i => i instanceof Interaction ? i : new Interaction(i)) : 
+    // Separate content interactions from system interactions
+    // System interactions are generated dynamically by InteractionManager
+    this.contentInteractions = Array.isArray(config.contentInteractions) ? 
+      config.contentInteractions.map(i => i instanceof Interaction ? i : new Interaction(i)) : 
       [];
+    
+    // Migration support: if old interactions array exists, migrate to contentInteractions
+    if (config.interactions && config.interactions.length > 0 && this.contentInteractions.length === 0) {
+      this.contentInteractions = config.interactions.map(i => i instanceof Interaction ? i : new Interaction(i));
+      console.warn(`Node ${this.id}: Migrated legacy 'interactions' to 'contentInteractions'. Consider updating save files.`);
+    }
+    
+    // Keep legacy interactions array for backward compatibility (read-only)
+    this.interactions = this.contentInteractions;
     
     this.resources = Array.isArray(config.resources) ? config.resources : [];
     
@@ -61,14 +70,46 @@ class Node {
   }
 
   hasInteraction(interactionId) {
-    return this.interactions.some(i => i.id === interactionId);
+    return this.contentInteractions.some(i => i.id === interactionId);
+  }
+
+  hasContentInteraction(interactionId) {
+    return this.hasInteraction(interactionId);
   }
 
   getAvailableInteractions(character) {
-    return this.interactions.filter(i => 
+    return this.contentInteractions.filter(i => 
       i.meetsRequirements && i.meetsRequirements(character) && 
       i.isAvailable && i.isAvailable(Date.now())
     );
+  }
+
+  getContentInteractions() {
+    return [...this.contentInteractions];
+  }
+
+  addContentInteraction(interaction) {
+    if (!(interaction instanceof Interaction)) {
+      throw new Error('Interaction must be an Interaction instance');
+    }
+    
+    if (!this.hasInteraction(interaction.id)) {
+      this.contentInteractions.push(interaction);
+      // Update legacy array for backward compatibility
+      this.interactions = this.contentInteractions;
+    }
+  }
+
+  removeContentInteraction(interactionId) {
+    const initialLength = this.contentInteractions.length;
+    this.contentInteractions = this.contentInteractions.filter(i => i.id !== interactionId);
+    
+    if (this.contentInteractions.length < initialLength) {
+      // Update legacy array for backward compatibility
+      this.interactions = this.contentInteractions;
+      return true;
+    }
+    return false;
   }
 
   getEnvironmentFactor() {
@@ -341,7 +382,9 @@ class Node {
       description: this.description,
       type: this.type,
       // No position in mapless architecture
-      interactions: this.interactions.map(i => i.toJSON ? i.toJSON() : i),
+      contentInteractions: this.contentInteractions.map(i => i.toJSON ? i.toJSON() : i),
+      // Maintain backward compatibility - include interactions for older save files
+      interactions: this.contentInteractions.map(i => i.toJSON ? i.toJSON() : i),
       resources: this.resources,
       environment: this.environment.toJSON ? this.environment.toJSON() : this.environment,
       size: this.size,
@@ -378,10 +421,19 @@ class Node {
       );
     }
     
+    // Handle interaction migration
+    let contentInteractions = data.contentInteractions;
+    if (!contentInteractions && data.interactions) {
+      // Migrate from old format
+      contentInteractions = data.interactions;
+      console.warn(`Node ${data.id}: Migrating legacy 'interactions' to 'contentInteractions' during deserialization.`);
+    }
+    
     return new Node({
       ...data,
       environment,
-      connections
+      connections,
+      contentInteractions
     });
   }
 }
