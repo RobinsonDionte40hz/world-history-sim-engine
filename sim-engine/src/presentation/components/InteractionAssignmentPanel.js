@@ -32,16 +32,33 @@ const InteractionAssignmentPanel = ({
   onAssignInteraction,
   onUnassignInteraction,
   onCreateInteraction,
-  onEditInteraction 
+  onEditInteraction,
+  // New props for hierarchical system
+  systemInteractions = [],
+  contentInteractions = [],
+  onExecuteInteraction,
+  interactionManager,
+  worldState,
+  currentNode
 }) => {
   const [activeTab, setActiveTab] = useState('assigned');
   const [searchTerm, setSearchTerm] = useState('');
+  const [executingInteraction] = useState(null);
 
   // Get character type for template suggestions
   const characterType = character?.type || character?.characterClass || 'generic';
   const characterTypeTemplates = getInteractionTemplatesForType(characterType);
   const availableTypes = getAvailableCharacterTypes();
   const quickOptions = getQuickInteractionOptions();
+
+  // Get available interactions from interaction manager if provided
+  const availableInteractionsData = interactionManager && character && worldState && currentNode
+    ? interactionManager.getAvailableInteractions({ character, world: worldState, currentNode })
+    : { systemInteractions: systemInteractions, contentInteractions: contentInteractions, allInteractions: [] };
+
+  // Separate system and content interactions for better organization
+  const systemInteractionsList = availableInteractionsData.systemInteractions || [];
+  const contentInteractionsList = availableInteractionsData.contentInteractions || [];
 
   // Get assigned interaction IDs for filtering
   const assignedInteractionIds = new Set(assignedInteractions.map(i => i.id));
@@ -93,6 +110,8 @@ const InteractionAssignmentPanel = ({
   const tabs = [
     { id: 'assigned', label: 'Assigned', count: assignedInteractions.length },
     { id: 'available', label: 'Available', count: filteredAvailable.length },
+    { id: 'system', label: 'System', count: systemInteractionsList.length },
+    { id: 'content', label: 'Content', count: contentInteractionsList.length },
     { id: 'templates', label: 'Templates', count: availableTypes.length },
     { id: 'quick', label: 'Quick Create', count: quickOptions.length }
   ];
@@ -240,7 +259,147 @@ const InteractionAssignmentPanel = ({
           </div>
         )}
 
-        {/* Templates Tab */}
+        {/* System Interactions Tab */}
+        {activeTab === 'system' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="font-medium text-white">System Interactions</h4>
+                <p className="text-sm text-gray-400">Core engine behaviors available to all characters</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded">
+                  Always Available
+                </span>
+              </div>
+            </div>
+
+            {availableInteractionsData.systemInteractions?.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Zap className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>No system interactions available</p>
+                <p className="text-sm">System interactions are generated dynamically</p>
+              </div>
+            ) : (
+              availableInteractionsData.systemInteractions?.map(interaction => (
+                <div
+                  key={interaction.id}
+                  className="p-3 bg-green-500/10 rounded-lg border border-green-500/30"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-green-400">⚙️</span>
+                        <h4 className="font-medium text-white">{interaction.name}</h4>
+                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded">
+                          System
+                        </span>
+                        {interaction.priority && (
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            interaction.priority === 'critical' ? 'bg-red-500/20 text-red-300' :
+                            interaction.priority === 'high' ? 'bg-orange-500/20 text-orange-300' :
+                            interaction.priority === 'normal' ? 'bg-blue-500/20 text-blue-300' :
+                            'bg-gray-500/20 text-gray-300'
+                          }`}>
+                            {interaction.priority}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-400 mb-2">
+                        {interaction.description}
+                      </p>
+                      {interaction.baseEnergyCost && (
+                        <div className="text-xs text-gray-500">
+                          Energy cost: {interaction.baseEnergyCost}
+                        </div>
+                      )}
+                    </div>
+                    {onExecuteInteraction && (
+                      <button
+                        onClick={() => onExecuteInteraction(interaction)}
+                        disabled={executingInteraction === interaction.id}
+                        className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+                      >
+                        {executingInteraction === interaction.id ? 'Executing...' : 'Execute'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Content Interactions Tab */}
+        {activeTab === 'content' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="font-medium text-white">Content Interactions</h4>
+                <p className="text-sm text-gray-400">Custom interactions created by users</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
+                  User Created
+                </span>
+              </div>
+            </div>
+
+            {availableInteractionsData.contentInteractions?.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Book className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>No content interactions available</p>
+                <p className="text-sm">Create custom interactions using the templates tab</p>
+              </div>
+            ) : (
+              availableInteractionsData.contentInteractions?.map(interaction => (
+                <div
+                  key={interaction.id}
+                  className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getIconForCategory(interaction.category)}
+                        <h4 className="font-medium text-white">{interaction.name}</h4>
+                        <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
+                          Content
+                        </span>
+                        <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded">
+                          {interaction.category}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-2">
+                        {interaction.description}
+                      </p>
+                      {interaction.author && (
+                        <div className="text-xs text-gray-500">
+                          By: {interaction.author}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => onEditInteraction(interaction)}
+                        className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                        title="Edit interaction"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onAssignInteraction(character.id, interaction.id)}
+                        className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/20 rounded transition-colors"
+                        title="Assign to character"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
         {activeTab === 'templates' && (
           <div className="space-y-4">
             {/* Character Type Template */}

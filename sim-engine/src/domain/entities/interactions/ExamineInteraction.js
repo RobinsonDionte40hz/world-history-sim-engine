@@ -124,14 +124,15 @@ class ExamineInteraction extends SystemInteraction {
    * @returns {boolean} True if examination can be executed
    * @override
    */
-  canExecute({ character, world }) {
+  canExecute(character, worldState) {
     // Create worldState object for SystemInteraction compatibility
-    const worldState = {
+    const world = worldState;
+    const worldStateObj = {
       getCurrentEnvironment: () => this.environment || {}
     };
 
     // Basic system interaction checks
-    if (!super.canExecute(character, worldState)) {
+    if (!super.canExecute(character, worldStateObj)) {
       return false;
     }
 

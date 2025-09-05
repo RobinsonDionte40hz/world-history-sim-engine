@@ -10,7 +10,8 @@ class MemoryService {
     }
 
     const { interactionId, participantId, outcome, minSignificance = 0 } = criteria;
-    return character.decisionHistory.filter(event => {
+    const decisionHistory = character.decisionHistory || [];
+    return decisionHistory.filter(event => {
       const matches = (
         (!interactionId || event.interactionId === interactionId) &&
         (!participantId || character.relationships.has(participantId)) &&
@@ -40,7 +41,8 @@ class MemoryService {
     character.logDecision(interactionId, outcome);  // Reuse Character method
     // Optionally prune old memories (e.g., below threshold)
     const retentionThreshold = 0.1;
-    character.decisionHistory = character.decisionHistory.filter(event =>
+    const decisionHistory = character.decisionHistory || [];
+    character.decisionHistory = decisionHistory.filter(event =>
       this.calculateRetentionStrength(character, event) >= retentionThreshold
     );
   }

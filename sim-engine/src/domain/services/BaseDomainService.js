@@ -1,17 +1,14 @@
-// src/domain/services/BaseDomainService.ts
-
-import { ValidationError } from '../../shared/types/ValueObjectTypes';
-import { ValidationResult } from '../../shared/types/SystemTypes';
+// src/domain/services/BaseDomainService.js
 
 /**
- * Abstract base class for all domain services
+ * Base class for all domain services
  * Provides common functionality for validation and error handling
  */
-export abstract class BaseDomainService {
+export default class BaseDomainService {
   /**
    * Helper method to create a successful validation result
    */
-  protected static createValidResult(): ValidationResult {
+  static createValidResult() {
     return {
       isValid: true,
       errors: [],
@@ -22,7 +19,7 @@ export abstract class BaseDomainService {
   /**
    * Helper method to create a failed validation result
    */
-  protected static createInvalidResult(errors: ValidationError[], warnings: string[] = []): ValidationResult {
+  static createInvalidResult(errors = [], warnings = []) {
     return {
       isValid: false,
       errors,
@@ -33,7 +30,7 @@ export abstract class BaseDomainService {
   /**
    * Helper method to validate required parameters
    */
-  protected static validateRequired(paramName: string, value: any): ValidationError | null {
+  static validateRequired(paramName, value) {
     if (value === null || value === undefined) {
       return {
         field: paramName,
@@ -47,12 +44,7 @@ export abstract class BaseDomainService {
   /**
    * Helper method to validate numeric ranges
    */
-  protected static validateRange(
-    paramName: string, 
-    value: number, 
-    min: number, 
-    max: number
-  ): ValidationError | null {
+  static validateRange(paramName, value, min, max) {
     if (typeof value !== 'number' || value < min || value > max) {
       return {
         field: paramName,
@@ -66,7 +58,7 @@ export abstract class BaseDomainService {
   /**
    * Helper method to validate dates
    */
-  protected static validateDate(paramName: string, value: Date): ValidationError | null {
+  static validateDate(paramName, value) {
     if (!(value instanceof Date) || isNaN(value.getTime())) {
       return {
         field: paramName,
@@ -80,11 +72,7 @@ export abstract class BaseDomainService {
   /**
    * Helper method to validate arrays
    */
-  protected static validateArray(
-    paramName: string, 
-    value: any[], 
-    minLength: number = 0
-  ): ValidationError | null {
+  static validateArray(paramName, value, minLength = 0) {
     if (!Array.isArray(value) || value.length < minLength) {
       return {
         field: paramName,
@@ -98,12 +86,7 @@ export abstract class BaseDomainService {
   /**
    * Helper method to validate string length
    */
-  protected static validateStringLength(
-    paramName: string, 
-    value: string, 
-    minLength: number, 
-    maxLength?: number
-  ): ValidationError | null {
+  static validateStringLength(paramName, value, minLength, maxLength) {
     if (typeof value !== 'string' || value.length < minLength) {
       return {
         field: paramName,
@@ -124,34 +107,34 @@ export abstract class BaseDomainService {
   /**
    * Helper method to collect validation errors
    */
-  protected static collectValidationErrors(...errors: (ValidationError | null)[]): ValidationError[] {
-    return errors.filter((error): error is ValidationError => error !== null);
+  static collectValidationErrors(...errors) {
+    return errors.filter((error) => error !== null);
   }
 
   /**
    * Helper method to validate multiple conditions and return result
    */
-  protected static validateConditions(...errors: (ValidationError | null)[]): ValidationResult {
+  static validateConditions(...errors) {
     const validationErrors = this.collectValidationErrors(...errors);
-    
+
     if (validationErrors.length > 0) {
       return this.createInvalidResult(validationErrors);
     }
-    
+
     return this.createValidResult();
   }
 
   /**
    * Helper method to ensure a value is within bounds
    */
-  protected static clamp(value: number, min: number, max: number): number {
+  static clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
   }
 
   /**
    * Helper method to calculate percentage change
    */
-  protected static calculatePercentageChange(oldValue: number, newValue: number): number {
+  static calculatePercentageChange(oldValue, newValue) {
     if (oldValue === 0) return newValue === 0 ? 0 : 100;
     return ((newValue - oldValue) / oldValue) * 100;
   }
@@ -159,21 +142,21 @@ export abstract class BaseDomainService {
   /**
    * Helper method to generate unique IDs
    */
-  protected static generateId(): string {
+  static generateId() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
    * Helper method to format timestamps consistently
    */
-  protected static formatTimestamp(date: Date): string {
+  static formatTimestamp(date) {
     return date.toISOString();
   }
 
   /**
    * Helper method to parse timestamps consistently
    */
-  protected static parseTimestamp(timestamp: string): Date {
+  static parseTimestamp(timestamp) {
     return new Date(timestamp);
   }
 }

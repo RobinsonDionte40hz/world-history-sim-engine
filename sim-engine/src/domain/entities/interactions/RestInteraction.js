@@ -75,14 +75,14 @@ class RestInteraction extends SystemInteraction {
 
   /**
    * Checks if the rest interaction can be executed
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character attempting to rest
+   * @param {Object} character - The character attempting to rest
+   * @param {Object} worldState - Current world state
    * @returns {boolean} True if rest can be executed
    * @override
    */
-  canExecute({ character }) {
+  canExecute(character, worldState) {
     // Basic system interaction checks
-    if (!super.canExecute(character, { getCurrentEnvironment: () => this.environment })) {
+    if (!super.canExecute(character, worldState)) {
       return false;
     }
 
@@ -101,15 +101,14 @@ class RestInteraction extends SystemInteraction {
 
   /**
    * Executes the rest interaction
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character resting
-   * @param {World} context.world - The current world state
+   * @param {Object} character - The character resting
+   * @param {Object} worldState - The current world state
    * @returns {Object} Execution result
    * @override
    */
-  execute({ character, world }) {
+  execute(character, worldState) {
     // Check if rest can be executed
-    if (!this.canExecute({ character })) {
+    if (!this.canExecute(character, worldState)) {
       return {
         success: false,
         interaction: this,
@@ -139,17 +138,14 @@ class RestInteraction extends SystemInteraction {
     const actualEnergyRestored = newEnergy - character.energy;
     const actualHealthRestored = newHealth - character.health;
 
-    // Create updated character
-    const updatedCharacter = {
-      ...character,
-      energy: newEnergy,
-      health: newHealth,
-      lastRestTime: world.currentTime
-    };
+    // Modify character directly
+    character.energy = newEnergy;
+    character.health = newHealth;
+    character.lastRestTime = worldState.currentTime || worldState.time;
 
     return {
       ...baseResult,
-      character: updatedCharacter,
+      environmentalModifier: modifier,
       details: {
         ...baseResult.details,
         energyRestored: actualEnergyRestored,

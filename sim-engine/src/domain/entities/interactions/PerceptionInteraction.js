@@ -137,19 +137,13 @@ class PerceptionInteraction extends SystemInteraction {
   }
 
   /**
-   * Checks if the perception can be executed
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character attempting to perceive
-   * @param {World} context.world - The current world state
+   * Checks if the perception interaction can be executed
+   * @param {Object} character - The character attempting to perceive
+   * @param {Object} worldState - Current world state
    * @returns {boolean} True if perception can be executed
    * @override
    */
-  canExecute({ character, world }) {
-    // Create worldState object for SystemInteraction compatibility
-    const worldState = {
-      getCurrentEnvironment: () => this.environment || {}
-    };
-
+  canExecute(character, worldState) {
     // Basic system interaction checks
     if (!super.canExecute(character, worldState)) {
       return false;
@@ -162,7 +156,7 @@ class PerceptionInteraction extends SystemInteraction {
 
     // If target specified, validate it exists and is in range
     if (this.targetId) {
-      return this._isTargetValid({ character, world }) && this._isTargetInRange({ character, world });
+      return this._isTargetValid(character, worldState) && this._isTargetInRange(character, worldState);
     }
 
     return true;
@@ -170,21 +164,22 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Validates that the target exists and is perceivable
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @returns {boolean} True if target is valid
    * @private
    */
-  _isTargetValid({ character, world }) {
+  _isTargetValid(character, worldState) {
     // Placeholder for PerceptionService integration
     // For now, assume targets are valid if they exist in the world
     if (!this.targetId) return true;
 
     // Check if target exists as a character
-    const targetCharacter = world.characters?.find(c => c.id === this.targetId);
+    const targetCharacter = worldState.characters?.find(c => c.id === this.targetId);
     if (targetCharacter) return true;
 
     // Check if target exists as a node feature
-    const currentNode = world.nodes?.find(node => node.id === character.currentNodeId);
+    const currentNode = worldState.nodes?.find(node => node.id === character.currentNodeId);
     if (currentNode && currentNode.features?.some(f => f.id === this.targetId)) {
       return true;
     }
@@ -194,11 +189,12 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Checks if the target is within perception range
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @returns {boolean} True if target is in range
    * @private
    */
-  _isTargetInRange({ character, world }) {
+  _isTargetInRange(character, worldState) {
     // Placeholder for PerceptionService integration
     // For now, assume all targets in the same node are in range
     // Future implementation would use PerceptionService for range calculations
@@ -207,15 +203,14 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Executes the perception interaction
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character perceiving
-   * @param {World} context.world - The current world state
+   * @param {Object} character - The character perceiving
+   * @param {Object} worldState - The current world state
    * @returns {Object} Execution result
    * @override
    */
-  execute({ character, world }) {
+  execute(character, worldState) {
     // Check if execution is allowed before proceeding
-    if (!this.canExecute({ character, world })) {
+    if (!this.canExecute(character, worldState)) {
       return {
         success: false,
         interaction: this,
@@ -224,11 +219,6 @@ class PerceptionInteraction extends SystemInteraction {
       };
     }
 
-    // Create worldState object for SystemInteraction compatibility
-    const worldState = {
-      getCurrentEnvironment: () => this.environment || {}
-    };
-
     const baseResult = super.execute(character, worldState);
 
     if (!baseResult.success) {
@@ -236,7 +226,7 @@ class PerceptionInteraction extends SystemInteraction {
     }
 
     const effectiveness = this.getPerceptionEffectiveness(character, this.environment);
-    const perceptionResult = this._performPerception({ character, world }, effectiveness);
+    const perceptionResult = this._performPerception(character, worldState, effectiveness);
 
     return {
       ...baseResult,
@@ -253,19 +243,20 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Performs the actual perception based on type
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @param {number} effectiveness - Perception effectiveness (0.0 to 1.0)
    * @returns {Object} Perception result data
    * @private
    */
-  _performPerception({ character, world }, effectiveness) {
+  _performPerception(character, worldState, effectiveness) {
     switch (this.perceptionType) {
       case 'look':
-        return this._performVisualPerception({ character, world }, effectiveness);
+        return this._performVisualPerception(character, worldState, effectiveness);
       case 'listen':
-        return this._performAuditoryPerception({ character, world }, effectiveness);
+        return this._performAuditoryPerception(character, worldState, effectiveness);
       case 'sense':
-        return this._performGeneralPerception({ character, world }, effectiveness);
+        return this._performGeneralPerception(character, worldState, effectiveness);
       default:
         return { success: false, reason: 'Unknown perception type' };
     }
@@ -273,12 +264,13 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Performs visual perception
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @param {number} effectiveness - Perception effectiveness
    * @returns {Object} Perception result
    * @private
    */
-  _performVisualPerception({ character, world }, effectiveness) {
+  _performVisualPerception(character, worldState, effectiveness) {
     const information = {};
 
     // Basic visual information
@@ -287,12 +279,12 @@ class PerceptionInteraction extends SystemInteraction {
 
     // Detailed information based on effectiveness
     if (effectiveness > 0.3) {
-      information.visibleCharacters = this._getVisibleCharacters(character, world, effectiveness);
-      information.visibleItems = this._getVisibleItems(character, world, effectiveness);
+      information.visibleCharacters = this._getVisibleCharacters(character, worldState, effectiveness);
+      information.visibleItems = this._getVisibleItems(character, worldState, effectiveness);
     }
 
     if (effectiveness > 0.6) {
-      information.environmentDetails = this._getEnvironmentDetails(world, effectiveness);
+      information.environmentDetails = this._getEnvironmentDetails(worldState, effectiveness);
     }
 
     return {
@@ -304,12 +296,13 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Performs auditory perception
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @param {number} effectiveness - Perception effectiveness
    * @returns {Object} Perception result
    * @private
    */
-  _performAuditoryPerception({ character, world }, effectiveness) {
+  _performAuditoryPerception(character, worldState, effectiveness) {
     const information = {};
 
     // Basic auditory information
@@ -318,11 +311,11 @@ class PerceptionInteraction extends SystemInteraction {
 
     // Detailed information based on effectiveness
     if (effectiveness > 0.3) {
-      information.audibleSounds = this._getAudibleSounds(character, world, effectiveness);
+      information.audibleSounds = this._getAudibleSounds(character, worldState, effectiveness);
     }
 
     if (effectiveness > 0.6) {
-      information.distantNoises = this._getDistantNoises(world, effectiveness);
+      information.distantNoises = this._getDistantNoises(worldState, effectiveness);
     }
 
     return {
@@ -334,12 +327,13 @@ class PerceptionInteraction extends SystemInteraction {
 
   /**
    * Performs general sensing perception
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @param {number} effectiveness - Perception effectiveness
    * @returns {Object} Perception result
    * @private
    */
-  _performGeneralPerception({ character, world }, effectiveness) {
+  _performGeneralPerception(character, worldState, effectiveness) {
     const information = {};
 
     // Basic sensing information
@@ -348,8 +342,8 @@ class PerceptionInteraction extends SystemInteraction {
 
     // Detailed information based on effectiveness
     if (effectiveness > 0.4) {
-      information.atmosphericConditions = this._getAtmosphericConditions(world, effectiveness);
-      information.presenceDetection = this._detectPresences(character, world, effectiveness);
+      information.atmosphericConditions = this._getAtmosphericConditions(worldState, effectiveness);
+      information.presenceDetection = this._detectPresences(character, worldState, effectiveness);
     }
 
     return {

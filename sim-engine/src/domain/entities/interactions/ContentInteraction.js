@@ -31,7 +31,9 @@ export default class ContentInteraction extends InteractionBase {
    * @param {number} config.lastUsed - Timestamp of last use
    */
   constructor(config = {}) {
-    super(config);
+    // Set the type for content interactions
+    const contentConfig = { ...config, type: 'content' };
+    super(contentConfig);
 
     this.isContentInteraction = true;
     this.category = config.category || 'general';
@@ -62,7 +64,7 @@ export default class ContentInteraction extends InteractionBase {
     }
 
     // Check cooldown
-    if (!this.isCooldownExpired(worldState.currentTick)) {
+    if (!this.isCooldownExpired(worldState.currentTick || worldState.time || 0)) {
       return false;
     }
 

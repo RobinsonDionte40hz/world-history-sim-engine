@@ -9,6 +9,7 @@ export { default as AssignmentManager, AssignmentManager as AssignmentManagerCla
 export { default as WorldBuilder } from './WorldBuilder';
 export { default as WorldValidator } from './WorldValidator';
 export { default as InteractionManager } from './InteractionManager';
+export { default as InteractionExecutor } from './InteractionExecutor';
 
 // Re-export existing services for compatibility
 export { default as EvolutionService } from './EvolutionService';

@@ -1,12 +1,13 @@
 // src/domain/services/InteractionResolver.js
 
 import Interaction from '../entities/Interaction.js';
+import InteractionBase from '../entities/interactions/InteractionBase.js';
 import Character from '../entities/Character.js';
 
 class InteractionResolver {
   // Resolve an interaction for a character, returning outcome and applying effects
   resolve(character, interaction, branchId) {
-    if (!(interaction instanceof Interaction) || !(character instanceof Character)) {
+    if (!(interaction instanceof InteractionBase) || !(character instanceof Character)) {
       throw new Error('Invalid interaction or character');
     }
 
@@ -52,7 +53,7 @@ class InteractionResolver {
 
   // Helper to select a branch based on character state (delegates to Interaction but adds logic)
   selectBranch(character, interaction) {
-    if (!(interaction instanceof Interaction)) {
+    if (!(interaction instanceof InteractionBase)) {
       throw new Error('Invalid interaction');
     }
 

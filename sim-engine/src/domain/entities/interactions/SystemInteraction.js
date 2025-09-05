@@ -21,7 +21,9 @@ export default class SystemInteraction extends InteractionBase {
    * @param {number} config.baseEnergyCost - Base energy cost before environmental modifiers
    */
   constructor(config = {}) {
-    super(config);
+    // Set the type for system interactions
+    const systemConfig = { ...config, type: 'system' };
+    super(systemConfig);
 
     this.isSystemInteraction = true;
     this.priority = config.priority || 'normal';

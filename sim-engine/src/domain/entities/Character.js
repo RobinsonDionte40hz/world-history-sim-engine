@@ -89,6 +89,7 @@ class Character {
 
     // Add these default properties to prevent undefined errors
     this.energy = config.energy !== undefined ? config.energy : 50;
+    this.maxEnergy = config.maxEnergy !== undefined ? config.maxEnergy : 100;
     this.health = config.health !== undefined ? config.health : 100;
     this.mood = config.mood !== undefined ? config.mood : 50;
     this.currentNodeId = config.currentNodeId || null;
@@ -103,11 +104,14 @@ class Character {
     // Ensure goals array exists
     this.goals = Array.isArray(config.goals) ? config.goals : [];
 
+    // Initialize decision history for memory system
+    this.decisionHistory = config.decisionHistory || [];
+
     // Validate character data against type requirements
     this._validateAgainstType();
 
-    // Freeze the character to maintain immutability at the entity level
-    Object.freeze(this);
+    // Note: Character is no longer frozen to allow interaction system modifications
+    // Object.freeze(this);
   }
 
   /**
@@ -976,12 +980,14 @@ class Character {
 
       // Add these properties to serialization
       energy: this.energy,
+      maxEnergy: this.maxEnergy,
       health: this.health,
       mood: this.mood,
       currentNodeId: this.currentNodeId,
       lastInteractionType: this.lastInteractionType,
       consciousness: this.consciousness,
-      goals: this.goals
+      goals: this.goals,
+      decisionHistory: this.decisionHistory
     };
   }
 
@@ -1027,12 +1033,14 @@ class Character {
 
       // Include these properties in deserialization
       energy: data.energy,
+      maxEnergy: data.maxEnergy,
       health: data.health,
       mood: data.mood,
       currentNodeId: data.currentNodeId,
       lastInteractionType: data.lastInteractionType,
       consciousness: data.consciousness,
-      goals: data.goals
+      goals: data.goals,
+      decisionHistory: data.decisionHistory
     });
   }
 
@@ -1071,12 +1079,14 @@ class Character {
       memories: this.memories,
       location: this.location,
       energy: this.energy,
+      maxEnergy: this.maxEnergy,
       health: this.health,
       mood: this.mood,
       currentNodeId: this.currentNodeId,
       lastInteractionType: this.lastInteractionType,
       consciousness: this.consciousness,
-      goals: this.goals
+      goals: this.goals,
+      decisionHistory: this.decisionHistory
     };
   }
 
@@ -1369,6 +1379,21 @@ class Character {
       militaryRank: this.militaryRank || 0,
       culture: this.culture || 'unknown'
     };
+  }
+
+  /**
+   * Logs a decision made by the character for memory tracking
+   * @param {string} interactionId - ID of the interaction executed
+   * @param {string} outcome - Outcome of the interaction ('positive', 'negative', 'neutral')
+   */
+  logDecision(interactionId, outcome) {
+    const decision = {
+      interactionId,
+      outcome,
+      timestamp: Date.now(),
+      significance: outcome === 'positive' ? 0.7 : outcome === 'negative' ? 0.3 : 0.5
+    };
+    this.decisionHistory.push(decision);
   }
 }
 

@@ -128,19 +128,13 @@ class MovementInteraction extends SystemInteraction {
   }
 
   /**
-   * Checks if the movement can be executed
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character attempting to move
-   * @param {World} context.world - The current world state
+   * Checks if the movement interaction can be executed
+   * @param {Object} character - The character attempting to move
+   * @param {Object} worldState - Current world state
    * @returns {boolean} True if movement can be executed
    * @override
    */
-  canExecute({ character, world }) {
-    // Create worldState object for SystemInteraction compatibility
-    const worldState = {
-      getCurrentEnvironment: () => this.environment || {}
-    };
-
+  canExecute(character, worldState) {
     // Basic system interaction checks
     if (!super.canExecute(character, worldState)) {
       return false;
@@ -152,7 +146,7 @@ class MovementInteraction extends SystemInteraction {
     }
 
     // Check if target node exists
-    const targetNode = world.nodes?.find(node => node.id === this.targetNodeId);
+    const targetNode = worldState.nodes?.find(node => node.id === this.targetNodeId);
     if (!targetNode) {
       return false;
     }
@@ -164,22 +158,23 @@ class MovementInteraction extends SystemInteraction {
 
     // Placeholder for path validation
     // Future: Use NavigationService to check if path exists
-    return this._isPathValid({ character, world });
+    return this._isPathValid(character, worldState);
   }
 
   /**
    * Validates that a path exists to the target node
-   * @param {Object} context - Execution context
+   * @param {Object} character - The character
+   * @param {Object} worldState - The world state
    * @returns {boolean} True if path is valid
    * @private
    */
-  _isPathValid({ character, world }) {
+  _isPathValid(character, worldState) {
     // Placeholder for NavigationService integration
     // For now, assume all nodes are connected (simple grid movement)
     // Future implementation would use NavigationService for pathfinding
 
-    const currentNode = world.nodes?.find(node => node.id === character.currentNodeId);
-    const targetNode = world.nodes?.find(node => node.id === this.targetNodeId);
+    const currentNode = worldState.nodes?.find(node => node.id === character.currentNodeId);
+    const targetNode = worldState.nodes?.find(node => node.id === this.targetNodeId);
 
     if (!currentNode || !targetNode) {
       return false;
@@ -195,15 +190,14 @@ class MovementInteraction extends SystemInteraction {
 
   /**
    * Executes the movement interaction
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character moving
-   * @param {World} context.world - The current world state
+   * @param {Object} character - The character moving
+   * @param {Object} worldState - The current world state
    * @returns {Object} Execution result
    * @override
    */
-  execute({ character, world }) {
+  execute(character, worldState) {
     // Check if execution is allowed before proceeding
-    if (!this.canExecute({ character, world })) {
+    if (!this.canExecute(character, worldState)) {
       return {
         success: false,
         interaction: this,
@@ -212,12 +206,7 @@ class MovementInteraction extends SystemInteraction {
       };
     }
 
-    // Create worldState object for SystemInteraction compatibility
-    const worldState = {
-      getCurrentEnvironment: () => this.environment || {}
-    };
-
-    const energyCost = this.getEnergyCost(character, this.environment, world);
+    const energyCost = this.getEnergyCost(character, this.environment, worldState);
     const baseResult = super.execute(character, worldState);
 
     if (!baseResult.success) {
@@ -239,7 +228,7 @@ class MovementInteraction extends SystemInteraction {
         targetNodeId: this.targetNodeId,
         previousNodeId,
         movementType: this.movementType,
-        distanceMultiplier: this.getMovementDistance(character, world),
+        distanceMultiplier: this.getMovementDistance(character, worldState),
         environmentalModifier: this.getEnvironmentalModifier(this.environment)
       }
     };

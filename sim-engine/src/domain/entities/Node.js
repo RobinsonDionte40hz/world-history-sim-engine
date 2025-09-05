@@ -2,6 +2,7 @@
 // Enhanced Node class with environmental properties and connections
 
 import Interaction from './Interaction.js';
+import InteractionBase from './interactions/InteractionBase.js';
 import Environment from '../value-objects/Environment.js';
 import NodeConnection from '../value-objects/NodeConnection.js';
 
@@ -89,8 +90,8 @@ class Node {
   }
 
   addContentInteraction(interaction) {
-    if (!(interaction instanceof Interaction)) {
-      throw new Error('Interaction must be an Interaction instance');
+    if (!(interaction instanceof Interaction) && !(interaction instanceof InteractionBase)) {
+      throw new Error('Interaction must be an Interaction or InteractionBase instance');
     }
     
     if (!this.hasInteraction(interaction.id)) {
@@ -98,6 +99,11 @@ class Node {
       // Update legacy array for backward compatibility
       this.interactions = this.contentInteractions;
     }
+  }
+
+  // Alias for backward compatibility
+  addInteraction(interaction) {
+    return this.addContentInteraction(interaction);
   }
 
   removeContentInteraction(interactionId) {

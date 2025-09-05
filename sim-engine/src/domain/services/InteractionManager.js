@@ -245,11 +245,36 @@ class InteractionManager {
    * @private
    */
   _getContentInteractions({ character, world, currentNode }, options) {
-    if (!currentNode || !currentNode.getAvailableInteractions) {
+    if (!currentNode || !currentNode.contentInteractions) {
+      console.log('Debug: No currentNode or no contentInteractions array');
       return [];
     }
 
-    return currentNode.getAvailableInteractions(character);
+    console.log(`Debug: Found ${currentNode.contentInteractions.length} content interactions in node`);
+
+    // Filter content interactions that can be executed
+    const filtered = currentNode.contentInteractions.filter(interaction => {
+      try {
+        console.log(`Debug: Checking interaction ${interaction.name} (${interaction.id})`);
+        console.log(`Debug: Interaction has canExecute method: ${!!interaction.canExecute}`);
+
+        if (!interaction.canExecute) {
+          console.log('Debug: Interaction missing canExecute method');
+          return false;
+        }
+
+        const canExecute = interaction.canExecute(character, world);
+        console.log(`Debug: Interaction ${interaction.name} canExecute result: ${canExecute}`);
+
+        return canExecute;
+      } catch (error) {
+        console.warn(`Error checking if content interaction can execute:`, error.message);
+        return false;
+      }
+    });
+
+    console.log(`Debug: Filtered to ${filtered.length} executable content interactions`);
+    return filtered;
   }
 
   /**
@@ -337,7 +362,7 @@ class InteractionManager {
    */
   canExecuteInteraction(interaction, context) {
     try {
-      return interaction.canExecute(context);
+      return interaction.canExecute(context.character, context.world || context.worldState);
     } catch (error) {
       console.warn(`Error validating interaction ${interaction.name}:`, error.message);
       return false;
