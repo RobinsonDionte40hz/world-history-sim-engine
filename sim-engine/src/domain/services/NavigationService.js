@@ -1,8 +1,5 @@
 // src/domain/services/NavigationService.js
 
-import Character from '../entities/Character.js';
-import Node from '../entities/Node.js';
-
 class NavigationService {
   constructor() {
     this.movementCache = new Map(); // Cache pathfinding results
@@ -506,3 +503,5 @@ class NavigationService {
     return 1; // Simplified - could be enhanced with node metadata
   }
 }
+
+export default NavigationService;

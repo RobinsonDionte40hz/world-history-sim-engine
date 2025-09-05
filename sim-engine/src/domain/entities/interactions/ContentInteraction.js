@@ -64,7 +64,8 @@ export default class ContentInteraction extends InteractionBase {
     }
 
     // Check cooldown
-    if (!this.isCooldownExpired(worldState.currentTick || worldState.time || 0)) {
+    const currentTick = worldState.currentTick || worldState.time || 0;
+    if (!this.isCooldownExpired(currentTick)) {
       return false;
     }
 
@@ -132,6 +133,15 @@ export default class ContentInteraction extends InteractionBase {
       return true;
     }
     return (currentTick - this.lastUsed) >= this.cooldown;
+  }
+
+  /**
+   * Checks if the interaction is available (not on cooldown)
+   * @param {number} currentTick - Current game tick
+   * @returns {boolean} True if the interaction is available
+   */
+  isAvailable(currentTick) {
+    return this.isCooldownExpired(currentTick);
   }
 
   /**

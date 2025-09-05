@@ -54,7 +54,12 @@ class PerceptionInteraction extends SystemInteraction {
    */
   getEnvironmentalModifier(environment) {
     // Use provided environment or fall back to this.environment
-    const env = environment || this.environment;
+    let env = environment || this.environment;
+
+    // If environment is a worldState object, get the current environment
+    if (env && typeof env.getCurrentEnvironment === 'function') {
+      env = env.getCurrentEnvironment();
+    }
 
     if (!env) {
       return 1.0; // Default modifier if no environment
@@ -105,9 +110,9 @@ class PerceptionInteraction extends SystemInteraction {
    * @returns {number} Effectiveness from 0.0 to 1.0
    */
   getPerceptionEffectiveness(character, environment) {
-    const intelligence = character.attributes?.intelligence || 10;
-    const wisdom = character.attributes?.wisdom || 10;
-    const perception = character.attributes?.perception || 10;
+    const intelligence = character.attributes.getTotalModifier('intelligence');
+    const wisdom = character.attributes.getTotalModifier('wisdom');
+    const perception = character.attributes.getTotalModifier('perception');
 
     // Base effectiveness from relevant attributes
     let baseEffectiveness = 0.0;

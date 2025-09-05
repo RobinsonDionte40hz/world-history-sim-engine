@@ -6,11 +6,13 @@ import { Prestige } from '../value-objects/Prestige.js';
 import PersonalityProfile from '../value-objects/PersonalityProfile.js';
 import { RacialTraits } from '../value-objects/RacialTraits.js';
 import { CharacterType } from '../value-objects/CharacterType.js';
+import Attributes from '../value-objects/Attributes.js';
 import AlignmentService from '../services/AlignmentService.js';
 import InfluenceService from '../services/InfluenceService.js';
 import PrestigeService from '../services/PrestigeService.js';
 import { PrerequisiteValidator } from '../services/PrerequisiteValidator.js';
 import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+import MemoryService from '../services/MemoryService.js';
 
 class Character {
   constructor(config = {}) {
@@ -74,7 +76,10 @@ class Character {
 
     // Apply racial modifiers to base attributes
     this.baseAttributes = config.baseAttributes || this._getDefaultAttributes();
-    this.attributes = this.racialTraits.applyAttributeModifiers(this.baseAttributes);
+    const racialModifiedAttributes = this.racialTraits.applyAttributeModifiers(this._convertAttributesToSimple(this.baseAttributes));
+    this.attributes = config.attributes instanceof Attributes
+      ? config.attributes
+      : new Attributes(this._convertSimpleToAttributes(racialModifiedAttributes));
 
     // Apply racial modifiers to base skills
     this.baseSkills = config.baseSkills || this._getDefaultSkills();
@@ -967,7 +972,7 @@ class Character {
 
       // Attributes and skills
       baseAttributes: { ...this.baseAttributes },
-      attributes: { ...this.attributes },
+      attributes: this.attributes.toJSON(),
       baseSkills: { ...this.baseSkills },
       skills: { ...this.skills },
 
@@ -1022,6 +1027,7 @@ class Character {
 
       // Attributes and skills
       baseAttributes: data.baseAttributes,
+      attributes: data.attributes ? Attributes.fromJSON(data.attributes) : undefined,
       baseSkills: data.baseSkills,
 
       // Other properties
@@ -1072,6 +1078,7 @@ class Character {
       personality: this.personality,
       racialTraits: this.racialTraits,
       baseAttributes: this.baseAttributes,
+      attributes: this.attributes,
       baseSkills: this.baseSkills,
       inventory: this.inventory,
       quests: this.quests,
@@ -1321,17 +1328,29 @@ class Character {
   }
 
   /**
-   * Get default attributes
+   * Convert Attributes format to simple object format
    */
-  _getDefaultAttributes() {
-    return {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
-      wisdom: 10,
-      charisma: 10
-    };
+  _convertAttributesToSimple(attributesObj) {
+    const result = {};
+    Object.keys(attributesObj).forEach(key => {
+      if (attributesObj[key] && typeof attributesObj[key] === 'object' && 'score' in attributesObj[key]) {
+        result[key] = attributesObj[key].score;
+      } else {
+        result[key] = attributesObj[key];
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Convert simple object format to Attributes format
+   */
+  _convertSimpleToAttributes(simpleAttributes) {
+    const result = {};
+    Object.keys(simpleAttributes).forEach(key => {
+      result[key] = { score: simpleAttributes[key] };
+    });
+    return result;
   }
 
   /**
@@ -1394,6 +1413,76 @@ class Character {
       significance: outcome === 'positive' ? 0.7 : outcome === 'negative' ? 0.3 : 0.5
     };
     this.decisionHistory.push(decision);
+  }
+
+  /**
+   * Calculate interaction weight for decision making
+   * @param {Object} interaction - The interaction to evaluate
+   * @param {Object} worldState - Current world state
+   * @returns {number} Weight score for the interaction
+   */
+  calculateInteractionWeight(interaction, worldState) {
+    let weight = 0;
+    
+    // 1. GOAL PRIORITY (Make this DOMINANT)
+    if (this.goals?.length > 0) {
+      const matchesGoal = this.goals.some(goal => 
+        interaction.name.toLowerCase().includes(goal.id.toLowerCase()) ||
+        interaction.type === goal.type ||
+        interaction.tags?.includes(goal.category)
+      );
+      
+      if (matchesGoal) {
+        weight += 10; // STRONG goal preference
+      }
+    }
+    
+    // 2. CRITICAL NEEDS (Override everything except goals)
+    const energyPercent = this.energy / this.maxEnergy;
+    
+    if (interaction.type === 'rest') {
+      if (energyPercent < 0.2) weight += 8;  // Critical need
+      else if (energyPercent < 0.5) weight += 3;  // Moderate need
+      else weight += 0.5;  // Low priority when not needed
+    }
+    
+    // 3. ENVIRONMENTAL SUITABILITY (Simple modifiers)
+    const environment = worldState.nodes.find(n => n.id === this.currentNodeId)?.environment;
+    if (environment) {
+      if (interaction.type === 'rest' && environment.isDangerous()) {
+        weight *= 0.1;  // Heavily discourage rest in danger
+      }
+      if (interaction.type === 'movement' && environment.isDangerous()) {
+        weight += 2;  // Encourage leaving dangerous areas
+      }
+    }
+    
+    // 4. PERSONALITY INFLUENCE (Simplified)
+    if (this.personality?.traits) {
+      const traits = this.personality.traits;
+      
+      // Match interaction to personality
+      if (interaction.type === 'social' && traits.get('extrovert')?.value > 0.5) {
+        weight += 2;
+      }
+      if (interaction.type === 'explore' && traits.get('adventurous')?.value > 0.5) {
+        weight += 2;
+      }
+      if (interaction.type === 'rest' && traits.get('lazy')?.value > 0.5) {
+        weight += 1;
+      }
+    }
+    
+    // 5. MEMORY (Simple positive/negative)
+    const memoryService = new MemoryService();
+    const memoryScore = memoryService.getMemoryInfluence(this, interaction);
+    weight += memoryScore * 2;  // -2 to +2 based on past experience
+    
+    // 6. RANDOM VARIATION (Small, for variety)
+    weight += Math.random() * 0.5;
+    
+    // Ensure non-negative
+    return Math.max(0, weight);
   }
 }
 

@@ -17,6 +17,7 @@ class RestInteraction extends SystemInteraction {
       name: 'Rest',
       description: 'Take time to rest and recover energy and health',
       energyCost: 0, // Resting doesn't cost energy
+      type: 'rest', // Set the correct type for weight calculation
       duration,
       isSafe,
       environment,
@@ -119,7 +120,11 @@ class RestInteraction extends SystemInteraction {
       };
     }
 
-    const baseResult = super.execute(character, { getCurrentEnvironment: () => this.environment });
+    const baseResult = super.execute(character, { 
+      getCurrentEnvironment: () => this.environment,
+      currentTime: worldState.currentTime,
+      time: worldState.time
+    });
 
     if (!baseResult.success) {
       return baseResult;

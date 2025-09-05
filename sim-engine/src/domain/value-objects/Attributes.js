@@ -71,6 +71,14 @@ class Attributes {
       charisma: { ...this.charisma },
     };
   }
+
+  // Deserialize from JSON
+  static fromJSON(data) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid JSON data for Attributes');
+    }
+    return new Attributes(data);
+  }
 }
 
 export default Attributes;

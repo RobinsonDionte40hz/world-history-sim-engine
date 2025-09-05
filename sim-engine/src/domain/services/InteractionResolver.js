@@ -1,12 +1,11 @@
 // src/domain/services/InteractionResolver.js
 
-import Interaction from '../entities/Interaction.js';
 import InteractionBase from '../entities/interactions/InteractionBase.js';
 import Character from '../entities/Character.js';
 
 class InteractionResolver {
   // Resolve an interaction for a character, returning outcome and applying effects
-  resolve(character, interaction, branchId) {
+  resolve(character, interaction, branchId, worldState = {}) {
     if (!(interaction instanceof InteractionBase) || !(character instanceof Character)) {
       throw new Error('Invalid interaction or character');
     }
@@ -36,8 +35,17 @@ class InteractionResolver {
 
     // Apply effects if successful
     if (success) {
-      interaction.applyEffects(character);
-      interaction.markUsed(Date.now());  // Update last used timestamp
+      // Handle different interaction types
+      if (interaction.isContentInteraction) {
+        // Content interactions use applyEffect for each effect
+        interaction.effects?.forEach(effect => {
+          interaction.applyEffect(character, effect);
+        });
+        interaction.markUsed(Date.now());
+      } else {
+        // System interactions use execute method
+        interaction.execute(character, worldState);
+      }
     }
 
     // Log for history (to be handled by HistoryGenerator)
@@ -57,9 +65,24 @@ class InteractionResolver {
       throw new Error('Invalid interaction');
     }
 
-    const branch = interaction.selectBranch(character);
+    let branch = interaction.selectBranch ? interaction.selectBranch(character) : null;
+    
+    // If no branch selected, try fallback options
     if (!branch) {
-      throw new Error('No branch selected');
+      // Try to find a default branch or first available branch
+      if (interaction.branches && interaction.branches.length > 0) {
+        // Filter for valid branches based on conditions
+        const validBranches = interaction.branches.filter(b => !b.condition || b.condition(character));
+        if (validBranches.length > 0) {
+          branch = validBranches[0]; // Take first valid branch
+        } else {
+          branch = interaction.branches[0]; // Take first branch as fallback
+        }
+      }
+    }
+
+    if (!branch) {
+      throw new Error('No branch available for interaction');
     }
 
     // Additional weighting or fallback logic (e.g., random if no strong match)

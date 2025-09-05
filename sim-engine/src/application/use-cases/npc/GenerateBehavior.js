@@ -8,12 +8,80 @@ import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
 
-const generateBehavior = (character, worldState) => {
-  if (!(character instanceof Character)) {
-    throw new Error('Invalid character');
-  }
+const DEBUG_MODE = false;
 
-  // Perceive: Find available interactions using InteractionManager
+// SIMPLIFIED WEIGHT CALCULATION
+const calculateInteractionWeight = (character, interaction, worldState) => {
+  let weight = 0;
+  
+  // 1. GOAL PRIORITY (Make this DOMINANT)
+  if (character.goals?.length > 0) {
+    const matchesGoal = character.goals.some(goal => 
+      interaction.name.toLowerCase().includes(goal.id.toLowerCase()) ||
+      interaction.category?.toLowerCase().includes(goal.id.toLowerCase()) ||
+      interaction.tags?.some(tag => tag.toLowerCase().includes(goal.id.toLowerCase())) ||
+      (goal.category && interaction.category === goal.category) ||
+      // More flexible matching: check if goal relates to interaction type/category
+      (goal.id === 'socialize' && (interaction.category === 'social' || interaction.tags?.includes('social'))) ||
+      (goal.id === 'learn' && (interaction.category === 'education' || interaction.tags?.includes('learn'))) ||
+      (goal.id === 'explore' && (interaction.type === 'movement' || interaction.category === 'exploration'))
+    );
+    
+    if (matchesGoal) {
+      weight += 10; // STRONG goal preference
+    }
+  }
+  
+  // 2. CRITICAL NEEDS (Override everything except goals)
+  const energyPercent = character.energy / character.maxEnergy;
+  
+  if (interaction.type === 'rest') {
+    if (energyPercent < 0.2) weight += 8;  // Critical need
+    else if (energyPercent < 0.5) weight += 3;  // Moderate need
+    else weight += 0.5;  // Low priority when not needed
+  }
+  
+  // 3. ENVIRONMENTAL SUITABILITY (Simple modifiers)
+  const environment = worldState.nodes.find(n => n.id === character.currentNodeId)?.environment;
+  if (environment) {
+    if (interaction.type === 'rest' && environment.isDangerous()) {
+      weight *= 0.1;  // Heavily discourage rest in danger
+    }
+    if (interaction.type === 'movement' && environment.isDangerous()) {
+      weight += 2;  // Encourage leaving dangerous areas
+    }
+  }
+  
+  // 4. PERSONALITY INFLUENCE (Simplified)
+  if (character.personality?.traits) {
+    const traits = character.personality.traits;
+    
+    // Match interaction to personality
+    if (interaction.type === 'social' && traits.get('extrovert')?.value > 0.5) {
+      weight += 2;
+    }
+    if (interaction.type === 'explore' && traits.get('adventurous')?.value > 0.5) {
+      weight += 2;
+    }
+    if (interaction.type === 'rest' && traits.get('lazy')?.value > 0.5) {
+      weight += 1;
+    }
+  }
+  
+  // 5. MEMORY (Simple positive/negative)
+  const memoryService = new MemoryService();
+  const memoryScore = memoryService.getMemoryInfluence(character, interaction);
+  weight += memoryScore * 2;  // -2 to +2 based on past experience
+  
+  // 6. RANDOM VARIATION (Small, for variety)
+  weight += Math.random() * 0.5;
+  
+  // Ensure non-negative
+  return Math.max(0, weight);
+};
+
+// Helper function to gather available interactions
+function gatherAvailableInteractions(character, worldState) {
   const currentNode = worldState.nodes.find(node => node.id === character.currentNodeId);
   if (!currentNode) {
     throw new Error('Character has no valid node');
@@ -26,20 +94,6 @@ const generateBehavior = (character, worldState) => {
     currentNode
   });
 
-  // Debug: Log all available interactions before filtering
-  if (character.goals.some(g => g.id === 'socialize')) {
-    console.log('Available interactions before filtering:');
-    availableInteractionsData.allInteractions.forEach(interaction => {
-      console.log(`- ${interaction.name} (type: ${interaction.type}, category: ${interaction.category})`);
-    });
-  }
-
-  // Check for critical needs first
-  const criticalInteraction = checkCriticalNeeds(character, availableInteractionsData.systemInteractions, worldState);
-  if (criticalInteraction) {
-    return executeInteraction(character, criticalInteraction, worldState);
-  }
-
   // Filter available interactions based on character state
   const availableInteractions = availableInteractionsData.allInteractions.filter(interaction => {
     try {
@@ -51,11 +105,6 @@ const generateBehavior = (character, worldState) => {
       // Content interactions use canExecute method
       const canExecuteResult = interaction.canExecute && interaction.canExecute(character, worldState);
       
-      // Debug logging for social goal
-      if (character.goals.some(g => g.id === 'socialize')) {
-        console.log(`Filtering ${interaction.name}: canExecute=${canExecuteResult}, hasMethod=${!!interaction.canExecute}`);
-      }
-      
       return canExecuteResult;
     } catch (error) {
       console.warn(`Error checking if interaction can execute:`, error.message);
@@ -63,123 +112,87 @@ const generateBehavior = (character, worldState) => {
     }
   });
 
-  // Debug: Log interactions after filtering
-  if (character.goals.some(g => g.id === 'socialize')) {
-    console.log('Available interactions after filtering:');
-    availableInteractions.forEach(interaction => {
-      console.log(`- ${interaction.name} (type: ${interaction.type}, category: ${interaction.category})`);
-    });
+  return availableInteractions;
+}
+
+// Emergency handler (separate from main weighting)
+function handleEmergency(character, interactions, worldState) {
+  // Only override for TRUE emergencies
+  if (character.energy < 5) {
+    return interactions.find(i => i.constructor.name === 'RestInteraction');
   }
-
-  if (!availableInteractions.length) return null;  // No actions possible
-
-  // Debug: Log interactions right before weightedSelect
-  if (character.goals.some(g => g.id === 'socialize')) {
-    console.log('Available interactions before weightedSelect:');
-    availableInteractions.forEach((interaction, index) => {
-      console.log(`${index}: ${interaction.name} (type: ${interaction.type}, category: ${interaction.category}, isSystem: ${interaction.isSystemInteraction})`);
-    });
+  if (character.health < 10) {
+    return interactions.find(i => i.constructor.name === 'RestInteraction' || i.constructor.name === 'MovementInteraction');
   }
+  return null;
+}
 
-  // Decide: Select an interaction based on goals, memory, and resonance
-  const memoryService = new MemoryService();
-  const selectedInteraction = weightedSelect(availableInteractions, interaction => {
-    const memoryInfluence = memoryService.getMemoryInfluence(character, interaction);
-    const branch = interaction.selectBranch ? interaction.selectBranch(character) : null;
-    const energyLevel = character.energy || 50; // Use direct energy level
-    const gammaFreq = character.consciousness.frequency || 40;  // 40 Hz gamma baseline
-    const energyDiff = energyLevel - (branch?.requiredEnergy || energyLevel);
-    const resonance = Math.exp(-Math.pow(energyDiff - gammaFreq, 2) / (2 * gammaFreq));
-    const coherenceBonus = character.consciousness.coherence * 1.5;  // Higher coherence favors optimal
-    
-    // Goal matching with massive priority for content interactions
-    const goalMatch = character.goals.some(goal => {
-      // Check if interaction name, category, or tags match the goal
-      const goalId = goal.id.toLowerCase();
-      const interactionName = interaction.name.toLowerCase();
-      const interactionCategory = interaction.category?.toLowerCase() || '';
-      const interactionTags = interaction.tags || [];
-      
-      // Exact word matching for better precision
-      const goalWords = goalId.split(/[-_\s]/).filter(word => word.length > 2); // Filter out short words
-      const categoryWords = interactionCategory.split(/[-_\s]/).filter(word => word.length > 2);
-      const nameWords = interactionName.split(/[-_\s]/).filter(word => word.length > 2);
-      
-      // Check for exact word matches or partial matches
-      return goalWords.some(gWord => 
-        categoryWords.some(cWord => cWord.includes(gWord) || gWord.includes(cWord)) ||
-        nameWords.some(nWord => nWord.includes(gWord) || gWord.includes(nWord)) ||
-        interactionTags.some(tag => tag.toLowerCase().includes(gWord) || gWord.includes(tag.toLowerCase()))
-      );
-    });
-    
-    // Debug logging
-    if (character.goals.some(g => g.id === 'socialize')) {
-      console.log(`Interaction: ${interaction.name}, Type: ${interaction.type}, Category: ${interaction.category}, GoalMatch: ${goalMatch}, IsSystem: ${interaction.isSystemInteraction}`);
-    }
-    
-    // Massive bonus for content interactions that match goals
-    const contentGoalBonus = (goalMatch && !interaction.isSystemInteraction) ? 10 : 0;
-    
-    // System interactions only get small bonus when NO content matches goals
-    const hasContentGoalMatch = availableInteractions.some(i => 
-      !i.isSystemInteraction && character.goals.some(goal => {
-        const goalId = goal.id.toLowerCase();
-        const interactionCategory = i.category?.toLowerCase() || '';
-        const interactionTags = i.tags || [];
-        return interactionCategory.includes(goalId.split(/[-_\s]/)[0]) || 
-               interactionTags.some(tag => tag.toLowerCase().includes(goalId.split(/[-_\s]/)[0]));
-      })
-    );
-    
-    const systemBonus = (interaction.isSystemInteraction && !hasContentGoalMatch) ? 1 : 0;
-    
-    const totalWeight = resonance + coherenceBonus + memoryInfluence + contentGoalBonus + systemBonus;
-    
-  // Debug logging for social goal
-  if (character.goals.some(g => g.id === 'socialize')) {
-    console.log(`Weight calc - ${interaction.name}: resonance=${resonance.toFixed(2)}, coherence=${coherenceBonus.toFixed(2)}, memory=${memoryInfluence.toFixed(2)}, contentBonus=${contentGoalBonus}, systemBonus=${systemBonus}, TOTAL=${totalWeight.toFixed(2)}`);
+// Biased selection (favors higher weights more strongly)
+function selectWithBias(weightedOptions) {
+  if (weightedOptions.length === 0) return null;
+  
+  // Normalize weights to prevent overflow with large values
+  const maxWeight = Math.max(...weightedOptions.map(opt => opt.weight));
+  const normalizedOptions = weightedOptions.map(opt => ({
+    ...opt,
+    normalizedWeight: opt.weight / maxWeight
+  }));
+  
+  // Apply bias with normalized weights
+  const biasedOptions = normalizedOptions.map(opt => ({
+    ...opt,
+    biasedWeight: Math.pow(opt.normalizedWeight, 1.5) // Softer bias than squared
+  }));
+  
+  const totalWeight = biasedOptions.reduce((sum, opt) => sum + opt.biasedWeight, 0);
+  
+  if (totalWeight === 0) return null;
+  
+  let random = Math.random() * totalWeight;
+  for (const opt of biasedOptions) {
+    random -= opt.biasedWeight;
+    if (random <= 0) return opt.interaction;
   }
   
-  return totalWeight;
-});
+  return biasedOptions[0].interaction;
+}
 
-  // Debug: Log the selected interaction
-  if (character.goals.some(g => g.id === 'socialize')) {
-    console.log(`Selected interaction: ${selectedInteraction.name} (type: ${selectedInteraction.type})`);
-  }  if (!selectedInteraction) return null;
+const generateBehavior = (character, worldState) => {
+  if (!(character instanceof Character)) {
+    throw new Error('Invalid character');
+  }
+  
+  // Get all available interactions
+  const availableInteractions = gatherAvailableInteractions(character, worldState);
+  
+  if (!availableInteractions.length) return null;
+  
+  // CRITICAL OVERRIDE: Handle emergencies first
+  const emergency = handleEmergency(character, availableInteractions, worldState);
+  if (emergency) return executeInteraction(character, emergency, worldState);
+  
+  // GOAL-DRIVEN SELECTION
+  const weights = availableInteractions.map(interaction => ({
+    interaction,
+    weight: calculateInteractionWeight(character, interaction, worldState)
+  }));
+  
+  // Sort by weight and add debug logging
+  weights.sort((a, b) => b.weight - a.weight);
+  
+  if (DEBUG_MODE) {
+    console.log(`${character.name} interaction weights:`, 
+      weights.slice(0, 5).map(w => `${w.interaction.name}: ${w.weight.toFixed(2)}`)
+    );
+  }
+  
+  // Use weighted random selection with bias toward top choices
+  const selectedInteraction = selectWithBias(weights);
+  if (!selectedInteraction) return null;
 
   // Act: Execute the selected interaction
   return executeInteraction(character, selectedInteraction, worldState);
 };
-
-// Helper function to check for critical needs
-function checkCriticalNeeds(character, systemInteractions, worldState) {
-  // Low energy - prioritize rest
-  if (character.energy < character.maxEnergy * 0.2) {
-    const restInteraction = systemInteractions.find(i => 
-      i.constructor.name === 'RestInteraction' || 
-      i.name.toLowerCase().includes('rest')
-    );
-    if (restInteraction) {
-      return restInteraction;
-    }
-  }
-
-  // Dangerous environment - prioritize movement to safety
-  const environment = worldState.getCurrentEnvironment?.();
-  if (environment && environment.isDangerous && environment.isDangerous()) {
-    const movementInteraction = systemInteractions.find(i => 
-      i.constructor.name === 'MovementInteraction' || 
-      i.name.toLowerCase().includes('move')
-    );
-    if (movementInteraction) {
-      return movementInteraction;
-    }
-  }
-
-  return null;
-}
 
 // Helper function to execute an interaction
 function executeInteraction(character, selectedInteraction, worldState) {
@@ -189,7 +202,7 @@ function executeInteraction(character, selectedInteraction, worldState) {
 
   // Act: Resolve the interaction
   const branch = selectedInteraction.selectBranch ? interactionResolver.selectBranch(character, selectedInteraction) : null;
-  const resolution = branch ? interactionResolver.resolve(character, selectedInteraction, branch.id) : null;
+  const resolution = branch ? interactionResolver.resolve(character, selectedInteraction, branch.id, worldState) : null;
 
   // Learn: Evolve and log history
   if (resolution) {
@@ -210,27 +223,6 @@ function executeInteraction(character, selectedInteraction, worldState) {
     branchId: branch?.id,
     resolution,
   };
-}
-
-// Helper function (move to shared/utils/weightedSelect.js if not existing)
-function weightedSelect(options, weightFn) {
-  const totalWeight = options.reduce((sum, opt) => sum + weightFn(opt), 0);
-  let rand = Math.random() * totalWeight;
-  
-  // Debug logging for weighted selection
-  console.log(`WeightedSelect: totalWeight=${totalWeight.toFixed(2)}, rand=${rand.toFixed(2)}`);
-  
-  for (const opt of options) {
-    const weight = weightFn(opt);
-    rand -= weight;
-    console.log(`Checking ${opt.name}: weight=${weight.toFixed(2)}, remaining rand=${rand.toFixed(2)}`);
-    if (rand <= 0) {
-      console.log(`Selected: ${opt.name}`);
-      return opt;
-    }
-  }
-  console.log(`Fallback selected: ${options[options.length - 1].name}`);
-  return options[options.length - 1];  // Fallback
 }
 
 export default generateBehavior;

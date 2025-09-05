@@ -1,13 +1,13 @@
 // src/domain/services/HistoryGenerator.js
 
 import Character from '../entities/Character.js';
-import Interaction from '../entities/Interaction.js';
+import InteractionBase from '../entities/interactions/InteractionBase.js';
 
 class HistoryGenerator {
   // Log a historical event from an interaction outcome
   logEvent(config = {}) {
     const { timestamp = Date.now(), character, interaction, outcome, roll, dc } = config;
-    if (!(character instanceof Character) || !(interaction instanceof Interaction)) {
+    if (!(character instanceof Character) || !(interaction instanceof InteractionBase)) {
       throw new Error('Invalid character or interaction');
     }
 
@@ -16,7 +16,7 @@ class HistoryGenerator {
     if (significance < 0.1) return;  // Skip trivial events
 
     const event = {
-      id: crypto.randomUUID(),
+      id: this.generateId(),
       timestamp,
       characterId: character.id,
       characterName: character.name,
@@ -74,6 +74,19 @@ class HistoryGenerator {
   // Clear events (for testing)
   clearEvents() {
     localStorage.removeItem('historicalEvents');
+  }
+
+  // Generate a unique ID for events
+  generateId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback for test environments
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+      return v.toString(16);
+    });
   }
 }
 

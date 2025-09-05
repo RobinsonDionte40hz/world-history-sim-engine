@@ -106,16 +106,23 @@ export default class SystemInteraction extends InteractionBase {
   }
 
   /**
-   * Serializes the system interaction to a plain object
-   * @returns {Object} Serialized interaction data
+   * Checks if character meets the interaction requirements
+   * @param {Object} character - The character to check
+   * @returns {boolean} True if requirements are met
    */
-  toJSON() {
-    return {
-      ...super.toJSON(),
-      isSystemInteraction: this.isSystemInteraction,
-      priority: this.priority,
-      baseEnergyCost: this.baseEnergyCost
-    };
+  meetsRequirements(character) {
+    // System interactions have basic requirements
+    return character.energy >= this.baseEnergyCost;
+  }
+
+  /**
+   * Checks if the interaction is available
+   * @param {number} currentTick - Current game tick
+   * @returns {boolean} True if the interaction is available
+   */
+  isAvailable(currentTick) {
+    // System interactions are always available (no cooldown)
+    return true;
   }
 
   /**

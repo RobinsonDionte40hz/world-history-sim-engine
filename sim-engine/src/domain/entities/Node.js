@@ -19,12 +19,24 @@ class Node {
     // Separate content interactions from system interactions
     // System interactions are generated dynamically by InteractionManager
     this.contentInteractions = Array.isArray(config.contentInteractions) ? 
-      config.contentInteractions.map(i => i instanceof Interaction ? i : new Interaction(i)) : 
+      config.contentInteractions.map(i => {
+        // If it's already an interaction instance, use it as-is
+        if (i instanceof Interaction || i instanceof InteractionBase) {
+          return i;
+        }
+        // Otherwise, try to create from config
+        return new Interaction(i);
+      }) : 
       [];
     
     // Migration support: if old interactions array exists, migrate to contentInteractions
     if (config.interactions && config.interactions.length > 0 && this.contentInteractions.length === 0) {
-      this.contentInteractions = config.interactions.map(i => i instanceof Interaction ? i : new Interaction(i));
+      this.contentInteractions = config.interactions.map(i => {
+        if (i instanceof Interaction || i instanceof InteractionBase) {
+          return i;
+        }
+        return new Interaction(i);
+      });
       console.warn(`Node ${this.id}: Migrated legacy 'interactions' to 'contentInteractions'. Consider updating save files.`);
     }
     
