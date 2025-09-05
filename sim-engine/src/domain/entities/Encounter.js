@@ -77,7 +77,7 @@ class Encounter {
     };
     
     // State tracking
-    this.lastTriggered = config.lastTriggered || 0;
+    this.lastTriggered = config.lastTriggered || -1;
     this.timesTriggered = config.timesTriggered || 0;
   }
 
@@ -86,7 +86,7 @@ class Encounter {
    */
   canTrigger(context = {}) {
     // Check cooldown
-    if (this.cooldown > 0 && context.currentTurn !== undefined) {
+    if (this.cooldown > 0 && context.currentTurn !== undefined && this.lastTriggered !== -1) {
       const turnsSinceLastTrigger = context.currentTurn - this.lastTriggered;
       if (turnsSinceLastTrigger < this.cooldown) {
         return false;
@@ -112,7 +112,7 @@ class Encounter {
     
     // Check triggers - if no triggers defined, encounter can always trigger (subject to other conditions)
     if (this.triggers.length > 0) {
-      const triggerMet = this.triggers.some(trigger => 
+      const triggerMet = this.triggers.every(trigger => 
         this.evaluateTrigger(trigger, context)
       );
       if (!triggerMet) {
@@ -281,6 +281,7 @@ class Encounter {
    */
   isAvailable(currentTurn = 0) {
     if (this.cooldown === 0) return true;
+    if (this.lastTriggered === -1) return true;
     return (currentTurn - this.lastTriggered) >= this.cooldown;
   }
 

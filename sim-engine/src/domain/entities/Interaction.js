@@ -1,43 +1,29 @@
 // src/domain/entities/Interaction.js
 
-// Utility function to generate UUID with fallback for test environments
-const generateId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback for test environments
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-    return v.toString(16);
-  });
-};
+import ContentInteraction from './interactions/ContentInteraction.js';
 
-class Interaction {
+class Interaction extends ContentInteraction {
   constructor(config = {}) {
-    this.id = config.id || generateId();  // Unique ID for tracking in history
+    super(config);
+
+    // Add nodeId which is specific to the existing Interaction class
     this.nodeId = config.nodeId || null;  // Link to world node (from Node Types)
-    this.name = config.name || 'Unnamed Interaction';
-    this.description = config.description || '';
-    this.type = config.type || 'dialogue';  // e.g., 'dialogue', 'action', 'event' (from Paper2)
-    this.requirements = config.requirements || [];  // e.g., { attr: 'charisma', min: 10 }
-    this.branches = config.branches || [];  // Array of branch objects (reused from old project)
-    this.effects = config.effects || [];  // e.g., { type: 'influence', value: 5 }
-    this.participants = config.participants || [];  // Array of character IDs involved
-    this.cooldown = config.cooldown || 0;  // Ticks before reusable
-    this.repeatable = config.repeatable || false;  // Can it happen again?
-    this.lastUsed = config.lastUsed || 0;  // Timestamp for cooldown
+
+    // Override defaults to maintain exact backward compatibility
+    if (!config.type) {
+      this.type = 'dialogue';  // Original default was 'dialogue', not 'unknown'
+    }
   }
 
-  // Validate if a character can perform this interaction (reuse PrerequisiteSystem if available)
+  // Override meetsRequirements to maintain exact existing behavior
   meetsRequirements(character) {
     return this.requirements.every(req => {
-      const attrValue = character.attributes[req.attr]?.score || 0;
+      const attrValue = character.attributes?.[req.attr]?.score || 0;
       return attrValue >= req.min;
     });
   }
 
-  // Select a branch based on character state (for autonomy; ties to Character.calculateDecisionWeight)
+  // Override selectBranch to maintain exact existing behavior with weighted selection
   selectBranch(character) {
     if (!this.branches.length) return null;
     const validBranches = this.branches.filter(b => !b.condition || b.condition(character));
@@ -53,7 +39,7 @@ class Interaction {
     });
   }
 
-  // Apply effects to a character (for resolution)
+  // Override applyEffects to maintain exact existing behavior
   applyEffects(character) {
     this.effects.forEach(effect => {
       switch (effect.type) {
@@ -75,17 +61,17 @@ class Interaction {
     });
   }
 
-  // Check if interaction is available (cooldown check)
+  // Override isAvailable to maintain exact existing behavior
   isAvailable(currentTick) {
     return this.repeatable || (currentTick - this.lastUsed >= this.cooldown);
   }
 
-  // Update last used timestamp
+  // Override markUsed to maintain exact existing behavior
   markUsed(currentTick) {
     this.lastUsed = currentTick;
   }
 
-  // Serialize for localStorage (match old JSON format)
+  // Override toJSON to maintain exact existing format including nodeId
   toJSON() {
     return {
       id: this.id,
@@ -104,7 +90,7 @@ class Interaction {
   }
 }
 
-// Helper function (move to shared/utils/weightedSelect.js if not existing)
+// Helper function (maintain existing weighted selection logic)
 function weightedSelect(options, weightFn) {
   const totalWeight = options.reduce((sum, opt) => sum + weightFn(opt), 0);
   let rand = Math.random() * totalWeight;

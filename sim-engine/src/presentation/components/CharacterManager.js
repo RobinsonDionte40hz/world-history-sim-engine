@@ -20,7 +20,6 @@ import {
   Zap,
   AlertTriangle,
   CheckCircle,
-  X,
   MoreVertical,
   SortAsc,
   SortDesc,
@@ -35,7 +34,7 @@ const CharacterManager = ({
   onViewCharacter,
   className = '' 
 }) => {
-  const { worldBuilder, templateManager } = useSimulationContext();
+  const { worldBuilder } = useSimulationContext();
   
   // State management
   const [characters, setCharacters] = useState([]);
@@ -450,6 +449,7 @@ const CharacterManager = ({
           <button
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+            aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
           >
             {sortOrder === 'asc' ? 
               <SortAsc className="w-4 h-4 text-gray-300" /> : 
@@ -747,7 +747,7 @@ const CharacterCard = ({
   return (
     <div className={`relative p-4 bg-white/10 border rounded-lg transition-all hover:bg-white/15 ${
       isSelected ? 'border-indigo-500 bg-indigo-500/20' : 'border-white/20'
-    }`}>
+    }`} data-testid={`character-card-${character.id}`}>
       {/* Selection Checkbox */}
       <div className="absolute top-3 left-3">
         <input
@@ -763,6 +763,7 @@ const CharacterCard = ({
         <button
           onClick={() => setShowActions(!showActions)}
           className="p-1 text-gray-400 hover:text-white transition-colors"
+          aria-label="Character actions menu"
         >
           <MoreVertical className="w-4 h-4" />
         </button>
@@ -820,7 +821,7 @@ const CharacterCard = ({
 
         {/* Description */}
         {character.description && (
-          <p className="text-sm text-gray-300 line-clamp-2">
+          <p className="text-sm text-gray-300 line-clamp-2" data-testid={`character-description-${character.id}`}>
             {character.description}
           </p>
         )}
@@ -838,7 +839,7 @@ const CharacterCard = ({
         )}
 
         {/* Assignment Status */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" data-testid={`assignment-status-${character.id}`}>
           <div className="flex items-center gap-2">
             {hasAssignments ? (
               <div className="flex items-center gap-1 text-green-400">
