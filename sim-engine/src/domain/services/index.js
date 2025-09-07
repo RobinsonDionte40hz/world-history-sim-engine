@@ -16,6 +16,7 @@ export { default as WorldValidator } from './WorldValidator';
 export { default as InteractionManager } from './InteractionManager';
 export { default as InteractionExecutor } from './InteractionExecutor';
 export { default as ChildGenerationService } from './ChildGenerationService';
+export { default as SettlementFamilyService } from './SettlementFamilyService';
 
 // Re-export existing services for compatibility
 export { default as EvolutionService } from './EvolutionService';
