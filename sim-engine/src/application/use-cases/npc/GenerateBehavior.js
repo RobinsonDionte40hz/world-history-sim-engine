@@ -7,6 +7,7 @@ import MemoryService from '../../../domain/services/MemoryService.js';
 import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
+import CharacterBehaviorModifierService from '../../../domain/services/CharacterBehaviorModifierService.js';
 
 const DEBUG_MODE = false;
 
@@ -73,7 +74,37 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   const memoryScore = memoryService.getMemoryInfluence(character, interaction);
   weight += memoryScore * 2;  // -2 to +2 based on past experience
   
-  // 6. RANDOM VARIATION (Small, for variety)
+  // 6. NEED-BASED MODIFIERS (From settlement need satisfaction)
+  if (character.needBasedInteractionModifiers) {
+    const interactionType = interaction.type || interaction.category || 'unknown';
+    const modifier = character.needBasedInteractionModifiers[interactionType] || 1.0;
+    weight *= modifier;
+  }
+
+  // 7. NEED-BASED PRIORITIES (From settlement need satisfaction)
+  if (character.needBasedBehaviorChanges) {
+    const interactionType = interaction.type || interaction.category || 'unknown';
+    
+    // Check if interaction matches need-based behavior changes
+    if (character.needBasedBehaviorChanges.includes('seek_food') && 
+        (interactionType.includes('farm') || interactionType.includes('hunt'))) {
+      weight *= 2.0;
+    }
+    if (character.needBasedBehaviorChanges.includes('seek_water') && 
+        interactionType.includes('water')) {
+      weight *= 2.0;
+    }
+    if (character.needBasedBehaviorChanges.includes('seek_shelter') && 
+        (interactionType.includes('build') || interactionType.includes('shelter'))) {
+      weight *= 1.8;
+    }
+    if (character.needBasedBehaviorChanges.includes('avoid_strenuous_activity') && 
+        (interactionType.includes('build') || interactionType.includes('hunt') || interactionType.includes('fight'))) {
+      weight *= 0.3;
+    }
+  }
+
+  // 8. RANDOM VARIATION (Small, for variety)
   weight += Math.random() * 0.5;
   
   // Ensure non-negative

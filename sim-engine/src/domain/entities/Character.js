@@ -112,6 +112,10 @@ class Character {
     // Initialize decision history for memory system
     this.decisionHistory = config.decisionHistory || [];
 
+    // Need satisfaction behavior modifiers (temporary, applied during turn processing)
+    this.needBasedBehaviorChanges = config.needBasedBehaviorChanges || [];
+    this.needBasedInteractionModifiers = config.needBasedInteractionModifiers || {};
+
     // Validate character data against type requirements
     this._validateAgainstType();
 
@@ -992,7 +996,9 @@ class Character {
       lastInteractionType: this.lastInteractionType,
       consciousness: this.consciousness,
       goals: this.goals,
-      decisionHistory: this.decisionHistory
+      decisionHistory: this.decisionHistory,
+      needBasedBehaviorChanges: this.needBasedBehaviorChanges,
+      needBasedInteractionModifiers: this.needBasedInteractionModifiers
     };
   }
 
@@ -1046,7 +1052,9 @@ class Character {
       lastInteractionType: data.lastInteractionType,
       consciousness: data.consciousness,
       goals: data.goals,
-      decisionHistory: data.decisionHistory
+      decisionHistory: data.decisionHistory,
+      needBasedBehaviorChanges: data.needBasedBehaviorChanges || [],
+      needBasedInteractionModifiers: data.needBasedInteractionModifiers || {}
     });
   }
 
@@ -1093,7 +1101,9 @@ class Character {
       lastInteractionType: this.lastInteractionType,
       consciousness: this.consciousness,
       goals: this.goals,
-      decisionHistory: this.decisionHistory
+      decisionHistory: this.decisionHistory,
+      needBasedBehaviorChanges: this.needBasedBehaviorChanges,
+      needBasedInteractionModifiers: this.needBasedInteractionModifiers
     };
   }
 

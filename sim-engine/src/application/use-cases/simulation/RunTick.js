@@ -4,6 +4,10 @@ import Character from '../../../domain/entities/Character.js';
 import generateBehavior from '../npc/GenerateBehavior.js';
 import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
+import BasicNeedsService from '../../../domain/services/BasicNeedsService.js';
+import NeedConsequenceService from '../../../domain/services/NeedConsequenceService.js';
+import SettlementService from '../../../domain/services/SettlementService.js';
+import CharacterBehaviorModifierService from '../../../domain/services/CharacterBehaviorModifierService.js';
 
 const runTick = (worldState) => {
   if (!worldState || !Array.isArray(worldState.npcs) || !Array.isArray(worldState.nodes)) {
@@ -43,12 +47,30 @@ const runTick = (worldState) => {
     const evolutionService = new EvolutionService();
     const evolvedNpc = evolutionService.evolveOverTime(updatedNpc, 1);  // 1 tick elapsed
 
+    // Apply need satisfaction modifiers to character behavior
+    const behaviorModifierService = new CharacterBehaviorModifierService();
+    let modifiedNpc = evolvedNpc;
+    
+    // Find the settlement the character is in
+    const characterSettlement = worldState.settlements?.find(settlement => 
+      settlement.assignedCharacters?.includes(evolvedNpc.id) || 
+      settlement.id === evolvedNpc.currentNodeId
+    );
+    
+    if (characterSettlement) {
+      modifiedNpc = behaviorModifierService.applyNeedSatisfactionModifiers(
+        evolvedNpc, 
+        characterSettlement, 
+        worldState
+      );
+    }
+
     // Generate and resolve behavior
-    const behavior = generateBehavior(evolvedNpc, worldState);
-    if (behavior) {
+    const behavior = generateBehavior(modifiedNpc, worldState);
+    if (behavior && behavior.resolution) {
       // Create a new Character instance with the interaction type tracked
       const npcWithInteraction = new Character({
-        ...evolvedNpc.toJSON(),
+        ...modifiedNpc.toJSON(),
         lastInteractionType: behavior.interaction.type
       });
 
@@ -66,9 +88,57 @@ const runTick = (worldState) => {
       worldState.npcs[index] = npcWithInteraction;
     } else {
       // Update even if no behavior was generated
-      worldState.npcs[index] = evolvedNpc;
+      worldState.npcs[index] = modifiedNpc;
     }
   });
+
+  // Process settlements with need satisfaction calculations
+  if (worldState.settlements && Array.isArray(worldState.settlements)) {
+    const basicNeedsService = new BasicNeedsService();
+    const needConsequenceService = new NeedConsequenceService();
+    const settlementService = new SettlementService();
+
+    worldState.settlements.forEach((settlement, index) => {
+      try {
+        // Initialize need satisfaction if not already present
+        if (!settlement.needSatisfaction) {
+          worldState.settlements[index] = settlementService.initializeNeedSatisfaction(settlement);
+          settlement = worldState.settlements[index];
+        }
+
+        // Calculate need satisfaction for the settlement
+        const satisfactionResult = basicNeedsService.calculateSatisfactionLevel(settlement);
+        
+        // Generate consequences based on need satisfaction
+        const consequences = needConsequenceService.generateConsequences(
+          satisfactionResult.needs,
+          settlement
+        );
+
+        // Generate historical events for significant changes
+        const eventIds = [];
+        if (consequences && consequences.length > 0) {
+          consequences.forEach(consequence => {
+            const eventId = `consequence_${consequence.id}_${worldState.time}`;
+            eventIds.push(eventId);
+          });
+        }
+
+        // Update settlement with new need satisfaction data
+        const consequenceIds = consequences.map(c => c.id);
+        worldState.settlements[index] = settlementService.updateNeedSatisfaction(
+          settlement,
+          satisfactionResult,
+          consequenceIds,
+          eventIds
+        );
+
+      } catch (error) {
+        console.error(`Error processing settlement ${settlement.name || settlement.id}:`, error);
+        // Continue processing other settlements even if one fails
+      }
+    });
+  }
 
   worldState.time++;
 

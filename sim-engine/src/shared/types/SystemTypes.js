@@ -479,5 +479,97 @@
  * @property {PersonalityEvolution} personalityEvolution
  */
 
+/**
+ * Need Satisfaction System Types
+ */
+
+/**
+ * @typedef {Object} NeedSatisfactionLevels
+ * @property {number} food - Food satisfaction level (0.0 - 1.0)
+ * @property {number} water - Water satisfaction level (0.0 - 1.0)
+ * @property {number} shelter - Shelter satisfaction level (0.0 - 1.0)
+ * @property {number} goods - Goods satisfaction level (0.0 - 1.0)
+ * @property {number} services - Services satisfaction level (0.0 - 1.0)
+ */
+
+/**
+ * @typedef {Object} CascadingEffects
+ * @property {number} multiplier - Combined multiplier from unmet basic needs
+ * @property {string[]} affectedNeeds - List of needs affected by cascading effects
+ * @property {boolean} hasEffects - Whether any cascading effects are active
+ */
+
+/**
+ * @typedef {Object} NeedSatisfactionResult
+ * @property {NeedSatisfactionLevels} needs - Individual need satisfaction levels
+ * @property {number} overall - Overall satisfaction level (0.0 - 1.0)
+ * @property {ConsequenceObject[]} consequences - Generated consequences from unmet needs
+ * @property {CascadingEffects} cascadingEffects - Information about cascading effects applied
+ */
+
+/**
+ * @typedef {Object} ConsequenceObject
+ * @property {string} id - Unique identifier for the consequence
+ * @property {string} type - Type of consequence ('famine', 'water_crisis', 'housing_crisis', etc.)
+ * @property {number} severity - Severity level (0.0 - 1.0)
+ * @property {string} description - Human-readable description of the consequence
+ * @property {ConsequenceEffects} effects - Specific effects of this consequence
+ * @property {number} duration - How many turns the consequence lasts
+ * @property {string[]} triggers - What can trigger resolution of this consequence
+ * @property {boolean} resolved - Whether this consequence has been resolved
+ * @property {Date} startDate - When this consequence began
+ * @property {Date} [endDate] - When this consequence ended (if resolved)
+ */
+
+/**
+ * @typedef {Object} ConsequenceEffects
+ * @property {PopulationEffects} population - Effects on population dynamics
+ * @property {CharacterEffects} character - Effects on character behavior and stats
+ * @property {SettlementEffects} settlement - Effects on settlement infrastructure and stability
+ */
+
+/**
+ * @typedef {Object} PopulationEffects
+ * @property {number} growth - Modifier to population growth (-0.1 = 10% slower growth)
+ * @property {number} migration - Migration pressure (0.2 = 20% of population wants to leave)
+ * @property {number} mortality - Mortality rate change (0.05 = 5% higher death rate)
+ */
+
+/**
+ * @typedef {Object} CharacterEffects
+ * @property {number} moodModifier - Mood change for characters in affected settlement
+ * @property {number} energyModifier - Energy change for characters in affected settlement
+ * @property {number} healthModifier - Health change for characters in affected settlement
+ * @property {string[]} behaviorChanges - New behavior patterns characters will adopt
+ * @property {Object<string, number>} interactionModifiers - Modifiers to interaction success rates
+ */
+
+/**
+ * @typedef {Object} SettlementEffects
+ * @property {number} stabilityChange - Change to settlement stability
+ * @property {number} economicImpact - Change to economic efficiency
+ * @property {number} socialCohesion - Change to social cohesion
+ * @property {Object<string, number>} buildingEfficiency - Efficiency changes for specific building types
+ */
+
+/**
+ * @typedef {Object} NeedSatisfactionHistory
+ * @property {Date} timestamp - When this measurement was taken
+ * @property {NeedSatisfactionLevels} needs - Need satisfaction levels at this time
+ * @property {number} overall - Overall satisfaction at this time
+ * @property {ConsequenceObject[]} consequences - Active consequences at this time
+ * @property {string[]} events - IDs of historical events generated from this measurement
+ */
+
+/**
+ * @typedef {Object} NeedSatisfactionTrends
+ * @property {number} food - Rate of change in food satisfaction
+ * @property {number} water - Rate of change in water satisfaction
+ * @property {number} shelter - Rate of change in shelter satisfaction
+ * @property {number} goods - Rate of change in goods satisfaction
+ * @property {number} services - Rate of change in services satisfaction
+ * @property {number} overall - Rate of change in overall satisfaction
+ */
+
 // Export empty object to make this a proper module
 export {};

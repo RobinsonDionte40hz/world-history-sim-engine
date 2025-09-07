@@ -92,12 +92,13 @@ class SimulationService {
    * @returns {Object} Simulation world state
    */
   processPreparedWorldData(preparedWorldData) {
-    const { worldProperties, nodes, characters, interactions } = preparedWorldData;
+    const { worldProperties, nodes, characters, interactions, settlements } = preparedWorldData;
     
     // Convert Maps to arrays for simulation processing
     const nodeArray = Array.from(nodes.values());
     const characterArray = Array.from(characters.values());
     const interactionArray = Array.from(interactions.values());
+    const settlementArray = settlements ? Array.from(settlements.values()) : [];
 
     // Build simulation state
     const worldState = {
@@ -107,6 +108,7 @@ class SimulationService {
       nodes: nodeArray,
       npcs: characterArray,
       interactions: interactionArray,
+      settlements: settlementArray,
       resources: {},
       history: [],
       rules: worldProperties.rules || {},
@@ -531,6 +533,7 @@ class SimulationService {
       changes: {
         charactersChanged: 0,
         resourcesChanged: 0,
+        settlementsChanged: 0,
         newEvents: 0
       }
     };
@@ -579,6 +582,33 @@ class SimulationService {
       }
     }
 
+    // Track settlement changes (need satisfaction updates)
+    if (previousState.settlements && currentState.settlements) {
+      currentState.settlements.forEach((currentSettlement, index) => {
+        const previousSettlement = previousState.settlements[index];
+        
+        if (previousSettlement && currentSettlement.needSatisfaction) {
+          const hasNeedSatisfactionChanges = this.hasSignificantSettlementChanges(previousSettlement, currentSettlement);
+          
+          if (hasNeedSatisfactionChanges) {
+            summary.changes.settlementsChanged++;
+            
+            // Track need satisfaction changes
+            if (currentSettlement.needSatisfaction.current) {
+              summary.events.push({
+                type: 'need_satisfaction_change',
+                settlementId: currentSettlement.id,
+                settlementName: currentSettlement.name,
+                needs: currentSettlement.needSatisfaction.current,
+                trends: currentSettlement.needSatisfaction.trends,
+                activeConsequences: currentSettlement.needSatisfaction.activeConsequences?.length || 0
+              });
+            }
+          }
+        }
+      });
+    }
+
     // Generate summary text
     summary.summary = this.generateSummaryText(summary);
     
@@ -602,6 +632,37 @@ class SimulationService {
     return statChanges;
   }
 
+  // Check if settlement has significant need satisfaction changes worth reporting
+  hasSignificantSettlementChanges(previousSettlement, currentSettlement) {
+    // Check if need satisfaction was just initialized
+    if (!previousSettlement.needSatisfaction && currentSettlement.needSatisfaction) {
+      return true;
+    }
+
+    // Check for significant need satisfaction changes (>0.1 points)
+    if (previousSettlement.needSatisfaction?.current && currentSettlement.needSatisfaction?.current) {
+      const needTypes = ['food', 'water', 'shelter', 'goods', 'services', 'overall'];
+      const hasSignificantChanges = needTypes.some(need => {
+        const prev = previousSettlement.needSatisfaction.current[need] || 0.5;
+        const curr = currentSettlement.needSatisfaction.current[need] || 0.5;
+        return Math.abs(curr - prev) > 0.1;
+      });
+      
+      if (hasSignificantChanges) {
+        return true;
+      }
+    }
+
+    // Check for new consequences
+    const prevConsequences = previousSettlement.needSatisfaction?.activeConsequences?.length || 0;
+    const currConsequences = currentSettlement.needSatisfaction?.activeConsequences?.length || 0;
+    if (currConsequences !== prevConsequences) {
+      return true;
+    }
+
+    return false;
+  }
+
   // Generate human-readable summary text
   generateSummaryText(summary) {
     const parts = [];
@@ -613,6 +674,10 @@ class SimulationService {
     
     if (summary.changes.resourcesChanged > 0) {
       parts.push(`${summary.changes.resourcesChanged} resource${summary.changes.resourcesChanged > 1 ? 's' : ''} changed`);
+    }
+    
+    if (summary.changes.settlementsChanged > 0) {
+      parts.push(`${summary.changes.settlementsChanged} settlement${summary.changes.settlementsChanged > 1 ? 's' : ''} had need satisfaction changes`);
     }
     
     if (parts.length === 0) {
@@ -689,6 +754,8 @@ class SimulationService {
         npcs: Array.isArray(this.worldState.npcs) ? 
           this.worldState.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc) : [],
         interactions: this.worldState.interactions || [],
+        settlements: Array.isArray(this.worldState.settlements) ? 
+          this.worldState.settlements.map(settlement => settlement.toJSON ? settlement.toJSON() : settlement) : [],
         resources: this.worldState.resources || {},
         // Save turn-based simulation data
         turnHistory: this.turnHistory || [],
@@ -763,6 +830,9 @@ class SimulationService {
         }
       }).filter(npc => npc !== null) : [];
 
+      // Handle settlements (might not exist in older save files)
+      const reconstructedSettlements = Array.isArray(savedState.settlements) ? savedState.settlements : [];
+
       const reconstructedState = {
         time: typeof savedState.time === 'number' ? savedState.time : 0,
         worldName: savedState.worldName || '',
@@ -772,6 +842,7 @@ class SimulationService {
         nodes: reconstructedNodes,
         npcs: reconstructedNPCs,
         interactions: savedState.interactions || [],
+        settlements: reconstructedSettlements,
         resources: savedState.resources && typeof savedState.resources === 'object' ? savedState.resources : {}
       };
 

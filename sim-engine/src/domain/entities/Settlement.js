@@ -149,6 +149,47 @@ export const Settlement = {
     impact: Object,
     participants: [String]
   }],
+  needSatisfaction: {
+    current: {
+      food: Number,
+      water: Number,
+      shelter: Number,
+      goods: Number,
+      services: Number,
+      overall: Number,
+      lastCalculated: Number
+    },
+    history: [{
+      timestamp: Number,
+      needs: {
+        food: Number,
+        water: Number,
+        shelter: Number,
+        goods: Number,
+        services: Number
+      },
+      overall: Number,
+      consequences: [String], // Array of consequence IDs
+      events: [String] // Array of historical event IDs
+    }],
+    trends: {
+      food: Number,
+      water: Number,
+      shelter: Number,
+      goods: Number,
+      services: Number,
+      overall: Number
+    },
+    activeConsequences: [{
+      id: String,
+      type: String,
+      severity: Number,
+      startDate: Number,
+      duration: Number,
+      triggers: [String],
+      resolved: Boolean
+    }]
+  },
   metadata: {
     creationDate: Number,
     lastUpdate: Number,

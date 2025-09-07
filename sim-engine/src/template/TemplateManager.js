@@ -14,7 +14,8 @@ class TemplateManager {
       items: new Map(),
       encounters: new Map(),  // Added for encounter templates
       worlds: new Map(),      // Added for world templates
-      composite: new Map()    // Added for composite templates (role sets, etc.)
+      composite: new Map(),   // Added for composite templates (role sets, etc.)
+      settlements: new Map()  // Added for settlement templates with need satisfaction profiles
     };
   }
 
@@ -260,8 +261,8 @@ class TemplateManager {
 
     // Validate the instantiated node
     try {
-      const node = new Node(nodeConfig);
-      return node.toJSON();
+      new Node(nodeConfig);
+      return nodeConfig;
     } catch (error) {
       throw new Error(`Failed to instantiate node template: ${error.message}`);
     }
@@ -327,7 +328,7 @@ class TemplateManager {
     if (type === 'nodes') {
       try {
         // Try to create a Node entity to validate environmental data
-        const node = new Node(template);
+        new Node(template);
         return {
           isValid: true,
           errors: [],
@@ -365,28 +366,397 @@ class TemplateManager {
   }
 
   /**
-   * Extracts environmental features from node data
+   * Instantiates a settlement template with need satisfaction data
+   * @param {string} templateId - Template ID
+   * @param {Object} customizations - Customizations to apply
+   * @returns {Object} Instantiated settlement configuration
+   */
+  instantiateSettlementTemplate(templateId, customizations = {}) {
+    const template = this.getTemplate('settlements', templateId);
+    if (!template) {
+      throw new Error(`Settlement template not found: ${templateId}`);
+    }
+
+    // Apply need satisfaction baseline
+    const needSatisfaction = this._applyNeedSatisfactionBaseline(template, customizations);
+
+    // Generate settlement configuration
+    const settlementConfig = {
+      ...template,
+      ...customizations,
+      id: customizations.id || `${template.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      templateId: templateId,
+      isTemplateInstance: true,
+      needSatisfaction: {
+        current: {
+          ...needSatisfaction,
+          lastCalculated: Date.now()
+        },
+        history: [],
+        trends: {
+          food: 0,
+          water: 0,
+          shelter: 0,
+          goods: 0,
+          services: 0,
+          overall: 0
+        },
+        activeConsequences: []
+      },
+      population: {
+        total: customizations.populationConfig?.basePopulation || template.populationConfig.basePopulation,
+        composition: customizations.populationConfig?.composition || template.populationConfig.composition || {},
+        growth: customizations.populationConfig?.growthRate || template.populationConfig.growthRate,
+        migration: 0
+      },
+      resources: {
+        types: Object.keys(template.resourceConfig.initialResources),
+        amounts: { ...template.resourceConfig.initialResources },
+        production: template.resourceConfig.productionRates || {},
+        consumption: template.resourceConfig.consumptionRates || {},
+        storage: template.resourceConfig.storageCapacity || {}
+      },
+      buildings: this._generateBuildingsFromTemplate(template),
+      economy: {
+        currency: {},
+        trade: template.economicConfig.tradePartners?.map(partner => ({
+          partner,
+          resources: {},
+          value: 0,
+          frequency: 1
+        })) || [],
+        markets: [],
+        taxes: template.economicConfig.taxStructure || {},
+        income: {},
+        expenses: {}
+      },
+      metadata: {
+        ...template.metadata,
+        instantiatedAt: new Date().toISOString(),
+        customizations: Object.keys(customizations)
+      }
+    };
+
+    return settlementConfig;
+  }
+
+  /**
+   * Applies need satisfaction baseline from template
    * @private
    */
-  _extractEnvironmentalFeatures(nodeData) {
-    const features = [];
-    
-    if (nodeData.environment) {
-      if (nodeData.environment.terrain) features.push(`terrain:${nodeData.environment.terrain}`);
-      if (nodeData.environment.climate) features.push(`climate:${nodeData.environment.climate}`);
-      if (nodeData.environment.lighting) features.push(`lighting:${nodeData.environment.lighting}`);
-      if (nodeData.environment.hazards && nodeData.environment.hazards.length > 0) {
-        features.push(`hazards:${nodeData.environment.hazards.length}`);
+  _applyNeedSatisfactionBaseline(template, customizations) {
+    const baseline = template.needSatisfactionBaseline;
+    const needs = ['food', 'water', 'shelter', 'goods', 'services'];
+
+    const satisfaction = {};
+    let overall = 0;
+
+    needs.forEach(need => {
+      const config = baseline[need];
+      let level = config.baseLevel;
+
+      // Apply environmental modifiers
+      if (customizations.environmentalModifiers) {
+        const envModifier = customizations.environmentalModifiers[need];
+        if (envModifier) {
+          level = Math.max(0, Math.min(1, level + envModifier));
+        }
       }
+
+      // Apply custom modifiers
+      if (customizations.needModifiers && customizations.needModifiers[need]) {
+        level = Math.max(0, Math.min(1, level + customizations.needModifiers[need]));
+      }
+
+      satisfaction[need] = level;
+      overall += level;
+    });
+
+    satisfaction.overall = overall / needs.length;
+    return satisfaction;
+  }
+
+  /**
+   * Generates buildings from template configuration
+   * @private
+   */
+  _generateBuildingsFromTemplate(template) {
+    const buildings = [];
+
+    // Add required buildings
+    template.buildingConfig.requiredBuildings.forEach((building, index) => {
+      for (let i = 0; i < building.quantity; i++) {
+        buildings.push({
+          id: `${building.type}_${index}_${i}`,
+          type: building.type,
+          level: building.level,
+          status: 'operational',
+          capacity: this._calculateBuildingCapacity(building),
+          occupants: [],
+          production: {},
+          maintenance: {}
+        });
+      }
+    });
+
+    // Add optional buildings based on probability
+    template.buildingConfig.optionalBuildings.forEach((building, index) => {
+      if (Math.random() < building.probability) {
+        buildings.push({
+          id: `${building.type}_optional_${index}`,
+          type: building.type,
+          level: building.level,
+          status: 'operational',
+          capacity: this._calculateBuildingCapacity(building),
+          occupants: [],
+          production: {},
+          maintenance: {}
+        });
+      }
+    });
+
+    return buildings;
+  }
+
+  /**
+   * Calculates building capacity based on type and level
+   * @private
+   */
+  _calculateBuildingCapacity(building) {
+    const baseCapacities = {
+      house: 4,
+      farm: 10,
+      well: 50,
+      workshop: 8,
+      temple: 20,
+      market: 30
+    };
+
+    const baseCapacity = baseCapacities[building.type] || 10;
+    return Math.floor(baseCapacity * (1 + (building.level - 1) * 0.5));
+  }
+
+  /**
+   * Creates preset settlement templates with different economic profiles
+   * @param {string} profileType - Type of economic profile
+   * @returns {Object} Preset template
+   */
+  createPresetSettlementTemplate(profileType) {
+    const presets = {
+      agrarian: {
+        name: 'Agrarian Village',
+        description: 'A farming-focused settlement with strong food production',
+        type: 'village',
+        size: 'medium',
+        economicProfile: 'agrarian',
+        needSatisfactionBaseline: {
+          food: { baseLevel: 0.8, modifiers: {}, requirements: { farms: 3 } },
+          water: { baseLevel: 0.6, modifiers: {}, requirements: { wells: 2 } },
+          shelter: { baseLevel: 0.7, modifiers: {}, requirements: { houses: 15 } },
+          goods: { baseLevel: 0.4, modifiers: {}, requirements: { workshops: 2 } },
+          services: { baseLevel: 0.5, modifiers: {}, requirements: { temple: 1 } }
+        },
+        populationConfig: {
+          basePopulation: 150,
+          growthRate: 0.02,
+          composition: { farmers: 60, craftsmen: 20, merchants: 10, clergy: 5, others: 5 },
+          migrationFactors: { food: 0.3, economy: 0.2 }
+        },
+        resourceConfig: {
+          initialResources: { food: 200, water: 300, wood: 100, stone: 50 },
+          productionRates: { food: 15, water: 20 },
+          consumptionRates: { food: 12, water: 18 },
+          storageCapacity: { food: 500, water: 600 }
+        },
+        buildingConfig: {
+          requiredBuildings: [
+            { type: 'farm', level: 2, quantity: 3 },
+            { type: 'house', level: 1, quantity: 15 },
+            { type: 'well', level: 1, quantity: 2 }
+          ],
+          optionalBuildings: [
+            { type: 'workshop', level: 1, probability: 0.6 },
+            { type: 'temple', level: 1, probability: 0.4 }
+          ]
+        },
+        economicConfig: {
+          tradePartners: ['neighboring_village'],
+          taxStructure: { income: 0.1, property: 0.05 },
+          marketConfig: { general: true }
+        }
+      },
+
+      commercial: {
+        name: 'Trading Hub',
+        description: 'A commerce-focused settlement with extensive trade networks',
+        type: 'town',
+        size: 'medium',
+        economicProfile: 'commercial',
+        needSatisfactionBaseline: {
+          food: { baseLevel: 0.6, modifiers: {}, requirements: { farms: 2 } },
+          water: { baseLevel: 0.7, modifiers: {}, requirements: { wells: 3 } },
+          shelter: { baseLevel: 0.8, modifiers: {}, requirements: { houses: 25 } },
+          goods: { baseLevel: 0.9, modifiers: {}, requirements: { workshops: 5, markets: 2 } },
+          services: { baseLevel: 0.7, modifiers: {}, requirements: { temple: 1, administrative: 1 } }
+        },
+        populationConfig: {
+          basePopulation: 300,
+          growthRate: 0.03,
+          composition: { merchants: 40, craftsmen: 25, farmers: 15, administrators: 10, others: 10 },
+          migrationFactors: { economy: 0.4, goods: 0.3 }
+        },
+        resourceConfig: {
+          initialResources: { food: 150, water: 400, gold: 500, spices: 100 },
+          productionRates: { goods: 25, services: 15 },
+          consumptionRates: { food: 20, water: 25 },
+          storageCapacity: { food: 300, water: 800, goods: 1000 }
+        },
+        buildingConfig: {
+          requiredBuildings: [
+            { type: 'market', level: 2, quantity: 2 },
+            { type: 'workshop', level: 2, quantity: 5 },
+            { type: 'house', level: 1, quantity: 25 }
+          ],
+          optionalBuildings: [
+            { type: 'temple', level: 1, probability: 0.7 },
+            { type: 'administrative', level: 1, probability: 0.8 }
+          ]
+        },
+        economicConfig: {
+          tradePartners: ['major_city', 'port_town', 'mining_village'],
+          taxStructure: { trade: 0.15, income: 0.08 },
+          marketConfig: { general: true, luxury: true }
+        }
+      },
+
+      industrial: {
+        name: 'Industrial Center',
+        description: 'A manufacturing-focused settlement with advanced production',
+        type: 'town',
+        size: 'large',
+        economicProfile: 'industrial',
+        needSatisfactionBaseline: {
+          food: { baseLevel: 0.5, modifiers: {}, requirements: { farms: 1 } },
+          water: { baseLevel: 0.8, modifiers: {}, requirements: { wells: 4, aqueduct: 1 } },
+          shelter: { baseLevel: 0.6, modifiers: {}, requirements: { houses: 40 } },
+          goods: { baseLevel: 0.95, modifiers: {}, requirements: { workshops: 8, factories: 3 } },
+          services: { baseLevel: 0.6, modifiers: {}, requirements: { temple: 1, hospital: 1 } }
+        },
+        populationConfig: {
+          basePopulation: 500,
+          growthRate: 0.025,
+          composition: { craftsmen: 50, laborers: 30, merchants: 10, engineers: 5, others: 5 },
+          migrationFactors: { jobs: 0.4, goods: 0.3 }
+        },
+        resourceConfig: {
+          initialResources: { food: 100, water: 600, iron: 200, coal: 150 },
+          productionRates: { goods: 40, tools: 20 },
+          consumptionRates: { food: 35, water: 40 },
+          storageCapacity: { food: 200, water: 1000, goods: 1500 }
+        },
+        buildingConfig: {
+          requiredBuildings: [
+            { type: 'workshop', level: 3, quantity: 8 },
+            { type: 'factory', level: 2, quantity: 3 },
+            { type: 'house', level: 1, quantity: 40 }
+          ],
+          optionalBuildings: [
+            { type: 'hospital', level: 1, probability: 0.6 },
+            { type: 'aqueduct', level: 1, probability: 0.8 }
+          ]
+        },
+        economicConfig: {
+          tradePartners: ['raw_materials_town', 'major_city'],
+          taxStructure: { production: 0.12, income: 0.1 },
+          marketConfig: { industrial: true, general: true }
+        }
+      }
+    };
+
+    if (!presets[profileType]) {
+      throw new Error(`Unknown preset type: ${profileType}`);
     }
-    
-    if (nodeData.connections && nodeData.connections.length > 0) {
-      features.push(`connections:${nodeData.connections.length}`);
+
+    const preset = presets[profileType];
+    const template = {
+      id: `preset_${profileType}_${Date.now()}`,
+      name: preset.name,
+      description: preset.description,
+      version: '1.0.0',
+      tags: ['preset', profileType, 'need-satisfaction'],
+      ...preset,
+      metadata: {
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        author: 'System',
+        type: 'settlement-preset',
+        profileType
+      }
+    };
+
+    return this.addTemplate('settlements', template);
+  }
+
+  /**
+   * Validates settlement template need satisfaction requirements
+   * @param {string} templateId - Template ID
+   * @returns {Object} Validation result
+   */
+  validateSettlementTemplateNeeds(templateId) {
+    const template = this.getTemplate('settlements', templateId);
+    if (!template) {
+      return {
+        isValid: false,
+        errors: ['Template not found'],
+        warnings: []
+      };
     }
-    
-    if (nodeData.size) features.push(`size:${nodeData.size}`);
-    
-    return features;
+
+    const errors = [];
+    const warnings = [];
+
+    // Validate need satisfaction baseline
+    const needs = ['food', 'water', 'shelter', 'goods', 'services'];
+    needs.forEach(need => {
+      const config = template.needSatisfactionBaseline[need];
+      if (!config) {
+        errors.push(`Missing ${need} configuration`);
+        return;
+      }
+
+      if (config.baseLevel < 0 || config.baseLevel > 1) {
+        errors.push(`${need} base level must be between 0 and 1`);
+      }
+
+      // Check if requirements can be met by buildings
+      const requirements = config.requirements;
+      if (requirements) {
+        Object.entries(requirements).forEach(([reqType, reqCount]) => {
+          const availableBuildings = template.buildingConfig.requiredBuildings.filter(
+            b => b.type === reqType
+          ).length;
+
+          if (availableBuildings < reqCount) {
+            warnings.push(`Insufficient ${reqType} buildings for ${need} requirement (${availableBuildings}/${reqCount})`);
+          }
+        });
+      }
+    });
+
+    // Validate population vs building capacity
+    const totalHousingCapacity = template.buildingConfig.requiredBuildings
+      .filter(b => b.type === 'house')
+      .reduce((total, building) => total + (this._calculateBuildingCapacity(building) * building.quantity), 0);
+
+    if (totalHousingCapacity < template.populationConfig.basePopulation) {
+      warnings.push(`Housing capacity (${totalHousingCapacity}) insufficient for base population (${template.populationConfig.basePopulation})`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
   }
 }
 

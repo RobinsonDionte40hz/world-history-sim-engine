@@ -81,6 +81,40 @@ class TemplateValidator {
     return true;
   }
 
+  static validateSettlementTemplate(template) {
+    if (!this.validateBaseTemplate(template)) return false;
+    if (!template.type || typeof template.type !== 'string') return false;
+    if (!template.size || typeof template.size !== 'string') return false;
+    if (!template.economicProfile || typeof template.economicProfile !== 'string') return false;
+
+    // Validate need satisfaction baseline
+    if (!template.needSatisfactionBaseline || typeof template.needSatisfactionBaseline !== 'object') return false;
+    const needs = ['food', 'water', 'shelter', 'goods', 'services'];
+    for (const need of needs) {
+      if (!template.needSatisfactionBaseline[need] || typeof template.needSatisfactionBaseline[need] !== 'object') return false;
+      const needConfig = template.needSatisfactionBaseline[need];
+      if (typeof needConfig.baseLevel !== 'number' || needConfig.baseLevel < 0 || needConfig.baseLevel > 1) return false;
+      if (typeof needConfig.modifiers !== 'object') return false;
+      if (typeof needConfig.requirements !== 'object') return false;
+    }
+
+    // Validate population config
+    if (!template.populationConfig || typeof template.populationConfig !== 'object') return false;
+    if (typeof template.populationConfig.basePopulation !== 'number') return false;
+    if (typeof template.populationConfig.growthRate !== 'number') return false;
+
+    // Validate resource config
+    if (!template.resourceConfig || typeof template.resourceConfig !== 'object') return false;
+    if (typeof template.resourceConfig.initialResources !== 'object') return false;
+
+    // Validate building config
+    if (!template.buildingConfig || typeof template.buildingConfig !== 'object') return false;
+    if (!Array.isArray(template.buildingConfig.requiredBuildings)) return false;
+    if (!Array.isArray(template.buildingConfig.optionalBuildings)) return false;
+
+    return true;
+  }
+
   static validateTemplate(type, template) {
     switch (type) {
       case 'characters':
@@ -95,6 +129,8 @@ class TemplateValidator {
         return this.validateGroupTemplate(template);
       case 'items':
         return this.validateItemTemplate(template);
+      case 'settlements':
+        return this.validateSettlementTemplate(template);
       default:
         return false;
     }

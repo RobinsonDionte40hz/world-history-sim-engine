@@ -261,4 +261,93 @@ export const EncounterTemplate = {
     generatedInteractions: Array,
     effectMapping: Object
   }
+};
+
+// Settlement template type for need satisfaction profiles
+export const SettlementTemplate = {
+  ...BaseTemplate,
+  type: String, // 'village', 'town', 'city', 'kingdom', etc.
+  size: String, // 'small', 'medium', 'large', 'metropolis'
+  economicProfile: String, // 'agrarian', 'industrial', 'commercial', 'military', 'academic'
+
+  // Need satisfaction baseline configuration
+  needSatisfactionBaseline: {
+    food: {
+      baseLevel: Number, // 0.0 to 1.0
+      modifiers: Object, // Environmental and situational modifiers
+      requirements: Object // Resource and infrastructure requirements
+    },
+    water: {
+      baseLevel: Number,
+      modifiers: Object,
+      requirements: Object
+    },
+    shelter: {
+      baseLevel: Number,
+      modifiers: Object,
+      requirements: Object
+    },
+    goods: {
+      baseLevel: Number,
+      modifiers: Object,
+      requirements: Object
+    },
+    services: {
+      baseLevel: Number,
+      modifiers: Object,
+      requirements: Object
+    }
+  },
+
+  // Population configuration
+  populationConfig: {
+    basePopulation: Number,
+    growthRate: Number,
+    composition: Object,
+    migrationFactors: Object
+  },
+
+  // Resource configuration
+  resourceConfig: {
+    initialResources: Object,
+    productionRates: Object,
+    consumptionRates: Object,
+    storageCapacity: Object
+  },
+
+  // Building configuration
+  buildingConfig: {
+    requiredBuildings: [{
+      type: String,
+      level: Number,
+      quantity: Number
+    }],
+    optionalBuildings: [{
+      type: String,
+      level: Number,
+      probability: Number
+    }]
+  },
+
+  // Economic configuration
+  economicConfig: {
+    tradePartners: [String],
+    marketConfig: Object,
+    taxStructure: Object
+  },
+
+  // Environmental modifiers
+  environmentalModifiers: {
+    terrain: Object,
+    climate: Object,
+    resources: Object
+  },
+
+  // Template validation rules
+  validationRules: {
+    minPopulation: Number,
+    maxPopulation: Number,
+    requiredResources: [String],
+    economicConstraints: Object
+  }
 }; 
