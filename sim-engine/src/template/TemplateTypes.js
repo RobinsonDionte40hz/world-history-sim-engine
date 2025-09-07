@@ -350,4 +350,77 @@ export const SettlementTemplate = {
     requiredResources: [String],
     economicConstraints: Object
   }
+};
+
+// Goal template type for character aspirations and objectives
+export const GoalTemplate = {
+  ...BaseTemplate,
+  type: String, // 'social', 'family', 'career', 'personal', 'exploration', etc.
+  category: String, // 'aspiration', 'survival', 'achievement', 'relationship'
+  priority: String, // 'low', 'medium', 'high', 'critical'
+
+  // Requirements for goal activation
+  requirements: {
+    age: {
+      min: Number,
+      max: Number
+    },
+    attributes: Object, // Attribute requirements (charisma: 10, etc.)
+    personality: Object, // Personality trait requirements (empathy: 0.3, etc.)
+    relationship_status: String, // 'single', 'dating', 'married', 'divorced', etc.
+    resources: Object, // Resource requirements (housing: 1, income: 100, etc.)
+    skills: [String], // Required skills
+    prerequisites: [String] // IDs of prerequisite goals
+  },
+
+  // Goal progression steps
+  steps: [{
+    id: String,
+    name: String,
+    description: String,
+    order: Number,
+    requirements: Object, // Step-specific requirements
+    actions: [String], // Required actions to complete step
+    duration: Number, // Estimated time in days
+    success_probability: Number // 0.0 to 1.0
+  }],
+
+  // Success conditions
+  success_conditions: {
+    primary: String, // Main completion condition
+    secondary: [String], // Additional conditions
+    time_limit: Number, // Time limit in days (optional)
+    failure_conditions: [String] // Conditions that cause failure
+  },
+
+  // Rewards and consequences
+  rewards: {
+    experience: Number, // XP gained
+    attributes: Object, // Attribute bonuses
+    skills: [String], // Skills learned
+    relationships: Object, // Relationship changes
+    resources: Object, // Resource rewards
+    reputation: Number // Reputation change
+  },
+
+  consequences: {
+    success: {
+      immediate: Object, // Immediate effects
+      long_term: Object // Long-term effects
+    },
+    failure: {
+      immediate: Object,
+      long_term: Object
+    }
+  },
+
+  // Goal metadata
+  metadata: {
+    ...BaseTemplate.metadata,
+    difficulty: String, // 'easy', 'medium', 'hard', 'legendary'
+    estimated_duration: Number, // Estimated total duration in days
+    social_impact: Number, // Impact on social relationships (-1 to 1)
+    economic_impact: Number, // Economic impact (-1 to 1)
+    historical_significance: Number // Historical importance (0 to 1)
+  }
 }; 

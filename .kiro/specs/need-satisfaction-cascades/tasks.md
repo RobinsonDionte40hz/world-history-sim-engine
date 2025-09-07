@@ -1,11 +1,11 @@
 # Implementation Plan
 
 - [x] 1. Create core BasicNeedsService with calculation methods
-  - ✅ Implement BasicNeedsService class extending BaseDomainService
-  - ✅ Add individual need calculation methods (food, water, shelter, goods, services)
-  - ✅ Implement cascading effects calculation logic
-  - ✅ Write unit tests for all calculation methods (41 tests passing)
-  - ✅ Export service in domain services index
+  -  Implement BasicNeedsService class extending BaseDomainService
+  -  Add individual need calculation methods (food, water, shelter, goods, services)
+  -  Implement cascading effects calculation logic
+  -  Write unit tests for all calculation methods (41 tests passing)
+  -  Export service in domain services index
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3_
 
 - [x] 2. Implement need satisfaction data structures and validation
@@ -58,14 +58,14 @@
   - _Requirements: 5.4, 6.3_
 
 - [x] 8. Integrate with template system for settlement need profiles
-  - ✅ Add need satisfaction baseline configuration to settlement templates
-  - ✅ Implement template instantiation with need satisfaction data
-  - ✅ Create preset settlement templates with different economic profiles
-  - ✅ Add template validation for need satisfaction requirements
-  - ✅ Write tests for template system integration
+  -  Add need satisfaction baseline configuration to settlement templates
+  -  Implement template instantiation with need satisfaction data
+  -  Create preset settlement templates with different economic profiles
+  -  Add template validation for need satisfaction requirements
+  -  Write tests for template system integration
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 9. Add historical event generation for need satisfaction changes
+- [x] 9. Add historical event generation for need satisfaction changes
   - Enhance HistoryGenerator to create need-related historical events
   - Implement event categorization and timeline integration
   - Add regional event detection for widespread need crises
@@ -73,7 +73,7 @@
   - Write tests for historical event generation
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 10. Implement consequence resolution and trigger system
+- [x] 10. Implement consequence resolution and trigger system
   - Create consequence lifecycle management system
   - Implement trigger detection and consequence resolution logic
   - Add automatic consequence cleanup when resolved

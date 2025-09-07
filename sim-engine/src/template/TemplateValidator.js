@@ -115,6 +115,43 @@ class TemplateValidator {
     return true;
   }
 
+  static validateGoalTemplate(template) {
+    if (!this.validateBaseTemplate(template)) return false;
+    if (!template.type || typeof template.type !== 'string') return false;
+    if (!template.category || typeof template.category !== 'string') return false;
+    if (!template.priority || typeof template.priority !== 'string') return false;
+
+    // Validate requirements
+    if (!template.requirements || typeof template.requirements !== 'object') return false;
+
+    // Validate steps
+    if (!Array.isArray(template.steps)) return false;
+    for (const step of template.steps) {
+      if (!step.id || typeof step.id !== 'string') return false;
+      if (!step.name || typeof step.name !== 'string') return false;
+      if (!step.description || typeof step.description !== 'string') return false;
+      if (typeof step.order !== 'number') return false;
+      if (!Array.isArray(step.actions)) return false;
+      if (typeof step.duration !== 'number') return false;
+      if (typeof step.success_probability !== 'number' || step.success_probability < 0 || step.success_probability > 1) return false;
+    }
+
+    // Validate success conditions
+    if (!template.success_conditions || typeof template.success_conditions !== 'object') return false;
+    if (!template.success_conditions.primary || typeof template.success_conditions.primary !== 'string') return false;
+    if (!Array.isArray(template.success_conditions.secondary)) return false;
+
+    // Validate rewards
+    if (!template.rewards || typeof template.rewards !== 'object') return false;
+
+    // Validate consequences
+    if (!template.consequences || typeof template.consequences !== 'object') return false;
+    if (!template.consequences.success || typeof template.consequences.success !== 'object') return false;
+    if (!template.consequences.failure || typeof template.consequences.failure !== 'object') return false;
+
+    return true;
+  }
+
   static validateTemplate(type, template) {
     switch (type) {
       case 'characters':
@@ -131,6 +168,8 @@ class TemplateValidator {
         return this.validateItemTemplate(template);
       case 'settlements':
         return this.validateSettlementTemplate(template);
+      case 'goals':
+        return this.validateGoalTemplate(template);
       default:
         return false;
     }

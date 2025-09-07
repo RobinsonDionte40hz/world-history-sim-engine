@@ -1,6 +1,7 @@
 // src/domain/services/InteractionExecutor.js
 
 import BaseDomainService from './BaseDomainService.js';
+import MemoryService from './MemoryService.js';
 
 /**
  * InteractionExecutor - Service for executing interactions with comprehensive error handling
@@ -17,6 +18,7 @@ export default class InteractionExecutor extends BaseDomainService {
    * @param {boolean} config.enableDebugging - Whether to enable debug information (default: false)
    * @param {boolean} config.enableEnvironmentalEffects - Whether to apply environmental effects (default: true)
    * @param {boolean} config.enableResourceTracking - Whether to track resource consumption (default: true)
+   * @param {boolean} config.enableRelationshipUpdates - Whether to update relationships during interactions (default: true)
    * @param {Object} config.logger - Custom logger instance (optional)
    */
   constructor(config = {}) {
@@ -26,7 +28,11 @@ export default class InteractionExecutor extends BaseDomainService {
     this.enableDebugging = config.enableDebugging || false;
     this.enableEnvironmentalEffects = config.enableEnvironmentalEffects !== false;
     this.enableResourceTracking = config.enableResourceTracking !== false;
+    this.enableRelationshipUpdates = config.enableRelationshipUpdates !== false;
     this.logger = config.logger || console;
+
+    // Initialize MemoryService for relationship management
+    this.memoryService = config.memoryService || new MemoryService();
 
     // Execution statistics for monitoring
     this.executionStats = {
@@ -93,6 +99,11 @@ export default class InteractionExecutor extends BaseDomainService {
       // Track resource consumption if enabled
       if (this.enableResourceTracking && !options.dryRun) {
         result.resourceConsumption = this._trackResourceConsumption(interaction, executionContext, result);
+      }
+
+      // Update relationships if enabled and this is a social interaction
+      if (this.enableRelationshipUpdates && !options.dryRun && this._isSocialInteraction(interaction)) {
+        result.relationshipUpdates = this._updateRelationships(interaction, executionContext, result);
       }
 
       // Update execution statistics
@@ -520,5 +531,172 @@ export default class InteractionExecutor extends BaseDomainService {
    */
   clearErrorHistory() {
     this.errorHistory = [];
+  }
+
+  /**
+   * Checks if an interaction is social and should trigger relationship updates
+   * @param {InteractionBase} interaction - The interaction to check
+   * @returns {boolean} True if the interaction is social
+   * @private
+   */
+  _isSocialInteraction(interaction) {
+    if (!interaction) return false;
+
+    // Check interaction type/name for social indicators
+    const socialIndicators = [
+      'talk', 'converse', 'chat', 'greet', 'social',
+      'romantic', 'date', 'courtship', 'flirt',
+      'family', 'parent', 'child', 'sibling',
+      'business', 'trade', 'commerce', 'professional',
+      'teach', 'learn', 'mentor', 'student'
+    ];
+
+    const interactionName = (interaction.name || '').toLowerCase();
+    const interactionType = (interaction.type || '').toLowerCase();
+
+    return socialIndicators.some(indicator =>
+      interactionName.includes(indicator) || interactionType.includes(indicator)
+    );
+  }
+
+  /**
+   * Updates relationships based on interaction outcome
+   * @param {InteractionBase} interaction - The interaction that was executed
+   * @param {Object} executionContext - The execution context
+   * @param {Object} result - The execution result
+   * @returns {Object} Relationship update results
+   * @private
+   */
+  _updateRelationships(interaction, executionContext, result) {
+    if (!this.memoryService) {
+      return { updated: false, reason: 'MemoryService not available' };
+    }
+
+    const updates = {
+      updated: false,
+      relationships: [],
+      errors: []
+    };
+
+    try {
+      const character = executionContext.character;
+      const worldState = executionContext.worldState;
+      const outcome = result.success ? 'positive' : 'negative';
+
+      // Find target characters involved in this interaction
+      const targetCharacters = this._findInteractionTargets(interaction, character, worldState);
+
+      for (const targetCharacter of targetCharacters) {
+        try {
+          // Update relationship from character's perspective
+          this.memoryService.updateRelationship(character, targetCharacter.id, outcome);
+
+          // Update relationship from target's perspective (bidirectional)
+          this.memoryService.updateRelationship(targetCharacter, character.id, outcome);
+
+          // Add detailed interaction history
+          this._addInteractionToRelationshipHistory(character, targetCharacter, interaction, outcome);
+          this._addInteractionToRelationshipHistory(targetCharacter, character, interaction, outcome);
+
+          const relationshipType = this.memoryService.calculateRelationshipType(
+            character.relationships.get(targetCharacter.id)?.value || 0,
+            character.relationships.get(targetCharacter.id)?.history || []
+          );
+
+          updates.relationships.push({
+            from: character.id,
+            to: targetCharacter.id,
+            outcome,
+            relationshipType,
+            bondValue: character.relationships.get(targetCharacter.id)?.value || 0
+          });
+
+        } catch (error) {
+          updates.errors.push({
+            from: character.id,
+            to: targetCharacter.id,
+            error: error.message
+          });
+        }
+      }
+
+      updates.updated = updates.relationships.length > 0;
+
+    } catch (error) {
+      updates.errors.push({
+        general: error.message
+      });
+    }
+
+    return updates;
+  }
+
+  /**
+   * Finds target characters involved in an interaction
+   * @param {InteractionBase} interaction - The interaction
+   * @param {Object} character - The executing character
+   * @param {WorldState} worldState - The world state
+   * @returns {Array} Array of target characters
+   * @private
+   */
+  _findInteractionTargets(interaction, character, worldState) {
+    const targets = [];
+
+    // Check if interaction has explicit target
+    if (interaction.targetCharacterId) {
+      const targetCharacter = worldState.characters?.find(c => c.id === interaction.targetCharacterId);
+      if (targetCharacter) {
+        targets.push(targetCharacter);
+      }
+    }
+
+    // Find characters in same location (for social interactions)
+    if (character.currentNodeId && worldState.characters) {
+      const localCharacters = worldState.characters.filter(c =>
+        c.id !== character.id &&
+        c.currentNodeId === character.currentNodeId
+      );
+      targets.push(...localCharacters);
+    }
+
+    // Remove duplicates
+    return targets.filter((target, index, self) =>
+      index === self.findIndex(t => t.id === target.id)
+    );
+  }
+
+  /**
+   * Adds interaction details to relationship history
+   * @param {Object} fromCharacter - Character whose relationship is being updated
+   * @param {Object} toCharacter - Target character
+   * @param {InteractionBase} interaction - The interaction
+   * @param {string} outcome - Interaction outcome
+   * @private
+   */
+  _addInteractionToRelationshipHistory(fromCharacter, toCharacter, interaction, outcome) {
+    if (!fromCharacter.relationships) {
+      fromCharacter.relationships = new Map();
+    }
+
+    if (!fromCharacter.relationships.has(toCharacter.id)) {
+      fromCharacter.relationships.set(toCharacter.id, {
+        value: 0,
+        type: 'neutral',
+        history: []
+      });
+    }
+
+    const relationship = fromCharacter.relationships.get(toCharacter.id);
+    const interactionHistory = {
+      timestamp: Date.now(),
+      change: 0, // Will be calculated by MemoryService
+      reason: `${interaction.name || 'Unknown interaction'}: ${outcome}`,
+      interactionType: interaction.type || 'unknown',
+      outcome,
+      targetCharacterId: toCharacter.id,
+      targetCharacterName: toCharacter.name
+    };
+
+    relationship.history.push(interactionHistory);
   }
 }

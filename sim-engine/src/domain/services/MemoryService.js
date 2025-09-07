@@ -59,6 +59,255 @@ class MemoryService {
 
     return recentFailure ? -1 : Math.max(-0.5, Math.min(0.5, trustScore));  // -1 to 0.5 range
   }
+
+  // Update relationship with another character based on interaction outcome
+  updateRelationship(character, targetCharacterId, interactionOutcome, context = {}) {
+    // More flexible validation - check for required properties instead of instanceof
+    if (!character || typeof character !== 'object') {
+      throw new Error('Invalid character: must be an object');
+    }
+
+    // Check for required properties that a character should have
+    const requiredProps = ['id', 'name', 'relationships'];
+    const missingProps = requiredProps.filter(prop => !(prop in character));
+    if (missingProps.length > 0) {
+      throw new Error(`Invalid character: missing required properties: ${missingProps.join(', ')}`);
+    }
+
+    if (!character.relationships) {
+      character.relationships = new Map();
+    }
+
+    // Get or create relationship bond with enhanced metadata
+    const currentBond = character.relationships.get(targetCharacterId) || {
+      value: 0,
+      type: 'neutral',
+      history: [],
+      firstInteraction: Date.now(),
+      interactionCount: 0,
+      lastInteraction: null
+    };
+
+    // Calculate bond change based on interaction outcome and context
+    const bondChange = this._calculateBondChange(interactionOutcome, context);
+
+    // Update bond value with bounds checking
+    currentBond.value = Math.max(-100, Math.min(100, currentBond.value + bondChange));
+
+    // Update metadata
+    currentBond.interactionCount++;
+    currentBond.lastInteraction = Date.now();
+
+    // Create detailed history entry
+    const historyEntry = {
+      timestamp: Date.now(),
+      change: bondChange,
+      reason: context.reason || `Interaction outcome: ${interactionOutcome}`,
+      interactionType: context.interactionType || 'unknown',
+      context: context.context || 'general',
+      outcome: interactionOutcome,
+      encounterId: context.encounterId,
+      significance: this._calculateInteractionSignificance(context)
+    };
+
+    currentBond.history.push(historyEntry);
+
+    // Calculate relationship type with full history context
+    currentBond.type = this.calculateRelationshipType(currentBond.value, currentBond.history);
+
+    // Store updated relationship
+    character.relationships.set(targetCharacterId, currentBond);
+
+    return currentBond;
+  }
+
+  // Calculate bond change based on outcome and context
+  _calculateBondChange(outcome, context) {
+    let baseChange = 0;
+
+    // Base change by outcome
+    switch (outcome) {
+      case 'positive':
+        baseChange = 8;
+        break;
+      case 'neutral':
+        baseChange = 1;
+        break;
+      case 'negative':
+        baseChange = -6;
+        break;
+      default:
+        baseChange = 0;
+    }
+
+    // Apply context modifiers
+    const modifiers = {
+      romantic: 1.5,
+      family: 1.2,
+      professional: 0.8,
+      mentorship: 1.3,
+      combat: 2.0,
+      social: 1.0,
+      economic: 0.9
+    };
+
+    const interactionType = context.interactionType || 'social';
+    const modifier = modifiers[interactionType] || 1.0;
+
+    // Apply significance modifier
+    const significance = context.significance || 1.0;
+
+    return Math.round(baseChange * modifier * significance);
+  }
+
+  // Calculate interaction significance
+  _calculateInteractionSignificance(context) {
+    let significance = 1.0;
+
+    // Higher significance for major events
+    if (context.encounterId) significance *= 1.5;
+    if (context.isMajorEvent) significance *= 2.0;
+    if (context.isPublic) significance *= 1.2;
+    if (context.involvesCrowd) significance *= 1.3;
+
+    // Lower significance for minor interactions
+    if (context.isMinor) significance *= 0.7;
+    if (context.isPrivate) significance *= 0.8;
+
+    return Math.max(0.1, Math.min(3.0, significance));
+  }
+
+  // Calculate relationship type based on bond value and interaction history
+  calculateRelationshipType(value, interactionHistory = []) {
+    // Check for romantic relationships first (highest priority)
+    if (this.hasRomanticCompatibility(interactionHistory)) {
+      if (value > 85) return 'married';
+      if (value > 75) return 'engaged';
+      if (value > 65) return 'romantic_partner';
+      if (value > 50) return 'romantic_interest';
+      if (value > 30) return 'dating';
+      if (value > 15) return 'flirting';
+    }
+
+    // Check for family relationships
+    if (this.isFamilyRelationship(interactionHistory)) {
+      if (value > 70) return 'close_family';
+      if (value > 40) return 'family';
+      if (value > 10) return 'distant_family';
+      return 'estranged_family';
+    }
+
+    // Check for professional/business relationships
+    if (this.isProfessionalRelationship(interactionHistory)) {
+      if (value > 60) return 'trusted_colleague';
+      if (value > 30) return 'colleague';
+      if (value > 10) return 'acquaintance';
+      if (value > -20) return 'neutral';
+      return 'rival';
+    }
+
+    // Check for mentorship relationships
+    if (this.isMentorshipRelationship(interactionHistory)) {
+      if (value > 70) return 'mentor';
+      if (value > 50) return 'student';
+      if (value > 20) return 'apprentice';
+      return 'distant_mentor';
+    }
+
+    // Default to basic relationship types
+    return this.calculateBasicRelationshipType(value);
+  }
+
+  // Check if relationship has romantic compatibility based on interaction history
+  hasRomanticCompatibility(interactionHistory) {
+    if (!interactionHistory || interactionHistory.length === 0) return false;
+
+    return interactionHistory.some(event =>
+      event.reason && (
+        event.reason.toLowerCase().includes('romantic') ||
+        event.reason.toLowerCase().includes('courtship') ||
+        event.reason.toLowerCase().includes('date') ||
+        event.reason.toLowerCase().includes('flirt') ||
+        event.reason.toLowerCase().includes('love') ||
+        event.reason.toLowerCase().includes('marriage') ||
+        event.reason.toLowerCase().includes('wedding') ||
+        event.reason.toLowerCase().includes('proposal')
+      )
+    );
+  }
+
+  // Check if relationship is familial based on interaction history
+  isFamilyRelationship(interactionHistory) {
+    if (!interactionHistory || interactionHistory.length === 0) return false;
+
+    return interactionHistory.some(event =>
+      event.reason && (
+        event.reason.toLowerCase().includes('family') ||
+        event.reason.toLowerCase().includes('parent') ||
+        event.reason.toLowerCase().includes('child') ||
+        event.reason.toLowerCase().includes('sibling') ||
+        event.reason.toLowerCase().includes('brother') ||
+        event.reason.toLowerCase().includes('sister') ||
+        event.reason.toLowerCase().includes('mother') ||
+        event.reason.toLowerCase().includes('father') ||
+        event.reason.toLowerCase().includes('grandparent') ||
+        event.reason.toLowerCase().includes('cousin') ||
+        event.reason.toLowerCase().includes('aunt') ||
+        event.reason.toLowerCase().includes('uncle') ||
+        event.reason.toLowerCase().includes('niece') ||
+        event.reason.toLowerCase().includes('nephew')
+      )
+    );
+  }
+
+  // Check if relationship is professional/business based on interaction history
+  isProfessionalRelationship(interactionHistory) {
+    if (!interactionHistory || interactionHistory.length === 0) return false;
+
+    return interactionHistory.some(event =>
+      event.reason && (
+        event.reason.toLowerCase().includes('business') ||
+        event.reason.toLowerCase().includes('trade') ||
+        event.reason.toLowerCase().includes('commerce') ||
+        event.reason.toLowerCase().includes('work') ||
+        event.reason.toLowerCase().includes('profession') ||
+        event.reason.toLowerCase().includes('guild') ||
+        event.reason.toLowerCase().includes('merchant') ||
+        event.reason.toLowerCase().includes('craft') ||
+        event.reason.toLowerCase().includes('service')
+      )
+    );
+  }
+
+  // Check if relationship is mentorship-based on interaction history
+  isMentorshipRelationship(interactionHistory) {
+    if (!interactionHistory || interactionHistory.length === 0) return false;
+
+    return interactionHistory.some(event =>
+      event.reason && (
+        event.reason.toLowerCase().includes('teach') ||
+        event.reason.toLowerCase().includes('learn') ||
+        event.reason.toLowerCase().includes('mentor') ||
+        event.reason.toLowerCase().includes('student') ||
+        event.reason.toLowerCase().includes('apprentice') ||
+        event.reason.toLowerCase().includes('master') ||
+        event.reason.toLowerCase().includes('train') ||
+        event.reason.toLowerCase().includes('guide') ||
+        event.reason.toLowerCase().includes('instruct')
+      )
+    );
+  }
+
+  // Calculate basic relationship type (fallback for non-specialized relationships)
+  calculateBasicRelationshipType(value) {
+    if (value > 60) return 'close_friend';
+    if (value > 30) return 'friend';
+    if (value > 10) return 'acquaintance';
+    if (value > -10) return 'neutral';
+    if (value > -30) return 'dislike';
+    if (value > -60) return 'enemy';
+    return 'hostile';
+  }
 }
 
 export default MemoryService;

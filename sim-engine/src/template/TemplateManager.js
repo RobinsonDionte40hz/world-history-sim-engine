@@ -15,7 +15,8 @@ class TemplateManager {
       encounters: new Map(),  // Added for encounter templates
       worlds: new Map(),      // Added for world templates
       composite: new Map(),   // Added for composite templates (role sets, etc.)
-      settlements: new Map()  // Added for settlement templates with need satisfaction profiles
+      settlements: new Map(), // Added for settlement templates with need satisfaction profiles
+      goals: new Map()        // Added for goal templates
     };
   }
 
@@ -757,6 +758,613 @@ class TemplateManager {
       errors,
       warnings
     };
+  }
+
+  /**
+   * Instantiates a goal template for a character
+   * @param {string} templateId - Goal template ID
+   * @param {Object} character - Character to assign the goal to
+   * @param {Object} customizations - Customizations to apply
+   * @returns {Object} Instantiated goal
+   */
+  instantiateGoalTemplate(templateId, character, customizations = {}) {
+    const template = this.getTemplate('goals', templateId);
+    if (!template) {
+      throw new Error(`Goal template not found: ${templateId}`);
+    }
+
+    // Validate character meets requirements
+    const validation = this._validateGoalRequirements(template, character);
+    if (!validation.isValid) {
+      throw new Error(`Character does not meet goal requirements: ${validation.errors.join(', ')}`);
+    }
+
+    // Create goal instance
+    const goalInstance = {
+      id: `${template.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      templateId: template.id,
+      name: template.name,
+      description: template.description,
+      type: template.type,
+      category: template.category,
+      priority: template.priority,
+
+      // Progress tracking
+      progress: 0,
+      currentStep: 0,
+      completedSteps: [],
+      startedAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+
+      // Steps and requirements
+      steps: template.steps.map(step => ({
+        ...step,
+        completed: false,
+        startedAt: null,
+        completedAt: null,
+        attempts: 0
+      })),
+
+      // Status
+      status: 'active', // 'active', 'completed', 'failed', 'paused'
+      success_conditions: template.success_conditions,
+      rewards: template.rewards,
+      consequences: template.consequences,
+
+      // Character-specific data
+      characterId: character.id,
+      customizations: customizations,
+
+      // Metadata
+      metadata: {
+        ...template.metadata,
+        instantiatedAt: new Date().toISOString(),
+        characterId: character.id,
+        templateVersion: template.version
+      }
+    };
+
+    return goalInstance;
+  }
+
+  /**
+   * Validates if a character meets goal requirements
+   * @param {Object} template - Goal template
+   * @param {Object} character - Character to validate
+   * @returns {Object} Validation result
+   * @private
+   */
+  _validateGoalRequirements(template, character) {
+    const errors = [];
+
+    // Age requirements
+    if (template.requirements.age) {
+      const age = character.age || 0;
+      if (template.requirements.age.min && age < template.requirements.age.min) {
+        errors.push(`Character too young (minimum: ${template.requirements.age.min})`);
+      }
+      if (template.requirements.age.max && age > template.requirements.age.max) {
+        errors.push(`Character too old (maximum: ${template.requirements.age.max})`);
+      }
+    }
+
+    // Attribute requirements
+    if (template.requirements.attributes) {
+      Object.entries(template.requirements.attributes).forEach(([attr, required]) => {
+        const current = character.attributes?.[attr]?.score || 0;
+        if (current < required) {
+          errors.push(`Insufficient ${attr} (required: ${required}, current: ${current})`);
+        }
+      });
+    }
+
+    // Personality requirements
+    if (template.requirements.personality) {
+      Object.entries(template.requirements.personality).forEach(([trait, required]) => {
+        const current = character.personality?.[trait] || 0;
+        if (current < required) {
+          errors.push(`Insufficient ${trait} (required: ${required}, current: ${current})`);
+        }
+      });
+    }
+
+    // Relationship status requirements
+    if (template.requirements.relationship_status) {
+      const current = character.relationship_status || 'single';
+      if (current !== template.requirements.relationship_status) {
+        errors.push(`Wrong relationship status (required: ${template.requirements.relationship_status}, current: ${current})`);
+      }
+    }
+
+    // Resource requirements
+    if (template.requirements.resources) {
+      Object.entries(template.requirements.resources).forEach(([resource, required]) => {
+        const current = character.resources?.[resource] || 0;
+        if (current < required) {
+          errors.push(`Insufficient ${resource} (required: ${required}, current: ${current})`);
+        }
+      });
+    }
+
+    // Children requirements
+    if (template.requirements.children) {
+      const currentChildren = character.children || 0;
+      if (template.requirements.children.min && currentChildren < template.requirements.children.min) {
+        errors.push(`Insufficient children (required: ${template.requirements.children.min}, current: ${currentChildren})`);
+      }
+      if (template.requirements.children.max && currentChildren > template.requirements.children.max) {
+        errors.push(`Too many children (maximum: ${template.requirements.children.max}, current: ${currentChildren})`);
+      }
+    }
+
+    // Skills requirements
+    if (template.requirements.skills) {
+      template.requirements.skills.forEach(skill => {
+        if (!character.skills?.includes(skill)) {
+          errors.push(`Missing required skill: ${skill}`);
+        }
+      });
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Updates goal progress based on character actions
+   * @param {Object} goal - Goal instance
+   * @param {string} action - Action performed
+   * @param {Object} context - Action context
+   * @returns {Object} Updated goal
+   */
+  updateGoalProgress(goal, action, context = {}) {
+    if (goal.status !== 'active') {
+      return goal;
+    }
+
+    const currentStep = goal.steps[goal.currentStep];
+    if (!currentStep || currentStep.completed) {
+      return goal;
+    }
+
+    // Check if action matches current step requirements
+    const actionMatches = currentStep.actions.includes(action);
+    if (!actionMatches) {
+      return goal;
+    }
+
+    // Update step progress
+    currentStep.attempts++;
+
+    // Check if step is completed
+    const stepCompleted = this._checkStepCompletion(currentStep, context);
+    if (stepCompleted) {
+      currentStep.completed = true;
+      currentStep.completedAt = new Date().toISOString();
+      goal.completedSteps.push(currentStep.id);
+
+      // Move to next step
+      goal.currentStep++;
+      goal.progress = (goal.completedSteps.length / goal.steps.length) * 100;
+
+      // Check if goal is completed
+      if (goal.currentStep >= goal.steps.length) {
+        goal.status = 'completed';
+        goal.completedAt = new Date().toISOString();
+      }
+    }
+
+    goal.lastUpdated = new Date().toISOString();
+    return goal;
+  }
+
+  /**
+   * Checks if a goal step is completed
+   * @param {Object} step - Goal step
+   * @param {Object} context - Action context
+   * @returns {boolean} Whether step is completed
+   * @private
+   */
+  _checkStepCompletion(step, context) {
+    // Simple implementation - in a real system this would be more sophisticated
+    // For now, assume steps complete after a certain number of attempts
+    return step.attempts >= 1; // Could be based on success_probability, context, etc.
+  }
+
+  /**
+   * Gets available goals for a character based on their current state
+   * @param {Object} character - Character to check goals for
+   * @returns {Array} Available goal templates
+   */
+  getAvailableGoalsForCharacter(character) {
+    const allGoals = this.getAllTemplates('goals');
+    return allGoals.filter(template => {
+      const validation = this._validateGoalRequirements(template, character);
+      return validation.isValid;
+    });
+  }
+
+  /**
+   * Creates preset family aspiration goal templates
+   * @returns {Array} Created goal templates
+   */
+  createFamilyAspirationGoalTemplates() {
+    const familyGoals = [
+      {
+        id: 'find_partner',
+        name: 'Find a Partner',
+        description: 'Find a compatible romantic partner to start a relationship',
+        type: 'social',
+        category: 'family',
+        priority: 'medium',
+        requirements: {
+          age: { min: 18, max: 50 },
+          attributes: { charisma: 10 },
+          personality: { empathy: 0.3 },
+          relationship_status: 'single'
+        },
+        steps: [
+          {
+            id: 'socialize_in_settlement',
+            name: 'Socialize in Settlement',
+            description: 'Spend time in social areas of the settlement to meet people',
+            order: 1,
+            requirements: {},
+            actions: ['socialize', 'attend_social_event', 'visit_tavern'],
+            duration: 7,
+            success_probability: 0.8
+          },
+          {
+            id: 'identify_compatible_partner',
+            name: 'Identify Compatible Partner',
+            description: 'Find someone with compatible personality and interests',
+            order: 2,
+            requirements: { social_interactions: 5 },
+            actions: ['meet_people', 'converse', 'share_interests'],
+            duration: 14,
+            success_probability: 0.6
+          },
+          {
+            id: 'build_romantic_relationship',
+            name: 'Build Romantic Relationship',
+            description: 'Develop a romantic connection with the partner',
+            order: 3,
+            requirements: { conversations: 10 },
+            actions: ['date', 'court', 'romantic_gesture', 'spend_time_together'],
+            duration: 30,
+            success_probability: 0.7
+          },
+          {
+            id: 'propose_marriage',
+            name: 'Propose Marriage',
+            description: 'Formally propose marriage to your partner',
+            order: 4,
+            requirements: { relationship_bond: 70 },
+            actions: ['propose_marriage'],
+            duration: 1,
+            success_probability: 0.8
+          }
+        ],
+        success_conditions: {
+          primary: 'marriage_proposal_accepted',
+          secondary: ['romantic_relationship_established'],
+          time_limit: 180,
+          failure_conditions: ['partner_rejects_proposal', 'relationship_ends']
+        },
+        rewards: {
+          experience: 500,
+          attributes: { charisma: 1, wisdom: 1 },
+          relationships: { partner: 50 },
+          reputation: 10,
+          resources: { happiness: 20 }
+        },
+        consequences: {
+          success: {
+            immediate: { happiness: 20, social_status: 5 },
+            long_term: { relationship_status: 'dating', marriage_potential: true }
+          },
+          failure: {
+            immediate: { happiness: -10, social_penalty: -5 },
+            long_term: { dating_cooldown: 30, reputation_penalty: -2 }
+          }
+        },
+        metadata: {
+          difficulty: 'medium',
+          estimated_duration: 52,
+          social_impact: 0.8,
+          economic_impact: 0.1,
+          historical_significance: 0.3,
+          tags: ['romance', 'courtship', 'marriage', 'social']
+        }
+      },
+
+      {
+        id: 'start_family',
+        name: 'Start a Family',
+        description: 'Build a stable family unit with children',
+        type: 'family',
+        category: 'family',
+        priority: 'high',
+        requirements: {
+          relationship_status: 'married',
+          resources: { housing: 1, income: 100 },
+          attributes: { constitution: 12, wisdom: 10 },
+          age: { min: 20, max: 45 }
+        },
+        steps: [
+          {
+            id: 'establish_stable_home',
+            name: 'Establish Stable Home',
+            description: 'Secure adequate housing and financial stability',
+            order: 1,
+            requirements: { housing: 1, savings: 200 },
+            actions: ['purchase_house', 'save_money', 'improve_home'],
+            duration: 30,
+            success_probability: 0.9
+          },
+          {
+            id: 'prepare_for_parenthood',
+            name: 'Prepare for Parenthood',
+            description: 'Learn about childcare and prepare emotionally',
+            order: 2,
+            requirements: { knowledge_childcare: 1 },
+            actions: ['study_childcare', 'discuss_parenthood', 'visit_families'],
+            duration: 14,
+            success_probability: 0.8
+          },
+          {
+            id: 'conceive_child',
+            name: 'Conceive Child',
+            description: 'Successfully conceive a child',
+            order: 3,
+            requirements: { health: 80, partner_health: 80 },
+            actions: ['intimate_encounter', 'consult_healer'],
+            duration: 30,
+            success_probability: 0.7
+          },
+          {
+            id: 'prepare_for_birth',
+            name: 'Prepare for Birth',
+            description: 'Prepare home and resources for newborn',
+            order: 4,
+            requirements: { nursery_prepared: true, supplies_ready: true },
+            actions: ['prepare_nursery', 'stock_supplies', 'hire_help'],
+            duration: 7,
+            success_probability: 0.9
+          }
+        ],
+        success_conditions: {
+          primary: 'child_born_healthy',
+          secondary: ['home_prepared', 'family_stable'],
+          time_limit: 180,
+          failure_conditions: ['miscarriage', 'health_complications']
+        },
+        rewards: {
+          experience: 1000,
+          attributes: { wisdom: 2, constitution: 1 },
+          relationships: { spouse: 20, child: 100 },
+          reputation: 15,
+          resources: { happiness: 30, family_legacy: 1 }
+        },
+        consequences: {
+          success: {
+            immediate: { happiness: 50, family_bond: 30 },
+            long_term: { legacy: 1, family_lineage: true, parental_responsibility: true }
+          },
+          failure: {
+            immediate: { happiness: -30, health_penalty: -10 },
+            long_term: { fertility_penalty: -20, emotional_trauma: 15 }
+          }
+        },
+        metadata: {
+          difficulty: 'hard',
+          estimated_duration: 81,
+          social_impact: 0.9,
+          economic_impact: 0.6,
+          historical_significance: 0.7,
+          tags: ['parenthood', 'legacy', 'stability']
+        }
+      },
+
+      {
+        id: 'raise_family',
+        name: 'Raise a Family',
+        description: 'Successfully raise children to adulthood',
+        type: 'family',
+        category: 'family',
+        priority: 'high',
+        requirements: {
+          children: { min: 1 },
+          resources: { housing: 1, income: 150 },
+          attributes: { wisdom: 12 },
+          personality: { patience: 0.5 }
+        },
+        steps: [
+          {
+            id: 'infant_care',
+            name: 'Infant Care',
+            description: 'Care for infant needs and development',
+            order: 1,
+            requirements: { child_age: 1 },
+            actions: ['feed_child', 'change_diapers', 'bond_with_child'],
+            duration: 365,
+            success_probability: 0.85
+          },
+          {
+            id: 'early_education',
+            name: 'Early Education',
+            description: 'Teach basic skills and values',
+            order: 2,
+            requirements: { child_age: 5 },
+            actions: ['teach_basic_skills', 'read_stories', 'teach_manners'],
+            duration: 1825, // 5 years
+            success_probability: 0.8
+          },
+          {
+            id: 'adolescent_guidance',
+            name: 'Adolescent Guidance',
+            description: 'Guide teenager through challenges',
+            order: 3,
+            requirements: { child_age: 13 },
+            actions: ['provide_guidance', 'set_boundaries', 'support_growth'],
+            duration: 2190, // 6 years
+            success_probability: 0.75
+          },
+          {
+            id: 'launch_adult',
+            name: 'Launch into Adulthood',
+            description: 'Prepare child for independent life',
+            order: 4,
+            requirements: { child_age: 18 },
+            actions: ['teach_life_skills', 'provide_resources', 'emotional_support'],
+            duration: 365,
+            success_probability: 0.9
+          }
+        ],
+        success_conditions: {
+          primary: 'child_becomes_adult',
+          secondary: ['child_healthy', 'child_educated', 'family_bond_strong'],
+          time_limit: 6570, // 18 years
+          failure_conditions: ['child_dies', 'child_runs_away', 'family_breaks_apart']
+        },
+        rewards: {
+          experience: 2000,
+          attributes: { wisdom: 3, charisma: 1 },
+          relationships: { child: 80, spouse: 40 },
+          reputation: 25,
+          resources: { legacy_points: 50, family_honor: 20 }
+        },
+        consequences: {
+          success: {
+            immediate: { happiness: 60, fulfillment: 40 },
+            long_term: { legacy: 2, family_continuity: true, wisdom_boost: 10 }
+          },
+          failure: {
+            immediate: { happiness: -50, grief: 30 },
+            long_term: { emotional_scars: 20, family_reputation_penalty: -10 }
+          }
+        },
+        metadata: {
+          difficulty: 'hard',
+          estimated_duration: 6570,
+          social_impact: 0.95,
+          economic_impact: 0.7,
+          historical_significance: 0.8,
+          tags: ['parenting', 'legacy', 'nurturing', 'long-term']
+        }
+      },
+
+      {
+        id: 'family_legacy',
+        name: 'Build Family Legacy',
+        description: 'Create a lasting family legacy through generations',
+        type: 'family',
+        category: 'family',
+        priority: 'critical',
+        requirements: {
+          children: { min: 2 },
+          resources: { wealth: 1000, property: 5 },
+          attributes: { wisdom: 15, leadership: 12 },
+          age: { min: 40 }
+        },
+        steps: [
+          {
+            id: 'establish_family_business',
+            name: 'Establish Family Business',
+            description: 'Create a sustainable family business or enterprise',
+            order: 1,
+            requirements: { capital: 500 },
+            actions: ['start_business', 'hire_family', 'build_reputation'],
+            duration: 365,
+            success_probability: 0.7
+          },
+          {
+            id: 'build_family_wealth',
+            name: 'Build Family Wealth',
+            description: 'Accumulate wealth and assets for future generations',
+            order: 2,
+            requirements: { business_profit: 1000 },
+            actions: ['invest_wisely', 'diversify_assets', 'save_for_future'],
+            duration: 1825, // 5 years
+            success_probability: 0.8
+          },
+          {
+            id: 'educate_heirs',
+            name: 'Educate Heirs',
+            description: 'Ensure children receive proper education and training',
+            order: 3,
+            requirements: { children_educated: true },
+            actions: ['hire_tutors', 'send_to_school', 'teach_family_values'],
+            duration: 2190, // 6 years
+            success_probability: 0.85
+          },
+          {
+            id: 'create_family_traditions',
+            name: 'Create Family Traditions',
+            description: 'Establish lasting family traditions and values',
+            order: 4,
+            requirements: { family_bonds: 80 },
+            actions: ['organize_family_events', 'document_history', 'teach_heritage'],
+            duration: 365,
+            success_probability: 0.9
+          }
+        ],
+        success_conditions: {
+          primary: 'multi_generational_success',
+          secondary: ['business_established', 'wealth_accumulated', 'heirs_prepared'],
+          time_limit: 7300, // 20 years
+          failure_conditions: ['business_failure', 'family_dissolution', 'heir_death']
+        },
+        rewards: {
+          experience: 5000,
+          attributes: { wisdom: 5, leadership: 3 },
+          relationships: { family: 100, community: 50 },
+          reputation: 50,
+          resources: { legacy_points: 100, family_influence: 30 }
+        },
+        consequences: {
+          success: {
+            immediate: { fulfillment: 80, pride: 60 },
+            long_term: { historical_legacy: true, family_name_eternal: true }
+          },
+          failure: {
+            immediate: { disappointment: -60, stress: 40 },
+            long_term: { family_name_tarnished: true, personal_regret: 30 }
+          }
+        },
+        metadata: {
+          difficulty: 'legendary',
+          estimated_duration: 7300,
+          social_impact: 0.9,
+          economic_impact: 0.95,
+          historical_significance: 0.9,
+          tags: ['legacy', 'wealth', 'tradition', 'multi-generational']
+        }
+      }
+    ];
+
+    const createdTemplates = [];
+    familyGoals.forEach(goalData => {
+      const template = {
+        ...goalData,
+        version: '1.0.0',
+        tags: ['family', 'aspiration', goalData.type, goalData.category],
+        metadata: {
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+          author: 'System',
+          type: 'goal-template',
+          ...goalData.metadata
+        }
+      };
+
+      this.addTemplate('goals', template);
+      createdTemplates.push(template);
+    });
+
+    return createdTemplates;
   }
 }
 

@@ -134,6 +134,11 @@ export default class NeedConsequenceService extends BaseDomainService {
       return false;
     }
 
+    // Check if consequence has triggers defined
+    if (!consequence.triggers || !Array.isArray(consequence.triggers)) {
+      return false;
+    }
+
     // Check if any resolution triggers are met
     return consequence.triggers.some(trigger => this._checkResolutionTrigger(trigger, settlement));
   }

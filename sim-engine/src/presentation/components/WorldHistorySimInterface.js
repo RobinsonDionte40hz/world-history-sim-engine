@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Calendar, Activity, ChevronRight, Settings, Filter, Download, Clock } from 'lucide-react';
-import useSimulation from '../hooks/useSimulation.js';
+import { useSimulationContext } from '../contexts/SimulationContext.js';
 import TurnCounter from './TurnCounter.js';
 
 const WorldHistorySimInterface = () => {
-  // Use the simulation hook instead of local state
-  const { worldState, isInitialized, currentTurn, canProcessTurn, resetSimulation, processTurn } = useSimulation();
+  // Use the simulation context hook instead of local state
+  const { worldState, isInitialized, currentTurn, canProcessTurn, resetSimulation, processTurn } = useSimulationContext();
   
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);

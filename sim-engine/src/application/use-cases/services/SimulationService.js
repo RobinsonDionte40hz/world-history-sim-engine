@@ -130,141 +130,6 @@ class SimulationService {
       'Use WorldBuilder.prepareForSimulation() to prepare world data.'
     );
     return false;  // Always fail to force proper pipeline usage
-
-    if (!Array.isArray(config.characters) || config.characters.length === 0) {
-      console.error('SimulationService: At least one character is required');
-      return false;
-    }
-
-    if (!Array.isArray(config.interactions) || config.interactions.length === 0) {
-      console.error('SimulationService: At least one interaction is required');
-      return false;
-    }
-
-    // Validate nodes are mappless (no spatial coordinates)
-    for (const node of config.nodes) {
-      if (node.position || node.x !== undefined || node.y !== undefined) {
-        console.error('SimulationService: Nodes must not contain spatial coordinates (mappless design)');
-        return false;
-      }
-      if (!node.id || !node.name || !node.type) {
-        console.error('SimulationService: Each node must have id, name, and type');
-        return false;
-      }
-    }
-
-    // Validate characters have assigned interactions
-    for (const character of config.characters) {
-      if (!character.assignedInteractions || !Array.isArray(character.assignedInteractions) || character.assignedInteractions.length === 0) {
-        console.error('SimulationService: Each character must have at least one assigned interaction');
-        return false;
-      }
-      if (!character.id || !character.name) {
-        console.error('SimulationService: Each character must have id and name');
-        return false;
-      }
-    }
-
-    // Validate all nodes have assigned characters
-    const characterIds = new Set(config.characters.map(c => c.id));
-    
-    for (const node of config.nodes) {
-      if (!node.assignedCharacters || !Array.isArray(node.assignedCharacters) || node.assignedCharacters.length === 0) {
-        console.error(`SimulationService: Node '${node.name}' must have at least one assigned character`);
-        return false;
-      }
-      
-      // Validate assigned characters exist
-      for (const characterId of node.assignedCharacters) {
-        if (!characterIds.has(characterId)) {
-          console.error(`SimulationService: Node '${node.name}' references non-existent character '${characterId}'`);
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Generate unique ID
-   * @private
-   * @returns {string} Unique identifier
-   */
-  _generateId() {
-    return `world_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  // Legacy method - deprecated
-  processMapplessWorldState(config) {
-    console.warn(
-      'processMapplessWorldState is deprecated. ' +
-      'Use processPreparedWorldData with properly prepared world data.'
-    );
-    const worldState = {
-      time: 0,
-      worldName: config.worldName,
-      worldDescription: config.worldDescription || '',
-      rules: config.rules || {},
-      initialConditions: config.initialConditions || {},
-      nodes: [],
-      npcs: [],
-      interactions: config.interactions || [],
-      resources: {}
-    };
-
-    // Process abstract nodes (no spatial coordinates)
-    worldState.nodes = config.nodes.map(nodeConfig => {
-      return {
-        id: nodeConfig.id,
-        name: nodeConfig.name,
-        type: nodeConfig.type,
-        description: nodeConfig.description || '',
-        environmentalProperties: nodeConfig.environmentalProperties || {},
-        resourceAvailability: nodeConfig.resourceAvailability || {},
-        culturalContext: nodeConfig.culturalContext || {},
-        assignedCharacters: nodeConfig.assignedCharacters || [],
-        // No position or spatial coordinates - mappless design
-        interactions: this.getNodeInteractions(nodeConfig, config.interactions)
-      };
-    });
-
-    // Process capability-driven characters
-    worldState.npcs = config.characters.map(characterConfig => {
-      // Find which node this character is assigned to
-      const assignedNode = config.nodes.find(node => 
-        node.assignedCharacters && node.assignedCharacters.includes(characterConfig.id)
-      );
-
-      const character = new Character({
-        id: characterConfig.id,
-        name: characterConfig.name,
-        currentNodeId: assignedNode ? assignedNode.id : null,
-        attributes: characterConfig.attributes || this.generateDefaultAttributes(),
-        personality: characterConfig.personality || {},
-        consciousness: characterConfig.consciousness || { frequency: 40, coherence: 0.7 },
-        skills: characterConfig.skills || {},
-        goals: characterConfig.goals || [],
-        energy: characterConfig.energy || 100,
-        health: characterConfig.health || 100,
-        mood: characterConfig.mood || 80
-      });
-
-      // Add assignedInteractions as a separate property since Character entity doesn't support it
-      character.assignedInteractions = characterConfig.assignedInteractions || [];
-
-      // Ensure currentNodeId is set correctly
-      if (assignedNode) {
-        character.currentNodeId = assignedNode.id;
-      }
-
-      return character;
-    });
-
-    // Initialize resources based on node availability
-    this.initializeResourcesFromNodes(worldState);
-
-    return worldState;
   }
 
   // Get interactions available at a specific node
@@ -729,6 +594,73 @@ class SimulationService {
   // Get current world state (public accessor)
   getCurrentWorldState() {
     return this.worldState;
+  }
+
+  // Get historical events from the HistoryGenerator
+  getHistoricalEvents(filters = {}) {
+    try {
+      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const historyGenerator = new HistoryGenerator();
+      return historyGenerator.getEvents(filters);
+    } catch (error) {
+      console.error('Error retrieving historical events:', error);
+      return [];
+    }
+  }
+
+  // Get need satisfaction events for a specific settlement
+  getNeedSatisfactionEvents(settlementId) {
+    try {
+      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const historyGenerator = new HistoryGenerator();
+      return historyGenerator.getNeedSatisfactionEvents(settlementId);
+    } catch (error) {
+      console.error('Error retrieving need satisfaction events:', error);
+      return [];
+    }
+  }
+
+  // Get consequence events for a specific settlement
+  getConsequenceEvents(settlementId) {
+    try {
+      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const historyGenerator = new HistoryGenerator();
+      return historyGenerator.getConsequenceEvents(settlementId);
+    } catch (error) {
+      console.error('Error retrieving consequence events:', error);
+      return [];
+    }
+  }
+
+  // Get prosperity/decline events for a specific settlement
+  getSettlementProsperityEvents(settlementId) {
+    try {
+      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const historyGenerator = new HistoryGenerator();
+      return historyGenerator.getSettlementProsperityEvents(settlementId);
+    } catch (error) {
+      console.error('Error retrieving prosperity events:', error);
+      return [];
+    }
+  }
+
+  // Get historical event statistics
+  getHistoricalEventStatistics() {
+    try {
+      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const historyGenerator = new HistoryGenerator();
+      return historyGenerator.getEventStatistics();
+    } catch (error) {
+      console.error('Error retrieving event statistics:', error);
+      return {
+        total: 0,
+        byType: {},
+        bySeverity: {},
+        bySettlement: {},
+        averageSignificance: 0,
+        timeRange: { earliest: null, latest: null }
+      };
+    }
   }
 
   // Analyze the current history

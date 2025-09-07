@@ -6,7 +6,6 @@
  */
 
 import Encounter from '../../domain/entities/Encounter.js';
-import Interaction from '../../domain/entities/Interaction.js';
 
 class EncounterService {
   constructor() {
@@ -368,18 +367,6 @@ class EncounterService {
     const encounter = Encounter.fromTemplate(template, overrides);
     this.encounters.set(encounter.id, encounter);
     return encounter;
-  }
-
-  /**
-   * Export encounter as template
-   */
-  exportAsTemplate(encounterId) {
-    const encounter = this.getEncounter(encounterId);
-    if (!encounter) {
-      throw new Error(`Encounter not found: ${encounterId}`);
-    }
-
-    return encounter.toTemplate();
   }
 }
 

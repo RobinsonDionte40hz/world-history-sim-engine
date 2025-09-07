@@ -6,6 +6,7 @@ import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import BasicNeedsService from '../../../domain/services/BasicNeedsService.js';
 import NeedConsequenceService from '../../../domain/services/NeedConsequenceService.js';
+import ConsequenceLifecycleManager from '../../../domain/services/ConsequenceLifecycleManager.js';
 import SettlementService from '../../../domain/services/SettlementService.js';
 import CharacterBehaviorModifierService from '../../../domain/services/CharacterBehaviorModifierService.js';
 
@@ -96,10 +97,18 @@ const runTick = (worldState) => {
   if (worldState.settlements && Array.isArray(worldState.settlements)) {
     const basicNeedsService = new BasicNeedsService();
     const needConsequenceService = new NeedConsequenceService();
+    const consequenceLifecycleManager = new ConsequenceLifecycleManager();
     const settlementService = new SettlementService();
+    const historyGenerator = new HistoryGenerator();
 
     worldState.settlements.forEach((settlement, index) => {
       try {
+        // Store previous need satisfaction for comparison
+        const previousSatisfaction = settlement.needSatisfaction?.current ? {
+          overall: settlement.needSatisfaction.current.overall,
+          needs: { ...settlement.needSatisfaction.current }
+        } : null;
+
         // Initialize need satisfaction if not already present
         if (!settlement.needSatisfaction) {
           worldState.settlements[index] = settlementService.initializeNeedSatisfaction(settlement);
@@ -110,24 +119,58 @@ const runTick = (worldState) => {
         const satisfactionResult = basicNeedsService.calculateSatisfactionLevel(settlement);
         
         // Generate consequences based on need satisfaction
-        const consequences = needConsequenceService.generateConsequences(
+        const newConsequences = needConsequenceService.generateConsequences(
           satisfactionResult.needs,
           settlement
         );
 
+        // Add new consequences to the settlement
+        let updatedSettlement = consequenceLifecycleManager.addConsequencesToSettlement(
+          settlement,
+          newConsequences
+        );
+
+        // Process consequence lifecycle (aging, resolution, cleanup)
+        const lifecycleResults = consequenceLifecycleManager.processConsequenceLifecycle(
+          [updatedSettlement],
+          {} // No player actions in automated processing
+        );
+
+        // Update settlement with processed consequences
+        updatedSettlement = lifecycleResults.processedSettlements[0];
+
+        // Clean up resolved/expired consequences
+        const cleanupResults = consequenceLifecycleManager.cleanupResolvedConsequences(updatedSettlement);
+        updatedSettlement = cleanupResults.settlement;
+
         // Generate historical events for significant changes
-        const eventIds = [];
-        if (consequences && consequences.length > 0) {
-          consequences.forEach(consequence => {
-            const eventId = `consequence_${consequence.id}_${worldState.time}`;
-            eventIds.push(eventId);
-          });
+        if (previousSatisfaction) {
+          const currentSatisfaction = {
+            overall: satisfactionResult.overall,
+            needs: satisfactionResult.needs
+          };
+
+          // Generate and save historical events
+          const historicalEvents = historyGenerator.generateNeedSatisfactionEvents(
+            updatedSettlement,
+            previousSatisfaction,
+            currentSatisfaction,
+            newConsequences
+          );
+
+          // Log the number of events generated for debugging
+          if (historicalEvents.length > 0) {
+            console.log(`Generated ${historicalEvents.length} historical events for ${updatedSettlement.name}`);
+          }
         }
 
         // Update settlement with new need satisfaction data
-        const consequenceIds = consequences.map(c => c.id);
+        const activeConsequences = updatedSettlement.needSatisfaction?.activeConsequences || [];
+        const consequenceIds = activeConsequences.map(c => c.id);
+        const eventIds = activeConsequences.map(c => `consequence_${c.id}_${worldState.time}`);
+        
         worldState.settlements[index] = settlementService.updateNeedSatisfaction(
-          settlement,
+          updatedSettlement,
           satisfactionResult,
           consequenceIds,
           eventIds

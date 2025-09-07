@@ -8,6 +8,7 @@ export { default as AlignmentService } from './AlignmentService';
 export { default as AssignmentManager, AssignmentManager as AssignmentManagerClass } from './AssignmentManager';
 export { default as BasicNeedsService } from './BasicNeedsService';
 export { default as NeedConsequenceService } from './NeedConsequenceService';
+export { default as ConsequenceLifecycleManager } from './ConsequenceLifecycleManager';
 export { default as SettlementService } from './SettlementService';
 export { default as CharacterBehaviorModifierService } from './CharacterBehaviorModifierService';
 export { default as WorldBuilder } from './WorldBuilder';
