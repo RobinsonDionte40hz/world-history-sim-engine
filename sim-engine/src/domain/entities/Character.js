@@ -19,7 +19,7 @@ class Character {
     // Basic character properties
     this.id = config.id || this._generateId();
     this.name = config.name || 'Unnamed Character';
-    this.age = config.age || 25;
+    this.age = config.age !== undefined ? config.age : 25;
     this.level = config.level || 1;
 
     // Character type for validation and field requirements
@@ -1361,6 +1361,20 @@ class Character {
       result[key] = { score: simpleAttributes[key] };
     });
     return result;
+  }
+
+  /**
+   * Get default attributes
+   */
+  _getDefaultAttributes() {
+    return {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      wisdom: 10,
+      charisma: 10
+    };
   }
 
   /**

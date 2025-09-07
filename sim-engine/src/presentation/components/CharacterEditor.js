@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
-import { Users, User, Save, Download, Upload } from 'lucide-react';
+import { Users, User, Save, Upload } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
 
@@ -1198,9 +1198,17 @@ const CharacterEditor = ({
   const validateCharacter = useCallback(() => {
     const validationResult = validateCharacterForSave(characterData);
     
+    // Defensive check for validation result
+    if (!validationResult || typeof validationResult !== 'object') {
+      console.error('Invalid validation result:', validationResult);
+      setErrors({ general: 'Validation failed - please check character data' });
+      return false;
+    }
+    
     // Convert validation errors to component error format
     const newErrors = {};
-    validationResult.errors.forEach(error => {
+    const errors = validationResult.errors || [];
+    errors.forEach(error => {
       const fieldPath = error.field.split('.');
       if (fieldPath.length === 1) {
         newErrors[fieldPath[0]] = error.message;
@@ -1924,12 +1932,12 @@ const CharacterEditor = ({
             <span className="font-medium text-gray-300">Goals:</span> <span className="text-white">{characterData.goals?.length || 0}</span>
           </div>
           <div>
-            <span className="font-medium text-gray-300">Interactions:</span> <span className="text-white">{characterData.assignedInteractions.length}</span>
+            <span className="font-medium text-gray-300">Interactions:</span> <span className="text-white">{characterData.assignedInteractions?.length || 0}</span>
           </div>
           {creationMode === CHARACTER_CREATION_MODES.DETAILED && (
             <>
               <div>
-                <span className="font-medium text-gray-300">Skills:</span> <span className="text-white">{Object.keys(characterData.skills).length}</span>
+                <span className="font-medium text-gray-300">Skills:</span> <span className="text-white">{Object.keys(characterData.skills || {}).length}</span>
               </div>
               <div>
                 <span className="font-medium text-gray-300">Equipment:</span> <span className="text-white">{
@@ -1937,7 +1945,7 @@ const CharacterEditor = ({
                 } items</span>
               </div>
               <div>
-                <span className="font-medium text-gray-300">Relationships:</span> <span className="text-white">{characterData.relationshipTemplates.length}</span>
+                <span className="font-medium text-gray-300">Relationships:</span> <span className="text-white">{characterData.relationshipTemplates?.length || 0}</span>
               </div>
             </>
           )}
@@ -1970,12 +1978,12 @@ const CharacterEditor = ({
                   <div className={`w-2 h-2 rounded-full ${characterData.name && characterData.description ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                   Basic Info
                 </div>
-                <div className={`flex items-center gap-2 ${characterData.goals.length > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
-                  <div className={`w-2 h-2 rounded-full ${characterData.goals.length > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                <div className={`flex items-center gap-2 ${(characterData.goals?.length || 0) > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${(characterData.goals?.length || 0) > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                   Goals
                 </div>
-                <div className={`flex items-center gap-2 ${characterData.assignedInteractions.length > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
-                  <div className={`w-2 h-2 rounded-full ${characterData.assignedInteractions.length > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                <div className={`flex items-center gap-2 ${(characterData.assignedInteractions?.length || 0) > 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${(characterData.assignedInteractions?.length || 0) > 0 ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                   Interactions
                 </div>
                 <div className="text-purple-400 text-xs ml-auto">

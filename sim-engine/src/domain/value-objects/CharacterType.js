@@ -11,10 +11,10 @@ export class CharacterType extends BaseValueObject {
   constructor(config = {}) {
     super();
     
-    this.typeId = config.typeId || 'generic';
-    this.name = config.name || 'Generic Character';
-    this.description = config.description || 'A basic character type';
-    this.category = config.category || 'npc'; // npc, leader, trader, warrior, mage, etc.
+    this.typeId = config.typeId !== undefined ? config.typeId : 'generic';
+    this.name = config.name !== undefined ? config.name : 'Generic Character';
+    this.description = config.description !== undefined ? config.description : 'A basic character type';
+    this.category = config.category !== undefined ? config.category : 'npc'; // npc, leader, trader, warrior, mage, etc.
     
     // Field requirements define which fields are required, optional, or hidden
     this.fieldRequirements = config.fieldRequirements || this._getDefaultFieldRequirements();
@@ -130,7 +130,7 @@ export class CharacterType extends BaseValueObject {
 
     // Check required fields
     for (const field of this.getRequiredFields()) {
-      if (!characterData[field] || characterData[field] === null || characterData[field] === undefined) {
+      if (characterData[field] === null || characterData[field] === undefined) {
         errors.push({
           field,
           type: 'required',

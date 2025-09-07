@@ -140,6 +140,15 @@ export const saveCharacter = async (characterData, options = {}) => {
  * @returns {Object} Validation result with errors array
  */
 export const validateCharacterForSave = (characterData, options = {}) => {
+  // Handle null/undefined characterData
+  if (!characterData || typeof characterData !== 'object') {
+    console.warn('validateCharacterForSave called with invalid characterData:', characterData);
+    return {
+      isValid: false,
+      errors: [{ field: 'character', message: 'Character data is required' }]
+    };
+  }
+
   const errors = [];
   
   // Basic validation

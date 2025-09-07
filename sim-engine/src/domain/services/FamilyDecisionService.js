@@ -879,6 +879,317 @@ class FamilyDecisionService {
     
     return recommendations;
   }
+
+  // ==================== PROCREATION DECISION SYSTEM ====================
+
+  /**
+   * Evaluates procreation decision for a married couple
+   * @param {Array} marriedCouple - Array containing two married characters [parent1, parent2]
+   * @param {Object} settlement - Settlement context
+   * @returns {Object} Procreation decision analysis
+   */
+  evaluateProcreationDecision(marriedCouple, settlement) {
+    if (!marriedCouple || marriedCouple.length !== 2) {
+      throw new Error('marriedCouple must be an array of exactly 2 characters');
+    }
+
+    const [parent1, parent2] = marriedCouple;
+    
+    // Use existing D&D attributes for family planning wisdom
+    const familyPlanningWisdom = (
+      (parent1.attributes?.wisdom?.score || 10) + 
+      (parent2.attributes?.wisdom?.score || 10)
+    ) / 2;
+    
+    const factors = {
+      // Economic stability using existing resource system
+      economicStability: this.calculateEconomicStability(marriedCouple, settlement),
+      
+      // Health factors using constitution
+      healthFactors: this.calculateHealthSuitability(marriedCouple),
+      
+      // Settlement conditions using existing settlement system
+      settlementConditions: this.evaluateSettlementForChildren(settlement),
+      
+      // Personal desire based on personality traits
+      personalDesire: this.calculatePersonalDesire(marriedCouple),
+      
+      // Age factors
+      ageFactors: this.calculateAgeFactors(marriedCouple)
+    };
+    
+    // Weight decision by wisdom and consciousness
+    const avgConsciousness = (
+      (parent1.consciousness?.coherence || 0.5) + 
+      (parent2.consciousness?.coherence || 0.5)
+    ) / 2;
+    
+    // Balanced decision weight calculation
+    // Wisdom contributes but not too generously, consciousness provides important modifier
+    const wisdomFactor = Math.min(1.0, familyPlanningWisdom / 16); // Scale to 16 for balance
+    const consciousnessFactor = 0.6 + (avgConsciousness * 0.4); // Range from 0.6 to 1.0
+    const decisionWeight = wisdomFactor * consciousnessFactor;
+    
+    const procreationProbability = this.calculateProcreationProbability(factors);
+    const shouldProcreate = procreationProbability * decisionWeight > 0.6;
+    
+    return {
+      decision: shouldProcreate,
+      probability: procreationProbability,
+      decisionWeight,
+      factors,
+      reasoning: this.generateProcreationReasoningText(factors, shouldProcreate),
+      recommendations: this.generateProcreationRecommendations(factors, shouldProcreate)
+    };
+  }
+
+  /**
+   * Calculate economic stability for procreation decision
+   */
+  calculateEconomicStability(marriedCouple, settlement) {
+    const [parent1, parent2] = marriedCouple;
+    
+    // Combined household resources
+    const combinedWealth = (parent1.resources?.wealth || 0) + (parent2.resources?.wealth || 0);
+    const combinedIncome = (parent1.resources?.income || 0) + (parent2.resources?.income || 0);
+    const hasHousing = (parent1.resources?.property || 0) + (parent2.resources?.property || 0) > 0;
+    
+    // Settlement economic context
+    const settlementAvgWealth = settlement?.economy?.averageWealth || 100;
+    const settlementAvgIncome = settlement?.economy?.averageIncome || 50;
+    
+    // Calculate relative economic position
+    const wealthStability = Math.min(1.0, combinedWealth / (settlementAvgWealth * 1.5));
+    const incomeStability = Math.min(1.0, combinedIncome / (settlementAvgIncome * 1.2));
+    const housingStability = hasHousing ? 0.8 : 0.2;
+    
+    return (wealthStability * 0.4 + incomeStability * 0.4 + housingStability * 0.2);
+  }
+
+  /**
+   * Calculate health suitability for procreation
+   */
+  calculateHealthSuitability(marriedCouple) {
+    const [parent1, parent2] = marriedCouple;
+    
+    // Constitution scores indicate physical health
+    const parent1Health = (parent1.attributes?.constitution?.score || 10) / 20;
+    const parent2Health = (parent2.attributes?.constitution?.score || 10) / 20;
+    
+    // Age factors for health
+    const parent1AgeHealth = this.calculateAgeHealthFactor(parent1.age);
+    const parent2AgeHealth = this.calculateAgeHealthFactor(parent2.age);
+    
+    const avgBaseHealth = (parent1Health + parent2Health) / 2;
+    const avgAgeHealth = (parent1AgeHealth + parent2AgeHealth) / 2;
+    
+    return Math.min(1.0, avgBaseHealth * avgAgeHealth);
+  }
+
+  /**
+   * Calculate age health factor
+   */
+  calculateAgeHealthFactor(age) {
+    if (age < 18) return 0.3; // Too young
+    if (age <= 25) return 1.0; // Optimal
+    if (age <= 35) return 0.9; // Good
+    if (age <= 40) return 0.7; // Declining but acceptable
+    if (age <= 45) return 0.5; // More challenging
+    return 0.3; // High risk
+  }
+
+  /**
+   * Evaluate settlement conditions for raising children
+   */
+  evaluateSettlementForChildren(settlement) {
+    if (!settlement) return 0.5; // Neutral if no settlement data
+    
+    // Settlement safety and stability
+    const populationStability = this.calculatePopulationStability(settlement);
+    const resourceAvailability = this.calculateResourceAvailability(settlement);
+    const socialSafety = this.calculateSocialSafety(settlement);
+    
+    return (populationStability * 0.3 + resourceAvailability * 0.4 + socialSafety * 0.3);
+  }
+
+  /**
+   * Calculate population stability
+   */
+  calculatePopulationStability(settlement) {
+    const population = settlement.population?.total || 0;
+    const growth = settlement.population?.growth || 0;
+    
+    // Stable communities with moderate growth are better for children
+    if (population < 50) return 0.4; // Too small, limited resources
+    if (population > 5000) return 0.6; // Large but potentially impersonal
+    
+    const growthFactor = Math.min(1.0, Math.max(0.2, 0.8 + growth * 2));
+    return Math.min(1.0, (Math.min(population, 1000) / 1000) * growthFactor);
+  }
+
+  /**
+   * Calculate resource availability for children
+   */
+  calculateResourceAvailability(settlement) {
+    const resources = settlement.resources || {};
+    
+    // Key resources for child-rearing
+    const foodAvailability = Math.min(1.0, (resources.amounts?.food || 0) / 100);
+    const waterAvailability = Math.min(1.0, (resources.amounts?.water || 0) / 100);
+    const materialAvailability = Math.min(1.0, (resources.amounts?.materials || 0) / 100);
+    
+    return (foodAvailability * 0.5 + waterAvailability * 0.3 + materialAvailability * 0.2);
+  }
+
+  /**
+   * Calculate social safety for children
+   */
+  calculateSocialSafety(settlement) {
+    // Based on government stability and law enforcement
+    const hasStableGovernment = settlement.government?.type ? 0.7 : 0.3;
+    const hasLaws = settlement.government?.laws?.length > 0 ? 0.8 : 0.4;
+    
+    return (hasStableGovernment + hasLaws) / 2;
+  }
+
+  /**
+   * Calculate personal desire for children based on personality traits
+   */
+  calculatePersonalDesire(marriedCouple) {
+    return marriedCouple.map(parent => {
+      let desire = 0.5; // Base neutral
+      
+      const traits = parent.personality?.traits || {};
+      
+      // Positive influences on desire for children
+      if (traits.empathy > 0.7) desire += 0.3;
+      if (traits.curiosity > 0.6) desire += 0.2;
+      if (traits.patience > 0.6) desire += 0.2;
+      if (traits.loyalty > 0.7) desire += 0.2;
+      
+      // Negative influences
+      if (traits.aggression > 0.8) desire -= 0.2;
+      if (traits.ambition > 0.8) desire -= 0.1; // May prioritize career
+      
+      return Math.max(0, Math.min(1, desire));
+    }).reduce((sum, val) => sum + val, 0) / 2;
+  }
+
+  /**
+   * Calculate age factors for procreation
+   */
+  calculateAgeFactors(marriedCouple) {
+    return marriedCouple.map(parent => {
+      const age = parent.age;
+      
+      if (age < 18) return 0.1; // Too young
+      if (age <= 25) return 1.0; // Optimal
+      if (age <= 35) return 0.8; // Good
+      if (age <= 40) return 0.6; // Acceptable
+      if (age <= 45) return 0.3; // Challenging
+      return 0.1; // Very challenging
+    }).reduce((sum, val) => Math.min(sum, val), 1); // Use minimum to be conservative
+  }
+
+  /**
+   * Calculate overall procreation probability from factors
+   */
+  calculateProcreationProbability(factors) {
+    const weights = {
+      economicStability: 0.25,
+      healthFactors: 0.25,
+      settlementConditions: 0.20,
+      personalDesire: 0.20,
+      ageFactors: 0.10
+    };
+    
+    return Object.entries(factors)
+      .reduce((sum, [factor, value]) => sum + (value * weights[factor]), 0);
+  }
+
+  /**
+   * Generate reasoning text for procreation decision
+   */
+  generateProcreationReasoningText(factors, shouldProcreate) {
+    const reasoningParts = [];
+    
+    if (factors.economicStability > 0.7) {
+      reasoningParts.push("The couple has strong economic stability to support a family");
+    } else if (factors.economicStability < 0.4) {
+      reasoningParts.push("Economic challenges may make child-rearing difficult");
+    }
+    
+    if (factors.healthFactors > 0.7) {
+      reasoningParts.push("Both partners are in good health for procreation");
+    } else if (factors.healthFactors < 0.4) {
+      reasoningParts.push("Health concerns may complicate pregnancy and child-rearing");
+    }
+    
+    if (factors.settlementConditions > 0.7) {
+      reasoningParts.push("The settlement provides a safe environment for children");
+    } else if (factors.settlementConditions < 0.4) {
+      reasoningParts.push("Settlement conditions are not ideal for raising children");
+    }
+    
+    if (factors.personalDesire > 0.7) {
+      reasoningParts.push("Both partners have a strong desire for children");
+    } else if (factors.personalDesire < 0.4) {
+      reasoningParts.push("Limited personal desire for children affects the decision");
+    }
+    
+    if (factors.ageFactors < 0.4) {
+      reasoningParts.push("Age factors present challenges for procreation");
+    }
+    
+    const conclusion = shouldProcreate 
+      ? "The overall assessment favors starting a family"
+      : "The assessment suggests waiting or reconsidering having children";
+    
+    return reasoningParts.length > 0 
+      ? reasoningParts.join(". ") + ". " + conclusion
+      : conclusion;
+  }
+
+  /**
+   * Generate recommendations for procreation decision
+   */
+  generateProcreationRecommendations(factors, shouldProcreate) {
+    const recommendations = [];
+    
+    if (shouldProcreate) {
+      recommendations.push("Proceed with family planning");
+      
+      if (factors.economicStability < 0.6) {
+        recommendations.push("Continue building financial stability");
+      }
+      if (factors.healthFactors < 0.6) {
+        recommendations.push("Consult healers about health optimization");
+      }
+      if (factors.settlementConditions < 0.6) {
+        recommendations.push("Consider improving living conditions");
+      }
+    } else {
+      recommendations.push("Consider waiting before having children");
+      
+      if (factors.economicStability < 0.5) {
+        recommendations.push("Focus on improving economic situation first");
+      }
+      if (factors.healthFactors < 0.5) {
+        recommendations.push("Address health concerns before procreation");
+      }
+      if (factors.settlementConditions < 0.5) {
+        recommendations.push("Consider relocating to a more family-friendly settlement");
+      }
+      if (factors.personalDesire < 0.5) {
+        recommendations.push("Spend time reflecting on family goals and desires");
+      }
+      if (factors.ageFactors < 0.5) {
+        recommendations.push("Consider age-related challenges and support needs");
+      }
+    }
+    
+    return recommendations;
+  }
 }
 
 export default FamilyDecisionService;
