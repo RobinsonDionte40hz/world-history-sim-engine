@@ -108,6 +108,10 @@ export class PrerequisiteValidator {
           return this.validatePersonalityCondition(condition, character);
         case 'racial':
           return this.validateRacialCondition(condition, character);
+        case 'wealth':
+          return this.validateWealthCondition(condition, character);
+        case 'risk_tolerance':
+          return this.validateRiskToleranceCondition(condition, character);
         default:
           return {
             isValid: false,
@@ -234,12 +238,43 @@ export class PrerequisiteValidator {
   static validateLevelCondition(condition, character) {
     const playerLevel = character.level || 0;
     const requiredLevel = condition.value || 0;
+    const operator = condition.operator || '>=';
+    
+    let conditionMet = false;
+    switch (operator) {
+      case '>=':
+        conditionMet = playerLevel >= requiredLevel;
+        break;
+      case '>':
+        conditionMet = playerLevel > requiredLevel;
+        break;
+      case '<=':
+        conditionMet = playerLevel <= requiredLevel;
+        break;
+      case '<':
+        conditionMet = playerLevel < requiredLevel;
+        break;
+      case '==':
+      case '=':
+        conditionMet = playerLevel === requiredLevel;
+        break;
+      default:
+        return {
+          isValid: false,
+          errors: [{
+            field: 'level',
+            message: `Invalid level operator: ${operator}`,
+            severity: 'error'
+          }],
+          warnings: []
+        };
+    }
     
     return {
-      isValid: playerLevel >= requiredLevel,
-      errors: playerLevel >= requiredLevel ? [] : [{
+      isValid: conditionMet,
+      errors: conditionMet ? [] : [{
         field: 'level',
-        message: `Requires level ${requiredLevel}, current level is ${playerLevel}`,
+        message: `Requires level ${operator} ${requiredLevel}, current level is ${playerLevel}`,
         severity: 'error'
       }],
       warnings: []
@@ -250,12 +285,43 @@ export class PrerequisiteValidator {
     const playerSkills = character.skills || {};
     const skillLevel = playerSkills[condition.skillId] || 0;
     const requiredLevel = condition.value || 0;
+    const operator = condition.operator || '>=';
+    
+    let conditionMet = false;
+    switch (operator) {
+      case '>=':
+        conditionMet = skillLevel >= requiredLevel;
+        break;
+      case '>':
+        conditionMet = skillLevel > requiredLevel;
+        break;
+      case '<=':
+        conditionMet = skillLevel <= requiredLevel;
+        break;
+      case '<':
+        conditionMet = skillLevel < requiredLevel;
+        break;
+      case '==':
+      case '=':
+        conditionMet = skillLevel === requiredLevel;
+        break;
+      default:
+        return {
+          isValid: false,
+          errors: [{
+            field: 'skill',
+            message: `Invalid skill operator: ${operator}`,
+            severity: 'error'
+          }],
+          warnings: []
+        };
+    }
     
     return {
-      isValid: skillLevel >= requiredLevel,
-      errors: skillLevel >= requiredLevel ? [] : [{
+      isValid: conditionMet,
+      errors: conditionMet ? [] : [{
         field: 'skill',
-        message: `Requires ${condition.skillId} level ${requiredLevel}, current level is ${skillLevel}`,
+        message: `Requires ${condition.skillId} level ${operator} ${requiredLevel}, current level is ${skillLevel}`,
         severity: 'error'
       }],
       warnings: []
@@ -694,5 +760,125 @@ export class PrerequisiteValidator {
     // Validate action-specific prerequisites
     // This can be extended based on specific action types
     return { isValid: true, errors: [], warnings: [] };
+  }
+
+  /**
+   * NEW: Validate wealth condition for investments
+   */
+  static validateWealthCondition(condition, character) {
+    const errors = [];
+    const warnings = [];
+    
+    if (!character.economicProfile) {
+      errors.push({
+        field: 'economicProfile',
+        message: 'Character must have an economic profile for wealth checks',
+        severity: 'error'
+      });
+      return { isValid: false, errors, warnings };
+    }
+
+    const wealth = character.economicProfile.wealth;
+    const requiredWealth = condition.value;
+    const operator = condition.operator || '>=';
+
+    let conditionMet = false;
+    switch (operator) {
+      case '>=':
+        conditionMet = wealth >= requiredWealth;
+        break;
+      case '>':
+        conditionMet = wealth > requiredWealth;
+        break;
+      case '<=':
+        conditionMet = wealth <= requiredWealth;
+        break;
+      case '<':
+        conditionMet = wealth < requiredWealth;
+        break;
+      case '==':
+      case '=':
+        conditionMet = wealth === requiredWealth;
+        break;
+      default:
+        errors.push({
+          field: 'condition.operator',
+          message: `Invalid wealth operator: ${operator}`,
+          severity: 'error'
+        });
+        return { isValid: false, errors, warnings };
+    }
+
+    if (!conditionMet) {
+      errors.push({
+        field: 'wealth',
+        message: `Insufficient wealth: need ${requiredWealth}, have ${wealth}`,
+        severity: 'error'
+      });
+    }
+
+    return { isValid: conditionMet, errors, warnings };
+  }
+
+  /**
+   * NEW: Validate risk tolerance condition for investments
+   */
+  static validateRiskToleranceCondition(condition, character) {
+    const errors = [];
+    const warnings = [];
+    
+    if (!character.economicProfile) {
+      errors.push({
+        field: 'economicProfile',
+        message: 'Character must have an economic profile for risk tolerance checks',
+        severity: 'error'
+      });
+      return { isValid: false, errors, warnings };
+    }
+
+    const riskTolerance = character.economicProfile.metadata.riskTolerance;
+    const requiredRisk = condition.value;
+    const operator = condition.operator || '>=';
+
+    const riskLevels = { conservative: 0, moderate: 1, aggressive: 2 };
+    const currentLevel = riskLevels[riskTolerance] || 1;
+    const requiredLevel = riskLevels[requiredRisk] || 1;
+
+    let conditionMet = false;
+    switch (operator) {
+      case '>=':
+        conditionMet = currentLevel >= requiredLevel;
+        break;
+      case '>':
+        conditionMet = currentLevel > requiredLevel;
+        break;
+      case '<=':
+        conditionMet = currentLevel <= requiredLevel;
+        break;
+      case '<':
+        conditionMet = currentLevel < requiredLevel;
+        break;
+      case '==':
+      case '=':
+        conditionMet = currentLevel === requiredLevel;
+        break;
+      default:
+        errors.push({
+          field: 'condition.operator',
+          message: `Invalid risk tolerance operator: ${operator}`,
+          severity: 'error'
+        });
+        return { isValid: false, errors, warnings };
+    }
+
+    if (!conditionMet) {
+      errors.push({
+        field: 'riskTolerance',
+        message: `Risk tolerance mismatch: need ${requiredRisk}, have ${riskTolerance}`,
+        severity: 'error'
+      });
+    }
+
+    return { isValid: conditionMet, errors, warnings };
   }
 }

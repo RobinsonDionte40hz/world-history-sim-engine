@@ -7,6 +7,7 @@ import PersonalityProfile from '../value-objects/PersonalityProfile.js';
 import { RacialTraits } from '../value-objects/RacialTraits.js';
 import { CharacterType } from '../value-objects/CharacterType.js';
 import Attributes from '../value-objects/Attributes.js';
+import EconomicProfile from '../value-objects/EconomicProfile.js';
 import AlignmentService from '../services/AlignmentService.js';
 import InfluenceService from '../services/InfluenceService.js';
 import PrestigeService from '../services/PrestigeService.js';
@@ -33,7 +34,8 @@ class Character {
       interactions: new Set(config.assignedInteractionIds || []),
       quests: new Set(config.assignedQuestIds || []),
       settlements: new Set(config.assignedSettlementIds || []),
-      factions: new Set(config.assignedFactionIds || [])
+      factions: new Set(config.assignedFactionIds || []),
+      investments: new Set(config.assignedInvestmentIds || [])
     };
 
     // Initialize racial traits first (affects other systems)
@@ -73,6 +75,13 @@ class Character {
     this.prestige = config.prestige instanceof Prestige
       ? config.prestige
       : new Prestige(prestigeTracks, prestigeValues, prestigeHistory);
+
+    // Initialize economic profile with default values if not provided
+    this.economicProfile = config.economicProfile instanceof EconomicProfile
+      ? config.economicProfile
+      : (config.initialWealth !== undefined ? 
+          EconomicProfile.createStarter(config.initialWealth) : 
+          EconomicProfile.createDefault());
 
     // Apply racial modifiers to base attributes
     this.baseAttributes = config.baseAttributes || this._getDefaultAttributes();
@@ -153,7 +162,14 @@ class Character {
       quests: this.quests,
       location: this.location,
       characterType: this.characterType.typeId,
-      assignments: this.getAssignmentSummary()
+      assignments: this.getAssignmentSummary(),
+      economicProfile: this.economicProfile ? {
+        wealth: this.economicProfile.wealth,
+        totalValue: this.economicProfile.getTotalValue(),
+        investmentCount: this.economicProfile.investments.length,
+        riskTolerance: this.economicProfile.metadata.riskTolerance,
+        investmentStrategy: this.economicProfile.metadata.investmentStrategy
+      } : null
     };
   }
 
@@ -219,13 +235,15 @@ class Character {
         interactions: this.assignments.interactions.size,
         quests: this.assignments.quests.size,
         settlements: this.assignments.settlements.size,
-        factions: this.assignments.factions.size
+        factions: this.assignments.factions.size,
+        investments: this.assignments.investments.size
       },
       nodeIds: Array.from(this.assignments.nodes),
       interactionIds: Array.from(this.assignments.interactions),
       questIds: Array.from(this.assignments.quests),
       settlementIds: Array.from(this.assignments.settlements),
-      factionIds: Array.from(this.assignments.factions)
+      factionIds: Array.from(this.assignments.factions),
+      investmentIds: Array.from(this.assignments.investments)
     };
   }
 
@@ -238,7 +256,8 @@ class Character {
            this.assignments.interactions.size + 
            this.assignments.quests.size + 
            this.assignments.settlements.size + 
-           this.assignments.factions.size;
+           this.assignments.factions.size +
+           this.assignments.investments.size;
   }
 
   /**
@@ -500,6 +519,55 @@ class Character {
     const newAssignments = {
       ...this.assignments,
       factions: newFactions
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Assign character to an investment
+   * @param {string} investmentId - ID of the investment to assign to
+   * @returns {Character} - New Character instance with the assignment
+   */
+  assignToInvestment(investmentId) {
+    if (!this.canBeAssignedTo('investment')) {
+      throw new ValidationError('assignment', investmentId, `Character type '${this.characterType.name}' cannot be assigned to investments`);
+    }
+    
+    if (this.assignments.investments.has(investmentId)) {
+      return this; // Already assigned
+    }
+
+    const newAssignments = {
+      ...this.assignments,
+      investments: new Set([...this.assignments.investments, investmentId])
+    };
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      assignments: newAssignments
+    });
+  }
+
+  /**
+   * Unassign character from an investment
+   * @param {string} investmentId - ID of the investment to unassign from
+   * @returns {Character} - New Character instance without the assignment
+   */
+  unassignFromInvestment(investmentId) {
+    if (!this.assignments.investments.has(investmentId)) {
+      return this; // Not assigned
+    }
+
+    const newInvestments = new Set(this.assignments.investments);
+    newInvestments.delete(investmentId);
+    
+    const newAssignments = {
+      ...this.assignments,
+      investments: newInvestments
     };
 
     return new Character({
@@ -964,7 +1032,8 @@ class Character {
         interactions: Array.from(this.assignments.interactions),
         quests: Array.from(this.assignments.quests),
         settlements: Array.from(this.assignments.settlements),
-        factions: Array.from(this.assignments.factions)
+        factions: Array.from(this.assignments.factions),
+        investments: Array.from(this.assignments.investments)
       },
 
       // Value objects
@@ -973,6 +1042,7 @@ class Character {
       prestige: this.prestige.toJSON(),
       personality: this.personality.toJSON(),
       racialTraits: this.racialTraits.toJSON(),
+      economicProfile: this.economicProfile.toJSON(),
 
       // Attributes and skills
       baseAttributes: { ...this.baseAttributes },
@@ -1023,6 +1093,7 @@ class Character {
       assignedQuestIds: data.assignments?.quests || [],
       assignedSettlementIds: data.assignments?.settlements || [],
       assignedFactionIds: data.assignments?.factions || [],
+      assignedInvestmentIds: data.assignments?.investments || [],
 
       // Reconstruct value objects
       alignment: data.alignment ? Alignment.fromJSON(data.alignment) : undefined,
@@ -1030,6 +1101,7 @@ class Character {
       prestige: data.prestige ? Prestige.fromJSON(data.prestige) : undefined,
       personality: data.personality ? PersonalityProfile.fromJSON(data.personality) : undefined,
       racialTraits: data.racialTraits ? RacialTraits.fromJSON(data.racialTraits) : undefined,
+      economicProfile: data.economicProfile ? EconomicProfile.fromJSON(data.economicProfile) : undefined,
 
       // Attributes and skills
       baseAttributes: data.baseAttributes,

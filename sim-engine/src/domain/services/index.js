@@ -11,6 +11,7 @@ export { default as NeedConsequenceService } from './NeedConsequenceService';
 export { default as ConsequenceLifecycleManager } from './ConsequenceLifecycleManager';
 export { default as SettlementService } from './SettlementService';
 export { default as CharacterBehaviorModifierService } from './CharacterBehaviorModifierService';
+export { default as CharacterEconomicService } from './CharacterEconomicService';
 export { default as WorldBuilder } from './WorldBuilder';
 export { default as WorldValidator } from './WorldValidator';
 export { default as InteractionManager } from './InteractionManager';
