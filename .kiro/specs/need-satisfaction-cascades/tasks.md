@@ -81,7 +81,7 @@
   - Write tests for consequence resolution system
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 11. Add performance optimizations and caching
+- [x] 11. Add performance optimizations and caching
   - Implement calculation caching for unchanged settlements
   - Add batch processing for multiple settlement updates
   - Create efficient data structures for need satisfaction history
@@ -106,7 +106,7 @@
   - Write unit tests for character economic activities following existing test patterns
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-- [ ] 14. Create Character Investment Editor Interface
+- [x] 14. Create Character Investment Editor Interface
   - Design investment management UI integrating with existing character editor
   - Implement investment opportunity discovery using existing interaction patterns
   - Add investment cost calculation following existing validation patterns

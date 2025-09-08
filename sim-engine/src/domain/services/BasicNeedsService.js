@@ -46,29 +46,31 @@ export default class BasicNeedsService extends BaseDomainService {
   /**
    * Calculate satisfaction levels for all basic needs
    * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @returns {Object} Need satisfaction analysis
    */
-  calculateSatisfactionLevel(settlement) {
+  calculateSatisfactionLevel(settlement, investmentEffects = null) {
     try {
       this._validateSettlement(settlement);
       
       const needs = {
-        food: this.calculateFoodSatisfaction(settlement),
-        water: this.calculateWaterSatisfaction(settlement),
-        shelter: this.calculateShelterSatisfaction(settlement),
-        goods: this.calculateGoodsSatisfaction(settlement),
-        services: this.calculateServicesSatisfaction(settlement)
+        food: this.calculateFoodSatisfaction(settlement, investmentEffects),
+        water: this.calculateWaterSatisfaction(settlement, investmentEffects),
+        shelter: this.calculateShelterSatisfaction(settlement, investmentEffects),
+        goods: this.calculateGoodsSatisfaction(settlement, investmentEffects),
+        services: this.calculateServicesSatisfaction(settlement, investmentEffects)
       };
 
       const cascadingEffects = this._calculateCascadingEffects(needs);
       const overall = this._calculateOverallSatisfaction(needs, cascadingEffects);
-      const consequences = this._generateConsequences(needs, settlement);
+      const consequences = this._generateConsequences(needs, settlement, investmentEffects);
 
       return {
         needs: this._clampNeedValues(needs),
         overall: BaseDomainService.clamp(overall, 0.0, 1.0),
         consequences: consequences,
-        cascadingEffects: cascadingEffects
+        cascadingEffects: cascadingEffects,
+        investmentEffects: investmentEffects || {}
       };
     } catch (error) {
       console.error('Need satisfaction calculation failed:', error);
@@ -143,106 +145,133 @@ export default class BasicNeedsService extends BaseDomainService {
   /**
    * Calculate food satisfaction based on settlement resources and infrastructure
    * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @returns {number} Food satisfaction level (0.0 - 1.0)
    */
-  calculateFoodSatisfaction(settlement) {
+  calculateFoodSatisfaction(settlement, investmentEffects = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const foodProduction = this._calculateFoodProduction(settlement);
-    const foodStorage = this._calculateFoodStorage(settlement);
-    const tradeAccess = this._calculateFoodTradeAccess(settlement);
+    const foodProduction = this._calculateFoodProduction(settlement, investmentEffects);
+    const foodStorage = this._calculateFoodStorage(settlement, investmentEffects);
+    const tradeAccess = this._calculateFoodTradeAccess(settlement, investmentEffects);
 
     const totalFoodAvailability = foodProduction + foodStorage + tradeAccess;
     const foodDemand = population * BasicNeedsService.CONSUMPTION_RATES.FOOD_PER_PERSON;
 
-    return Math.min(1.0, totalFoodAvailability / foodDemand);
+    const baseSatisfaction = Math.min(1.0, totalFoodAvailability / foodDemand);
+    
+    // Apply investment effects
+    const investmentMultiplier = this._getInvestmentMultiplier(investmentEffects, 'food');
+    return Math.min(1.0, baseSatisfaction * investmentMultiplier);
   }
 
   /**
    * Calculate water satisfaction based on water sources and infrastructure
    * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @returns {number} Water satisfaction level (0.0 - 1.0)
    */
-  calculateWaterSatisfaction(settlement) {
+  calculateWaterSatisfaction(settlement, investmentEffects = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const waterSources = this._calculateWaterSources(settlement);
-    const waterInfrastructure = this._calculateWaterInfrastructure(settlement);
-    const waterStorage = this._calculateWaterStorage(settlement);
+    const waterSources = this._calculateWaterSources(settlement, investmentEffects);
+    const waterInfrastructure = this._calculateWaterInfrastructure(settlement, investmentEffects);
+    const waterStorage = this._calculateWaterStorage(settlement, investmentEffects);
 
     const totalWaterAvailability = waterSources + waterInfrastructure + waterStorage;
     const waterDemand = population * BasicNeedsService.CONSUMPTION_RATES.WATER_PER_PERSON;
 
-    return Math.min(1.0, totalWaterAvailability / waterDemand);
+    const baseSatisfaction = Math.min(1.0, totalWaterAvailability / waterDemand);
+    
+    // Apply investment effects
+    const investmentMultiplier = this._getInvestmentMultiplier(investmentEffects, 'water');
+    return Math.min(1.0, baseSatisfaction * investmentMultiplier);
   }
 
   /**
    * Calculate shelter satisfaction based on housing and population density
    * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @returns {number} Shelter satisfaction level (0.0 - 1.0)
    */
-  calculateShelterSatisfaction(settlement) {
+  calculateShelterSatisfaction(settlement, investmentEffects = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const housingCapacity = this._calculateHousingCapacity(settlement);
-    const housingQuality = this._calculateHousingQuality(settlement);
+    const housingCapacity = this._calculateHousingCapacity(settlement, investmentEffects);
+    const housingQuality = this._calculateHousingQuality(settlement, investmentEffects);
 
     const basicShelterRatio = Math.min(1.0, housingCapacity / population);
     const qualityModifier = housingQuality;
+    
+    const baseSatisfaction = basicShelterRatio * qualityModifier;
 
-    return basicShelterRatio * qualityModifier;
+    // Apply investment effects
+    const investmentMultiplier = this._getInvestmentMultiplier(investmentEffects, 'shelter');
+    return Math.min(1.0, baseSatisfaction * investmentMultiplier);
   }
 
   /**
    * Calculate goods satisfaction based on production and trade
    * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @returns {number} Goods satisfaction level (0.0 - 1.0)
    */
-  calculateGoodsSatisfaction(settlement) {
+  calculateGoodsSatisfaction(settlement, investmentEffects = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const localProduction = this._calculateGoodsProduction(settlement);
-    const tradeAccess = this._calculateGoodsTradeAccess(settlement);
-    const marketEfficiency = this._calculateMarketEfficiency(settlement);
+    const localProduction = this._calculateGoodsProduction(settlement, investmentEffects);
+    const tradeAccess = this._calculateGoodsTradeAccess(settlement, investmentEffects);
+    const marketEfficiency = this._calculateMarketEfficiency(settlement, investmentEffects);
 
     const totalGoodsAvailability = (localProduction + tradeAccess) * marketEfficiency;
     const goodsDemand = population * BasicNeedsService.CONSUMPTION_RATES.GOODS_PER_PERSON;
 
-    return Math.min(1.0, totalGoodsAvailability / goodsDemand);
+    const baseSatisfaction = Math.min(1.0, totalGoodsAvailability / goodsDemand);
+    
+    // Apply investment effects
+    const investmentMultiplier = this._getInvestmentMultiplier(investmentEffects, 'goods');
+    return Math.min(1.0, baseSatisfaction * investmentMultiplier);
   }
 
   /**
    * Calculate services satisfaction based on available services and infrastructure
    * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @returns {number} Services satisfaction level (0.0 - 1.0)
    */
-  calculateServicesSatisfaction(settlement) {
+  calculateServicesSatisfaction(settlement, investmentEffects = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const healthcareCapacity = this._calculateHealthcareCapacity(settlement);
-    const educationCapacity = this._calculateEducationCapacity(settlement);
-    const religiousCapacity = this._calculateReligiousCapacity(settlement);
-    const administrativeCapacity = this._calculateAdministrativeCapacity(settlement);
+    const healthcareCapacity = this._calculateHealthcareCapacity(settlement, investmentEffects);
+    const educationCapacity = this._calculateEducationCapacity(settlement, investmentEffects);
+    const religiousCapacity = this._calculateReligiousCapacity(settlement, investmentEffects);
+    const administrativeCapacity = this._calculateAdministrativeCapacity(settlement, investmentEffects);
 
     const totalServiceCapacity = healthcareCapacity + educationCapacity + 
                                 religiousCapacity + administrativeCapacity;
     const serviceDemand = population * BasicNeedsService.CONSUMPTION_RATES.SERVICES_PER_PERSON;
 
-    return Math.min(1.0, totalServiceCapacity / serviceDemand);
+    const baseSatisfaction = Math.min(1.0, totalServiceCapacity / serviceDemand);
+    
+    // Apply investment effects
+    const investmentMultiplier = this._getInvestmentMultiplier(investmentEffects, 'services');
+    return Math.min(1.0, baseSatisfaction * investmentMultiplier);
   }
 
   // Private helper methods for calculating specific resource availability
 
   /**
    * Calculate food production from farms and other sources
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateFoodProduction(settlement) {
+  _calculateFoodProduction(settlement, investmentEffects = null) {
     let production = 0;
     
     // Base food from resources
@@ -260,25 +289,41 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects to food production
+    if (investmentEffects && investmentEffects.food) {
+      production *= investmentEffects.food;
+    }
+
     return Math.max(0, production);
   }
 
   /**
    * Calculate food storage capacity
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateFoodStorage(settlement) {
+  _calculateFoodStorage(settlement, investmentEffects = null) {
+    let storage = 0;
     if (settlement.resources && settlement.resources.storage && settlement.resources.storage.food) {
-      return settlement.resources.storage.food;
+      storage = settlement.resources.storage.food;
     }
-    return 0;
+    
+    // Apply investment effects
+    if (investmentEffects && investmentEffects.food) {
+      storage *= investmentEffects.food;
+    }
+    
+    return storage;
   }
 
   /**
    * Calculate food access through trade
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateFoodTradeAccess(settlement) {
+  _calculateFoodTradeAccess(settlement, investmentEffects = null) {
     let tradeAccess = 0;
     
     if (settlement.economy && settlement.economy.trade) {
@@ -289,14 +334,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects (trade route investments improve trade access)
+    if (investmentEffects && investmentEffects.trade) {
+      tradeAccess *= investmentEffects.trade;
+    }
+
     return tradeAccess;
   }
 
   /**
    * Calculate water from natural sources
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateWaterSources(settlement) {
+  _calculateWaterSources(settlement, investmentEffects = null) {
     let waterSources = 0;
     
     // Base water from resources
@@ -317,14 +369,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects
+    if (investmentEffects && investmentEffects.water) {
+      waterSources *= investmentEffects.water;
+    }
+
     return waterSources;
   }
 
   /**
    * Calculate water from infrastructure
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateWaterInfrastructure(settlement) {
+  _calculateWaterInfrastructure(settlement, investmentEffects = null) {
     let infrastructure = 0;
     
     if (settlement.buildings) {
@@ -336,25 +395,41 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects (infrastructure investments improve water infrastructure)
+    if (investmentEffects && investmentEffects.infrastructure) {
+      infrastructure *= investmentEffects.infrastructure;
+    }
+
     return infrastructure;
   }
 
   /**
    * Calculate water storage capacity
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateWaterStorage(settlement) {
+  _calculateWaterStorage(settlement, investmentEffects = null) {
+    let storage = 0;
     if (settlement.resources && settlement.resources.storage && settlement.resources.storage.water) {
-      return settlement.resources.storage.water;
+      storage = settlement.resources.storage.water;
     }
-    return 0;
+    
+    // Apply investment effects
+    if (investmentEffects && investmentEffects.water) {
+      storage *= investmentEffects.water;
+    }
+    
+    return storage;
   }
 
   /**
    * Calculate housing capacity from buildings
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateHousingCapacity(settlement) {
+  _calculateHousingCapacity(settlement, investmentEffects = null) {
     let capacity = 0;
     
     if (settlement.buildings) {
@@ -366,14 +441,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects (shelter/infrastructure investments improve housing)
+    if (investmentEffects && investmentEffects.shelter) {
+      capacity *= investmentEffects.shelter;
+    }
+
     return capacity;
   }
 
   /**
    * Calculate housing quality modifier
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateHousingQuality(settlement) {
+  _calculateHousingQuality(settlement, investmentEffects = null) {
     // Base quality starts at 0.8
     let quality = 0.8;
     
@@ -401,14 +483,21 @@ export default class BasicNeedsService extends BaseDomainService {
       }
     }
 
+    // Apply investment effects (infrastructure investments improve housing quality)
+    if (investmentEffects && investmentEffects.infrastructure) {
+      quality *= Math.min(1.5, investmentEffects.infrastructure); // Cap quality bonus
+    }
+
     return BaseDomainService.clamp(quality, 0.5, 1.2);
   }
 
   /**
    * Calculate goods production from workshops and crafters
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateGoodsProduction(settlement) {
+  _calculateGoodsProduction(settlement, investmentEffects = null) {
     let production = 0;
     
     if (settlement.buildings) {
@@ -420,14 +509,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects (workshop investments improve goods production)
+    if (investmentEffects && investmentEffects.goods) {
+      production *= investmentEffects.goods;
+    }
+
     return production;
   }
 
   /**
    * Calculate goods access through trade
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateGoodsTradeAccess(settlement) {
+  _calculateGoodsTradeAccess(settlement, investmentEffects = null) {
     let tradeAccess = 0;
     
     if (settlement.economy && settlement.economy.trade) {
@@ -437,14 +533,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects (trade route investments improve goods trade access)
+    if (investmentEffects && investmentEffects.trade) {
+      tradeAccess *= investmentEffects.trade;
+    }
+
     return tradeAccess;
   }
 
   /**
    * Calculate market efficiency for goods distribution
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateMarketEfficiency(settlement) {
+  _calculateMarketEfficiency(settlement, investmentEffects = null) {
     let efficiency = 0.7; // Base efficiency
     
     if (settlement.economy && settlement.economy.markets) {
@@ -453,14 +556,26 @@ export default class BasicNeedsService extends BaseDomainService {
       efficiency += marketBonus;
     }
 
+    // Apply investment effects (trade route and infrastructure investments improve market efficiency)
+    if (investmentEffects) {
+      if (investmentEffects.trade) {
+        efficiency *= Math.min(1.3, investmentEffects.trade); // Trade routes improve market efficiency
+      }
+      if (investmentEffects.infrastructure) {
+        efficiency *= Math.min(1.2, investmentEffects.infrastructure); // Infrastructure improves markets
+      }
+    }
+
     return BaseDomainService.clamp(efficiency, 0.5, 1.2);
   }
 
   /**
    * Calculate healthcare service capacity
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateHealthcareCapacity(settlement) {
+  _calculateHealthcareCapacity(settlement, investmentEffects = null) {
     let capacity = 0;
     
     if (settlement.buildings) {
@@ -472,14 +587,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects
+    if (investmentEffects && investmentEffects.services) {
+      capacity *= investmentEffects.services;
+    }
+
     return capacity;
   }
 
   /**
    * Calculate education service capacity
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateEducationCapacity(settlement) {
+  _calculateEducationCapacity(settlement, investmentEffects = null) {
     let capacity = 0;
     
     if (settlement.buildings) {
@@ -491,14 +613,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects
+    if (investmentEffects && investmentEffects.services) {
+      capacity *= investmentEffects.services;
+    }
+
     return capacity;
   }
 
   /**
    * Calculate religious service capacity
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateReligiousCapacity(settlement) {
+  _calculateReligiousCapacity(settlement, investmentEffects = null) {
     let capacity = 0;
     
     if (settlement.buildings) {
@@ -510,14 +639,21 @@ export default class BasicNeedsService extends BaseDomainService {
       });
     }
 
+    // Apply investment effects
+    if (investmentEffects && investmentEffects.services) {
+      capacity *= investmentEffects.services;
+    }
+
     return capacity;
   }
 
   /**
    * Calculate administrative service capacity
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects to apply
    * @private
    */
-  _calculateAdministrativeCapacity(settlement) {
+  _calculateAdministrativeCapacity(settlement, investmentEffects = null) {
     let capacity = 0;
     
     // Government structure provides administrative capacity
@@ -527,6 +663,11 @@ export default class BasicNeedsService extends BaseDomainService {
           capacity += level.positions.length * 2; // Each position provides 2 units of admin capacity
         }
       });
+    }
+
+    // Apply investment effects (infrastructure investments improve administrative efficiency)
+    if (investmentEffects && investmentEffects.infrastructure) {
+      capacity *= Math.min(1.3, investmentEffects.infrastructure);
     }
 
     return capacity;
@@ -768,40 +909,46 @@ export default class BasicNeedsService extends BaseDomainService {
    * Generate consequences based on need satisfaction levels
    * @param {Object} needs - Need satisfaction levels
    * @param {Object} settlement - Settlement experiencing the needs
+   * @param {Object} investmentEffects - Optional investment effects
    * @returns {Array} Array of consequence objects
    * @private
    */
-  _generateConsequences(needs, settlement) {
+  _generateConsequences(needs, settlement, investmentEffects = null) {
     const consequences = [];
 
     // Food-related consequences
     if (needs.food < 0.3) {
       const severity = (0.3 - needs.food) / 0.3;
-      consequences.push(this._createFamineConsequence(settlement, severity));
+      consequences.push(this._createFamineConsequence(settlement, severity, investmentEffects));
     }
 
     // Water-related consequences
     if (needs.water < 0.4) {
       const severity = (0.4 - needs.water) / 0.4;
-      consequences.push(this._createWaterCrisisConsequence(settlement, severity));
+      consequences.push(this._createWaterCrisisConsequence(settlement, severity, investmentEffects));
     }
 
     // Shelter-related consequences
     if (needs.shelter < 0.2) {
       const severity = (0.2 - needs.shelter) / 0.2;
-      consequences.push(this._createHousingCrisisConsequence(settlement, severity));
+      consequences.push(this._createHousingCrisisConsequence(settlement, severity, investmentEffects));
     }
 
     // Goods-related consequences
     if (needs.goods < 0.3) {
       const severity = (0.3 - needs.goods) / 0.3;
-      consequences.push(this._createGoodsShortageConsequence(settlement, severity));
+      consequences.push(this._createGoodsShortageConsequence(settlement, severity, investmentEffects));
     }
 
     // Services-related consequences
     if (needs.services < 0.2) {
       const severity = (0.2 - needs.services) / 0.2;
-      consequences.push(this._createServicesShortageConsequence(settlement, severity));
+      consequences.push(this._createServicesShortageConsequence(settlement, severity, investmentEffects));
+    }
+
+    // Investment-specific consequences
+    if (investmentEffects) {
+      consequences.push(...this._generateInvestmentConsequences(settlement, investmentEffects, needs));
     }
 
     return consequences;
@@ -809,10 +956,13 @@ export default class BasicNeedsService extends BaseDomainService {
 
   /**
    * Create famine consequence
+   * @param {Object} settlement - Settlement experiencing famine
+   * @param {number} severity - Severity level (0.0-1.0)
+   * @param {Object} investmentEffects - Optional investment effects
    * @private
    */
-  _createFamineConsequence(settlement, severity) {
-    return {
+  _createFamineConsequence(settlement, severity, investmentEffects = null) {
+    const consequence = {
       id: `famine_${settlement.id}_${Date.now()}`,
       type: 'famine',
       severity: severity,
@@ -845,14 +995,25 @@ export default class BasicNeedsService extends BaseDomainService {
       resolved: false,
       startDate: new Date()
     };
+
+    // Modify consequence based on investment effects
+    if (investmentEffects && investmentEffects.food > 1.0) {
+      consequence.description += ` despite recent farm investments`;
+      consequence.effects.character.behaviorChanges.push('invest_more_farms');
+    }
+
+    return consequence;
   }
 
   /**
    * Create water crisis consequence
+   * @param {Object} settlement - Settlement experiencing water crisis
+   * @param {number} severity - Severity level (0.0-1.0)
+   * @param {Object} investmentEffects - Optional investment effects
    * @private
    */
-  _createWaterCrisisConsequence(settlement, severity) {
-    return {
+  _createWaterCrisisConsequence(settlement, severity, investmentEffects = null) {
+    const consequence = {
       id: `water_crisis_${settlement.id}_${Date.now()}`,
       type: 'water_crisis',
       severity: severity,
@@ -889,14 +1050,25 @@ export default class BasicNeedsService extends BaseDomainService {
       resolved: false,
       startDate: new Date()
     };
+
+    // Modify consequence based on investment effects
+    if (investmentEffects && investmentEffects.infrastructure > 1.0) {
+      consequence.description += ` despite infrastructure improvements`;
+      consequence.effects.character.behaviorChanges.push('invest_more_infrastructure');
+    }
+
+    return consequence;
   }
 
   /**
    * Create housing crisis consequence
+   * @param {Object} settlement - Settlement experiencing housing crisis
+   * @param {number} severity - Severity level (0.0-1.0)
+   * @param {Object} investmentEffects - Optional investment effects
    * @private
    */
-  _createHousingCrisisConsequence(settlement, severity) {
-    return {
+  _createHousingCrisisConsequence(settlement, severity, investmentEffects = null) {
+    const consequence = {
       id: `housing_crisis_${settlement.id}_${Date.now()}`,
       type: 'housing_crisis',
       severity: severity,
@@ -929,14 +1101,25 @@ export default class BasicNeedsService extends BaseDomainService {
       resolved: false,
       startDate: new Date()
     };
+
+    // Modify consequence based on investment effects
+    if (investmentEffects && (investmentEffects.shelter > 1.0 || investmentEffects.infrastructure > 1.0)) {
+      consequence.description += ` despite housing investments`;
+      consequence.effects.character.behaviorChanges.push('invest_more_housing');
+    }
+
+    return consequence;
   }
 
   /**
    * Create goods shortage consequence
+   * @param {Object} settlement - Settlement experiencing goods shortage
+   * @param {number} severity - Severity level (0.0-1.0)
+   * @param {Object} investmentEffects - Optional investment effects
    * @private
    */
-  _createGoodsShortageConsequence(settlement, severity) {
-    return {
+  _createGoodsShortageConsequence(settlement, severity, investmentEffects = null) {
+    const consequence = {
       id: `goods_shortage_${settlement.id}_${Date.now()}`,
       type: 'goods_shortage',
       severity: severity,
@@ -973,14 +1156,25 @@ export default class BasicNeedsService extends BaseDomainService {
       resolved: false,
       startDate: new Date()
     };
+
+    // Modify consequence based on investment effects
+    if (investmentEffects && (investmentEffects.goods > 1.0 || investmentEffects.trade > 1.0)) {
+      consequence.description += ` despite workshop and trade investments`;
+      consequence.effects.character.behaviorChanges.push('expand_trade_network');
+    }
+
+    return consequence;
   }
 
   /**
    * Create services shortage consequence
+   * @param {Object} settlement - Settlement experiencing services shortage
+   * @param {number} severity - Severity level (0.0-1.0)
+   * @param {Object} investmentEffects - Optional investment effects
    * @private
    */
-  _createServicesShortageConsequence(settlement, severity) {
-    return {
+  _createServicesShortageConsequence(settlement, severity, investmentEffects = null) {
+    const consequence = {
       id: `services_shortage_${settlement.id}_${Date.now()}`,
       type: 'services_shortage',
       severity: severity,
@@ -1018,6 +1212,130 @@ export default class BasicNeedsService extends BaseDomainService {
       resolved: false,
       startDate: new Date()
     };
+
+    // Modify consequence based on investment effects
+    if (investmentEffects && investmentEffects.services > 1.0) {
+      consequence.description += ` despite service investments`;
+      consequence.effects.character.behaviorChanges.push('improve_service_quality');
+    }
+
+    return consequence;
+  }
+
+  /**
+   * Generate investment-specific consequences
+   * @param {Object} settlement - Settlement experiencing effects
+   * @param {Object} investmentEffects - Investment effects
+   * @param {Object} needs - Current need satisfaction levels
+   * @returns {Array} Array of investment consequence objects
+   * @private
+   */
+  _generateInvestmentConsequences(settlement, investmentEffects, needs) {
+    const consequences = [];
+
+    // Successful investment consequences (positive effects)
+    if (Object.values(investmentEffects).some(effect => effect > 1.15)) {
+      const averageEffect = Object.values(investmentEffects).reduce((sum, effect) => sum + effect, 0) / Object.keys(investmentEffects).length;
+      const successIntensity = Math.min(1.0, (averageEffect - 1.0) * 2); // Scale from 1.0 to effect value
+
+      consequences.push({
+        id: `investment_boom_${settlement.id}_${Date.now()}`,
+        type: 'investment_boom',
+        severity: successIntensity,
+        description: `Economic prosperity blooms in ${settlement.name} due to successful investments`,
+        effects: {
+          population: {
+            growth: 0.1 * successIntensity,
+            migration: -0.15 * successIntensity, // People moving TO the settlement
+            mortality: -0.05 * successIntensity // Reduced mortality
+          },
+          character: {
+            moodModifier: 25 * successIntensity,
+            energyModifier: 15 * successIntensity,
+            healthModifier: 10 * successIntensity,
+            behaviorChanges: ['celebrate_success', 'invest_more', 'expand_business'],
+            interactionModifiers: {
+              'make_investment': 1 + successIntensity,
+              'trade_goods': 1 + (0.5 * successIntensity),
+              'social_gathering': 1 + (0.3 * successIntensity)
+            }
+          },
+          settlement: {
+            stabilityChange: 0.3 * successIntensity,
+            economicImpact: 0.4 * successIntensity,
+            socialCohesion: 0.2 * successIntensity
+          }
+        },
+        duration: Math.ceil(5 * successIntensity),
+        triggers: ['economic_downturn', 'investment_failure', 'external_crisis'],
+        resolved: false,
+        startDate: new Date(),
+        investmentTypes: Object.keys(investmentEffects)
+      });
+    }
+
+    // Failed investment consequences (when investments don't help enough)
+    const overallSatisfaction = (needs.food + needs.water + needs.shelter + needs.goods + needs.services) / 5;
+    if (overallSatisfaction < 0.4 && Object.keys(investmentEffects).length > 0) {
+      const failureIntensity = Math.min(1.0, (0.4 - overallSatisfaction) * 2.5);
+
+      consequences.push({
+        id: `investment_failure_${settlement.id}_${Date.now()}`,
+        type: 'investment_failure',
+        severity: failureIntensity,
+        description: `Investments in ${settlement.name} fail to prevent economic hardship`,
+        effects: {
+          population: {
+            growth: -0.08 * failureIntensity,
+            migration: 0.2 * failureIntensity,
+            mortality: 0.04 * failureIntensity
+          },
+          character: {
+            moodModifier: -20 * failureIntensity,
+            energyModifier: -15 * failureIntensity,
+            healthModifier: -8 * failureIntensity,
+            behaviorChanges: ['question_investments', 'seek_alternatives', 'blame_leaders'],
+            interactionModifiers: {
+              'make_investment': 1 - (0.4 * failureIntensity),
+              'complain': 1 + (2 * failureIntensity),
+              'seek_help': 1 + (1.5 * failureIntensity)
+            }
+          },
+          settlement: {
+            stabilityChange: -0.25 * failureIntensity,
+            economicImpact: -0.3 * failureIntensity,
+            socialCohesion: -0.2 * failureIntensity
+          }
+        },
+        duration: Math.ceil(6 * failureIntensity),
+        triggers: ['new_investment_opportunity', 'external_aid', 'resource_discovery'],
+        resolved: false,
+        startDate: new Date(),
+        failedInvestmentTypes: Object.keys(investmentEffects)
+      });
+    }
+
+    return consequences;
+  }
+
+  /**
+   * Get investment multiplier for a specific need type
+   * @param {Object} investmentEffects - Investment effects object
+   * @param {string} needType - Type of need (food, water, shelter, goods, services)
+   * @returns {number} Multiplier to apply (default 1.0)
+   * @private
+   */
+  _getInvestmentMultiplier(investmentEffects, needType) {
+    if (!investmentEffects || typeof investmentEffects !== 'object') {
+      return 1.0;
+    }
+    
+    const multiplier = investmentEffects[needType];
+    if (typeof multiplier === 'number' && multiplier > 0) {
+      return multiplier;
+    }
+    
+    return 1.0;
   }
 
   /**
@@ -1043,7 +1361,8 @@ export default class BasicNeedsService extends BaseDomainService {
           goods: 0.5,
           services: 0.5
         }
-      }
+      },
+      investmentEffects: {}
     };
   }
 }

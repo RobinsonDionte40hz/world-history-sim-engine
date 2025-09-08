@@ -173,6 +173,7 @@ export default class CharacterEconomicService extends BaseDomainService {
       category: 'infrastructure',
       settlementEffects: {
         shelter: { multiplier: 1.2, type: 'efficiency' },
+        water: { multiplier: 1.15, type: 'availability' },
         services: { multiplier: 1.25, type: 'availability' }
       }
     },

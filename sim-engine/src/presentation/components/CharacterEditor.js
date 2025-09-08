@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
+import InvestmentEditor from './InvestmentEditor.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
 import { Users, User, Save, Upload } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
@@ -1489,6 +1490,7 @@ const CharacterEditor = ({
         { id: 'skills', label: 'Skills', icon: '⭐' },
         { id: 'goals', label: 'Goals', icon: '🎯' },
         { id: 'interactions', label: 'Interactions', icon: '⚡' },
+        { id: 'investments', label: 'Investments', icon: '💰' },
         { id: 'equipment', label: 'Equipment', icon: '🎒' },
         { id: 'relationships', label: 'Relationships', icon: '🤝' },
         { id: 'advanced', label: 'Advanced', icon: '⚙️' }
@@ -1844,6 +1846,22 @@ const CharacterEditor = ({
               onUnassignInteraction={handleUnassignInteraction}
               onCreateInteraction={onCreateInteraction}
               onEditInteraction={onEditInteraction}
+            />
+          </div>
+        )}
+
+        {/* Investments Tab - Only in Detailed Mode */}
+        {activeTab === 'investments' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Manage character's economic investments, passive income, and financial goals
+            </p>
+            <InvestmentEditor
+              character={characterData}
+              onChange={(updatedCharacter) => setCharacterData(updatedCharacter)}
+              availableInteractions={availableInteractions}
+              worldState={null}
+              currentNode={null}
             />
           </div>
         )}
