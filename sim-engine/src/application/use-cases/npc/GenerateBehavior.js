@@ -7,7 +7,6 @@ import MemoryService from '../../../domain/services/MemoryService.js';
 import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
-import CharacterBehaviorModifierService from '../../../domain/services/CharacterBehaviorModifierService.js';
 
 const DEBUG_MODE = false;
 

@@ -23,7 +23,6 @@ const TemplateCustomizationDialog = ({
   // Context removed - text templating now handled in editors
 
   // Memoize preset customizations to avoid unnecessary re-renders
-  const presetCustomizationsString = JSON.stringify(presetCustomizations);
   const memoizedPresetCustomizations = useMemo(() => presetCustomizations, [presetCustomizations]);
 
   // Initialize customizations when template changes

@@ -18,6 +18,11 @@ module.exports = {
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
         'text-tertiary': 'var(--text-tertiary)',
+        // Timeline-specific colors
+        'timeline-character': '#10b981',
+        'timeline-settlement': '#3b82f6',
+        'timeline-event': '#f59e0b',
+        'timeline-war': '#ef4444',
       },
       spacing: {
         'xs': 'var(--spacing-xs)',
@@ -42,8 +47,23 @@ module.exports = {
         'fast': '150ms',
         'normal': '250ms',
         'slow': '350ms',
+      },
+      animation: {
+        'spin-slow': 'spin 2s linear infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      backdropBlur: {
+        'xs': '2px',
+        'sm': '4px',
+        'md': '8px',
+        'lg': '12px',
+        'xl': '16px',
       }
     },
   },
   plugins: [],
+  // Add custom utilities for timeline component
+  corePlugins: {
+    preflight: true,
+  }
 }
