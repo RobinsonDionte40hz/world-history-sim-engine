@@ -352,11 +352,18 @@ const useCachedSuggestions = (context, options = {}) => {
     return getSuggestions(context);
   }, [context, getSuggestions]);
 
-  // Periodic cleanup
+  // Periodic cleanup - ONLY when cache has items
   useEffect(() => {
+    // Only run cleanup if we have cached items
+    const hasCachedItems = cacheRef.current.size > 0;
+    if (!hasCachedItems) return;
+    
     const cleanupInterval = setInterval(() => {
-      removeExpiredEntries();
-      cleanupCache();
+      // Only clean if we still have items to clean
+      if (cacheRef.current.size > 0) {
+        removeExpiredEntries();
+        cleanupCache();
+      }
     }, 60000); // Every minute
 
     return () => clearInterval(cleanupInterval);

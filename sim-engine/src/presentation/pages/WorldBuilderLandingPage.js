@@ -28,22 +28,32 @@ const WorldBuilderLandingPage = () => {
     navigate('/builder');
   };
 
-  // Handle scroll for content visibility
+  // Handle scroll for content visibility - OPTIMIZED with throttling
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      const windowHeight = window.innerHeight;
-      
-      // Make content appear earlier and stay visible
-      setContentVisible({
-        cta: scrollPosition > windowHeight * 0.1,
-        reviews: scrollPosition > windowHeight * 0.3,
-        howItWorks: scrollPosition > windowHeight * 0.5,
-        additionalFeatures: scrollPosition > windowHeight * 0.8
-      });
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollPosition = window.scrollY;
+          const windowHeight = window.innerHeight;
+          
+          // Make content appear earlier and stay visible
+          setContentVisible({
+            cta: scrollPosition > windowHeight * 0.1,
+            reviews: scrollPosition > windowHeight * 0.3,
+            howItWorks: scrollPosition > windowHeight * 0.5,
+            additionalFeatures: scrollPosition > windowHeight * 0.8
+          });
+          
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
     
-    window.addEventListener('scroll', handleScroll);
+    // Throttle scroll events
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -127,7 +137,7 @@ const WorldBuilderLandingPage = () => {
             animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
           }
           50% {
-            transform: translateY(-10px);
+            transform: translateY(-4px);
             animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
           }
         }
@@ -147,6 +157,15 @@ const WorldBuilderLandingPage = () => {
           }
           100% {
             transform: translateX(-2296px);
+          }
+        }
+
+        /* Pause all animations when user prefers reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
           }
         }
       `}</style>

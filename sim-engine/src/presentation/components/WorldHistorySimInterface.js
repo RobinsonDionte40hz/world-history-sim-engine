@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Calendar, Activity, ChevronRight, Settings, Filter, Download, Clock } from 'lucide-react';
+import { SkipForward, RotateCcw, Globe, Users, History, Map, TrendingUp, Activity, Settings, Filter, Clock } from 'lucide-react';
 import { useSimulationContext } from '../contexts/SimulationContext.js';
 import TurnCounter from './TurnCounter.js';
+import RelationshipVisualizer from '../features/network/RelationshipVisualizer.js';
+import TimelineVisualization from '../features/historical/TimelineVisualization.jsx';
 
 const WorldHistorySimInterface = () => {
   // Use the simulation context hook instead of local state
@@ -10,21 +12,9 @@ const WorldHistorySimInterface = () => {
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [simulationSpeed, setSimulationSpeed] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Minimal fallback data for when worldState is not available
-  const displayWorldState = worldState || {
-    time: 0,
-    npcs: [],
-    nodes: [],
-    events: [],
-    resources: { totalGold: 0, totalFood: 0, totalPopulation: 0 }
-  };
 
   // Simulation control functions using the hook - turn-based approach
   const toggleSimulation = () => {
-    // In turn-based mode, this processes a single turn instead of starting/stopping
     processTurn();
   };
 
@@ -33,17 +23,132 @@ const WorldHistorySimInterface = () => {
   };
 
   const stepForward = () => {
-    // Same as toggle in turn-based mode
     processTurn();
   };
 
-  // Filter events based on search
-  const filteredEvents = (displayWorldState.events || []).filter(event => 
-    event.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+              <Globe className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <h1 className="text-xl font-bold">World History Simulation Engine</h1>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <TurnCounter currentTurn={currentTurn} />
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
-  // Main dashboard view
-  const DashboardView = () => (
+      {/* Simulation Controls */}
+      <div className="bg-blue-600 dark:bg-blue-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={toggleSimulation}
+                disabled={!canProcessTurn}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <SkipForward className="w-4 h-4" />
+                Process Turn
+              </button>
+              
+              <button
+                onClick={stepForward}
+                disabled={!canProcessTurn}
+                className="p-2 bg-blue-700 rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Same as Process Turn"
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
+              
+              <button
+                onClick={handleResetSimulation}
+                className="p-2 bg-blue-700 rounded-lg hover:bg-blue-800"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2 ml-4">
+                <Clock className="w-4 h-4" />
+                <label className="text-sm">Speed:</label>
+                <select 
+                  value={simulationSpeed} 
+                  onChange={(e) => setSimulationSpeed(e.target.value)}
+                  className="bg-blue-700 rounded px-2 py-1 text-sm"
+                >
+                  <option value="0.5">0.5x</option>
+                  <option value="1">1x</option>
+                  <option value="2">2x</option>
+                  <option value="5">5x</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className="text-sm opacity-75">
+                {isInitialized ? 'Turn-Based Mode' : 'Not Initialized'}
+              </span>
+              <div className={`w-2 h-2 rounded-full ${isInitialized ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex gap-8">
+            {['overview', 'timeline', 'characters', 'settlements', 'relationships'].map(view => (
+              <button
+                key={view}
+                onClick={() => setSelectedView(view)}
+                className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors ${
+                  selectedView === view
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                {view}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {selectedView === 'overview' && <DashboardView worldState={worldState} />}
+        {selectedView === 'timeline' && <TimelineVisualization data={worldState?.events || []} />}
+        {selectedView === 'characters' && <CharactersView worldState={worldState} selectedCharacter={selectedCharacter} setSelectedCharacter={setSelectedCharacter} />}
+        {selectedView === 'settlements' && <SettlementsView worldState={worldState} />}
+        {selectedView === 'relationships' && <RelationshipVisualizer />}
+      </main>
+    </div>
+  );
+};
+
+// Main dashboard view
+const DashboardView = ({ worldState }) => {
+  const [showFilters, setShowFilters] = useState(false);
+  const displayWorldState = worldState || {
+    time: 0,
+    npcs: [],
+    nodes: [],
+    events: [],
+    resources: { totalGold: 0, totalFood: 0, totalPopulation: 0 }
+  };
+  const filteredEvents = (displayWorldState.events || []);
+
+  return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Statistics Cards */}
       <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -142,9 +247,12 @@ const WorldHistorySimInterface = () => {
       </div>
     </div>
   );
+};
 
-  // Characters view
-  const CharactersView = () => (
+// Characters view
+const CharactersView = ({ worldState, selectedCharacter, setSelectedCharacter }) => {
+  const displayWorldState = worldState || { npcs: [] };
+  return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-1">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
@@ -180,164 +288,6 @@ const WorldHistorySimInterface = () => {
           </div>
         )}
       </div>
-    </div>
-  );
-
-  // Timeline view
-  const TimelineView = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
-          Historical Timeline
-        </h3>
-        <div className="flex items-center gap-4">
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-1 text-sm border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-            maxLength={100}
-          />
-          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-            <Download className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="relative">
-        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
-        <div className="space-y-6">
-          {filteredEvents.map((event, index) => (
-            <div key={event.id} className="relative flex items-start gap-4">
-              <div className="relative z-10 w-16 text-right">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Turn {event.timestamp}</span>
-              </div>
-              <div className="relative z-10 w-4 h-4 bg-blue-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-              <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{event.description}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Type: {event.type} • Significance: {event.significance}/10
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <Globe className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-xl font-bold">World History Simulation Engine</h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <TurnCounter currentTurn={currentTurn} />
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <Settings className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Simulation Controls */}
-      <div className="bg-blue-600 dark:bg-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleSimulation}
-                disabled={!canProcessTurn}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <SkipForward className="w-4 h-4" />
-                Process Turn
-              </button>
-              
-              <button
-                onClick={stepForward}
-                disabled={!canProcessTurn}
-                className="p-2 bg-blue-700 rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Same as Process Turn"
-              >
-                <SkipForward className="w-4 h-4" />
-              </button>
-              
-              <button
-                onClick={handleResetSimulation}
-                className="p-2 bg-blue-700 rounded-lg hover:bg-blue-800"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center gap-2 ml-4">
-                <Clock className="w-4 h-4" />
-                <label className="text-sm">Speed:</label>
-                <select 
-                  value={simulationSpeed} 
-                  onChange={(e) => setSimulationSpeed(e.target.value)}
-                  className="bg-blue-700 rounded px-2 py-1 text-sm"
-                >
-                  <option value="0.5">0.5x</option>
-                  <option value="1">1x</option>
-                  <option value="2">2x</option>
-                  <option value="5">5x</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm opacity-75">
-                {isInitialized ? 'Turn-Based Mode' : 'Not Initialized'}
-              </span>
-              <div className={`w-2 h-2 rounded-full ${isInitialized ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex gap-8">
-            {['overview', 'timeline', 'characters', 'settlements'].map(view => (
-              <button
-                key={view}
-                onClick={() => setSelectedView(view)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors ${
-                  selectedView === view
-                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {view}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {selectedView === 'overview' && <DashboardView />}
-        {selectedView === 'timeline' && <TimelineView />}
-        {selectedView === 'characters' && <CharactersView />}
-        {selectedView === 'settlements' && <SettlementsView worldState={displayWorldState} />}
-      </main>
     </div>
   );
 };

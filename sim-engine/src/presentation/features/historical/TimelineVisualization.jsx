@@ -44,11 +44,13 @@ const TimelineVisualization = ({
   selectedTracks = ['characters', 'settlements', 'events'],
   zoom = 1,
   onEventSelect = () => {},
-  onTimeRangeChange = () => {},
+  onTracksChange = () => {},
   className = '',
   width = 1200,
   height = 600
 }) => {
+  // Ensure data is always an array
+  const safeData = useMemo(() => Array.isArray(data) ? data : [], [data]);
   // Refs
   const svgRef = useRef(null);
   const containerRef = useRef(null);
@@ -73,10 +75,10 @@ const TimelineVisualization = ({
 
   // Memoized data processing
   const processedData = useMemo(() => {
-    return processTimelineData(data, filters, timeRange);
-  }, [data, filters, timeRange]);
+    return processTimelineData(safeData, filters, timeRange);
+  }, [safeData, filters, timeRange]);
 
-  const { tracks, timeScale, eventsByTrack } = processedData;
+  const { tracks, eventsByTrack, timeExtent } = processedData;
 
   // Main render function
   const renderTimeline = useCallback(() => {
@@ -86,6 +88,11 @@ const TimelineVisualization = ({
 
     const svg = d3.select(svgRef.current);
     const { width: viewWidth, height: viewHeight, scale, x: viewX, y: viewY } = viewport;
+
+    // Create time scale with current viewport
+    const timeScale = d3.scaleTime()
+      .domain(timeExtent)
+      .range([60, viewWidth - 60]); // Leave margins
 
     // Clear previous render
     svg.selectAll('*').remove();
@@ -120,7 +127,7 @@ const TimelineVisualization = ({
     });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewport, tracks, eventsByTrack, selectedTracks, timeScale, data.length, selectedEvents]);
+  }, [viewport, tracks, eventsByTrack, selectedTracks, timeExtent, safeData.length, selectedEvents]);
 
   // Debounced render function for performance
   const debouncedRender = useMemo(
@@ -155,7 +162,7 @@ const TimelineVisualization = ({
   /**
    * Render background grid and styling
    */
-  const renderBackground = (group, width, height) => {
+  const renderBackground = (group, width, height, timeScale) => {
     // Background
     group
       .append('rect')
@@ -374,7 +381,7 @@ const TimelineVisualization = ({
   /**
    * Calculate visible events for performance metrics
    */
-  const calculateVisibleEvents = () => {
+  const calculateVisibleEvents = (timeScale) => {
     // This would calculate based on current viewport
     return data.filter(event => {
       const eventTime = new Date(event.timestamp);
@@ -449,10 +456,10 @@ const TimelineVisualization = ({
           filters,
           renderStats
         },
-        events: processedData.filteredData,
+        events: processedData.events,
         tracks: processedData.tracks,
         statistics: {
-          totalEvents: processedData.filteredData.length,
+          totalEvents: processedData.events.length,
           timeSpan: {
             start: processedData.timeExtent[0],
             end: processedData.timeExtent[1]
@@ -500,7 +507,7 @@ const TimelineVisualization = ({
         onZoomChange={handleZoomChange}
         onPanChange={handlePanChange}
         selectedTracks={selectedTracks}
-        onTracksChange={onTimeRangeChange}
+        onTracksChange={onTracksChange}
         renderStats={renderStats}
       />
 
@@ -526,7 +533,7 @@ const TimelineVisualization = ({
       <div className="md:absolute md:bottom-4 md:right-4 relative mt-4 md:mt-0">
         <TimelineExport
           onExport={handleExport}
-          disabled={!data.length}
+          disabled={!safeData.length}
         />
       </div>
     </div>
@@ -540,7 +547,7 @@ function processTimelineData(data, filters, timeRange) {
   // Validate input data
   if (!Array.isArray(data)) {
     console.warn('Invalid data provided to processTimelineData');
-    return { tracks: [], eventsByTrack: {}, timeScale: null, viewport: { x: 0, y: 0, width: 1200, height: 600 } };
+    return { events: [], tracks: [], eventsByTrack: {}, timeExtent: [new Date(), new Date()] };
   }
 
   // Filter data based on criteria
@@ -550,10 +557,15 @@ function processTimelineData(data, filters, timeRange) {
       return false;
     }
 
+    // Validate timestamp
+    const date = new Date(event.timestamp);
+    if (isNaN(date.getTime())) {
+      return false;
+    }
+
     // Time range filter
     if (timeRange) {
-      const eventTime = new Date(event.timestamp);
-      if (isNaN(eventTime.getTime()) || eventTime < timeRange.start || eventTime > timeRange.end) {
+      if (date < timeRange.start || date > timeRange.end) {
         return false;
       }
     }
@@ -585,26 +597,16 @@ function processTimelineData(data, filters, timeRange) {
 
   // Handle empty data
   if (filteredData.length === 0) {
-    const defaultTimeScale = {
-      domain: () => [new Date(), new Date()],
-      range: () => [60, 1140],
-      invert: () => new Date(),
-      copy: () => defaultTimeScale
-    };
-    
     return {
+      events: filteredData,
       tracks: [],
       eventsByTrack: { characters: [], settlements: [], events: [], wars: [] },
-      timeScale: defaultTimeScale,
-      viewport: { x: 0, y: 0, width: 1200, height: 600 }
+      timeExtent: [new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), new Date()]
     };
   }
 
   // Create time scale
   const timeExtent = d3.extent(filteredData, d => new Date(d.timestamp));
-  const timeScale = d3.scaleTime()
-    .domain(timeExtent)
-    .range([60, 1140]); // Leave margins
 
   // Group events by track
   const eventsByTrack = {
@@ -625,7 +627,6 @@ function processTimelineData(data, filters, timeRange) {
   return {
     events: filteredData,
     tracks,
-    timeScale,
     eventsByTrack,
     timeExtent
   };

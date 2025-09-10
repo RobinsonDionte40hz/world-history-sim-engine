@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 /**
  * useTemplatePerformance - Performance optimization hooks for text templating
@@ -204,10 +204,8 @@ const useTemplatePerformance = (options = {}) => {
    * Memoized expensive operation with cache
    */
   const memoizeExpensiveOperation = useCallback((key, operation, dependencies = []) => {
-    return useMemo(() => {
-      const cacheKey = `${key}_${createCacheKey(dependencies)}`;
-      return getCachedContext(cacheKey, () => operation(...dependencies));
-    }, [key, operation, dependencies, getCachedContext, createCacheKey]);
+    const cacheKey = `${key}_${createCacheKey(dependencies)}`;
+    return getCachedContext(cacheKey, () => operation(...dependencies));
   }, [getCachedContext, createCacheKey]);
 
   /**
@@ -339,9 +337,10 @@ const useTemplatePerformance = (options = {}) => {
     metrics.lastCleanup = now;
   }, [cleanupInterval, cleanupCache, suggestionCacheSize, contextCacheSize, maxMemoryUsage]);
 
-  // Set up periodic cleanup
+  // Set up periodic cleanup - ONLY when actively needed
   useEffect(() => {
-    if (cleanupInterval > 0) {
+    // Only run cleanup if we have active caches and cleanup is enabled
+    if (cleanupInterval > 0 && (suggestionCacheSize > 0 || contextCacheSize > 0)) {
       cleanupIntervalRef.current = setInterval(performPeriodicCleanup, cleanupInterval);
     }
 
@@ -350,7 +349,7 @@ const useTemplatePerformance = (options = {}) => {
         clearInterval(cleanupIntervalRef.current);
       }
     };
-  }, [cleanupInterval, performPeriodicCleanup]);
+  }, [cleanupInterval, performPeriodicCleanup, suggestionCacheSize, contextCacheSize]);
 
   // Cleanup on unmount
   useEffect(() => {

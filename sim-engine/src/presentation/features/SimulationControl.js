@@ -3,6 +3,10 @@
  * 
  * This component now properly uses SimulationContext instead of directly
  * accessing SimulationService, enforcing the proper architectural boundaries.
+ * 
+ * PERFORMANCE FIX: HistoryTimeline now only renders when simulation is 
+ * properly initialized and has a prepared world. This prevents heavy timeline
+ * rendering from causing scrolling latency issues during world building.
  */
 
 import React from 'react';
@@ -72,7 +76,11 @@ const SimulationControl = () => {
           Reset
         </button>
       </div>
-      <HistoryTimeline /> {/* Embed analysis */}
+      
+      {/* Only render timeline when simulation is properly initialized and ready */}
+      {(hasPreparedWorld && isInitialized) ? (
+        <HistoryTimeline />
+      ) : null}
     </div>
   );
 };

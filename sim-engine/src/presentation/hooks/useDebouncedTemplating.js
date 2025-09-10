@@ -138,24 +138,6 @@ const useDebouncedTemplating = (options = {}) => {
   }, [createDebouncedFunction]);
 
   /**
-   * Batch multiple operations together
-   */
-  const addToBatch = useCallback((operation) => {
-    batchQueueRef.current.push(operation);
-    
-    // If batch is full, process immediately
-    if (batchQueueRef.current.length >= batchSize) {
-      processBatch();
-      return;
-    }
-
-    // Otherwise, set a timeout to process the batch
-    if (!batchTimeoutRef.current) {
-      batchTimeoutRef.current = setTimeout(processBatch, Math.min(previewDebounceMs, 100));
-    }
-  }, [batchSize, previewDebounceMs]);
-
-  /**
    * Process the current batch of operations
    */
   const processBatch = useCallback(() => {
@@ -194,6 +176,24 @@ const useDebouncedTemplating = (options = {}) => {
   }, []);
 
   /**
+   * Batch multiple operations together
+   */
+  const addToBatch = useCallback((operation) => {
+    batchQueueRef.current.push(operation);
+    
+    // If batch is full, process immediately
+    if (batchQueueRef.current.length >= batchSize) {
+      processBatch();
+      return;
+    }
+
+    // Otherwise, set a timeout to process the batch
+    if (!batchTimeoutRef.current) {
+      batchTimeoutRef.current = setTimeout(processBatch, Math.min(previewDebounceMs, 100));
+    }
+  }, [batchSize, previewDebounceMs, processBatch]);
+
+  /**
    * Smart debouncing that adapts delay based on system load
    */
   const adaptiveDebounce = useCallback((key, fn, baseDelay, operationType = 'default') => {
@@ -208,7 +208,7 @@ const useDebouncedTemplating = (options = {}) => {
       adaptedDelay = baseDelay * 1.2;
     }
 
-    return createDebouncedFunction(key, fn, operationType);
+    return createDebouncedFunction(key, fn, operationType, adaptedDelay);
   }, [createDebouncedFunction]);
 
   /**
@@ -270,7 +270,6 @@ const useDebouncedTemplating = (options = {}) => {
    */
   const flushAll = useCallback(() => {
     const pending = pendingOperationsRef.current;
-    const timeouts = timeoutsRef.current;
     
     // Execute all pending operations immediately
     pending.forEach((operation, key) => {
@@ -318,9 +317,18 @@ const useDebouncedTemplating = (options = {}) => {
     return keysToRemove.length;
   }, []);
 
-  // Periodic cleanup of old operations
+  // Periodic cleanup of old operations - ONLY when there are operations to clean
   useEffect(() => {
-    const cleanupInterval = setInterval(cleanupOldOperations, 30000); // Every 30 seconds
+    // Only start cleanup if we have operations to clean
+    const hasOperations = pendingOperationsRef.current.size > 0 || timeoutsRef.current.size > 0;
+    if (!hasOperations) return;
+    
+    const cleanupInterval = setInterval(() => {
+      // Check if we still have operations before cleaning
+      if (pendingOperationsRef.current.size > 0 || timeoutsRef.current.size > 0) {
+        cleanupOldOperations();
+      }
+    }, 30000); // Every 30 seconds
     
     return () => {
       clearInterval(cleanupInterval);

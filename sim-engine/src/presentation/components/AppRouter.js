@@ -11,6 +11,7 @@ import { NavigationProvider } from '../contexts/NavigationContext';
 
 // Existing pages
 import HistoryPage from '../pages/HistoryPage';
+import SimulationPage from '../pages/SimulationPage';
 import WorldBuilderLandingPage from '../pages/WorldBuilderLandingPage';
 
 // New pages (will be created)
@@ -67,7 +68,7 @@ const AppRouter = () => {
             <Route path="/template-customization" element={<TemplatePage />} />
             
             {/* Simulation route - Optional, with prerequisites */}
-            <Route path="/simulation" element={<HistoryPage />} />
+            <Route path="/simulation" element={<SimulationPage />} />
             <Route path="/history" element={<HistoryPage />} />
             
             {/* Fallback route */}

@@ -11,11 +11,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * Custom hook for auto-saving data with debouncing
  * @param {*} data - Data to auto-save
  * @param {Function} saveFunction - Function to call for saving
- * @param {number} delay - Delay in milliseconds before auto-saving (default: 30000ms = 30s)
+ * @param {number} delay - Delay in milliseconds before auto-saving (default: 60000ms = 60s)
  * @param {boolean} enabled - Whether auto-save is enabled (default: true)
  * @returns {Object} Auto-save state and controls
  */
-const useAutoSave = (data, saveFunction, delay = 30000, enabled = true) => {
+const useAutoSave = (data, saveFunction, delay = 60000, enabled = true) => {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [saveError, setSaveError] = useState(null);
