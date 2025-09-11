@@ -176,7 +176,57 @@ class ConsciousnessState {
     _applyEmotionalModifiers(baseEmotion) {
         let modifiedEmotion = { ...baseEmotion };
         
-        // Find the strongest active emotional modifier
+        // Collect all active emotional modifiers
+        const activeEmotions = [];
+        
+        // Add base emotion as starting point
+        activeEmotions.push({
+            primary: baseEmotion.primary,
+            intensity: 0.5, // Base emotion has moderate intensity
+            duration: Infinity // Base emotion is persistent
+        });
+        
+        // Add all active modifiers as separate emotions
+        this.emotionalModifiers.forEach((modifier, eventType) => {
+            if (modifier.intensity > 0.1) { // Only include significant modifiers
+                activeEmotions.push({
+                    primary: modifier.shift.primary,
+                    secondary: modifier.shift.secondary,
+                    intensity: modifier.intensity,
+                    duration: modifier.duration,
+                    energy: modifier.shift.energyModifier
+                });
+            }
+        });
+        
+        // Simple conflict detection for basic cases
+        if (activeEmotions.length > 1) {
+            const emotions = activeEmotions.map(e => e.primary);
+            
+            // Check for basic conflict patterns
+            if (emotions.includes('joyful') && emotions.includes('sad')) {
+                modifiedEmotion.primary = 'bittersweet';
+                modifiedEmotion.isComplex = true;
+                modifiedEmotion.description = 'Mixed feelings of joy and sadness';
+                return modifiedEmotion;
+            }
+            
+            if (emotions.includes('angry') && emotions.includes('content')) {
+                modifiedEmotion.primary = 'conflicted';
+                modifiedEmotion.isComplex = true;
+                modifiedEmotion.description = 'Internal struggle between anger and contentment';
+                return modifiedEmotion;
+            }
+            
+            if (emotions.includes('excited') && emotions.includes('anxious')) {
+                modifiedEmotion.primary = 'nervous_excitement';
+                modifiedEmotion.isComplex = true;
+                modifiedEmotion.description = 'Excited but with underlying anxiety';
+                return modifiedEmotion;
+            }
+        }
+        
+        // Fallback to strongest modifier approach if no conflicts detected
         let strongestModifier = null;
         let maxIntensity = 0;
         

@@ -226,10 +226,251 @@ export function calculateEmotionalContagion(sourceCharacter, targetCharacter, pr
   return null;
 }
 
+/**
+ * Resolve emotional conflicts when multiple strong emotions overlap
+ */
+export function resolveEmotionalConflicts(emotions) {
+  // Handle edge cases
+  if (!emotions) {
+    return null;
+  }
+  
+  if (emotions.length === 0) {
+    return [];
+  }
+  
+  if (emotions.length === 1) {
+    return emotions[0];
+  }
+
+  // Define conflicting emotion pairs and their complex emotional resolutions
+  const conflictPairs = [
+    {
+      emotions: ['joyful', 'sad'],
+      resolution: 'bittersweet',
+      description: 'Mixed feelings of joy and sadness'
+    },
+    {
+      emotions: ['angry', 'content'],
+      resolution: 'conflicted',
+      description: 'Internal struggle between anger and contentment'
+    },
+    {
+      emotions: ['excited', 'anxious'],
+      resolution: 'nervous_excitement',
+      description: 'Excited but with underlying anxiety'
+    },
+    {
+      emotions: ['proud', 'ashamed'],
+      resolution: 'ambivalent',
+      description: 'Conflicted between pride and shame'
+    },
+    {
+      emotions: ['happy', 'distrustful'],
+      resolution: 'cautiously_optimistic',
+      description: 'Happy but maintaining caution'
+    },
+    {
+      emotions: ['curious', 'anxious'],
+      resolution: 'apprehensive_interest',
+      description: 'Interested but worried about consequences'
+    },
+    {
+      emotions: ['energized', 'stressed'],
+      resolution: 'frantic',
+      description: 'High energy mixed with stress'
+    },
+    {
+      emotions: ['satisfied', 'disappointed'],
+      resolution: 'resigned',
+      description: 'Accepting mixed outcomes'
+    }
+  ];
+
+  // Check for conflicting emotions
+  for (const conflict of conflictPairs) {
+    if (hasConflictingEmotions(emotions, conflict.emotions)) {
+      return createComplexEmotionalState(emotions, conflict);
+    }
+  }
+
+  // If no specific conflicts found, blend similar intensity emotions
+  return blendSimilarEmotions(emotions);
+}
+
+/**
+ * Check if emotions contain conflicting pairs
+ */
+function hasConflictingEmotions(emotions, conflictPair) {
+  const emotionNames = emotions.map(e => e.name || e.primary || e);
+  return conflictPair.every(emotion => emotionNames.includes(emotion));
+}
+
+/**
+ * Create a complex emotional state from conflicting emotions
+ */
+function createComplexEmotionalState(emotions, conflict) {
+  // Find the conflicting emotions and calculate their combined intensity
+  const conflictingEmotions = emotions.filter(emotion => {
+    const emotionName = emotion.name || emotion.primary || emotion;
+    return conflict.emotions.includes(emotionName);
+  });
+
+  // Calculate average intensity of conflicting emotions
+  const totalIntensity = conflictingEmotions.reduce((sum, emotion) => {
+    return sum + (emotion.intensity || 0.5);
+  }, 0);
+  const averageIntensity = totalIntensity / conflictingEmotions.length;
+
+  // Create the complex emotional state
+  const complexEmotion = {
+    primary: conflict.resolution,
+    secondary: conflictingEmotions[0].name || conflictingEmotions[0].primary || conflictingEmotions[0],
+    intensity: Math.min(averageIntensity * 1.2, 1.0), // Slight intensity boost for conflict
+    isComplex: true,
+    conflictedEmotions: conflictingEmotions.map(e => e.name || e.primary || e),
+    description: conflict.description,
+    duration: Math.max(...conflictingEmotions.map(e => e.duration || 60))
+  };
+
+  // Add non-conflicting emotions as modifiers
+  const nonConflictingEmotions = emotions.filter(emotion => {
+    const emotionName = emotion.name || emotion.primary || emotion;
+    return !conflict.emotions.includes(emotionName);
+  });
+
+  return {
+    ...complexEmotion,
+    modifiers: nonConflictingEmotions
+  };
+}
+
+/**
+ * Blend emotions of similar valence and intensity
+ */
+function blendSimilarEmotions(emotions) {
+  if (emotions.length === 1) {
+    return emotions[0];
+  }
+
+  // Sort emotions by intensity (strongest first)
+  const sortedEmotions = [...emotions].sort((a, b) => {
+    const intensityA = a.intensity || 0.5;
+    const intensityB = b.intensity || 0.5;
+    return intensityB - intensityA;
+  });
+
+  // Primary emotion is the strongest
+  const primaryEmotion = sortedEmotions[0];
+  
+  // If there's a strong secondary emotion, include it
+  const secondaryEmotion = sortedEmotions.length > 1 ? sortedEmotions[1] : null;
+  
+  // Calculate blended intensity
+  const primaryIntensity = primaryEmotion.intensity || 0.5;
+  const secondaryIntensity = secondaryEmotion?.intensity || 0;
+  
+  // Primary emotion dominates, but secondary adds complexity
+  const blendedIntensity = primaryIntensity * 0.7 + secondaryIntensity * 0.3;
+
+  return {
+    primary: primaryEmotion.name || primaryEmotion.primary || primaryEmotion,
+    secondary: secondaryEmotion ? (secondaryEmotion.name || secondaryEmotion.primary || secondaryEmotion) : null,
+    intensity: Math.min(blendedIntensity, 1.0),
+    isBlended: true,
+    components: sortedEmotions.slice(0, 3), // Keep top 3 emotions as components
+    duration: Math.max(...sortedEmotions.map(e => e.duration || 60))
+  };
+}
+
+/**
+ * Get behavioral modifiers for complex emotional states
+ */
+export function getComplexEmotionalModifier(complexEmotion, interaction) {
+  if (!complexEmotion.isComplex && !complexEmotion.isBlended) {
+    return getEmotionalModifier(complexEmotion, interaction);
+  }
+
+  // Handle complex emotions with special modifier combinations
+  const complexModifiers = {
+    'bittersweet': {
+      social: 0.8,          // Reduced social interaction
+      creative: 1.4,        // Enhanced creativity from mixed feelings
+      contemplative: 1.6,   // More thoughtful
+      melancholy: 1.3,      // Touches of sadness
+      grateful: 1.2         // Appreciation for good things
+    },
+    'conflicted': {
+      decision_making: 0.6, // Poor decision making
+      internal_struggle: 1.8, // Internal conflict behaviors
+      social: 0.7,          // Reduced social confidence
+      planning: 0.8,        // Difficulty planning
+      emotional_expression: 1.4 // More emotional expression
+    },
+    'nervous_excitement': {
+      impulsive: 1.3,       // More impulsive
+      energetic: 1.4,       // High energy
+      social: 1.2,          // Social but nervous
+      risky_actions: 1.1,   // Slightly more risky
+      fidgety: 1.6          // Can't sit still
+    },
+    'ambivalent': {
+      hesitation: 1.7,      // Lots of hesitation
+      self_reflection: 1.5, // More introspective
+      social: 0.6,          // Reduced social interaction
+      commitment: 0.7,      // Difficulty committing
+      mood_swings: 1.4      // Emotional instability
+    },
+    'cautiously_optimistic': {
+      social: 0.9,          // Slightly reduced social
+      planning: 1.3,        // Better planning
+      careful: 1.4,         // More careful approach
+      hopeful: 1.2,         // Maintains hope
+      verification: 1.3     // Wants to verify things
+    },
+    'apprehensive_interest': {
+      learning: 1.2,        // Still wants to learn
+      cautious: 1.5,        // Very cautious approach
+      observation: 1.6,     // Prefers observing first
+      social: 0.8,          // Less direct social interaction
+      escape_planning: 1.3  // Plans exit strategies
+    },
+    'frantic': {
+      hyperactive: 1.8,     // Can't stop moving
+      impulsive: 1.6,       // Very impulsive
+      focus: 0.4,           // Poor focus
+      social: 1.3,          // High social energy but scattered
+      mistakes: 1.5         // More prone to errors
+    },
+    'resigned': {
+      acceptance: 1.4,      // Accepts situation
+      motivation: 0.7,      // Reduced motivation
+      social: 0.8,          // Less social energy
+      routine: 1.3,         // Sticks to routine
+      philosophical: 1.2    // More philosophical
+    }
+  };
+
+  const interactionType = interaction.type || interaction.category || 'social';
+  const emotionMods = complexModifiers[complexEmotion.primary] || {};
+  
+  // Get base modifier
+  let modifier = emotionMods[interactionType] || 1.0;
+  
+  // Apply intensity scaling
+  const intensity = complexEmotion.intensity || 0.5;
+  const finalModifier = 1.0 + ((modifier - 1.0) * intensity);
+  
+  // Clamp to reasonable bounds
+  return Math.max(0.1, Math.min(3.0, finalModifier));
+}
+
 const EmotionalUtils = {
   getEmotionalModifier,
   getEmotionalReaction,
-  calculateEmotionalContagion
+  calculateEmotionalContagion,
+  resolveEmotionalConflicts,
+  getComplexEmotionalModifier
 };
 
 export default EmotionalUtils;
