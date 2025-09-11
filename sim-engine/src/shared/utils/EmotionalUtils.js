@@ -465,12 +465,345 @@ export function getComplexEmotionalModifier(complexEmotion, interaction) {
   return Math.max(0.1, Math.min(3.0, finalModifier));
 }
 
+/**
+ * Create an emotional memory that links events to emotional states
+ * This enhances memory formation and retrieval based on emotional significance
+ */
+export function createEmotionalMemory(event, emotionalState) {
+  return {
+    ...event,
+    emotionalContext: {
+      state: emotionalState.primary,
+      secondary: emotionalState.secondary,
+      intensity: emotionalState.intensity,
+      frequency: emotionalState.frequency,
+      coherence: emotionalState.coherence,
+      isComplex: emotionalState.isComplex,
+      description: emotionalState.description
+    },
+    // Strong emotions create stronger, more lasting memories
+    memorySalience: calculateMemorySalience(emotionalState),
+    // Emotional triggers that can later retrieve this memory
+    retrievalTriggers: getEmotionalTriggers(emotionalState),
+    // Memory decay rate influenced by emotional intensity
+    decayRate: calculateEmotionalDecayRate(emotionalState),
+    // Emotional valence affects memory retention
+    valence: calculateEmotionalValence(emotionalState.primary)
+  };
+}
+
+/**
+ * Calculate memory salience based on emotional state
+ * Strong emotions create more salient memories
+ */
+function calculateMemorySalience(emotionalState) {
+  // Default values for missing properties
+  const intensity = emotionalState.intensity || 0.5;
+  const frequency = emotionalState.frequency || 40;
+  const coherence = emotionalState.coherence || 0.7;
+  
+  let baseSalience = intensity * 1.5;
+  
+  // Complex emotional states are more memorable
+  if (emotionalState.isComplex) {
+    baseSalience *= 1.3;
+  }
+  
+  // High frequency states (alert/energized) enhance encoding
+  if (frequency > 10) {
+    baseSalience *= 1.2;
+  }
+  
+  // Low coherence reduces memory formation
+  if (coherence < 0.5) {
+    baseSalience *= 0.8;
+  }
+  
+  // Extreme emotional states are highly memorable
+  const extremeEmotions = ['manic', 'frantic', 'bittersweet', 'conflicted'];
+  if (extremeEmotions.includes(emotionalState.primary)) {
+    baseSalience *= 1.4;
+  }
+  
+  return Math.min(baseSalience, 3.0); // Cap at 3x normal salience
+}
+
+/**
+ * Generate emotional triggers that can later retrieve this memory
+ */
+function getEmotionalTriggers(emotionalState) {
+  const triggers = [];
+  
+  // Primary emotion as main trigger
+  triggers.push({
+    type: 'emotional_state',
+    value: emotionalState.primary,
+    strength: 0.8
+  });
+  
+  // Secondary emotion as additional trigger
+  if (emotionalState.secondary) {
+    triggers.push({
+      type: 'emotional_state',
+      value: emotionalState.secondary,
+      strength: 0.6
+    });
+  }
+  
+  // Frequency range triggers
+  const freqRange = getFrequencyRange(emotionalState.frequency);
+  triggers.push({
+    type: 'frequency_range',
+    value: freqRange,
+    strength: 0.5
+  });
+  
+  // Complex state triggers
+  if (emotionalState.isComplex) {
+    triggers.push({
+      type: 'complex_emotion',
+      value: emotionalState.primary,
+      strength: 0.7
+    });
+    
+    // Add conflicted emotion triggers if available
+    if (emotionalState.conflictedEmotions) {
+      emotionalState.conflictedEmotions.forEach(emotion => {
+        triggers.push({
+          type: 'conflicted_emotion',
+          value: emotion,
+          strength: 0.6
+        });
+      });
+    }
+  }
+  
+  return triggers;
+}
+
+/**
+ * Calculate emotional decay rate for memory
+ * Positive emotions tend to last longer, trauma creates persistent memories
+ */
+function calculateEmotionalDecayRate(emotionalState) {
+  const baseDecayRate = 0.05; // Default decay rate
+  
+  // Get emotional valence
+  const valence = calculateEmotionalValence(emotionalState.primary);
+  
+  // Extreme emotional states are very persistent
+  const extremeEmotions = ['manic', 'frantic', 'bittersweet', 'conflicted'];
+  if (extremeEmotions.includes(emotionalState.primary) || 
+      (emotionalState.intensity && emotionalState.intensity > 0.8)) {
+    return baseDecayRate * 0.4; // Much slower decay for extreme states
+  }
+  
+  // Positive emotions decay slower (easier to forget negative experiences)
+  if (valence > 0) {
+    return baseDecayRate * 0.8;
+  }
+  
+  // Negative emotions can be more persistent (trauma effect)
+  if (valence < -0.5) {
+    return baseDecayRate * 0.6;
+  }
+  
+  // Complex emotions are more persistent
+  if (emotionalState.isComplex) {
+    return baseDecayRate * 0.7;
+  }
+  
+  return baseDecayRate;
+}
+
+/**
+ * Calculate emotional valence (-1 to +1)
+ */
+function calculateEmotionalValence(emotion) {
+  const valenceMap = {
+    // Positive emotions
+    'joyful': 0.9,
+    'happy': 0.8,
+    'excited': 0.7,
+    'content': 0.6,
+    'satisfied': 0.7,
+    'proud': 0.8,
+    'energized': 0.6,
+    'alert': 0.3,
+    'curious': 0.4,
+    
+    // Negative emotions
+    'sad': -0.7,
+    'angry': -0.8,
+    'anxious': -0.6,
+    'stressed': -0.7,
+    'ashamed': -0.8,
+    'disappointed': -0.6,
+    'distrustful': -0.5,
+    'tired': -0.3,
+    'exhausted': -0.8,
+    
+    // Complex emotions (mixed valence)
+    'bittersweet': 0.1,
+    'conflicted': -0.2,
+    'nervous_excitement': 0.2,
+    'ambivalent': 0.0,
+    'cautiously_optimistic': 0.3,
+    'apprehensive_interest': 0.1,
+    'frantic': -0.4,
+    'resigned': -0.3,
+    
+    // Extreme states
+    'manic': -0.2, // Positive but potentially destructive
+  };
+  
+  return valenceMap[emotion] || 0.0;
+}
+
+/**
+ * Get frequency range category for memory triggers
+ */
+function getFrequencyRange(frequency) {
+  if (frequency < 4) return 'very_low';
+  if (frequency < 6) return 'low';
+  if (frequency < 8) return 'normal';
+  if (frequency < 10) return 'high';
+  if (frequency < 12) return 'very_high';
+  return 'extreme';
+}
+
+/**
+ * Retrieve memories based on current emotional state
+ * This allows emotional state to trigger relevant past memories
+ */
+export function retrieveEmotionalMemories(character, currentEmotionalState, maxResults = 10) {
+  if (!character.decisionHistory) {
+    return [];
+  }
+  
+  const relevantMemories = [];
+  
+  character.decisionHistory.forEach(memory => {
+    if (!memory.emotionalContext) return;
+    
+    let relevanceScore = 0;
+    
+    // Check emotional state similarity
+    if (memory.emotionalContext.state === currentEmotionalState.primary) {
+      relevanceScore += 0.8;
+    }
+    
+    if (memory.emotionalContext.secondary === currentEmotionalState.primary ||
+        memory.emotionalContext.state === currentEmotionalState.secondary) {
+      relevanceScore += 0.6;
+    }
+    
+    // Check frequency similarity
+    const freqDiff = Math.abs(memory.emotionalContext.frequency - currentEmotionalState.frequency);
+    if (freqDiff < 2) {
+      relevanceScore += 0.4;
+    }
+    
+    // Complex emotions can trigger other complex emotions
+    if (memory.emotionalContext.isComplex && currentEmotionalState.isComplex) {
+      relevanceScore += 0.5;
+    }
+    
+    // Check retrieval triggers
+    if (memory.retrievalTriggers) {
+      memory.retrievalTriggers.forEach(trigger => {
+        if (trigger.type === 'emotional_state' && trigger.value === currentEmotionalState.primary) {
+          relevanceScore += trigger.strength;
+        }
+        
+        if (trigger.type === 'frequency_range' && 
+            trigger.value === getFrequencyRange(currentEmotionalState.frequency)) {
+          relevanceScore += trigger.strength;
+        }
+      });
+    }
+    
+    if (relevanceScore > 0.3) {
+      relevantMemories.push({
+        memory,
+        relevanceScore,
+        emotionalResonance: calculateEmotionalResonance(memory.emotionalContext, currentEmotionalState)
+      });
+    }
+  });
+  
+  // Sort by relevance and return top results
+  return relevantMemories
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
+    .slice(0, maxResults);
+}
+
+/**
+ * Calculate emotional resonance between past and current emotional states
+ */
+function calculateEmotionalResonance(pastEmotion, currentEmotion) {
+  let resonance = 0;
+  
+  // Same primary emotions resonate strongly
+  if (pastEmotion.state === currentEmotion.primary) {
+    resonance += 0.8;
+  }
+  
+  // Similar intensity levels resonate
+  const intensityDiff = Math.abs(pastEmotion.intensity - currentEmotion.intensity);
+  resonance += Math.max(0, 0.5 - intensityDiff);
+  
+  // Similar frequency ranges resonate
+  const freqDiff = Math.abs(pastEmotion.frequency - currentEmotion.frequency);
+  resonance += Math.max(0, 0.3 - (freqDiff / 10));
+  
+  // Complex emotions resonate with each other
+  if (pastEmotion.isComplex && currentEmotion.isComplex) {
+    resonance += 0.4;
+  }
+  
+  return Math.min(resonance, 1.0);
+}
+
+/**
+ * Enhanced memory formation that considers emotional context
+ */
+export function enhanceMemoryWithEmotion(character, event, emotionalState) {
+  // Create emotional memory
+  const emotionalMemory = createEmotionalMemory(event, emotionalState);
+  
+  // Add to character's decision history with emotional context
+  if (!character.decisionHistory) {
+    character.decisionHistory = [];
+  }
+  
+  character.decisionHistory.push(emotionalMemory);
+  
+  // Sort memories by salience (most salient first)
+  character.decisionHistory.sort((a, b) => {
+    const salienceA = a.memorySalience || 1.0;
+    const salienceB = b.memorySalience || 1.0;
+    return salienceB - salienceA;
+  });
+  
+  // Limit memory storage (keep most salient memories)
+  const maxMemories = 50;
+  if (character.decisionHistory.length > maxMemories) {
+    character.decisionHistory = character.decisionHistory.slice(0, maxMemories);
+  }
+  
+  return emotionalMemory;
+}
+
 const EmotionalUtils = {
   getEmotionalModifier,
   getEmotionalReaction,
   calculateEmotionalContagion,
   resolveEmotionalConflicts,
-  getComplexEmotionalModifier
+  getComplexEmotionalModifier,
+  createEmotionalMemory,
+  retrieveEmotionalMemories,
+  enhanceMemoryWithEmotion
 };
 
 export default EmotionalUtils;

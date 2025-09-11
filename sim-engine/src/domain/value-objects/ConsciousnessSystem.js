@@ -80,14 +80,68 @@ class ConsciousnessState {
         this.currentFrequency += emotionalShift.frequencyDelta;
         this.currentFrequency = Math.max(2, Math.min(18, this.currentFrequency));
         
-        // Record emotional imprint
-        this.emotionalImprints.push({
+        // Record emotional imprint with enhanced memory context
+        const emotionalImprint = {
             eventType,
             intensity,
             timestamp: Date.now(),
             frequencyBefore: this.currentFrequency - emotionalShift.frequencyDelta,
-            frequencyAfter: this.currentFrequency
-        });
+            frequencyAfter: this.currentFrequency,
+            emotionalShift: emotionalShift
+        };
+        
+        this.emotionalImprints.push(emotionalImprint);
+        
+        // Return the emotional imprint for potential memory enhancement
+        return emotionalImprint;
+    }
+    
+    /**
+     * Create emotional memory for a character with current emotional state
+     * This integrates with the MemoryService for enhanced memory formation
+     */
+    createEmotionalMemoryForCharacter(character, event) {
+        const currentEmotionalState = this.getCurrentEmotionalState();
+        
+        // Use EmotionalUtils to create enhanced memory
+        try {
+            // Dynamic import to avoid circular dependencies
+            import('../../shared/utils/EmotionalUtils.js').then(module => {
+                const enhancedMemory = module.enhanceMemoryWithEmotion(character, event, currentEmotionalState);
+                return enhancedMemory;
+            });
+        } catch (error) {
+            console.warn('Could not enhance memory with emotional context:', error);
+            // Fallback to basic memory storage
+            if (!character.decisionHistory) {
+                character.decisionHistory = [];
+            }
+            character.decisionHistory.push({
+                ...event,
+                emotionalContext: {
+                    state: currentEmotionalState.primary,
+                    intensity: currentEmotionalState.intensity,
+                    frequency: currentEmotionalState.frequency
+                }
+            });
+        }
+    }
+    
+    /**
+     * Retrieve emotionally relevant memories for current state
+     */
+    getEmotionallyRelevantMemories(character, maxResults = 5) {
+        const currentEmotionalState = this.getCurrentEmotionalState();
+        
+        try {
+            // Dynamic import to avoid circular dependencies
+            import('../../shared/utils/EmotionalUtils.js').then(module => {
+                return module.retrieveEmotionalMemories(character, currentEmotionalState, maxResults);
+            });
+        } catch (error) {
+            console.warn('Could not retrieve emotional memories:', error);
+            return [];
+        }
     }
 
     // Define how different events affect emotional state
