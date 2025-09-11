@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import CharacterEconomicService from '../../domain/services/CharacterEconomicService';
 import { EconomicProfile } from '../../domain/value-objects/EconomicProfile';
+import BulkControls from './BulkControls';
 
 const InvestmentEditor = ({ 
   character, 
@@ -45,6 +46,8 @@ const InvestmentEditor = ({
   const [showOpportunityDetails, setShowOpportunityDetails] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastError, setLastError] = useState(null);
+  const [bulkOptions, setBulkOptions] = useState({ count: 5, distribution: 'random' });
+  const [selectedInvestments, setSelectedInvestments] = useState([]);
 
   // Initialize economic profile if not present
   const economicProfile = character?.economicProfile || EconomicProfile.createDefault();
@@ -186,7 +189,8 @@ const InvestmentEditor = ({
     { id: 'portfolio', label: 'Portfolio', icon: <PieChart className="w-4 h-4" /> },
     { id: 'opportunities', label: 'Opportunities', icon: <TrendingUp className="w-4 h-4" /> },
     { id: 'income', label: 'Passive Income', icon: <DollarSign className="w-4 h-4" /> },
-    { id: 'goals', label: 'Economic Goals', icon: <Target className="w-4 h-4" /> }
+    { id: 'goals', label: 'Economic Goals', icon: <Target className="w-4 h-4" /> },
+    { id: 'bulk', label: 'Bulk Operations', icon: <Coins className="w-4 h-4" /> }
   ];
 
   return (
@@ -804,6 +808,47 @@ const InvestmentEditor = ({
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Bulk Operations Tab */}
+        {activeTab === 'bulk' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Create multiple investments at once with batch operations
+            </p>
+            <BulkControls
+              title="Bulk Investment Operations"
+              itemType="investment"
+              itemTypePlural="investments"
+              bulkOptions={bulkOptions}
+              onBulkOptionsChange={setBulkOptions}
+              selectedItems={selectedInvestments}
+              totalItems={economicProfile.investments?.length || 0}
+              onSelectAll={() => setSelectedInvestments(economicProfile.investments?.map(inv => inv.id) || [])}
+              onDeselectAll={() => setSelectedInvestments([])}
+              onPreview={() => {
+                console.log('Preview bulk investments:', bulkOptions);
+                // TODO: Implement preview functionality
+              }}
+              onGenerate={() => {
+                console.log('Generate bulk investments:', bulkOptions);
+                // TODO: Implement bulk generation
+              }}
+              onDuplicate={(items) => {
+                console.log('Duplicate investments:', items);
+                // TODO: Implement duplication
+              }}
+              onDeleteSelected={(items) => {
+                console.log('Delete selected investments:', items);
+                // TODO: Implement deletion
+              }}
+              showGeneration={true}
+              showSelection={true}
+              showPreview={true}
+              showDuplicate={true}
+              showDelete={true}
+            />
           </div>
         )}
       </div>

@@ -1016,6 +1016,53 @@ class Character {
   }
 
   /**
+   * Apply emotional event to character consciousness
+   */
+  withEmotionalEvent(eventType, intensity = 0.5, duration = 60) {
+    if (!this.consciousness || !this.consciousness.applyEmotionalEvent) {
+      console.warn('Character consciousness does not support emotional events');
+      return this;
+    }
+
+    // Create new consciousness with emotional event applied
+    const updatedConsciousness = { ...this.consciousness };
+    updatedConsciousness.applyEmotionalEvent(eventType, intensity, duration);
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      consciousness: updatedConsciousness
+    });
+  }
+
+  /**
+   * Update character's emotional state (decay modifiers, drift frequency)
+   */
+  withUpdatedEmotionalState() {
+    if (!this.consciousness || !this.consciousness.updateEmotionalState) {
+      return this;
+    }
+
+    const updatedConsciousness = { ...this.consciousness };
+    updatedConsciousness.updateEmotionalState();
+
+    return new Character({
+      ...this._getSerializableConfig(),
+      consciousness: updatedConsciousness
+    });
+  }
+
+  /**
+   * Get current emotional state for decision making
+   */
+  getCurrentEmotionalState() {
+    if (!this.consciousness || !this.consciousness.getCurrentEmotionalState) {
+      return { primary: 'content', secondary: 'stable', intensity: 0.5, energy: 0.6 };
+    }
+
+    return this.consciousness.getCurrentEmotionalState();
+  }
+
+  /**
    * Serialize character to JSON
    */
   toJSON() {

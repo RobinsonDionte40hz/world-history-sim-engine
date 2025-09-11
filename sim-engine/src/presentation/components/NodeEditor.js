@@ -11,6 +11,7 @@ import { ClimateTypes, CLIMATE_DESCRIPTIONS } from '../../shared/constants/Clima
 import { LightingTypes, LIGHTING_DESCRIPTIONS } from '../../shared/constants/LightingTypes';
 import { HazardTypes, HAZARD_DESCRIPTIONS, getHazardCategory } from '../../shared/constants/HazardTypes';
 import EnvironmentalHazard from '../../domain/entities/EnvironmentalHazard';
+import BulkControls from './BulkControls';
 
 // Node types with their characteristics
 const NODE_TYPES = [
@@ -646,6 +647,8 @@ const NodeEditor = ({
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [bulkOptions, setBulkOptions] = useState({ count: 5, distribution: 'random' });
+  const [selectedNodes, setSelectedNodes] = useState([]);
   
   const { saveTemplate, loadTemplate } = useTemplates();
 
@@ -829,6 +832,7 @@ const NodeEditor = ({
     { id: 'resources', label: 'Resources', icon: '💎' },
     { id: 'modifiers', label: 'Modifiers', icon: '⚙️' },
     { id: 'connections', label: 'Connections', icon: '🔗' },
+    { id: 'bulk', label: 'Bulk Operations', icon: '📦' },
     { id: 'advanced', label: 'Advanced', icon: '🔧' }
   ];
 
@@ -1339,6 +1343,47 @@ const NodeEditor = ({
                 <li>Connections define travel between nodes</li>
               </ul>
             </div>
+          </div>
+        )}
+
+        {/* Bulk Operations Tab */}
+        {activeTab === 'bulk' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Create multiple nodes at once with batch operations
+            </p>
+            <BulkControls
+              title="Bulk Node Operations"
+              itemType="node"
+              itemTypePlural="nodes"
+              bulkOptions={bulkOptions}
+              onBulkOptionsChange={setBulkOptions}
+              selectedItems={selectedNodes}
+              totalItems={1} // Current node being edited
+              onSelectAll={() => setSelectedNodes([nodeData.id])}
+              onDeselectAll={() => setSelectedNodes([])}
+              onPreview={() => {
+                console.log('Preview bulk nodes:', bulkOptions);
+                // TODO: Implement preview functionality
+              }}
+              onGenerate={() => {
+                console.log('Generate bulk nodes:', bulkOptions);
+                // TODO: Implement bulk generation
+              }}
+              onDuplicate={(items) => {
+                console.log('Duplicate nodes:', items);
+                // TODO: Implement duplication
+              }}
+              onDeleteSelected={(items) => {
+                console.log('Delete selected nodes:', items);
+                // TODO: Implement deletion
+              }}
+              showGeneration={true}
+              showSelection={false}
+              showPreview={true}
+              showDuplicate={false}
+              showDelete={false}
+            />
           </div>
         )}
       </div>

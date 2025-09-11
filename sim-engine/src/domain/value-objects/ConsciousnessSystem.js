@@ -12,6 +12,11 @@ class ConsciousnessState {
         this.hiddenAgendas = config.hiddenAgendas || [];
         this.relationships = config.relationships || new Map();
         this.lastUpdate = Date.now();
+        
+        // Enhanced emotional state tracking
+        this.baseEmotionalState = config.baseEmotionalState || 'content';
+        this.emotionalModifiers = config.emotionalModifiers || new Map();
+        this.emotionalDecayRate = config.emotionalDecayRate || 0.05;
     }
 
     toJSON() {
@@ -27,8 +32,216 @@ class ConsciousnessState {
             activeGoals: this.activeGoals,
             hiddenAgendas: this.hiddenAgendas,
             relationships: Array.from(this.relationships.entries()),
-            lastUpdate: this.lastUpdate
+            lastUpdate: this.lastUpdate,
+            baseEmotionalState: this.baseEmotionalState,
+            emotionalModifiers: Array.from(this.emotionalModifiers.entries()),
+            emotionalDecayRate: this.emotionalDecayRate
         };
+    }
+
+    // Map frequency bands to practical emotional states
+    getCurrentEmotionalState() {
+        const freq = this.currentFrequency;
+        let baseEmotion;
+        
+        // Practical emotion mapping with content as baseline
+        if (freq < 4) baseEmotion = { primary: 'exhausted', secondary: 'withdrawn', energy: 0.2 };
+        else if (freq < 6) baseEmotion = { primary: 'tired', secondary: 'cautious', energy: 0.4 };
+        else if (freq < 8) baseEmotion = { primary: 'content', secondary: 'stable', energy: 0.6 }; // Normal baseline
+        else if (freq < 10) baseEmotion = { primary: 'alert', secondary: 'engaged', energy: 0.8 };
+        else if (freq < 12) baseEmotion = { primary: 'energized', secondary: 'motivated', energy: 0.9 };
+        else if (freq < 15) baseEmotion = { primary: 'excited', secondary: 'ambitious', energy: 1.0 };
+        else baseEmotion = { primary: 'manic', secondary: 'reckless', energy: 1.2 }; // Dangerous high state
+        
+        // Apply temporary emotional modifiers
+        const modifiedEmotion = this._applyEmotionalModifiers(baseEmotion);
+        
+        return {
+            ...modifiedEmotion,
+            intensity: this._calculateEmotionalIntensity(),
+            coherence: this.emotionalCoherence,
+            frequency: this.currentFrequency
+        };
+    }
+
+    // Apply emotional events that temporarily shift the character's state
+    applyEmotionalEvent(eventType, intensity, duration = 60) {
+        const emotionalShift = this._calculateEmotionalShift(eventType, intensity);
+        
+        this.emotionalModifiers.set(eventType, {
+            shift: emotionalShift,
+            intensity: intensity,
+            startTime: Date.now(),
+            duration: duration * 60000, // Convert to milliseconds
+            decayRate: this.emotionalDecayRate
+        });
+        
+        // Adjust frequency based on emotional event
+        this.currentFrequency += emotionalShift.frequencyDelta;
+        this.currentFrequency = Math.max(2, Math.min(18, this.currentFrequency));
+        
+        // Record emotional imprint
+        this.emotionalImprints.push({
+            eventType,
+            intensity,
+            timestamp: Date.now(),
+            frequencyBefore: this.currentFrequency - emotionalShift.frequencyDelta,
+            frequencyAfter: this.currentFrequency
+        });
+    }
+
+    // Define how different events affect emotional state
+    _calculateEmotionalShift(eventType, intensity) {
+        const emotionalEvents = {
+            // Positive events
+            'success': { 
+                primary: 'proud', 
+                secondary: 'confident', 
+                frequencyDelta: +2 * intensity,
+                energyModifier: 1.2 
+            },
+            'love': { 
+                primary: 'joyful', 
+                secondary: 'warm', 
+                frequencyDelta: +1.5 * intensity,
+                energyModifier: 1.1 
+            },
+            'friendship': { 
+                primary: 'happy', 
+                secondary: 'social', 
+                frequencyDelta: +1 * intensity,
+                energyModifier: 1.05 
+            },
+            'achievement': { 
+                primary: 'satisfied', 
+                secondary: 'motivated', 
+                frequencyDelta: +1.5 * intensity,
+                energyModifier: 1.15 
+            },
+            'discovery': { 
+                primary: 'curious', 
+                secondary: 'excited', 
+                frequencyDelta: +1 * intensity,
+                energyModifier: 1.1 
+            },
+            
+            // Negative events
+            'betrayal': { 
+                primary: 'angry', 
+                secondary: 'distrustful', 
+                frequencyDelta: +0.5 * intensity, // Anger can increase frequency
+                energyModifier: 0.9 
+            },
+            'loss': { 
+                primary: 'sad', 
+                secondary: 'withdrawn', 
+                frequencyDelta: -2 * intensity,
+                energyModifier: 0.7 
+            },
+            'failure': { 
+                primary: 'disappointed', 
+                secondary: 'doubtful', 
+                frequencyDelta: -1.5 * intensity,
+                energyModifier: 0.8 
+            },
+            'conflict': { 
+                primary: 'stressed', 
+                secondary: 'aggressive', 
+                frequencyDelta: +1 * intensity, // Stress increases frequency
+                energyModifier: 0.9 
+            },
+            'fear': { 
+                primary: 'anxious', 
+                secondary: 'cautious', 
+                frequencyDelta: -1 * intensity,
+                energyModifier: 0.8 
+            },
+            'embarrassment': { 
+                primary: 'ashamed', 
+                secondary: 'withdrawn', 
+                frequencyDelta: -1 * intensity,
+                energyModifier: 0.85 
+            }
+        };
+        
+        return emotionalEvents[eventType] || { 
+            primary: 'neutral', 
+            secondary: 'stable', 
+            frequencyDelta: 0,
+            energyModifier: 1.0 
+        };
+    }
+
+    // Apply active emotional modifiers to base emotion
+    _applyEmotionalModifiers(baseEmotion) {
+        let modifiedEmotion = { ...baseEmotion };
+        
+        // Find the strongest active emotional modifier
+        let strongestModifier = null;
+        let maxIntensity = 0;
+        
+        this.emotionalModifiers.forEach((modifier, eventType) => {
+            if (modifier.intensity > maxIntensity) {
+                maxIntensity = modifier.intensity;
+                strongestModifier = modifier;
+            }
+        });
+        
+        // If we have a strong emotional modifier, override the base emotion
+        if (strongestModifier && maxIntensity > 0.3) {
+            modifiedEmotion.primary = strongestModifier.shift.primary;
+            modifiedEmotion.secondary = strongestModifier.shift.secondary;
+            modifiedEmotion.energy *= strongestModifier.shift.energyModifier;
+        }
+        
+        return modifiedEmotion;
+    }
+
+    // Calculate overall emotional intensity based on active modifiers
+    _calculateEmotionalIntensity() {
+        let totalIntensity = 0;
+        this.emotionalModifiers.forEach(modifier => {
+            totalIntensity += modifier.intensity;
+        });
+        
+        return Math.min(1.0, totalIntensity); // Cap at 1.0
+    }
+
+    // Update and decay emotional modifiers over time
+    updateEmotionalState() {
+        const now = Date.now();
+        const expiredModifiers = [];
+        
+        this.emotionalModifiers.forEach((modifier, eventType) => {
+            const elapsed = now - modifier.startTime;
+            
+            if (elapsed >= modifier.duration) {
+                expiredModifiers.push(eventType);
+            } else {
+                // Decay the modifier over time
+                const decayFactor = Math.exp(-modifier.decayRate * elapsed / modifier.duration);
+                modifier.intensity *= decayFactor;
+                
+                // If intensity is very low, mark for removal
+                if (modifier.intensity < 0.1) {
+                    expiredModifiers.push(eventType);
+                }
+            }
+        });
+        
+        // Remove expired modifiers and adjust frequency back toward baseline
+        expiredModifiers.forEach(eventType => {
+            const modifier = this.emotionalModifiers.get(eventType);
+            this.currentFrequency -= modifier.shift.frequencyDelta * modifier.intensity;
+            this.emotionalModifiers.delete(eventType);
+        });
+        
+        // Drift frequency back toward baseline
+        const driftRate = 0.1;
+        const driftDirection = this.baseFrequency - this.currentFrequency;
+        this.currentFrequency += driftDirection * driftRate;
+        
+        this.lastUpdate = Date.now();
     }
 }
 

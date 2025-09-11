@@ -9,8 +9,8 @@
  * - Text templating with PlaceholderEditor integration
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Settings, Dice6, Clock, Users, Target, Gift, AlertTriangle, Info } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Plus, X, Settings, Dice6, Clock, Target, Gift, AlertTriangle, Info } from 'lucide-react';
 import PlaceholderEditor from './text-templating/PlaceholderEditor';
 import EditorContextService from '../../application/services/EditorContextService';
 import QuestTextTemplatingService from '../../application/services/QuestTextTemplatingService';
@@ -107,14 +107,7 @@ const EncounterEditor = ({
     { value: 'sequential', label: 'Sequential', description: 'Participants act in turn order' }
   ];
 
-  useEffect(() => {
-    validateEncounter();
-    if (onChange) {
-      onChange(encounter);
-    }
-  }, [encounter]);
-
-  const validateEncounter = () => {
+  const validateEncounter = useCallback(() => {
     const errors = {};
     
     if (!encounter.name?.trim()) {
@@ -138,10 +131,17 @@ const EncounterEditor = ({
     if (!questValidation.isValid) {
       errors.questIntegration = questValidation.errors.join('; ');
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  };
+  }, [encounter, questTemplatingService]);
+
+  useEffect(() => {
+    validateEncounter();
+    if (onChange) {
+      onChange(encounter);
+    }
+  }, [encounter, onChange, validateEncounter]);
 
   const updateEncounter = (updates) => {
     setEncounter(prev => ({ ...prev, ...updates }));

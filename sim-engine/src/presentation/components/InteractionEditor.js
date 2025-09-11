@@ -5,6 +5,7 @@ import TemplateLibraryPanel from './TemplateLibraryPanel';
 import PlaceholderEditor from './text-templating/PlaceholderEditor';
 import DialoguePatterns from './text-templating/DialoguePatterns';
 import EditorContextService from '../../application/services/EditorContextService';
+import BulkControls from './BulkControls';
 
 // Note: Redux integration will need to be implemented when store is available
 // import { useDispatch } from 'react-redux';
@@ -700,6 +701,8 @@ const InteractionEditor = ({
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('basic');
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [bulkOptions, setBulkOptions] = useState({ count: 5, distribution: 'random' });
+  const [selectedInteractions, setSelectedInteractions] = useState([]);
   
   const { saveTemplate, loadTemplate } = useTemplates();
 
@@ -837,6 +840,7 @@ const InteractionEditor = ({
     { id: 'prerequisites', label: 'Prerequisites', icon: '🔒' },
     { id: 'choices', label: 'Choices', icon: '🔀' },
     { id: 'effects', label: 'Global Effects', icon: '⚡' },
+    { id: 'bulk', label: 'Bulk Operations', icon: '📦' },
     { id: 'advanced', label: 'Advanced', icon: '⚙️' }
   ];
 
@@ -1162,6 +1166,47 @@ const InteractionEditor = ({
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg font-mono text-sm text-white"
               />
             </div>
+          </div>
+        )}
+
+        {/* Bulk Operations Tab */}
+        {activeTab === 'bulk' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Create multiple interactions at once with batch operations
+            </p>
+            <BulkControls
+              title="Bulk Interaction Operations"
+              itemType="interaction"
+              itemTypePlural="interactions"
+              bulkOptions={bulkOptions}
+              onBulkOptionsChange={setBulkOptions}
+              selectedItems={selectedInteractions}
+              totalItems={1} // Current interaction being edited
+              onSelectAll={() => setSelectedInteractions([interactionData.id])}
+              onDeselectAll={() => setSelectedInteractions([])}
+              onPreview={() => {
+                console.log('Preview bulk interactions:', bulkOptions);
+                // TODO: Implement preview functionality
+              }}
+              onGenerate={() => {
+                console.log('Generate bulk interactions:', bulkOptions);
+                // TODO: Implement bulk generation
+              }}
+              onDuplicate={(items) => {
+                console.log('Duplicate interactions:', items);
+                // TODO: Implement duplication
+              }}
+              onDeleteSelected={(items) => {
+                console.log('Delete selected interactions:', items);
+                // TODO: Implement deletion
+              }}
+              showGeneration={true}
+              showSelection={false}
+              showPreview={true}
+              showDuplicate={false}
+              showDelete={false}
+            />
           </div>
         )}
       </div>

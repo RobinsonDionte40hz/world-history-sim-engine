@@ -11,7 +11,7 @@
   - Write unit tests for timeline rendering logic
   - _Requirements: UI-1.1, UI-1.2, UI-1.3, UI-1.4, UI-1.5_
 
-- [ ] 2. Build Relationship Network Visualizer
+- [x] 2. Build Relationship Network Visualizer
   - Create NetworkGraph component with force-directed layout
   - Implement character nodes and relationship edges
   - Add time slider for temporal navigation
@@ -20,7 +20,7 @@
   - Add export functionality for graph formats
   - _Requirements: UI-3.1, UI-3.2, UI-3.3, UI-3.4, UI-3.5, UI-3.6_
 
-- [ ] 3. Develop Statistical Analysis Dashboard
+- [x] 3. Develop Statistical Analysis Dashboard
   - Create StatsDashboard component with metric panels
   - Implement D3.js charts for population, economic, military metrics
   - Add entity comparison views

@@ -7,6 +7,7 @@ import MemoryService from '../../../domain/services/MemoryService.js';
 import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
+import { getEmotionalModifier } from '../../../shared/utils/EmotionalUtils.js';
 
 const DEBUG_MODE = false;
 
@@ -73,14 +74,32 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   const memoryScore = memoryService.getMemoryInfluence(character, interaction);
   weight += memoryScore * 2;  // -2 to +2 based on past experience
   
-  // 6. NEED-BASED MODIFIERS (From settlement need satisfaction)
+  // 6. EMOTIONAL STATE INFLUENCE (New consciousness-based emotions)
+  if (character.consciousness && character.consciousness.getCurrentEmotionalState) {
+    const emotionalState = character.consciousness.getCurrentEmotionalState();
+    const emotionalModifier = getEmotionalModifier(emotionalState, interaction);
+    weight *= emotionalModifier; // 0.1x to 3.0x based on emotional state
+    
+    // Strong emotional overrides for specific states
+    if (emotionalState.primary === 'exhausted' && interaction.type !== 'rest') {
+      weight *= 0.2; // Exhausted characters really need rest
+    }
+    if (emotionalState.primary === 'manic' && interaction.type === 'risky_actions') {
+      weight *= 2.0; // Manic characters seek risk
+    }
+    if (emotionalState.primary === 'angry' && interaction.category === 'social') {
+      weight *= 0.3; // Angry characters avoid most social interaction
+    }
+  }
+  
+  // 7. NEED-BASED MODIFIERS (From settlement need satisfaction)
   if (character.needBasedInteractionModifiers) {
     const interactionType = interaction.type || interaction.category || 'unknown';
     const modifier = character.needBasedInteractionModifiers[interactionType] || 1.0;
     weight *= modifier;
   }
 
-  // 7. NEED-BASED PRIORITIES (From settlement need satisfaction)
+  // 8. NEED-BASED PRIORITIES (From settlement need satisfaction)
   if (character.needBasedBehaviorChanges) {
     const interactionType = interaction.type || interaction.category || 'unknown';
     

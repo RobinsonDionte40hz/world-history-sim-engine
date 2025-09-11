@@ -4,6 +4,7 @@ import { useSimulationContext } from '../contexts/SimulationContext.js';
 import TurnCounter from './TurnCounter.js';
 import RelationshipVisualizer from '../features/network/RelationshipVisualizer.js';
 import TimelineVisualization from '../features/historical/TimelineVisualization.jsx';
+import StatsDashboard from '../features/historical/components/StatsDashboard.jsx';
 
 const WorldHistorySimInterface = () => {
   // Use the simulation context hook instead of local state
@@ -107,7 +108,7 @@ const WorldHistorySimInterface = () => {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex gap-8">
-            {['overview', 'timeline', 'characters', 'settlements', 'relationships'].map(view => (
+            {['overview', 'timeline', 'statistics', 'characters', 'settlements', 'relationships'].map(view => (
               <button
                 key={view}
                 onClick={() => setSelectedView(view)}
@@ -128,6 +129,7 @@ const WorldHistorySimInterface = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {selectedView === 'overview' && <DashboardView worldState={worldState} />}
         {selectedView === 'timeline' && <TimelineVisualization data={worldState?.events || []} />}
+        {selectedView === 'statistics' && <StatsDashboard data={worldState?.events || []} />}
         {selectedView === 'characters' && <CharactersView worldState={worldState} selectedCharacter={selectedCharacter} setSelectedCharacter={setSelectedCharacter} />}
         {selectedView === 'settlements' && <SettlementsView worldState={worldState} />}
         {selectedView === 'relationships' && <RelationshipVisualizer />}
@@ -202,7 +204,7 @@ const DashboardView = ({ worldState }) => {
               className="p-3 text-left bg-gray-50 dark:bg-gray-700 rounded-lg"
             >
               <p className="font-medium text-sm">{node.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Pop: {node.population}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Pop: {(node.assignedCharacters?.length || 0).toLocaleString()}</p>
             </div>
           ))}
         </div>
@@ -331,28 +333,69 @@ const CharacterDetail = ({ character }) => (
 
 // Component for settlements view
 const SettlementsView = ({ worldState }) => {
+  const displayWorldState = worldState || { nodes: [] };
+
+  if (displayWorldState.nodes.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center py-12">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              <Globe className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-xl font-semibold mb-2">No Settlements Yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Create some nodes in your world to see settlement information here.
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                Settlements will show population, resources, and other details once your world has nodes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {worldState.nodes.map(node => (
+      {displayWorldState.nodes.map(node => (
         <div key={node.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-2">{node.name}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Type: {node.type}</p>
-          
+
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-500">Population</span>
-              <span className="font-medium">{node.population.toLocaleString()}</span>
+              <span className="font-medium">{(node.assignedCharacters?.length || 0).toLocaleString()}</span>
             </div>
-            
+
             <div>
               <p className="text-sm text-gray-500 mb-2">Resources</p>
-              {Object.entries(node.resources).map(([resource, amount]) => (
-                <div key={resource} className="flex justify-between text-sm">
-                  <span className="capitalize">{resource}</span>
-                  <span>{amount}</span>
-                </div>
-              ))}
+              {node.resourceAvailability && Object.keys(node.resourceAvailability).length > 0 ? (
+                Object.entries(node.resourceAvailability).map(([resource, amount]) => (
+                  <div key={resource} className="flex justify-between text-sm">
+                    <span className="capitalize">{resource}</span>
+                    <span>{amount}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-400 italic">No resources defined</p>
+              )}
             </div>
+
+            {node.description && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Description</p>
+                <p className="text-sm">{node.description}</p>
+              </div>
+            )}
+
+            {node.environmentalProperties && (
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Environment</p>
+                <p className="text-sm capitalize">{node.environmentalProperties.climate || 'Unknown'}</p>
+              </div>
+            )}
           </div>
         </div>
       ))}
