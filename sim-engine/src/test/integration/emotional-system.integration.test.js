@@ -7,16 +7,78 @@
 
 import ConsciousnessSystem from '../../domain/value-objects/ConsciousnessSystem.js';
 import EmotionalUtils from '../../shared/utils/EmotionalUtils.js';
+import Character from '../../domain/entities/Character.js';
+import generateBehavior from '../../application/use-cases/npc/GenerateBehavior.js';
+
+// Mock the Character class for testing with emotional capabilities
+jest.mock('../../domain/entities/Character.js', () => {
+  const RealCharacter = jest.requireActual('../../domain/entities/Character.js').default;
+  
+  const MockCharacter = function(config) {
+    const instance = Object.create(RealCharacter.prototype);
+    instance.constructor = MockCharacter;
+    
+    // Set properties including emotional system requirements
+    instance.id = config.id || 'test-char';
+    instance.name = config.name || 'Test Character';
+    instance.energy = config.energy || 50;
+    instance.maxEnergy = config.maxEnergy || 100;
+    instance.currentNodeId = config.currentNodeId || 'test-node';
+    instance.attributes = config.attributes || { getEnergyProxy: () => 50 };
+    instance.consciousness = config.consciousness || { 
+      frequency: 40, 
+      coherence: 0.8,
+      emotionalModifiers: new Map()
+    };
+    instance.goals = config.goals || [{ id: 'rest' }];
+    instance.decisionHistory = config.decisionHistory || [];
+    instance.personality = config.personality || {
+      traits: {
+        empathy: 0.5,
+        aggression: 0.3,
+        patience: 0.7,
+        ambition: 0.6,
+        loyalty: 0.8,
+        curiosity: 0.5
+      },
+      emotionalTendencies: new Map([
+        ['happiness', 0.6],
+        ['anger', 0.3],
+        ['fear', 0.2],
+        ['sadness', 0.4]
+      ])
+    };
+    
+    // Add emotional system methods
+    instance.withEmotionalEvent = function(eventType, intensity = 1.0, duration = 5) {
+      return this;
+    };
+    
+    instance.withUpdatedEmotionalState = function() {
+      return this;
+    };
+    
+    return instance;
+  };
+
+  MockCharacter.prototype = RealCharacter.prototype;
+  MockCharacter.prototype.constructor = MockCharacter;
+  
+  return {
+    __esModule: true,
+    default: MockCharacter
+  };
+});
 
 describe('Emotional System Integration', () => {
   let consciousnessSystem;
   let mockCharacter;
+  let mockWorldState;
 
   beforeEach(() => {
     consciousnessSystem = new ConsciousnessSystem();
     
-    // Create a simple mock character object instead of using the Character class
-    mockCharacter = {
+    mockCharacter = new Character({
       id: 'emotional-test-char',
       name: 'Emotional Test Character',
       energy: 60,
@@ -47,6 +109,13 @@ describe('Emotional System Integration', () => {
         { id: 'rest', priority: 5 }
       ],
       decisionHistory: []
+    });
+
+    mockWorldState = {
+      characters: new Map([[mockCharacter.id, mockCharacter]]),
+      settlements: new Map(),
+      interactions: new Map(),
+      currentTurn: 1
     };
   });
 

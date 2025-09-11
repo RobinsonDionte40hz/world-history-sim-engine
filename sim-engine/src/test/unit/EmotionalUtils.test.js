@@ -12,50 +12,57 @@ describe('EmotionalUtils', () => {
     test('should return correct modifiers for tired emotion', () => {
       const modifier = EmotionalUtils.getEmotionalModifier('tired', 0.8);
       
-      // Test that the structure is correct and values are reasonable
-      expect(modifier.socialInteraction).toBeCloseTo(0.68, 1);
-      expect(modifier.riskTaking).toBeCloseTo(0.6, 1);
-      expect(modifier.energyEfficiency).toBeCloseTo(0.76, 1);
-      expect(modifier.conflictAvoidance).toBeCloseTo(1.32, 1);
-      expect(modifier.decisionSpeed).toBeCloseTo(0.84, 1);
-      expect(modifier.creativity).toBeCloseTo(0.68, 1);
-      expect(modifier.patience).toBeCloseTo(1.16, 1);
+      expect(modifier).toEqual({
+        socialInteraction: 0.6,
+        riskTaking: 0.5,
+        energyEfficiency: 0.7,
+        conflictAvoidance: 1.4,
+        decisionSpeed: 0.8,
+        creativity: 0.6,
+        patience: 1.2
+      });
     });
 
     test('should return correct modifiers for content emotion', () => {
       const modifier = EmotionalUtils.getEmotionalModifier('content', 0.7);
       
-      expect(modifier.socialInteraction).toBeCloseTo(1.0, 1);
-      expect(modifier.riskTaking).toBeCloseTo(0.93, 1);
-      expect(modifier.energyEfficiency).toBeCloseTo(1.07, 1);
-      expect(modifier.conflictAvoidance).toBeCloseTo(1.07, 1);
-      expect(modifier.decisionSpeed).toBeCloseTo(1.0, 1);
-      expect(modifier.creativity).toBeCloseTo(1.0, 1);
-      expect(modifier.patience).toBeCloseTo(1.14, 1);
+      expect(modifier).toEqual({
+        socialInteraction: 1.0,
+        riskTaking: 0.9,
+        energyEfficiency: 1.1,
+        conflictAvoidance: 1.1,
+        decisionSpeed: 1.0,
+        creativity: 1.0,
+        patience: 1.2
+      });
     });
 
     test('should return correct modifiers for alert emotion', () => {
       const modifier = EmotionalUtils.getEmotionalModifier('alert', 0.9);
       
-      expect(modifier.socialInteraction).toBeCloseTo(1.18, 1);
-      expect(modifier.riskTaking).toBeCloseTo(1.09, 1);
-      expect(modifier.energyEfficiency).toBeCloseTo(1.18, 1);
-      expect(modifier.conflictAvoidance).toBeCloseTo(0.82, 1);
-      expect(modifier.decisionSpeed).toBeCloseTo(1.27, 1);
-      expect(modifier.creativity).toBeCloseTo(1.09, 1);
-      expect(modifier.patience).toBeCloseTo(0.91, 1);
+      expect(modifier).toEqual({
+        socialInteraction: 1.2,
+        riskTaking: 1.1,
+        energyEfficiency: 1.2,
+        conflictAvoidance: 0.8,
+        decisionSpeed: 1.3,
+        creativity: 1.1,
+        patience: 0.9
+      });
     });
 
     test('should return correct modifiers for energized emotion', () => {
       const modifier = EmotionalUtils.getEmotionalModifier('energized', 0.85);
       
-      expect(modifier.socialInteraction).toBeCloseTo(1.34, 1);
-      expect(modifier.riskTaking).toBeCloseTo(1.255, 1);
-      expect(modifier.energyEfficiency).toBeCloseTo(1.255, 1);
-      expect(modifier.conflictAvoidance).toBeCloseTo(0.66, 1);
-      expect(modifier.decisionSpeed).toBeCloseTo(1.34, 1);
-      expect(modifier.creativity).toBeCloseTo(1.255, 1);
-      expect(modifier.patience).toBeCloseTo(0.745, 1);
+      expect(modifier).toEqual({
+        socialInteraction: 1.4,
+        riskTaking: 1.3,
+        energyEfficiency: 1.3,
+        conflictAvoidance: 0.6,
+        decisionSpeed: 1.4,
+        creativity: 1.3,
+        patience: 0.7
+      });
     });
 
     test('should return neutral modifiers for unknown emotion', () => {
