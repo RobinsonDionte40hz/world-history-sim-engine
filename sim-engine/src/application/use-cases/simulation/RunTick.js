@@ -16,6 +16,14 @@ const runTick = (worldState) => {
   }
 
   worldState.time = worldState.time || 0;
+  
+  // Initialize events array if it doesn't exist
+  if (!worldState.events) {
+    worldState.events = [];
+  }
+
+  // Create a shared history generator instance for this tick
+  const historyGenerator = new HistoryGenerator();
 
   // Adjust tick interval based on average coherence (quantum-inspired)
   const avgCoherence = worldState.npcs.reduce((sum, npc) => sum + (npc.consciousness?.coherence || 0), 0) / worldState.npcs.length;
@@ -97,8 +105,8 @@ const runTick = (worldState) => {
         lastInteractionType: behavior.interaction.type
       });
 
-      // Log history
-      new HistoryGenerator().logEvent({
+      // Log history using shared instance
+      const event = historyGenerator.logEvent({
         timestamp: worldState.time,
         character: npcWithInteraction,
         interaction: behavior.interaction,
@@ -106,6 +114,11 @@ const runTick = (worldState) => {
         roll: behavior.resolution.roll,
         dc: behavior.resolution.dc,
       });
+
+      // Add event to world state if it was created
+      if (event) {
+        worldState.events.push(event);
+      }
 
       // Update the reference to the new character instance
       worldState.npcs[index] = npcWithInteraction;
@@ -180,8 +193,9 @@ const runTick = (worldState) => {
             newConsequences
           );
 
-          // Log the number of events generated for debugging
-          if (historicalEvents.length > 0) {
+          // Add historical events to world state
+          if (historicalEvents && historicalEvents.length > 0) {
+            worldState.events.push(...historicalEvents);
             console.log(`Generated ${historicalEvents.length} historical events for ${updatedSettlement.name}`);
           }
         }
@@ -206,6 +220,10 @@ const runTick = (worldState) => {
   }
 
   worldState.time++;
+
+  // Log summary of events generated this tick
+  const newEventsCount = worldState.events ? worldState.events.filter(e => e.timestamp === worldState.time - 1).length : 0;
+  console.log(`Turn ${worldState.time}: Generated ${newEventsCount} events total`);
 
   return { ...worldState, tickDelay };  // Return updated state with delay for UI
 };

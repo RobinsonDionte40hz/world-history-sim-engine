@@ -101,6 +101,56 @@ class SimulationService {
     const interactionArray = Array.from(interactions.values());
     const settlementArray = settlements ? Array.from(settlements.values()) : [];
 
+    // Assign interactions to nodes based on character assignments
+    nodeArray.forEach(node => {
+      node.contentInteractions = [];
+      
+      // Find characters assigned to this node
+      const nodeCharacters = characterArray.filter(char => 
+        char.currentNodeId === node.id || 
+        (char.assignments?.nodes && char.assignments.nodes.has(node.id))
+      );
+      
+      // Collect all interactions from characters assigned to this node
+      nodeCharacters.forEach(character => {
+        if (character.assignments?.interactions) {
+          const characterInteractions = interactionArray.filter(interaction =>
+            character.assignments.interactions.has(interaction.id)
+          );
+          node.contentInteractions.push(...characterInteractions);
+        }
+      });
+      
+      // Remove duplicates
+      const uniqueInteractions = node.contentInteractions.filter((interaction, index, self) =>
+        index === self.findIndex(i => i.id === interaction.id)
+      );
+      node.contentInteractions = uniqueInteractions;
+      
+      console.log(`Node ${node.name} has ${node.contentInteractions.length} interactions assigned from ${nodeCharacters.length} characters`);
+    });
+
+    // Ensure all characters have valid currentNodeId assignments
+    characterArray.forEach(character => {
+      if (!character.currentNodeId) {
+        // Try to assign from character assignments first
+        if (character.assignments?.nodes?.size > 0) {
+          const assignedNodeId = Array.from(character.assignments.nodes)[0];
+          const nodeExists = nodeArray.some(node => node.id === assignedNodeId);
+          if (nodeExists) {
+            character.currentNodeId = assignedNodeId;
+            console.log(`Assigned character ${character.name} to node ${assignedNodeId} from assignments`);
+          }
+        }
+        
+        // Fallback: assign to first available node
+        if (!character.currentNodeId && nodeArray.length > 0) {
+          character.currentNodeId = nodeArray[0].id;
+          console.log(`Assigned character ${character.name} to first available node ${character.currentNodeId}`);
+        }
+      }
+    });
+
     // Build simulation state
     const worldState = {
       time: 0,

@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import WorldSelector from '../components/WorldSelector';
 import { useWorldContext } from '../hooks/useWorldContext';
 import { useWorldSave } from '../hooks/useWorldSave';
+import { useSimulationContext } from '../contexts/SimulationContext';
 import editorStateManager from '../../application/services/EditorStateManager';
 
 const Sidebar = ({
@@ -37,6 +38,12 @@ const Sidebar = ({
     hasWorld,
     refreshWorldContext // Add this
   } = useWorldContext();
+  
+  // Simulation context integration
+  const { 
+    isSimulationReady,
+    hasPreparedWorld 
+  } = useSimulationContext();
   
   const { 
     navigateToEditor, 
@@ -750,11 +757,11 @@ const Sidebar = ({
         navigate('/simulation');
         onClose();
       },
-      description: 'Watch history unfold',
+      description: isSimulationReady || hasPreparedWorld ? 'Watch history unfold' : 'Complete world foundation to unlock',
       hoverColor: 'rgba(34, 197, 94, 0.15)',
       hoverBorder: 'rgba(34, 197, 94, 0.4)',
-      disabled: true,
-      tooltip: 'Complete world foundation to unlock simulation'
+      disabled: !isSimulationReady && !hasPreparedWorld,
+      tooltip: isSimulationReady || hasPreparedWorld ? 'Start the simulation' : 'Complete world foundation to unlock simulation'
     },
     {
       id: 'divider-resources',

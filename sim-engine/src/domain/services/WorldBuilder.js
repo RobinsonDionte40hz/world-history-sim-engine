@@ -874,6 +874,65 @@ class WorldBuilder {
     return this.addCharacter(characterConfig);
   }
 
+  /**
+   * Automatically assign interactions to characters based on their capabilities
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  autoAssignInteractionsToCharacters() {
+    if (!this._canProceedToPhase('actorsAssigned')) {
+      throw new Error('Cannot assign interactions until locations, capabilities, and actors are defined.');
+    }
+
+    console.log('Auto-assigning interactions to characters...');
+
+    // For each character, assign a subset of available interactions
+    this.worldConfig.characters.forEach(character => {
+      // Skip if character already has interaction assignments
+      if (character.assignments?.interactions?.size > 0) {
+        console.log(`Character ${character.name} already has ${character.assignments.interactions.size} interaction assignments`);
+        return;
+      }
+
+      // Initialize assignments.interactions if it doesn't exist
+      if (!character.assignments) {
+        character.assignments = {
+          nodes: new Set(),
+          interactions: new Set(),
+          quests: new Set(),
+          settlements: new Set(),
+          factions: new Set(),
+          investments: new Set()
+        };
+      }
+
+      if (!character.assignments.interactions) {
+        character.assignments.interactions = new Set();
+      }
+
+      // Get all available interactions
+      const availableInteractions = [...this.worldConfig.interactions];
+
+      // Determine how many interactions to assign (1-3 based on character level/type)
+      const maxAssignments = Math.min(3, Math.max(1, Math.floor(character.level / 2) || 1));
+      const numToAssign = Math.min(maxAssignments, availableInteractions.length);
+
+      // Randomly select interactions to assign
+      const shuffled = [...availableInteractions].sort(() => 0.5 - Math.random());
+      const selectedInteractions = shuffled.slice(0, numToAssign);
+
+      // Assign interactions to character using the correct assignment system
+      selectedInteractions.forEach(interaction => {
+        character.assignments.interactions.add(interaction.id);
+      });
+
+      console.log(`Assigned ${selectedInteractions.length} interactions to character ${character.name}:`,
+        selectedInteractions.map(i => i.name).join(', '));
+    });
+
+    this._validatePreparationPhase('actorsAssigned');
+    return this;
+  }
+
   // Phase 5: Node population methods (assign characters to nodes)
 
   /**
@@ -910,24 +969,6 @@ class WorldBuilder {
     }
 
     this._validatePreparationPhase('actorsAssigned');
-    return this;
-  }
-
-  /**
-   * Populates a node with multiple characters
-   * @param {string} nodeId - Node ID
-   * @param {Array} characterIds - Array of character IDs
-   * @returns {WorldBuilder} This instance for chaining
-   */
-  populateNode(nodeId, characterIds) {
-    if (!Array.isArray(characterIds)) {
-      throw new Error('Character IDs must be an array');
-    }
-
-    for (const characterId of characterIds) {
-      this.assignCharacterToNode(characterId, nodeId);
-    }
-
     return this;
   }
 
@@ -1099,15 +1140,41 @@ class WorldBuilder {
       throw new Error('World configuration is not valid for simulation.');
     }
 
-    // Create simulation-optimized data structures
-    const simulationNodes = new Map(this.worldConfig.nodes.map(node => [node.id, { ...node, characters: [] }]));
-    const simulationCharacters = new Map(this.worldConfig.characters.map(char => [char.id, { ...char }]));
+    // Auto-assign interactions to characters if not already assigned
+    this.autoAssignInteractionsToCharacters();
 
-    // Populate nodes with character references
+    // Create simulation-optimized data structures
+    const simulationNodes = new Map(this.worldConfig.nodes.map(node => [node.id, { ...node, characters: [], contentInteractions: [] }]));
+    const simulationCharacters = new Map(this.worldConfig.characters.map(char => [char.id, { ...char }]));
+    const simulationInteractions = new Map(this.worldConfig.interactions.map(i => [i.id, { ...i }]));
+
+    // Populate nodes with character references and content interactions
     for (const [nodeId, characterIds] of Object.entries(this.worldConfig.nodePopulations)) {
       const node = simulationNodes.get(nodeId);
       if (node) {
+        // Add character references
         node.characters = characterIds.map(id => simulationCharacters.get(id)).filter(Boolean);
+
+        // Populate contentInteractions from assigned characters
+        node.contentInteractions = [];
+
+        // Find all characters assigned to this node
+        characterIds.forEach(characterId => {
+          const character = simulationCharacters.get(characterId);
+          if (character && character.assignments?.interactions) {
+            // Get the actual interaction objects from the assigned interaction IDs
+            const characterInteractions = Array.from(character.assignments.interactions)
+              .map(interactionId => simulationInteractions.get(interactionId))
+              .filter(Boolean); // Remove any null/undefined interactions
+
+            // Add to node's content interactions (avoid duplicates)
+            characterInteractions.forEach(interaction => {
+              if (!node.contentInteractions.some(existing => existing.id === interaction.id)) {
+                node.contentInteractions.push(interaction);
+              }
+            });
+          }
+        });
       }
     }
 
@@ -1120,7 +1187,7 @@ class WorldBuilder {
       },
       nodes: simulationNodes,
       characters: simulationCharacters,
-      interactions: new Map(this.worldConfig.interactions.map(i => [i.id, { ...i }])),
+      interactions: simulationInteractions,
       simulationMetadata: {
         preparedAt: new Date().toISOString(),
         source: 'WorldBuilder',

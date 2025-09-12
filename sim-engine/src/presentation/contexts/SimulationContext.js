@@ -270,6 +270,9 @@ export const SimulationProvider = ({ children }) => {
       setCurrentTurn(prev => prev + 1);
       
       console.log('Turn processed successfully:', turnResult);
+      console.log('Turn summary:', turnResult.turnSummary);
+      console.log('World state events:', turnResult.worldState.events?.length || 0);
+      
       return turnResult;
     } catch (error) {
       console.error('Error processing turn:', error);

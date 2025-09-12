@@ -83,46 +83,6 @@ const TurnBasedInterface = ({
     };
   }, [turnManager, updateState, onTurnProcessed]);
 
-  const handleNextTurn = async () => {
-    if (!turnManager || isProcessing) return;
-
-    try {
-      setError(null);
-      setIsProcessing(true);
-      await turnManager.processNextTurn();
-    } catch (error) {
-      console.error('Error processing turn:', error);
-      setError(error.message);
-      if (onError) {
-        onError(error);
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePause = () => {
-    if (!turnManager) return;
-    turnManager.pause();
-    updateState();
-  };
-
-  const handleResume = () => {
-    if (!turnManager) return;
-    turnManager.resume();
-    updateState();
-  };
-
-  const handleReset = () => {
-    if (!turnManager) return;
-    if (window.confirm('Are you sure you want to reset the simulation? This cannot be undone.')) {
-      turnManager.reset();
-      updateState();
-      setError(null);
-      setExpandedSummary(null);
-    }
-  };
-
   const toggleSummaryExpansion = (turnNumber) => {
     setExpandedSummary(expandedSummary === turnNumber ? null : turnNumber);
   };
@@ -135,6 +95,9 @@ const TurnBasedInterface = ({
     const iconMap = {
       character_moved: '🚶',
       character_interaction: '💬',
+      dialogue: '🗨️',
+      social_interaction: '👥',
+      conversation: '💭',
       economic_activity: '💰',
       resource_change: '📦',
       population_change: '👥',
@@ -144,9 +107,84 @@ const TurnBasedInterface = ({
       discovery: '🔍',
       birth: '👶',
       death: '💀',
+      romance: '💕',
+      friendship: '🤝',
+      rivalry: '⚡',
+      betrayal: '🗡️',
       default: '📅'
     };
     return iconMap[type] || iconMap.default;
+  };
+
+  const renderDialogueContent = (event) => {
+    // Check if the event contains dialogue data
+    if (event.dialogue) {
+      return (
+        <div className="dialogue-content">
+          <div className="dialogue-bubble">
+            <span className="dialogue-speaker">{event.speaker || 'Character'}:</span>
+            <span className="dialogue-text">"{event.dialogue}"</span>
+          </div>
+          {event.response && (
+            <div className="dialogue-response">
+              <span className="response-speaker">{event.responseBy || 'Response'}:</span>
+              <span className="response-text">"{event.response}"</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Check if the event has branches (dialogue choices)
+    if (event.branches && event.branches.length > 0) {
+      return (
+        <div className="dialogue-branches">
+          <div className="branch-label">Dialogue Options:</div>
+          {event.branches.slice(0, 3).map((branch, index) => (
+            <div key={index} className="dialogue-branch">
+              "{branch.text || branch.description}"
+              {branch.outcome && (
+                <span className="branch-outcome"> → {branch.outcome}</span>
+              )}
+            </div>
+          ))}
+          {event.branches.length > 3 && (
+            <div className="more-branches">...and {event.branches.length - 3} more options</div>
+          )}
+        </div>
+      );
+    }
+
+    // Check for conversation summary
+    if (event.conversationSummary) {
+      return (
+        <div className="conversation-summary">
+          <div className="summary-label">Conversation:</div>
+          <div className="summary-text">{event.conversationSummary}</div>
+          {event.mood && (
+            <div className="conversation-mood">Mood: {event.mood}</div>
+          )}
+        </div>
+      );
+    }
+
+    // Check for templated text content
+    if (event.template || event.resolvedText) {
+      return (
+        <div className="templated-dialogue">
+          <div className="template-result">
+            "{event.resolvedText || event.template}"
+          </div>
+          {event.context && (
+            <div className="template-context">
+              Context: {Object.keys(event.context).join(', ')}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const getChangeIcon = (changeType) => {
@@ -154,13 +192,150 @@ const TurnBasedInterface = ({
       character_moved: '🚶',
       character_attribute_change: '📊',
       character_relationships_changed: '💕',
+      character_emotional_change: '😊',
+      character_consciousness_change: '🧠',
+      character_goal_change: '🎯',
       character_added: '✨',
       character_removed: '👻',
       node_resources_changed: '📦',
       node_population_changed: '👥',
+      settlement_economic_change: '💰',
+      settlement_social_change: '🏛️',
+      environmental_change: '🌍',
       default: '🔄'
     };
     return iconMap[changeType] || iconMap.default;
+  };
+
+  const formatChangeTitle = (changeType) => {
+    const titleMap = {
+      character_moved: 'Character Movement',
+      character_attribute_change: 'Attribute Changes',
+      character_relationships_changed: 'Relationship Shifts',
+      character_emotional_change: 'Emotional State Changes',
+      character_consciousness_change: 'Consciousness Evolution',
+      character_goal_change: 'Goal Adjustments',
+      character_added: 'New Character',
+      character_removed: 'Character Departure',
+      node_resources_changed: 'Resource Fluctuations',
+      node_population_changed: 'Population Dynamics',
+      settlement_economic_change: 'Economic Activity',
+      settlement_social_change: 'Social Developments',
+      environmental_change: 'Environmental Shifts'
+    };
+    return titleMap[changeType] || formatEventType(changeType);
+  };
+
+  const renderChangeDescription = (change) => {
+    switch (change.type) {
+      case 'character_moved':
+        return (
+          <div className="change-details">
+            <span className="character-name">{change.character}</span> traveled from{' '}
+            <span className="location-name">{change.fromNode}</span> to{' '}
+            <span className="location-name">{change.toNode}</span>
+            {change.reason && <div className="change-reason">Reason: {change.reason}</div>}
+          </div>
+        );
+      
+      case 'character_emotional_change':
+        return (
+          <div className="change-details">
+            <span className="character-name">{change.character}</span>'s emotional state shifted
+            {change.fromEmotion && change.toEmotion && (
+              <div className="emotion-shift">
+                {change.fromEmotion} → {change.toEmotion}
+              </div>
+            )}
+            {change.intensity && (
+              <div className="emotion-intensity">Intensity: {(change.intensity * 100).toFixed(0)}%</div>
+            )}
+          </div>
+        );
+      
+      case 'character_consciousness_change':
+        return (
+          <div className="change-details">
+            <span className="character-name">{change.character}</span>'s consciousness evolved
+            {change.frequency && (
+              <div className="consciousness-metrics">
+                Frequency: {change.frequency.toFixed(1)} Hz
+                {change.coherence && ` | Coherence: ${(change.coherence * 100).toFixed(0)}%`}
+              </div>
+            )}
+          </div>
+        );
+      
+      case 'character_relationships_changed':
+        return (
+          <div className="change-details">
+            <span className="character-name">{change.character}</span> relationship dynamics
+            {change.target && (
+              <div className="relationship-details">
+                with <span className="character-name">{change.target}</span>:{' '}
+                {change.change > 0 ? 'improved' : 'deteriorated'} by {Math.abs(change.change)}
+              </div>
+            )}
+          </div>
+        );
+      
+      case 'settlement_economic_change':
+        return (
+          <div className="change-details">
+            Economic activity in <span className="location-name">{change.settlement}</span>
+            {change.economicData && (
+              <div className="economic-metrics">
+                {change.economicData.wealth && `Wealth: ${change.economicData.wealth}`}
+                {change.economicData.trade && ` | Trade: ${change.economicData.trade}`}
+                {change.economicData.growth && ` | Growth: ${(change.economicData.growth * 100).toFixed(1)}%`}
+              </div>
+            )}
+          </div>
+        );
+      
+      default:
+        return (
+          <div className="change-details">
+            {change.description || `${change.type} occurred`}
+            {change.magnitude && (
+              <div className="change-magnitude">Magnitude: {change.magnitude}</div>
+            )}
+          </div>
+        );
+    }
+  };
+
+  const formatStatLabel = (key) => {
+    const labelMap = {
+      totalEvents: 'Total Events',
+      characterInteractions: 'Character Interactions',
+      economicActivity: 'Economic Activity',
+      populationChanges: 'Population Changes',
+      resourceChanges: 'Resource Changes',
+      emotionalEvents: 'Emotional Events',
+      consciousnessShifts: 'Consciousness Changes',
+      relationshipChanges: 'Relationship Shifts',
+      goalAchievements: 'Goals Achieved',
+      socialEvents: 'Social Interactions',
+      environmentalEffects: 'Environmental Changes'
+    };
+    return labelMap[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+  };
+
+  const formatStatValue = (value) => {
+    if (typeof value === 'number') {
+      if (value > 1000) {
+        return `${(value / 1000).toFixed(1)}k`;
+      }
+      return value.toString();
+    }
+    return value;
+  };
+
+  const getStatTrend = (key, value) => {
+    // This would ideally compare with previous turns
+    // For now, return null - could be enhanced with historical data
+    return null;
   };
 
   if (!turnManager || !turnStats) {
@@ -176,67 +351,35 @@ const TurnBasedInterface = ({
 
   return (
     <div className={`turn-based-interface ${className}`}>
-      {/* Main control panel */}
-      <div className="turn-control-panel">
-        <div className="turn-info">
-          <div className="turn-counter">
-            <span className="turn-label">Turn</span>
+      {/* Information Panel Only - No Controls */}
+      <div className="turn-info-panel">
+        <div className="panel-header">
+          <h3 className="panel-title">Simulation Status</h3>
+          <div className="turn-display">
+            <span className="turn-label">Turn:</span>
             <span className="turn-number">{turnStats.currentTurn}</span>
             {turnStats.maxTurns && (
-              <span className="turn-limit">of {turnStats.maxTurns}</span>
-            )}
-          </div>
-          
-          <div className="turn-status">
-            {isProcessing && (
-              <div className="processing-indicator">
-                <div className="processing-spinner"></div>
-                <span>Processing Turn...</span>
-              </div>
-            )}
-            {turnStats.isPaused && !isProcessing && (
-              <div className="paused-indicator">⏸️ Paused</div>
-            )}
-            {!turnStats.canContinue && (
-              <div className="completed-indicator">🏁 Max Turns Reached</div>
+              <span className="turn-limit">/ {turnStats.maxTurns}</span>
             )}
           </div>
         </div>
-
-        <div className="turn-controls">
-          <button
-            className={`next-turn-btn ${!turnStats.canContinue || isProcessing || turnStats.isPaused ? 'disabled' : ''}`}
-            onClick={handleNextTurn}
-            disabled={!turnStats.canContinue || isProcessing || turnStats.isPaused}
-          >
-            {isProcessing ? (
-              <>
-                <div className="btn-spinner"></div>
-                Processing...
-              </>
-            ) : (
-              <>
-                <span className="btn-icon">⏭️</span>
-                Next Turn
-              </>
-            )}
-          </button>
-
-          <div className="secondary-controls">
-            {turnStats.isPaused ? (
-              <button className="control-btn resume-btn" onClick={handleResume}>
-                ▶️ Resume
-              </button>
-            ) : (
-              <button className="control-btn pause-btn" onClick={handlePause}>
-                ⏸️ Pause
-              </button>
-            )}
-            
-            <button className="control-btn reset-btn" onClick={handleReset}>
-              🔄 Reset
-            </button>
-          </div>
+        
+        <div className="status-indicators">
+          {isProcessing && (
+            <div className="status-item processing">
+              <div className="status-spinner"></div>
+              <span>Processing Turn...</span>
+            </div>
+          )}
+          {turnStats.isPaused && !isProcessing && (
+            <div className="status-item paused">⏸️ Simulation Paused</div>
+          )}
+          {!turnStats.canContinue && (
+            <div className="status-item completed">🏁 Max Turns Reached</div>
+          )}
+          {!isProcessing && !turnStats.isPaused && turnStats.canContinue && (
+            <div className="status-item active">▶️ Simulation Ready</div>
+          )}
         </div>
       </div>
 
@@ -292,49 +435,23 @@ const TurnBasedInterface = ({
 
                 {expandedSummary === summary.turn && showDetails && (
                   <div className="summary-details">
-                    {/* Changes */}
+                    {/* Enhanced Character & World Changes */}
                     {summary.changes.length > 0 && (
                       <div className="changes-section">
-                        <h5>Changes:</h5>
+                        <h5>📊 World Changes</h5>
                         <div className="changes-list">
                           {summary.changes.map((change, changeIndex) => (
-                            <div key={changeIndex} className="change-item">
+                            <div key={changeIndex} className="change-item detailed">
                               <span className="change-icon">{getChangeIcon(change.type)}</span>
-                              <span className="change-description">
-                                {change.type === 'character_moved' && (
-                                  `${change.character} moved from ${change.fromNode} to ${change.toNode}`
-                                )}
-                                {change.type === 'character_attribute_change' && (
-                                  `${change.character} attributes changed`
-                                )}
-                                {change.type === 'character_relationships_changed' && (
-                                  `${change.character} relationships ${change.change > 0 ? 'gained' : 'lost'} ${Math.abs(change.change)}`
-                                )}
-                                {change.type === 'node_population_changed' && (
-                                  `${change.node} population ${change.change > 0 ? 'increased' : 'decreased'} by ${Math.abs(change.change)}`
-                                )}
-                                {change.type === 'node_resources_changed' && (
-                                  `${change.node} resources updated`
-                                )}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Events */}
-                    {summary.events.length > 0 && (
-                      <div className="events-section">
-                        <h5>Events:</h5>
-                        <div className="events-list">
-                          {summary.events.map((event, eventIndex) => (
-                            <div key={eventIndex} className="event-item">
-                              <span className="event-icon">{getEventIcon(event.type)}</span>
-                              <div className="event-details">
-                                <span className="event-type">{formatEventType(event.type)}</span>
-                                {event.description && (
-                                  <span className="event-description">{event.description}</span>
+                              <div className="change-content">
+                                <div className="change-title">{formatChangeTitle(change.type)}</div>
+                                <div className="change-description">
+                                  {renderChangeDescription(change)}
+                                </div>
+                                {change.impact && (
+                                  <div className="change-impact">
+                                    Impact: {change.impact}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -343,15 +460,72 @@ const TurnBasedInterface = ({
                       </div>
                     )}
 
-                    {/* Statistics */}
+                    {/* Enhanced Events with Dialogue */}
+                    {summary.events.length > 0 && (
+                      <div className="events-section">
+                        <h5>🎭 Events & Interactions</h5>
+                        <div className="events-list">
+                          {summary.events.map((event, eventIndex) => (
+                            <div key={eventIndex} className="event-item detailed">
+                              <span className="event-icon">{getEventIcon(event.type)}</span>
+                              <div className="event-content">
+                                <div className="event-header">
+                                  <span className="event-type">{formatEventType(event.type)}</span>
+                                  {event.significance && (
+                                    <span className="event-significance">
+                                      ⭐ {event.significance}/10
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {event.description && (
+                                  <div className="event-description">{event.description}</div>
+                                )}
+
+                                {/* Dialogue Content */}
+                                {renderDialogueContent(event)}
+
+                                {/* Event Participants */}
+                                {event.characters && event.characters.length > 0 && (
+                                  <div className="event-participants">
+                                    👥 Involved: {event.characters.join(', ')}
+                                  </div>
+                                )}
+                                
+                                {/* Event Location */}
+                                {event.location && (
+                                  <div className="event-location">
+                                    📍 Location: {event.location}
+                                  </div>
+                                )}
+                                
+                                {/* Event Consequences */}
+                                {event.consequences && (
+                                  <div className="event-consequences">
+                                    ⚡ Consequences: {event.consequences}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Enhanced Statistics */}
                     {summary.statistics && Object.keys(summary.statistics).length > 0 && (
                       <div className="statistics-section">
-                        <h5>Statistics:</h5>
-                        <div className="stats-grid">
+                        <h5>📈 Turn Statistics</h5>
+                        <div className="stats-grid enhanced">
                           {Object.entries(summary.statistics).map(([key, value]) => (
-                            <div key={key} className="stat-item">
-                              <span className="stat-label">{formatEventType(key)}</span>
-                              <span className="stat-value">{value}</span>
+                            <div key={key} className="stat-item enhanced">
+                              <div className="stat-content">
+                                <span className="stat-label">{formatStatLabel(key)}</span>
+                                <span className="stat-value">{formatStatValue(value)}</span>
+                                {getStatTrend(key, value) && (
+                                  <span className="stat-trend">{getStatTrend(key, value)}</span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -365,7 +539,7 @@ const TurnBasedInterface = ({
         </div>
       )}
 
-      {/* Recent events panel */}
+      {/* Enhanced Recent Events Panel with Dialogue */}
       {showEvents && recentEvents.length > 0 && (
         <div className="recent-events-section">
           <div className="section-header">
@@ -380,19 +554,43 @@ const TurnBasedInterface = ({
 
           <div className="recent-events">
             {recentEvents.map((event, index) => (
-              <div key={index} className="event-entry">
-                <div className="event-turn">T{event.turn}</div>
-                <div className="event-icon">{getEventIcon(event.type)}</div>
-                <div className="event-info">
-                  <div className="event-type">{formatEventType(event.type)}</div>
+              <div key={index} className="event-entry enhanced">
+                <div className="event-header">
+                  <div className="event-turn">T{event.turn}</div>
+                  <div className="event-icon">{getEventIcon(event.type)}</div>
+                  <div className="event-meta">
+                    <div className="event-type">{formatEventType(event.type)}</div>
+                    {event.significance && (
+                      <div className="event-significance">⭐ {event.significance}/10</div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="event-content">
                   {event.description && (
                     <div className="event-description">{event.description}</div>
                   )}
-                  {event.characters && (
-                    <div className="event-characters">
-                      Characters: {event.characters.join(', ')}
-                    </div>
-                  )}
+                  
+                  {/* Dialogue Content in Recent Events */}
+                  {renderDialogueContent(event)}
+                  
+                  <div className="event-details">
+                    {event.characters && (
+                      <div className="event-characters">
+                        👥 {event.characters.join(', ')}
+                      </div>
+                    )}
+                    {event.location && (
+                      <div className="event-location">
+                        📍 {event.location}
+                      </div>
+                    )}
+                    {event.consequences && (
+                      <div className="event-consequences">
+                        ⚡ {event.consequences}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

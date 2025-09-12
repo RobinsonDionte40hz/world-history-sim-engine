@@ -41,10 +41,22 @@ const WorldBuilderLandingPage = () => {
     setIsDemoModalOpen(false);
   };
 
-  const handleSelectDemo = (demoWorld) => {
-    // Navigate to simulation with the demo world data
-    // The demo world is already prepared for simulation, so we pass it directly
-    navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
+  const handleSelectDemo = async (demoWorld) => {
+    try {
+      // First, import the demo world so it's saved and available
+      const demoInfo = demoWorld.metadata || { name: demoWorld.name || 'Demo World' };
+      const worldId = await importDemoWorld(demoWorld, demoInfo);
+      
+      console.log('Demo world imported with ID:', worldId);
+      
+      // Navigate to simulation with the demo world data
+      // The demo world is already prepared for simulation, so we pass it directly
+      navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
+    } catch (error) {
+      console.error('Failed to import demo world before simulation:', error);
+      // Fallback: still navigate to simulation even if import fails
+      navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
+    }
   };
 
   const handleImportDemo = async (demoWorld, demoInfo) => {

@@ -6,7 +6,11 @@ import { useSimulationContext } from '../contexts/SimulationContext';
 
 const SimulationPage = () => {
   const location = useLocation();
-  const { acceptPreparedWorld, simulationReadinessStatus } = useSimulationContext();
+  const { 
+    acceptPreparedWorld, 
+    simulationReadinessStatus,
+    worldState
+  } = useSimulationContext();
   const [isLoadingDemo, setIsLoadingDemo] = useState(false);
   const [demoError, setDemoError] = useState(null);
 
@@ -75,7 +79,10 @@ const SimulationPage = () => {
         variant="default"
         showSearch={true}
       />
-      <WorldHistorySimInterface />
+      <WorldHistorySimInterface 
+        worldState={worldState}
+        simulationService={null}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import InvestmentEditor from './InvestmentEditor.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
@@ -1194,6 +1194,53 @@ const CharacterEditor = ({
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   
   const { saveTemplate, loadTemplate } = useTemplates();
+
+  // Sync character data when initialCharacter prop changes (for editing)
+  useEffect(() => {
+    if (initialCharacter) {
+      setCharacterData({
+        id: initialCharacter.id || `character_${Date.now()}`,
+        name: initialCharacter.name || '',
+        description: initialCharacter.description || '',
+        archetype: initialCharacter.archetype || 'warrior',
+        attributes: initialCharacter.attributes || {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10
+        },
+        personality: initialCharacter.personality || {
+          traits: {},
+          beliefs: '',
+          fears: []
+        },
+        consciousness: initialCharacter.consciousness || {
+          baseFrequency: 40,
+          coherence: 0.7,
+          awareness: 0.5
+        },
+        skills: initialCharacter.skills || {},
+        goals: initialCharacter.goals || [],
+        assignedInteractions: initialCharacter.assignedInteractions || [],
+        equipment: initialCharacter.equipment || {},
+        relationshipTemplates: initialCharacter.relationshipTemplates || [],
+        background: initialCharacter.background || '',
+        appearance: initialCharacter.appearance || '',
+        tags: initialCharacter.tags || [],
+        metadata: initialCharacter.metadata || {},
+        templateSettings: initialCharacter.templateSettings || {
+          namePattern: { prefix: '', suffix: '' },
+          attributeRanges: {},
+          variation: { attributes: 2, personality: 0.2 },
+          bulkOptions: { count: 5, distribution: 'random' }
+        }
+      });
+      // Clear any previous errors
+      setErrors({});
+    }
+  }, [initialCharacter]);
 
   // Validation using unified utility with mode-specific requirements
   const validateCharacter = useCallback(() => {

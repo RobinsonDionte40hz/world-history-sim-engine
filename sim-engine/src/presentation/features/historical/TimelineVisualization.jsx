@@ -84,7 +84,15 @@ const TimelineVisualization = ({
   const renderTimeline = useCallback(() => {
     const startTime = performance.now();
     
-    if (!svgRef.current || !tracks.length) return;
+    if (!svgRef.current || !tracks.length) {
+      // Update render stats for empty case
+      setRenderStats({
+        lastRenderTime: performance.now() - startTime,
+        visibleEvents: 0,
+        totalEvents: safeData.length
+      });
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     const { width: viewWidth, height: viewHeight, scale, x: viewX, y: viewY } = viewport;
@@ -103,7 +111,7 @@ const TimelineVisualization = ({
       .attr('transform', `translate(${viewX}, ${viewY}) scale(${scale})`);
 
     // Render background
-    renderBackground(mainGroup, viewWidth, viewHeight);
+    renderBackground(mainGroup, viewWidth, viewHeight, timeScale);
 
     // Render time axis
     renderTimeAxis(mainGroup, timeScale, viewWidth);
@@ -122,8 +130,8 @@ const TimelineVisualization = ({
     const renderTime = performance.now() - startTime;
     setRenderStats({
       lastRenderTime: renderTime,
-      visibleEvents: calculateVisibleEvents(),
-      totalEvents: data.length
+      visibleEvents: calculateVisibleEvents(timeScale),
+      totalEvents: safeData.length
     });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -382,8 +390,13 @@ const TimelineVisualization = ({
    * Calculate visible events for performance metrics
    */
   const calculateVisibleEvents = (timeScale) => {
+    // If no timeScale provided or timeScale is not a function, return total events
+    if (!timeScale || typeof timeScale !== 'function') {
+      return safeData.length;
+    }
+    
     // This would calculate based on current viewport
-    return data.filter(event => {
+    return safeData.filter(event => {
       const eventTime = new Date(event.timestamp);
       const timeInViewport = timeScale(eventTime);
       return timeInViewport >= viewport.x && timeInViewport <= viewport.x + viewport.width;

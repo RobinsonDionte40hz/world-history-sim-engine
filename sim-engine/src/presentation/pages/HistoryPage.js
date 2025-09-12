@@ -5,7 +5,7 @@ import { useSimulationContext } from '../contexts/SimulationContext.js';
 import { SkipForward, RotateCcw } from 'lucide-react';
 import TimelineVisualization from '../features/historical/TimelineVisualization.jsx';
 import TurnCounter from '../components/TurnCounter.js';
-import analyzeHistory from '../../application/use-cases/history/AnalyzeHistory.js';
+import simulationService from '../../application/use-cases/services/SimulationService.js';
 
 const HistoryPage = () => {
   const { 
@@ -27,12 +27,14 @@ const HistoryPage = () => {
   const loadHistoryData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Get events from the analyze history function
-      const result = contextAnalyzeHistory || analyzeHistory;
-        const analysisResult = result({ limit: 1000 }); // Load more events for timeline
+      // Get events from the current world state
+      const currentWorldState = simulationService.getCurrentWorldState();
+      
+      if (currentWorldState && currentWorldState.events) {
+        console.log('Loading events from world state:', currentWorldState.events.length);
         
         // Transform the events for timeline visualization
-        const transformedEvents = analysisResult.events.map(event => ({
+        const transformedEvents = currentWorldState.events.map(event => ({
           ...event,
           track: determineEventTrack(event),
           x: event.timestamp,
@@ -49,13 +51,17 @@ const HistoryPage = () => {
             end: Math.max(...timestamps)
           });
         }
-      } catch (error) {
-        console.error('Failed to load history data:', error);
+      } else {
+        console.log('No events found in world state');
         setTimelineData([]);
-      } finally {
-        setIsLoading(false);
       }
-    }, [contextAnalyzeHistory]);
+    } catch (error) {
+      console.error('Failed to load history data:', error);
+      setTimelineData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
     useEffect(() => {
       loadHistoryData();
