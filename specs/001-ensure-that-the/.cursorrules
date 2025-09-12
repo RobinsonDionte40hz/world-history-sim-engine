@@ -1,0 +1,72 @@
+# Cursor Rules: Demo World Save Flow Consistency
+
+## Project Context
+- **Framework**: React 18.2.0 with Redux Toolkit
+- **Language**: JavaScript ES2022, TypeScript support
+- **Storage**: LocalStorage with Redux-Persist
+- **Styling**: Tailwind CSS
+- **Testing**: Jest, React Testing Library
+
+## Feature-Specific Rules
+
+### Demo Content Handling
+- Always preserve content ownership flags ('demo', 'user', 'mixed')
+- Use identical save flows for demo and user content
+- Maintain backward compatibility with existing save operations
+- Implement conflict resolution for version mismatches
+
+### Save Flow Consistency
+- Standard Save buttons should work identically for all content types
+- No special "demo mode" handling in editors
+- Preserve all entity relationships during save operations
+- Validate content integrity before and after saves
+
+### State Management
+- Use Redux Toolkit for all state management
+- Implement proper action creators for save operations
+- Handle async operations with createAsyncThunk
+- Maintain immutable state updates
+
+### Error Handling
+- Provide user-friendly error messages
+- Implement graceful degradation for save failures
+- Log errors with appropriate context
+- Handle LocalStorage quota exceeded scenarios
+
+## Code Quality Standards
+
+### Naming Conventions
+- Use camelCase for variables and functions
+- Use PascalCase for components and classes
+- Use UPPER_SNAKE_CASE for constants
+- Prefix demo-related functions with `demo` or `Demo`
+
+### File Organization
+- Keep components in `/src/components/`
+- Store Redux logic in `/src/store/`
+- Place services in `/src/services/`
+- Put utilities in `/src/utils/`
+
+### Testing Requirements
+- Write tests before implementation (TDD)
+- Cover all acceptance scenarios
+- Test both demo and user content paths
+- Mock external dependencies appropriately
+
+## Implementation Priorities
+
+1. **Core Save Flow**: Ensure identical save behavior
+2. **Content Ownership**: Proper flag management
+3. **Conflict Resolution**: Handle version conflicts
+4. **UI Consistency**: Identical editor behavior
+5. **Performance**: Maintain <500ms save times
+6. **Error Handling**: Robust failure scenarios
+
+## Validation Checklist
+
+- [ ] Save operations work identically for demo and user content
+- [ ] Content ownership is preserved correctly
+- [ ] All editors remain functional after saves
+- [ ] Performance targets are met
+- [ ] Error scenarios are handled gracefully
+- [ ] Tests cover all acceptance criteria
