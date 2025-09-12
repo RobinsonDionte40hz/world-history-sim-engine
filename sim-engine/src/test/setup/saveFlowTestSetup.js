@@ -46,59 +46,30 @@ export class MockPersistenceAdapter {
   }
 }
 
-// Mock Redux persist configuration
-export const mockPersistConfig = {
-  key: 'test-root',
-  storage: {
-    getItem: (key) => Promise.resolve(localStorageMock.getItem(key)),
-    setItem: (key, value) => Promise.resolve(localStorageMock.setItem(key, value)),
-    removeItem: (key) => Promise.resolve(localStorageMock.removeItem(key)),
-  },
-  whitelist: ['saveFlow'],
-};
-
 // Mock Redux store factory
 export function createMockStore(initialState = {}) {
-  const mockReducer = (state = initialState, action) => {
-    switch (action.type) {
-      case 'SAVE_CONTENT':
-        return {
-          ...state,
-          content: action.payload,
-          lastSaved: new Date().toISOString(),
-        };
-      case 'LOAD_CONTENT':
-        return {
-          ...state,
-          content: action.payload,
-          lastLoaded: new Date().toISOString(),
-        };
-      case 'CLEAR_CONTENT':
-        return {
-          ...state,
-          content: null,
-          lastCleared: new Date().toISOString(),
-        };
-      default:
-        return state;
-    }
+  // Create a simple mock store that doesn't use persistence for testing
+  const mockStore = {
+    getState: jest.fn(() => initialState),
+    dispatch: jest.fn(),
+    subscribe: jest.fn(),
+    replaceReducer: jest.fn(),
   };
 
-  const persistedReducer = persistReducer(mockPersistConfig, mockReducer);
+  const mockPersistor = {
+    getState: jest.fn(() => ({ bootstrapped: true })),
+    subscribe: jest.fn((callback) => {
+      // Immediately call callback to simulate bootstrapped state
+      setTimeout(() => callback && callback(), 0);
+      return jest.fn(); // unsubscribe function
+    }),
+    pause: jest.fn(),
+    resume: jest.fn(),
+    purge: jest.fn().mockResolvedValue(),
+    flush: jest.fn().mockResolvedValue(),
+  };
 
-  const store = configureStore({
-    reducer: persistedReducer,
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({
-        serializableCheck: {
-          ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-        },
-      }),
-  });
-
-  const persistor = persistStore(store);
-
-  return { store, persistor };
+  return { store: mockStore, persistor: mockPersistor };
 }
 
 // Test data factories

@@ -58,14 +58,15 @@ export default class SaveFlowService {
 
       // Prepare save data with metadata
       const saveData = {
-        id: operationId,
+        id: content.id, // Use content ID as storage key
         content,
         ownership,
         timestamp: new Date().toISOString(),
         metadata: {
           ...metadata,
           version: this.getVersion(),
-          operationType: 'save'
+          operationType: 'save',
+          operationId // Keep operation ID in metadata
         }
       };
 
