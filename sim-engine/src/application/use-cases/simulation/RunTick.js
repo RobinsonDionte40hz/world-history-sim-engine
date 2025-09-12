@@ -22,26 +22,48 @@ const runTick = (worldState) => {
   const tickDelay = Math.max(100, 1000 - (avgCoherence * 900));  // 100-1000ms, higher coherence slows time
 
   worldState.npcs.forEach((npc, index) => {
+    let characterInstance = npc;
+
+    // Ensure we have a proper Character instance
     if (!(npc instanceof Character)) {
-      console.error('Invalid character in world state at index', index, npc);
-      // Try to recover by converting to Character instance
+      console.warn(`Converting plain object to Character instance at index ${index}:`, npc);
       try {
-        npc = Character.fromJSON(npc);
-        worldState.npcs[index] = npc;
+        characterInstance = Character.fromJSON(npc);
+        console.log(`Successfully converted character ${characterInstance.name} to Character instance`);
       } catch (error) {
-        console.error('Failed to convert NPC to Character instance:', error);
+        console.error(`Failed to convert NPC to Character instance at index ${index}:`, error);
+        console.error('NPC data:', JSON.stringify(npc, null, 2));
         return; // Skip this NPC
       }
     }
 
+    // Ensure character has a valid currentNodeId
+    if (!characterInstance.currentNodeId) {
+      // Try to assign from assignments first
+      if (characterInstance.assignments?.nodes?.size > 0) {
+        const assignedNodeId = Array.from(characterInstance.assignments.nodes)[0];
+        const characterData = characterInstance.toJSON();
+        characterData.currentNodeId = assignedNodeId; // Explicitly set to ensure override
+        characterInstance = new Character(characterData);
+        console.log(`Assigned character ${characterInstance.name} to node ${assignedNodeId} from assignments`);
+      }
+      // Fallback to first available node
+      else if (worldState.nodes.length > 0) {
+        const firstNodeId = worldState.nodes[0].id;
+        const characterData = characterInstance.toJSON();
+        characterData.currentNodeId = firstNodeId; // Explicitly set to ensure override
+        characterInstance = new Character(characterData);
+        console.log(`Assigned character ${characterInstance.name} to first available node ${firstNodeId}`);
+      }
+    }
+
     // Create a new Character instance with updated basic state
-    // This maintains the Character class while updating properties
     const updatedNpc = new Character({
-      ...npc.toJSON(), // Get all current properties
+      ...characterInstance.toJSON(),
       // Update basic properties
-      energy: Math.max(0, Math.min(100, (npc.energy || 50) - 1)),
-      health: Math.max(0, Math.min(100, npc.health || 100)),
-      mood: Math.max(0, Math.min(100, npc.mood || 50))
+      energy: Math.max(0, Math.min(100, (characterInstance.energy || 50) - 1)),
+      health: Math.max(0, Math.min(100, characterInstance.health || 100)),
+      mood: Math.max(0, Math.min(100, characterInstance.mood || 50))
     });
 
     // Evolve over time - now passing a proper Character instance
@@ -51,17 +73,17 @@ const runTick = (worldState) => {
     // Apply need satisfaction modifiers to character behavior
     const behaviorModifierService = new CharacterBehaviorModifierService();
     let modifiedNpc = evolvedNpc;
-    
+
     // Find the settlement the character is in
-    const characterSettlement = worldState.settlements?.find(settlement => 
-      settlement.assignedCharacters?.includes(evolvedNpc.id) || 
+    const characterSettlement = worldState.settlements?.find(settlement =>
+      settlement.assignedCharacters?.includes(evolvedNpc.id) ||
       settlement.id === evolvedNpc.currentNodeId
     );
-    
+
     if (characterSettlement) {
       modifiedNpc = behaviorModifierService.applyNeedSatisfactionModifiers(
-        evolvedNpc, 
-        characterSettlement, 
+        evolvedNpc,
+        characterSettlement,
         worldState
       );
     }

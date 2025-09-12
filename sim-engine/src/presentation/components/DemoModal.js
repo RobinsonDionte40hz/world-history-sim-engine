@@ -1,13 +1,14 @@
 // src/presentation/components/DemoModal.js
 
 import React, { useState } from 'react';
-import { X, Play, Clock, Star, Globe, Rocket, Ship } from 'lucide-react';
+import { X, Play, Clock, Star, Globe, Rocket, Ship, Edit } from 'lucide-react';
 import DemoService from '../../application/services/DemoService';
 
 /**
  * DemoModal - Modal for selecting and launching demo worlds
+ * Now supports both importing as editable worlds and direct simulation
  */
-const DemoModal = ({ isOpen, onClose, onSelectDemo }) => {
+const DemoModal = ({ isOpen, onClose, onSelectDemo, onImportDemo }) => {
   const [selectedDemo, setSelectedDemo] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,6 +35,21 @@ const DemoModal = ({ isOpen, onClose, onSelectDemo }) => {
       onClose();
     } catch (error) {
       console.error('Error loading demo world:', error);
+      // Handle error - maybe show toast notification
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportDemo = async (demoId) => {
+    setIsLoading(true);
+    try {
+      const demoWorld = DemoService.generateDemoWorldForImport(demoId);
+      const demoInfo = demoWorlds.find(d => d.id === demoId);
+      onImportDemo(demoWorld, demoInfo);
+      onClose();
+    } catch (error) {
+      console.error('Error importing demo world:', error);
       // Handle error - maybe show toast notification
     } finally {
       setIsLoading(false);
@@ -132,35 +148,60 @@ const DemoModal = ({ isOpen, onClose, onSelectDemo }) => {
                   )}
                 </div>
 
-                {/* Launch Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectDemo(demo.id);
-                  }}
-                  disabled={isLoading}
-                  className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{
-                    background: demo.category === 'fantasy' 
-                      ? 'linear-gradient(135deg, #10b981, #34d399)'
-                      : demo.category === 'sci-fi'
-                      ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
-                      : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                    color: 'white'
-                  }}
-                >
-                  {isLoading && selectedDemo === demo.id ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Launch Demo
-                    </>
-                  )}
-                </button>
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  {/* Import as Editable World Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImportDemo(demo.id);
+                    }}
+                    disabled={isLoading}
+                    className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                  >
+                    {isLoading && selectedDemo === demo.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-4 h-4" />
+                        Import & Edit
+                      </>
+                    )}
+                  </button>
+
+                  {/* Direct Launch Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectDemo(demo.id);
+                    }}
+                    disabled={isLoading}
+                    className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{
+                      background: demo.category === 'fantasy' 
+                        ? 'linear-gradient(135deg, #10b981, #34d399)'
+                        : demo.category === 'sci-fi'
+                        ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
+                        : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                      color: 'white'
+                    }}
+                  >
+                    {isLoading && selectedDemo === demo.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        Launch Demo
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -170,10 +211,13 @@ const DemoModal = ({ isOpen, onClose, onSelectDemo }) => {
         <div className="mt-8 pt-6 border-t border-gray-700">
           <div className="text-center text-gray-400 text-sm">
             <p className="mb-2">
-              Demo worlds are pre-configured for immediate exploration
+              <strong className="text-white">Import & Edit:</strong> Save as your own world to customize and modify
+            </p>
+            <p className="mb-4">
+              <strong className="text-white">Launch Demo:</strong> Jump straight into simulation with the pre-built world
             </p>
             <p className="flex items-center justify-center gap-1">
-              <span>Want to build your own?</span>
+              <span>Want to start from scratch?</span>
               <button 
                 onClick={onClose}
                 className="text-blue-400 hover:text-blue-300 underline"

@@ -12,7 +12,7 @@
  * @param {Object} validationToken - Security token from SimulationContext
  */
 
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import SimulationService from '../../application/use-cases/services/SimulationService.js';
 import pipelineValidationService from '../../application/services/PipelineValidationService.js';
 
@@ -28,7 +28,8 @@ const isPreparedWorldValid = (preparedWorldData) => {
 
   // Must have simulation metadata from preparation pipeline
   if (!preparedWorldData.simulationMetadata || 
-      preparedWorldData.simulationMetadata.source !== 'WorldBuilder') {
+      (preparedWorldData.simulationMetadata.source !== 'WorldBuilder' && 
+       preparedWorldData.simulationMetadata.source !== 'DemoService')) {
     return false;
   }
 

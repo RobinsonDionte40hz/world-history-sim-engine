@@ -21,12 +21,12 @@ class PipelineValidationService {
   /**
    * Generate a secure validation token for prepared world data
    * @param {Object} worldData - The prepared world data
-   * @param {string} source - The source of preparation (must be 'WorldBuilder')
+   * @param {string} source - The source of preparation ('WorldBuilder' or 'DemoService')
    * @returns {string} Secure validation token
    */
   generateValidationToken(worldData, source) {
-    if (source !== 'WorldBuilder') {
-      throw new Error('Invalid preparation source. Only WorldBuilder can generate validation tokens.');
+    if (source !== 'WorldBuilder' && source !== 'DemoService') {
+      throw new Error('Invalid preparation source. Only WorldBuilder and DemoService can generate validation tokens.');
     }
 
     // Create a fingerprint of the world data
@@ -57,7 +57,7 @@ class PipelineValidationService {
     if (!this._validatedWorlds.has(token)) {
       return {
         isValid: false,
-        error: 'Invalid or expired validation token. World data must be prepared through WorldBuilder.'
+        error: 'Invalid or expired validation token. World data must be prepared through WorldBuilder or DemoService.'
       };
     }
 
@@ -68,7 +68,7 @@ class PipelineValidationService {
     if (currentFingerprint !== registeredData.fingerprint) {
       return {
         isValid: false,
-        error: 'World data has been modified after preparation. Re-prepare through WorldBuilder.'
+        error: 'World data has been modified after preparation. Re-prepare through WorldBuilder or DemoService.'
       };
     }
 
@@ -78,7 +78,7 @@ class PipelineValidationService {
       this._validatedWorlds.delete(token);
       return {
         isValid: false,
-        error: 'Validation token has expired. Re-prepare world through WorldBuilder.'
+        error: 'Validation token has expired. Re-prepare world through WorldBuilder or DemoService.'
       };
     }
 

@@ -12,6 +12,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import TemplateManager from '../../template/TemplateManager.js';
 import pipelineValidationService from '../../application/services/PipelineValidationService.js';
+import simulationService from '../../application/use-cases/services/SimulationService.js';
 
 const SimulationContext = createContext();
 
@@ -23,6 +24,7 @@ export const SimulationProvider = ({ children }) => {
       pipelineValidationService.popContext();
     };
   }, []);
+  
   // Initialize template manager for template operations (read-only in simulation context)
   const [templateManager] = useState(() => new TemplateManager());
   
@@ -38,28 +40,36 @@ export const SimulationProvider = ({ children }) => {
     hasValidToken: false
   });
   
-  // State for simulation management (managed internally, not via useSimulation hook)
-  const simulationState = {
-    worldState: null,
-    isInitialized: false,
-    initializationError: null,
-    historyAnalysis: null,
-    currentTurn: 0,
-    turnSummary: null,
-    turnHistory: [],
-    canProcessTurn: false,
-    initializeWorld: () => {
-      throw new Error('No prepared world available. Use acceptPreparedWorld() first.');
-    },
-    resetSimulation: () => {
-      throw new Error('No prepared world available. Use acceptPreparedWorld() first.');
-    },
-    processTurn: () => {
-      throw new Error('No prepared world available. Use acceptPreparedWorld() first.');
-    },
-    getTurnHistory: () => [],
-    analyzeHistory: () => null
-  };
+  // Track validation token and simulation state directly
+  const [validationToken, setValidationToken] = useState(null);
+  const [currentSimulationState, setCurrentSimulationState] = useState(null);
+  const [worldState, setWorldState] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initializationError, setInitializationError] = useState(null);
+  const [currentTurn, setCurrentTurn] = useState(0);
+  const [turnHistory, setTurnHistory] = useState([]);
+  const [isProcessingTurn, setIsProcessingTurn] = useState(false);
+  
+  // Initialize simulation when prepared world data is available
+  useEffect(() => {
+    if (preparedWorldData && validationToken && !isInitialized) {
+      console.log('Initializing simulation with prepared world data:', preparedWorldData);
+      console.log('Validation token:', validationToken);
+      try {
+        const initialState = simulationService.initialize(preparedWorldData);
+        setCurrentSimulationState(initialState);
+        setWorldState(initialState); // Use the simulation state, not the prepared data
+        setIsInitialized(true);
+        setInitializationError(null);
+        console.log('Simulation initialized successfully with state:', initialState);
+        console.log('SimulationService internal state check:', simulationService.getCurrentWorldState());
+      } catch (error) {
+        console.error('Failed to initialize simulation:', error);
+        setInitializationError(error.message);
+        setIsInitialized(false);
+      }
+    }
+  }, [preparedWorldData, validationToken, isInitialized]);
   
   // Validation function to ensure world data comes from WorldBuilder pipeline
   const validatePreparedWorld = useCallback((worldData) => {
@@ -72,9 +82,9 @@ export const SimulationProvider = ({ children }) => {
     } else {
       const metadata = worldData.simulationMetadata;
       
-      // Must be prepared by WorldBuilder
-      if (metadata.source !== 'WorldBuilder') {
-        errors.push(`Invalid source: ${metadata.source}. Only WorldBuilder-prepared worlds are accepted.`);
+      // Must be prepared by WorldBuilder or DemoService
+      if (metadata.source !== 'WorldBuilder' && metadata.source !== 'DemoService') {
+        errors.push(`Invalid source: ${metadata.source}. Only WorldBuilder-prepared worlds and demo worlds are accepted.`);
       }
       
       // Must have preparation timestamp
@@ -182,11 +192,15 @@ export const SimulationProvider = ({ children }) => {
       }
 
       // Generate validation token for this world
-      // Generate validation token for the prepared world
-      pipelineValidationService.generateValidationToken(
+      const sourceForToken = worldData.simulationMetadata?.source || 'WorldBuilder';
+      
+      const token = pipelineValidationService.generateValidationToken(
         worldData,
-        worldData.simulationMetadata?.source || 'WorldBuilder'
+        sourceForToken
       );
+      
+      // Set the validation token for simulation initialization
+      setValidationToken(token);
 
       // Accept the prepared world data 
       setPreparedWorldData(worldData);
@@ -215,6 +229,14 @@ export const SimulationProvider = ({ children }) => {
   const clearPreparedWorld = useCallback(() => {
     setPreparedWorldData(null);
     setPipelineValidationError(null);
+    setCurrentSimulationState(null);
+    setWorldState(null);
+    setIsInitialized(false);
+    setInitializationError(null);
+    setCurrentTurn(0);
+    setTurnHistory([]);
+    setIsProcessingTurn(false);
+    setValidationToken(null);
     setSimulationReadinessStatus({
       hasPreparedWorld: false,
       isSimulationReady: false,
@@ -224,6 +246,62 @@ export const SimulationProvider = ({ children }) => {
       hasValidToken: false
     });
   }, []);
+
+  // Process turn function
+  const processTurn = useCallback(async () => {
+    if (!currentSimulationState || isProcessingTurn || !isInitialized) {
+      console.warn('Cannot process turn: no simulation state, already processing, or not initialized');
+      console.warn('State check:', { 
+        hasCurrentSimulationState: !!currentSimulationState, 
+        isProcessingTurn, 
+        isInitialized 
+      });
+      return;
+    }
+
+    setIsProcessingTurn(true);
+    try {
+      // SimulationService.processTurn() doesn't take parameters - it uses its internal worldState
+      const turnResult = await simulationService.processTurn();
+      
+      setCurrentSimulationState(turnResult.worldState);
+      setWorldState(turnResult.worldState); // Update worldState with the new simulation state
+      setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
+      setCurrentTurn(prev => prev + 1);
+      
+      console.log('Turn processed successfully:', turnResult);
+      return turnResult;
+    } catch (error) {
+      console.error('Error processing turn:', error);
+      throw error;
+    } finally {
+      setIsProcessingTurn(false);
+    }
+  }, [currentSimulationState, isProcessingTurn, isInitialized]);
+
+  // Reset simulation function
+  const resetSimulation = useCallback(() => {
+    setCurrentSimulationState(null);
+    setIsInitialized(false);
+    setInitializationError(null);
+    setCurrentTurn(0);
+    setTurnHistory([]);
+    setIsProcessingTurn(false);
+    
+    // Re-initialize if we have prepared world data
+    if (preparedWorldData && validationToken) {
+      try {
+        const initialState = simulationService.initialize(preparedWorldData);
+        setCurrentSimulationState(initialState);
+        setWorldState(initialState); // Use the simulation state, not the prepared data
+        setIsInitialized(true);
+        console.log('Simulation reset and re-initialized');
+      } catch (error) {
+        console.error('Failed to re-initialize simulation:', error);
+        setInitializationError(error.message);
+      }
+    }
+  }, [preparedWorldData, validationToken]);
   
   // Combined context value with simulation state and preparation pipeline integration
   const contextValue = {
@@ -240,36 +318,25 @@ export const SimulationProvider = ({ children }) => {
     clearPreparedWorld,
     validatePreparedWorld,
     
-    // Simulation state and methods (only available with prepared world)
-    simulation: simulationState,
+    // Simulation state and methods
+    worldState,
+    isInitialized,
+    initializationError,
+    currentTurn,
+    turnHistory,
+    canProcessTurn: isInitialized && !isProcessingTurn && !!currentSimulationState,
+    isProcessingTurn,
     
-    // Legacy compatibility - expose simulation properties at root level
-    worldState: simulationState?.worldState || null,
-    isInitialized: simulationState?.isInitialized || false,
-    initializationError: simulationState?.initializationError || null,
-    historyAnalysis: simulationState?.historyAnalysis || null,
-    currentTurn: simulationState?.currentTurn || 0,
-    turnSummary: simulationState?.turnSummary || null,
-    turnHistory: simulationState?.turnHistory || [],
-    canProcessTurn: simulationState?.canProcessTurn || false,
+    // Turn-based actions
+    processTurn,
+    resetSimulation,
+    getTurnHistory: () => turnHistory,
+    analyzeHistory: () => turnHistory,
     
-    // Turn-based actions (only available with prepared world)
-    initializeWorld: simulationState?.initializeWorld || (() => {
-      throw new Error('No prepared world available. Use acceptPreparedWorld() first.');
-    }),
-    resetSimulation: simulationState?.resetSimulation || (() => {
-      throw new Error('No prepared world available. Use acceptPreparedWorld() first.');
-    }),
-    processTurn: simulationState?.processTurn || (() => {
-      throw new Error('No prepared world available. Use acceptPreparedWorld() first.');
-    }),
-    getTurnHistory: simulationState?.getTurnHistory || (() => []),
-    analyzeHistory: simulationState?.analyzeHistory || (() => null),
-    
-    // Simulation readiness status (based on prepared world, not world builder)
+    // Simulation readiness status
     isSimulationReady: simulationReadinessStatus.isSimulationReady,
     hasPreparedWorld: simulationReadinessStatus.hasPreparedWorld,
-    canInitializeSimulation: simulationReadinessStatus.isSimulationReady && !simulationState?.isInitialized
+    canInitializeSimulation: simulationReadinessStatus.isSimulationReady && !isInitialized
   };
 
   return (

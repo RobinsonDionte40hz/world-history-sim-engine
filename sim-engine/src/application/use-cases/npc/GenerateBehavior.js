@@ -131,9 +131,34 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
 
 // Helper function to gather available interactions
 function gatherAvailableInteractions(character, worldState) {
+  // Ensure we have a proper Character instance
+  if (!(character instanceof Character)) {
+    console.error('gatherAvailableInteractions received non-Character object:', character);
+    throw new Error('Invalid character object passed to gatherAvailableInteractions');
+  }
+
+  console.log(`Checking character ${character.name} (ID: ${character.id}) with currentNodeId: ${character.currentNodeId}`);
+  console.log(`Available nodes:`, worldState.nodes.map(n => ({ id: n.id, name: n.name })));
+
+  // If character has no currentNodeId, try to assign one from their assignments
+  if (!character.currentNodeId && character.assignments?.nodes?.size > 0) {
+    const assignedNodeId = Array.from(character.assignments.nodes)[0];
+    console.log(`Character has no currentNodeId, assigning from assignments: ${assignedNodeId}`);
+    character.currentNodeId = assignedNodeId;
+  }
+
+  // If still no currentNodeId, assign to first available node
+  if (!character.currentNodeId && worldState.nodes.length > 0) {
+    const firstNodeId = worldState.nodes[0].id;
+    console.log(`Character has no currentNodeId, assigning to first available node: ${firstNodeId}`);
+    character.currentNodeId = firstNodeId;
+  }
+
   const currentNode = worldState.nodes.find(node => node.id === character.currentNodeId);
   if (!currentNode) {
-    throw new Error('Character has no valid node');
+    console.error(`Character ${character.name} has invalid currentNodeId: ${character.currentNodeId}`);
+    console.error(`Available node IDs:`, worldState.nodes.map(n => n.id));
+    throw new Error(`Character ${character.name} has no valid node (currentNodeId: ${character.currentNodeId})`);
   }
 
   const interactionManager = new InteractionManager();
@@ -150,10 +175,10 @@ function gatherAvailableInteractions(character, worldState) {
       if (interaction.isSystemInteraction) {
         return interactionManager.canExecuteInteraction(interaction, { character, worldState, currentNode });
       }
-      
+
       // Content interactions use canExecute method
       const canExecuteResult = interaction.canExecute && interaction.canExecute(character, worldState);
-      
+
       return canExecuteResult;
     } catch (error) {
       console.warn(`Error checking if interaction can execute:`, error.message);
@@ -162,9 +187,7 @@ function gatherAvailableInteractions(character, worldState) {
   });
 
   return availableInteractions;
-}
-
-// Emergency handler (separate from main weighting)
+}// Emergency handler (separate from main weighting)
 function handleEmergency(character, interactions, worldState) {
   // Only override for TRUE emergencies
   if (character.energy < 5) {

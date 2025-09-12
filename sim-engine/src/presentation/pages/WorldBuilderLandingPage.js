@@ -10,9 +10,11 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Globe, Users, Layers, Sparkles, Clock, Map, Mail, MessageSquare, Phone, Database, Shield, Share2, Play } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import DemoModal from '../components/DemoModal';
+import { useWorldContext } from '../contexts/WorldContext';
 
 const WorldBuilderLandingPage = () => {
   const navigate = useNavigate();
+  const { importDemoWorld } = useWorldContext();
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [cardsVisible, setCardsVisible] = useState([false, false, false]);
@@ -43,6 +45,24 @@ const WorldBuilderLandingPage = () => {
     // Navigate to simulation with the demo world data
     // The demo world is already prepared for simulation, so we pass it directly
     navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
+  };
+
+  const handleImportDemo = async (demoWorld, demoInfo) => {
+    try {
+      // Import the demo as a regular editable world
+      const worldId = await importDemoWorld(demoWorld, demoInfo);
+      
+      // Navigate to the world builder with the imported world
+      navigate('/world-builder', { 
+        state: { 
+          importedWorldId: worldId, 
+          message: `Demo world "${demoInfo?.name}" imported successfully! You can now edit and customize it.` 
+        } 
+      });
+    } catch (error) {
+      console.error('Failed to import demo world:', error);
+      // Handle error - could show a toast notification
+    }
   };
 
   // Handle scroll for content visibility - OPTIMIZED with throttling
@@ -694,7 +714,10 @@ const WorldBuilderLandingPage = () => {
               style={{
                 display: 'flex',
                 gap: '2rem',
-                animation: contentVisible.howItWorks ? 'carouselMove 30s linear infinite' : 'none',
+                animationName: contentVisible.howItWorks ? 'carouselMove' : 'none',
+                animationDuration: contentVisible.howItWorks ? '30s' : '0s',
+                animationTimingFunction: 'linear',
+                animationIterationCount: 'infinite',
                 animationPlayState: 'running',
                 willChange: 'transform'
               }}
@@ -1448,7 +1471,10 @@ const WorldBuilderLandingPage = () => {
             style={{
               display: 'flex',
               gap: '2rem',
-              animation: contentVisible.additionalFeatures ? 'carouselMoveWide 28s linear infinite' : 'none',
+              animationName: contentVisible.additionalFeatures ? 'carouselMoveWide' : 'none',
+              animationDuration: contentVisible.additionalFeatures ? '28s' : '0s',
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
               animationPlayState: 'running'
             }}
             className="carousel-container"
@@ -2376,6 +2402,7 @@ const WorldBuilderLandingPage = () => {
         isOpen={isDemoModalOpen}
         onClose={handleCloseDemoModal}
         onSelectDemo={handleSelectDemo}
+        onImportDemo={handleImportDemo}
       />
     </div>
     </>

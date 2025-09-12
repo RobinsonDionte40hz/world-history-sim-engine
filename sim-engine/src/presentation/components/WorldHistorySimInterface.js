@@ -28,26 +28,7 @@ const WorldHistorySimInterface = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <Globe className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-xl font-bold">World History Simulation Engine</h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <TurnCounter currentTurn={currentTurn} />
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <Settings className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Simulation Controls */}
       <div className="bg-blue-600 dark:bg-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -95,10 +76,14 @@ const WorldHistorySimInterface = () => {
             </div>
 
             <div className="flex items-center gap-4">
+              <TurnCounter currentTurn={currentTurn} />
               <span className="text-sm opacity-75">
                 {isInitialized ? 'Turn-Based Mode' : 'Not Initialized'}
               </span>
               <div className={`w-2 h-2 rounded-full ${isInitialized ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+              <button className="p-2 hover:bg-blue-700 rounded-lg">
+                <Settings className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -146,8 +131,22 @@ const DashboardView = ({ worldState }) => {
     npcs: [],
     nodes: [],
     events: [],
-    resources: { totalGold: 0, totalFood: 0, totalPopulation: 0 }
+    resources: { 
+      totalGold: 0, 
+      totalFood: 0, 
+      totalPopulation: 0,
+      population: 0
+    }
   };
+  
+  // Ensure resources object exists and has required properties
+  const resources = displayWorldState.resources || { 
+    totalGold: 0, 
+    totalFood: 0, 
+    totalPopulation: 0,
+    population: 0
+  };
+  
   const filteredEvents = (displayWorldState.events || []);
 
   return (
@@ -157,14 +156,14 @@ const DashboardView = ({ worldState }) => {
         <StatCard 
           icon={<Users className="w-6 h-6" />}
           label="Total Population"
-          value={displayWorldState.resources.totalPopulation?.toLocaleString() || '0'}
+          value={resources.totalPopulation?.toLocaleString() || resources.population?.toLocaleString() || '0'}
           trend="+5%"
           color="blue"
         />
         <StatCard 
           icon={<TrendingUp className="w-6 h-6" />}
           label="Total Resources"
-          value={displayWorldState.resources.totalGold || 0}
+          value={resources.totalGold || 0}
           trend="+12%"
           color="green"
         />

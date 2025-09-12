@@ -42,9 +42,10 @@ class SimulationService {
     }
 
     // Validate source
-    if (preparedWorldData.simulationMetadata.source !== 'WorldBuilder') {
+    if (preparedWorldData.simulationMetadata.source !== 'WorldBuilder' && 
+        preparedWorldData.simulationMetadata.source !== 'DemoService') {
       throw new Error(
-        'Invalid world data source. World must be prepared through WorldBuilder.prepareForSimulation()'
+        'Invalid world data source. World must be prepared through WorldBuilder.prepareForSimulation() or DemoService.generateDemoWorld()'
       );
     }
 
@@ -109,7 +110,12 @@ class SimulationService {
       npcs: characterArray,
       interactions: interactionArray,
       settlements: settlementArray,
-      resources: {},
+      resources: {
+        totalPopulation: characterArray.length,
+        totalGold: this._calculateInitialResources(nodeArray, characterArray),
+        population: characterArray.length
+      },
+      events: [], // Initialize events array for UI
       history: [],
       rules: worldProperties.rules || {},
       initialConditions: worldProperties.initialConditions || {},
@@ -279,6 +285,20 @@ class SimulationService {
       
       // Track turn start
       const turnStartTime = Date.now();
+      
+      // Validate world state before processing
+      if (typeof this.validateWorldStateIntegrity === 'function') {
+        this.validateWorldStateIntegrity();
+      } else {
+        console.error('validateWorldStateIntegrity method not found - possible compilation issue');
+        // Fallback basic validation
+        if (!this.worldState) {
+          throw new Error('World state is null or undefined');
+        }
+        if (!Array.isArray(this.worldState.nodes) || !Array.isArray(this.worldState.npcs)) {
+          throw new Error('Invalid world state structure');
+        }
+      }
       
       // Process the turn using existing runTick logic
       const updatedState = runTick(this.worldState);
@@ -861,6 +881,96 @@ class SimulationService {
   // Event handler for UI updates (optional)
   setOnTick(callback) {
     this.onTick = callback;
+  }
+
+  // Helper method to calculate initial resources from world data
+  _calculateInitialResources(nodes, characters) {
+    let totalGold = 0;
+    
+    // Calculate gold from nodes (settlements, resource nodes, etc.)
+    nodes.forEach(node => {
+      if (node.resources && node.resources.gold) {
+        totalGold += node.resources.gold;
+      } else if (node.type === 'settlement') {
+        totalGold += 100; // Default gold for settlements
+      } else if (node.type === 'resource') {
+        totalGold += 50; // Default gold for resource nodes
+      }
+    });
+    
+    // Add gold from characters
+    characters.forEach(character => {
+      if (character.resources && character.resources.gold) {
+        totalGold += character.resources.gold;
+      } else {
+        totalGold += 10; // Default starting gold per character
+      }
+    });
+    
+    return totalGold;
+  }
+
+  // Validate world state integrity before processing turns
+  validateWorldStateIntegrity() {
+    console.log('Starting world state integrity validation...');
+    
+    if (!this.worldState) {
+      throw new Error('World state is null or undefined');
+    }
+
+    // Validate basic structure
+    if (!Array.isArray(this.worldState.nodes)) {
+      throw new Error('World state nodes must be an array');
+    }
+
+    if (!Array.isArray(this.worldState.npcs)) {
+      throw new Error('World state npcs must be an array');
+    }
+
+    // Validate character-node relationships
+    const nodeIds = new Set(this.worldState.nodes.map(node => node.id));
+    const orphanedCharacters = [];
+
+    this.worldState.npcs.forEach(character => {
+      if (!character.currentNodeId) {
+        // Try to assign from character assignments
+        if (character.assignments?.nodes?.size > 0) {
+          const assignedNodeId = Array.from(character.assignments.nodes)[0];
+          if (nodeIds.has(assignedNodeId)) {
+            character.currentNodeId = assignedNodeId;
+            console.log(`Auto-assigned character ${character.name} to node ${assignedNodeId}`);
+          } else {
+            orphanedCharacters.push(character);
+          }
+        } else if (nodeIds.size > 0) {
+          // Assign to first available node
+          const firstNodeId = Array.from(nodeIds)[0];
+          character.currentNodeId = firstNodeId;
+          console.log(`Emergency assignment: ${character.name} assigned to node ${firstNodeId}`);
+        } else {
+          orphanedCharacters.push(character);
+        }
+      } else if (!nodeIds.has(character.currentNodeId)) {
+        orphanedCharacters.push(character);
+      }
+    });
+
+    if (orphanedCharacters.length > 0) {
+      console.error('Characters with invalid node assignments:', orphanedCharacters.map(c => ({
+        name: c.name,
+        id: c.id,
+        currentNodeId: c.currentNodeId
+      })));
+      throw new Error(`${orphanedCharacters.length} characters have invalid node assignments. Available nodes: ${Array.from(nodeIds).join(', ')}`);
+    }
+
+    // Validate time is a valid number
+    if (typeof this.worldState.time !== 'number' || !Number.isFinite(this.worldState.time)) {
+      console.warn('Invalid world state time, resetting to 0');
+      this.worldState.time = 0;
+    }
+
+    console.log('World state integrity validated successfully');
   }
 }
 

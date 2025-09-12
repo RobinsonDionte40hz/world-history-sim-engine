@@ -43,9 +43,35 @@ class DemoService {
   /**
    * Generate a complete demo world configuration
    * @param {string} demoId - ID of the demo world to generate
-   * @returns {Object} Complete world configuration ready for simulation
+   * @returns {Object} Complete world configuration ready for simulation pipeline
    */
   static generateDemoWorld(demoId) {
+    let rawWorldData;
+    
+    switch (demoId) {
+      case 'fantasy_village_demo':
+        rawWorldData = this._generateFantasyVillage();
+        break;
+      case 'space_colony_demo':
+        rawWorldData = this._generateSpaceColony();
+        break;
+      case 'pirate_port_demo':
+        rawWorldData = this._generatePiratePort();
+        break;
+      default:
+        throw new Error(`Unknown demo world: ${demoId}`);
+    }
+    
+    // Format for SimulationContext pipeline
+    return this._formatForSimulationPipeline(rawWorldData, demoId);
+  }
+
+  /**
+   * Generate raw demo world data for import as regular world
+   * @param {string} demoId - ID of the demo world to generate
+   * @returns {Object} Raw world configuration for import
+   */
+  static generateDemoWorldForImport(demoId) {
     switch (demoId) {
       case 'fantasy_village_demo':
         return this._generateFantasyVillage();
@@ -56,6 +82,98 @@ class DemoService {
       default:
         throw new Error(`Unknown demo world: ${demoId}`);
     }
+  }
+
+  /**
+   * Format demo world data for SimulationContext pipeline
+   * @private
+   * @param {Object} rawWorldData - Raw demo world configuration
+   * @param {string} demoId - Demo identifier for metadata
+   * @returns {Object} Pipeline-ready world data
+   */
+  static _formatForSimulationPipeline(rawWorldData, demoId) {
+    // Convert arrays to Maps for pipeline compatibility
+    const nodesMap = new Map();
+    if (rawWorldData.nodes && Array.isArray(rawWorldData.nodes)) {
+      rawWorldData.nodes.forEach(node => {
+        // Ensure node has required properties
+        const processedNode = {
+          ...node,
+          id: node.id || `node_${Date.now()}_${Math.random()}`,
+          name: node.name || 'Unnamed Location',
+          type: node.type || 'settlement',
+          description: node.description || 'A location in the world'
+        };
+        nodesMap.set(processedNode.id, processedNode);
+      });
+    }
+    
+    const charactersMap = new Map();
+    if (rawWorldData.characters && Array.isArray(rawWorldData.characters)) {
+      rawWorldData.characters.forEach(character => {
+        // Ensure character has required properties and fix assignments
+        const processedCharacter = {
+          ...character,
+          id: character.id || `char_${Date.now()}_${Math.random()}`,
+          name: character.name || 'Unnamed Character',
+          assignments: {
+            nodes: character.assignments?.nodes || new Set(),
+            interactions: character.assignments?.interactions || new Set()
+          },
+          // Preserve currentNodeId for simulation
+          currentNodeId: character.currentNodeId || null
+        };
+        charactersMap.set(processedCharacter.id, processedCharacter);
+      });
+    }
+    
+    const interactionsMap = new Map();
+    if (rawWorldData.interactions && Array.isArray(rawWorldData.interactions)) {
+      rawWorldData.interactions.forEach(interaction => {
+        // Ensure interaction has required properties
+        const processedInteraction = {
+          ...interaction,
+          id: interaction.id || `int_${Date.now()}_${Math.random()}`,
+          name: interaction.name || 'Unnamed Interaction',
+          type: interaction.type || 'social'
+        };
+        interactionsMap.set(processedInteraction.id, processedInteraction);
+      });
+    }
+    
+    const settlementsMap = new Map();
+    if (rawWorldData.settlements && Array.isArray(rawWorldData.settlements)) {
+      rawWorldData.settlements.forEach(settlement => {
+        settlementsMap.set(settlement.id, settlement);
+      });
+    }
+
+    // Ensure world properties exist
+    const worldProperties = {
+      name: rawWorldData.name || 'Demo World',
+      description: rawWorldData.description || 'A demonstration world',
+      rules: rawWorldData.rules || { timeProgression: 'turn-based' },
+      initialConditions: rawWorldData.initialConditions || { startingYear: 1000 }
+    };
+
+    // Create pipeline-compatible world data structure
+    return {
+      worldProperties,
+      nodes: nodesMap,
+      characters: charactersMap,
+      interactions: interactionsMap,
+      settlements: settlementsMap,
+      
+      // Required simulation metadata for pipeline validation
+      simulationMetadata: {
+        source: 'DemoService',
+        preparedAt: new Date().toISOString(),
+        worldId: `demo_${demoId}_${Date.now()}`,
+        demoId: demoId,
+        isDemoWorld: true,
+        version: '2.0.0'
+      }
+    };
   }
 
   /**
@@ -175,6 +293,7 @@ class DemoService {
             nodes: new Set(['village_center']),
             interactions: new Set(['wise_counsel', 'village_lore'])
           },
+          currentNodeId: 'village_center',
           background: 'The village elder who has guided Greenwood for over three decades'
         },
         {
@@ -200,6 +319,7 @@ class DemoService {
             nodes: new Set(['merchant_quarter']),
             interactions: new Set(['trade_goods', 'travel_stories'])
           },
+          currentNodeId: 'merchant_quarter',
           background: 'A traveling merchant who has made Greenwood her semi-permanent base'
         },
         {
@@ -225,6 +345,7 @@ class DemoService {
             nodes: new Set(['village_center', 'forest_edge']),
             interactions: new Set(['security_briefing', 'patrol_report'])
           },
+          currentNodeId: 'village_center',
           background: 'The stalwart defender of Greenwood, respected by all who know him'
         },
         {
@@ -250,6 +371,7 @@ class DemoService {
             nodes: new Set(['forest_edge']),
             interactions: new Set(['nature_wisdom', 'forest_secrets'])
           },
+          currentNodeId: 'forest_edge',
           background: 'An ancient elf who has watched over these forests for centuries'
         }
       ],

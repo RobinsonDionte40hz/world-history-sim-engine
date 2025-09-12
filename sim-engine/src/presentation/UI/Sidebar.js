@@ -1406,132 +1406,135 @@ const Sidebar = ({
 
                 return (
                   <div key={item.id}>
-                    <button
-                      onClick={() => handleCategoryClick(item)}
-                      disabled={item.disabled}
-                      title={item.disabled ? item.tooltip : undefined}
-                      className={`text-left rounded-xl transition-all duration-300 font-medium group ${
-                        item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.01]'
-                      }`}
-                      style={{
-                        width: '98%', // 2% shorter than full width
-                        color: item.disabled ? '#94a3b8' : (isActive ? 'white' : '#e2e8f0'),
-                        border: (isActive || isSubItemActive) && !item.disabled 
-                          ? `2px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.6)'}` 
-                          : '2px solid transparent',
-                        fontSize: '0.85rem', // Reduced from 0.95rem (about 11% smaller)
-                        background: item.disabled 
-                          ? 'rgba(71, 85, 105, 0.05)' 
-                          : ((isActive || isSubItemActive)
-                            ? `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`
-                            : 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))'),
-                        transform: (isActive || isSubItemActive) && !item.disabled ? 'translateX(2px)' : 'translateX(0)', // Reduced from 6px to 2px
-                        boxShadow: (isActive || isSubItemActive) && !item.disabled 
-                          ? `0 8px 25px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.05)` 
-                          : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                        backdropFilter: 'blur(12px)',
-                        padding: '0.5rem 0.36rem', // Reduced horizontal padding from 0.45rem to 0.36rem (another 20% smaller)
-                        // Ensure text doesn't overflow
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        maxWidth: '100%'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive && !isSubItemActive && !item.disabled) {
-                          // Only apply styles to the button itself, not child elements
-                          const button = e.currentTarget;
-                          button.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
-                          button.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
-                          button.style.transform = 'translateX(2px) scale(1.01)'; // Reduced from 6px to 2px
-                          button.style.color = 'white';
-                          button.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive && !isSubItemActive && !item.disabled) {
-                          // Only apply styles to the button itself, not child elements
-                          const button = e.currentTarget;
-                          button.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
-                          button.style.borderColor = 'transparent';
-                          button.style.transform = 'translateX(0) scale(1)';
-                          button.style.color = '#e2e8f0';
-                          button.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0"> {/* Added min-w-0 for proper text truncation */}
-                          <div 
-                            className="font-semibold mb-1"
-                            style={{
-                              // Prevent inheritance of hover styles
-                              background: 'transparent !important',
-                              border: 'none !important',
-                              transform: 'none !important',
-                              boxShadow: 'none !important',
-                              // Ensure text doesn't overflow
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              fontSize: '0.8rem' // Reduced from text-sm (0.875rem) to 0.8rem
-                            }}
-                          >
-                            {item.label}
-                          </div>
-                          {item.description && (
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => handleCategoryClick(item)}
+                        disabled={item.disabled}
+                        title={item.disabled ? item.tooltip : undefined}
+                        className={`text-left rounded-xl transition-all duration-300 font-medium group flex-1 ${
+                          item.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-[1.01]'
+                        }`}
+                        style={{
+                          width: '98%', // 2% shorter than full width
+                          color: item.disabled ? '#94a3b8' : (isActive ? 'white' : '#e2e8f0'),
+                          border: (isActive || isSubItemActive) && !item.disabled 
+                            ? `2px solid ${item.hoverBorder || 'rgba(129, 140, 248, 0.6)'}` 
+                            : '2px solid transparent',
+                          fontSize: '0.85rem', // Reduced from 0.95rem (about 11% smaller)
+                          background: item.disabled 
+                            ? 'rgba(71, 85, 105, 0.05)' 
+                            : ((isActive || isSubItemActive)
+                              ? `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`
+                              : 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))'),
+                          transform: (isActive || isSubItemActive) && !item.disabled ? 'translateX(2px)' : 'translateX(0)', // Reduced from 6px to 2px
+                          boxShadow: (isActive || isSubItemActive) && !item.disabled 
+                            ? `0 8px 25px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.05)` 
+                            : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                          backdropFilter: 'blur(12px)',
+                          padding: '0.5rem 0.36rem', // Reduced horizontal padding from 0.45rem to 0.36rem (another 20% smaller)
+                          // Ensure text doesn't overflow
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word',
+                          maxWidth: '100%'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive && !isSubItemActive && !item.disabled) {
+                            // Only apply styles to the button itself, not child elements
+                            const button = e.currentTarget;
+                            button.style.background = `linear-gradient(135deg, ${item.hoverColor || 'rgba(129, 140, 248, 0.2)'}, rgba(15, 23, 42, 0.8))`;
+                            button.style.borderColor = item.hoverBorder || 'rgba(129, 140, 248, 0.6)';
+                            button.style.transform = 'translateX(2px) scale(1.01)'; // Reduced from 6px to 2px
+                            button.style.color = 'white';
+                            button.style.boxShadow = `0 12px 35px -5px ${item.hoverColor || 'rgba(129, 140, 248, 0.4)'}, 0 0 0 1px rgba(255, 255, 255, 0.1)`;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive && !isSubItemActive && !item.disabled) {
+                            // Only apply styles to the button itself, not child elements
+                            const button = e.currentTarget;
+                            button.style.background = 'linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(30, 41, 59, 0.1))';
+                            button.style.borderColor = 'transparent';
+                            button.style.transform = 'translateX(0) scale(1)';
+                            button.style.color = '#e2e8f0';
+                            button.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0"> {/* Added min-w-0 for proper text truncation */}
                             <div 
-                              className="opacity-75 leading-relaxed"
+                              className="font-semibold mb-1"
                               style={{
                                 // Prevent inheritance of hover styles
                                 background: 'transparent !important',
                                 border: 'none !important',
                                 transform: 'none !important',
                                 boxShadow: 'none !important',
-                                // Allow description to wrap but limit lines
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
+                                // Ensure text doesn't overflow
                                 overflow: 'hidden',
-                                wordBreak: 'break-word',
-                                fontSize: '0.7rem' // Reduced from text-xs (0.75rem) to 0.7rem
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: '0.8rem' // Reduced from text-sm (0.875rem) to 0.8rem
                               }}
                             >
-                              {item.description}
+                              {item.label}
+                            </div>
+                            {item.description && (
+                              <div 
+                                className="opacity-75 leading-relaxed"
+                                style={{
+                                  // Prevent inheritance of hover styles
+                                  background: 'transparent !important',
+                                  border: 'none !important',
+                                  transform: 'none !important',
+                                  boxShadow: 'none !important',
+                                  // Allow description to wrap but limit lines
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  wordBreak: 'break-word',
+                                  fontSize: '0.7rem' // Reduced from text-xs (0.75rem) to 0.7rem
+                                }}
+                              >
+                                {item.description}
+                              </div>
+                            )}
+                          </div>
+                          {item.disabled && (
+                            <div className="ml-2 text-gray-500 group-hover:animate-pulse">
+                              🔒
+                            </div>
+                          )}
+                          {(isActive || isSubItemActive) && !item.disabled && (
+                            <div className="ml-2 text-sm opacity-80">
+                              ✨
                             </div>
                           )}
                         </div>
-                        {item.disabled && (
-                          <div className="ml-2 text-gray-500 group-hover:animate-pulse">
-                            🔒
-                          </div>
-                        )}
-                        {hasSubItems && (
-                          <button
-                            onClick={(e) => handleArrowClick(e, item.id)}
-                            className="ml-2 text-sm opacity-60 hover:opacity-100 transition-opacity p-1 rounded"
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: 'inherit'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.background = 'transparent';
-                            }}
-                          >
-                            {shouldShowExpanded ? '▼' : '▶'}
-                          </button>
-                        )}
-                        {(isActive || isSubItemActive) && !item.disabled && (
-                          <div className="ml-2 text-sm opacity-80">
-                            ✨
-                          </div>
-                        )}
-                      </div>
-                    </button>
+                      </button>
+                      
+                      {hasSubItems && (
+                        <button
+                          onClick={(e) => handleArrowClick(e, item.id)}
+                          className="ml-2 text-sm opacity-60 hover:opacity-100 transition-opacity p-1 rounded flex-shrink-0"
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'inherit'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'transparent';
+                          }}
+                        >
+                          {shouldShowExpanded ? '▼' : '▶'}
+                        </button>
+                      )}
+                    </div>
                     
                     {/* Sub-items */}
                     {hasSubItems && shouldShowExpanded && (

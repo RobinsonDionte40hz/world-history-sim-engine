@@ -193,6 +193,62 @@ export const WorldProvider = ({ children }) => {
         setError(null);
     }, [currentWorldId, worlds]);
 
+    // Import demo world as a regular editable world
+    const importDemoWorld = useCallback(async (demoWorldData, demoInfo) => {
+        try {
+            const worldId = `demo_imported_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            
+            // Convert demo world data to regular world config format
+            const worldConfig = {
+                name: demoWorldData.name || demoInfo?.name || 'Imported Demo World',
+                description: demoWorldData.description || demoInfo?.description || 'A demo world imported for editing',
+                rules: demoWorldData.rules || null,
+                initialConditions: demoWorldData.initialConditions || null,
+                nodes: demoWorldData.nodes || [],
+                interactions: demoWorldData.interactions || [],
+                characters: demoWorldData.characters || [],
+                nodePopulations: {},
+                isComplete: true, // Demo worlds are complete by definition
+                isValid: true,
+                stepValidation: {
+                    1: true, // Foundation - has name/description/rules
+                    2: true, // Locations - has nodes
+                    3: true, // Capabilities - has interactions
+                    4: true, // Actors - has characters
+                    5: true, // Assignments - characters are assigned
+                    6: true  // Ready for simulation
+                },
+                isDemoImport: true,
+                originalDemoId: demoInfo?.id || 'unknown_demo'
+            };
+
+            const newWorld = {
+                id: worldId,
+                name: worldConfig.name,
+                description: worldConfig.description,
+                created: new Date(),
+                lastModified: new Date(),
+                worldConfig
+            };
+
+            // Add to worlds collection
+            const newWorlds = new Map(worlds);
+            newWorlds.set(worldId, newWorld);
+            setWorlds(newWorlds);
+
+            // Switch to the new world
+            setCurrentWorldId(worldId);
+            setError(null);
+
+            console.log(`Demo world "${newWorld.name}" imported as regular world with ID: ${worldId}`);
+            return worldId;
+            
+        } catch (err) {
+            setError(`Failed to import demo world: ${err.message}`);
+            throw err;
+        }
+    }, [worlds]);
+
     // Get current world
     const getCurrentWorld = useCallback(() => {
         if (!currentWorldId || !worlds.has(currentWorldId)) {
@@ -228,6 +284,7 @@ export const WorldProvider = ({ children }) => {
         switchToWorld,
         deleteWorld,
         updateWorldConfig,
+        importDemoWorld,
 
         // Template management
         templateManager,
@@ -245,6 +302,7 @@ export const WorldProvider = ({ children }) => {
         switchToWorld,
         deleteWorld,
         updateWorldConfig,
+        importDemoWorld,
         templateManager,
         worlds.size
     ]);
