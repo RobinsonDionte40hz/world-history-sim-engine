@@ -7,8 +7,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Globe, Users, Layers, Sparkles, Clock, Map, Mail, MessageSquare, Phone, Database, Shield, Share2 } from 'lucide-react';
+import { ChevronRight, Globe, Users, Layers, Sparkles, Clock, Map, Mail, MessageSquare, Phone, Database, Shield, Share2, Play } from 'lucide-react';
 import Navigation from '../UI/Navigation';
+import DemoModal from '../components/DemoModal';
 
 const WorldBuilderLandingPage = () => {
   const navigate = useNavigate();
@@ -22,10 +23,26 @@ const WorldBuilderLandingPage = () => {
     howItWorks: false,
     additionalFeatures: false
   });
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   // Handle world creation
   const handleCreateWorld = () => {
     navigate('/builder');
+  };
+
+  // Handle demo modal
+  const handleOpenDemoModal = () => {
+    setIsDemoModalOpen(true);
+  };
+
+  const handleCloseDemoModal = () => {
+    setIsDemoModalOpen(false);
+  };
+
+  const handleSelectDemo = (demoWorld) => {
+    // Navigate to simulation with the demo world data
+    // The demo world is already prepared for simulation, so we pass it directly
+    navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
   };
 
   // Handle scroll for content visibility - OPTIMIZED with throttling
@@ -320,7 +337,7 @@ const WorldBuilderLandingPage = () => {
           ))}
         </div>
 
-        {/* Hero Create World Button */}
+        {/* Hero Buttons Section */}
         <div 
           className="text-center"
           style={{ 
@@ -335,39 +352,106 @@ const WorldBuilderLandingPage = () => {
             transition: 'transform 0.8s ease-out, opacity 0.8s ease-out'
           }}
         >
-          <button 
-            onClick={handleCreateWorld}
-            className="group relative px-12 py-5 text-lg font-semibold transition-all duration-300"
+          {/* Main Action Buttons */}
+          <div 
             style={{ 
-              background: 'linear-gradient(to right, #6366f1, #10b981)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: '1rem',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-              animation: heroButtonVisible ? 'slowBounce 3s ease-in-out infinite' : 'none'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.background = 'linear-gradient(to right, #4f46e5, #059669)';
-              e.target.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.4)';
-              e.target.style.transform = 'scale(1.05)';
-              e.target.style.animation = 'none'; // Stop bounce on hover
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = 'linear-gradient(to right, #6366f1, #10b981)';
-              e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
-              e.target.style.transform = 'scale(1)';
-              e.target.style.animation = heroButtonVisible ? 'slowBounce 3s ease-in-out infinite' : 'none'; // Resume bounce
-            }}
-            onMouseDown={(e) => {
-              e.target.style.transform = 'scale(1.1)'; // Expand on click
-            }}
-            onMouseUp={(e) => {
-              e.target.style.transform = 'scale(1.05)'; // Return to hover scale
+              display: 'flex',
+              gap: '1.5rem',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              marginBottom: '1rem'
             }}
           >
-            <span className="relative z-10">Create Your World</span>
-          </button>
+            {/* Create Your World Button */}
+            <button 
+              onClick={handleCreateWorld}
+              className="group relative px-12 py-5 text-lg font-semibold transition-all duration-300"
+              style={{ 
+                background: 'linear-gradient(to right, #6366f1, #10b981)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: '1rem',
+                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                animation: heroButtonVisible ? 'slowBounce 3s ease-in-out infinite' : 'none'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'linear-gradient(to right, #4f46e5, #059669)';
+                e.target.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.4)';
+                e.target.style.transform = 'scale(1.05)';
+                e.target.style.animation = 'none'; // Stop bounce on hover
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'linear-gradient(to right, #6366f1, #10b981)';
+                e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
+                e.target.style.transform = 'scale(1)';
+                e.target.style.animation = heroButtonVisible ? 'slowBounce 3s ease-in-out infinite' : 'none'; // Resume bounce
+              }}
+              onMouseDown={(e) => {
+                e.target.style.transform = 'scale(1.1)'; // Expand on click
+              }}
+              onMouseUp={(e) => {
+                e.target.style.transform = 'scale(1.05)'; // Return to hover scale
+              }}
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Create Your World
+              </span>
+            </button>
+
+            {/* Try Demo Button */}
+            <button 
+              onClick={handleOpenDemoModal}
+              className="group relative px-10 py-5 text-lg font-semibold transition-all duration-300"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                cursor: 'pointer',
+                borderRadius: '1rem',
+                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+                backdropFilter: 'blur(8px)'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                e.target.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.3)';
+                e.target.style.transform = 'scale(1.05)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)';
+                e.target.style.transform = 'scale(1)';
+              }}
+              onMouseDown={(e) => {
+                e.target.style.transform = 'scale(1.08)';
+              }}
+              onMouseUp={(e) => {
+                e.target.style.transform = 'scale(1.05)';
+              }}
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <Play className="w-5 h-5" />
+                Try Demo
+              </span>
+            </button>
+          </div>
+
+          {/* Subtitle for buttons */}
+          <p 
+            className="text-sm"
+            style={{ 
+              color: '#cbd5e1', 
+              opacity: 0.8,
+              maxWidth: '600px',
+              textAlign: 'center'
+            }}
+          >
+            Build from scratch or explore pre-made worlds to see the engine in action
+          </p>
         </div>
 
         {/* CTA Button - Now hidden since we moved it to hero */}
@@ -2286,6 +2370,13 @@ const WorldBuilderLandingPage = () => {
           </div>
         </div>
       </footer>
+
+      {/* Demo Modal */}
+      <DemoModal 
+        isOpen={isDemoModalOpen}
+        onClose={handleCloseDemoModal}
+        onSelectDemo={handleSelectDemo}
+      />
     </div>
     </>
   );
