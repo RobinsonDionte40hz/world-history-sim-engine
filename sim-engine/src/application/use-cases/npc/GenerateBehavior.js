@@ -9,7 +9,7 @@ import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
 import { getEmotionalModifier } from '../../../shared/utils/EmotionalUtils.js';
 
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;  // Enable for enhanced decision logging
 
 // SIMPLIFIED WEIGHT CALCULATION
 const calculateInteractionWeight = (character, interaction, worldState) => {
@@ -262,6 +262,67 @@ const generateBehavior = (character, worldState) => {
   const selectedInteraction = selectWithBias(weights);
   if (!selectedInteraction) return null;
 
+  // Enhanced Decision Logging - Store decision reasoning
+  const currentNode = worldState.nodes.find(n => n.id === character.currentNodeId);
+  const decisionContext = {
+    timestamp: worldState.time || Date.now(),
+    availableInteractions: weights.slice(0, 10).map(w => ({ 
+      name: w.interaction.name, 
+      weight: w.weight,
+      type: w.interaction.type || 'unknown'
+    })),
+    selectedInteraction: {
+      name: selectedInteraction.name,
+      weight: weights.find(w => w.interaction === selectedInteraction)?.weight || 0,
+      type: selectedInteraction.type || 'unknown'
+    },
+    reasoning: {
+      emergencyOverride: emergency ? true : false,
+      consciousnessInfluence: {
+        frequency: character.consciousness?.frequency || 0,
+        coherence: character.consciousness?.coherence || 0,
+        emotionalState: character.consciousness?.getCurrentEmotionalState ? 
+          character.consciousness.getCurrentEmotionalState() : null
+      },
+      personalityFactors: character.personality ? {
+        dominantTraits: Array.from(character.personality.traits.entries())
+          .filter(([_, trait]) => trait.value > 0.6)
+          .map(([name, trait]) => ({ name, value: trait.value }))
+          .slice(0, 3)
+      } : null,
+      environmentalFactors: currentNode ? {
+        nodeType: currentNode.type,
+        climate: currentNode.environmentalProperties?.climate,
+        isDangerous: currentNode.environment?.isDangerous?.() || false,
+        resources: currentNode.resources
+      } : null,
+      needFactors: {
+        energyLevel: character.energy / character.maxEnergy,
+        criticalNeeds: character.energy < (character.maxEnergy * 0.2) ? ['energy'] : [],
+        goals: character.goals?.slice(0, 3).map(g => g.id) || []
+      }
+    }
+  };
+
+  // Store decision in character's decision history
+  if (!character.decisionHistory) {
+    character.decisionHistory = [];
+  }
+  character.decisionHistory.push(decisionContext);
+  
+  // Limit decision history to last 50 decisions to prevent memory bloat
+  if (character.decisionHistory.length > 50) {
+    character.decisionHistory = character.decisionHistory.slice(-50);
+  }
+
+  if (DEBUG_MODE) {
+    console.log(`${character.name} decision context:`, {
+      selected: decisionContext.selectedInteraction.name,
+      reasoning: decisionContext.reasoning,
+      topAlternatives: decisionContext.availableInteractions.slice(0, 3)
+    });
+  }
+
   // Act: Execute the selected interaction
   return executeInteraction(character, selectedInteraction, worldState);
 };
@@ -280,6 +341,8 @@ function executeInteraction(character, selectedInteraction, worldState) {
   if (resolution) {
     evolutionService.evolveFromInteraction(character, selectedInteraction, resolution.outcome);
 
+    // Enhanced history logging with decision context
+    const latestDecision = character.decisionHistory?.[character.decisionHistory.length - 1];
     historyGenerator.logEvent({
       timestamp: worldState.time,
       character,
@@ -287,6 +350,11 @@ function executeInteraction(character, selectedInteraction, worldState) {
       outcome: resolution.outcome,
       roll: resolution.roll,
       dc: resolution.dc,
+      decisionContext: latestDecision ? {
+        reasoningFactors: latestDecision.reasoning,
+        alternativeOptions: latestDecision.availableInteractions.slice(0, 5),
+        selectionWeight: latestDecision.selectedInteraction.weight
+      } : null
     });
   }
 

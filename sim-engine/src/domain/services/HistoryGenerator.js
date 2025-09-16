@@ -9,7 +9,7 @@ class HistoryGenerator {
   }
   // Log a historical event from an interaction outcome
   logEvent(config = {}) {
-    const { timestamp = Date.now(), character, interaction, outcome, roll, dc } = config;
+    const { timestamp = Date.now(), character, interaction, outcome, roll, dc, decisionContext } = config;
     if (!(character instanceof Character) || !(interaction instanceof InteractionBase)) {
       throw new Error('Invalid character or interaction');
     }
@@ -32,6 +32,8 @@ class HistoryGenerator {
       location: interaction.nodeId || 'Unknown',
       significance,
       description: this.generateDescription(character, interaction, outcome),
+      // Enhanced decision context for behavior analysis
+      decisionContext: decisionContext || null
     };
 
     // Simulate persistence (reused from old localStorage approach)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // No Lucide React imports needed - using emojis instead
 import { useSimulationContext } from '../contexts/SimulationContext.js';
+import DecisionAnalysisService from '../../domain/services/DecisionAnalysisService.js';
 
 // Convert real world state and turn manager data to timeline-compatible events
 const getTimelineEvents = (turnManager, worldState, currentTurn) => {
@@ -1034,8 +1035,100 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold mb-4">Behavior Analysis</h3>
 
-                {characterChanges.length > 0 ? (
+                {/* Enhanced Decision Analysis */}
+                {(() => {
+                  const decisionAnalysisService = new DecisionAnalysisService();
+                  const decisionAnalysis = decisionAnalysisService.analyzeDecisionHistory(selectedCharacter);
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* Decision Analysis Summary */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Decision Patterns</h4>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          {decisionAnalysis.reasoning}
+                        </p>
+                      </div>
+
+                      {/* Recent Decisions */}
+                      {decisionAnalysis.recentDecisions.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Decisions</h4>
+                          <div className="space-y-3">
+                            {decisionAnalysis.recentDecisions.slice(0, 3).map((decision, index) => (
+                              <div key={index} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                                <div className="flex items-start justify-between mb-2">
+                                  <span className="font-medium text-sm">{decision.selectedAction}</span>
+                                  <span className="text-xs text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">
+                                    Weight: {decision.weight.toFixed(1)}
+                                  </span>
+                                </div>
+                                
+                                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                  <div><strong>Primary Reason:</strong> {decision.reasoning.primary}</div>
+                                  
+                                  {decision.reasoning.consciousness && (
+                                    <div><strong>Consciousness:</strong> {decision.reasoning.consciousness}</div>
+                                  )}
+                                  
+                                  {decision.reasoning.personality && decision.reasoning.personality !== 'No dominant traits' && (
+                                    <div><strong>Personality:</strong> {decision.reasoning.personality}</div>
+                                  )}
+                                  
+                                  {decision.reasoning.environment && (
+                                    <div><strong>Environment:</strong> {decision.reasoning.environment}</div>
+                                  )}
+                                  
+                                  {decision.reasoning.needs && (
+                                    <div><strong>Needs:</strong> {decision.reasoning.needs}</div>
+                                  )}
+                                  
+                                  {decision.reasoning.emergency && (
+                                    <div className="text-red-600 dark:text-red-400"><strong>⚠️ Emergency Override</strong></div>
+                                  )}
+                                </div>
+
+                                {/* Alternative Options */}
+                                {decision.alternatives.length > 0 && (
+                                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      <strong>Alternatives considered:</strong> {' '}
+                                      {decision.alternatives.map((alt, i) => (
+                                        <span key={i}>
+                                          {alt.name} ({alt.weight.toFixed(1)})
+                                          {i < decision.alternatives.length - 1 ? ', ' : ''}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Decision Patterns Summary */}
+                      {decisionAnalysis.patterns.mostCommonActions && decisionAnalysis.patterns.mostCommonActions.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Common Actions</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {decisionAnalysis.patterns.mostCommonActions.map((pattern, index) => (
+                              <span key={index} className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-2 py-1 rounded">
+                                {pattern.action} ({pattern.percentage}%)
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Fallback to original behavior analysis if no decision history */}
+                {(!selectedCharacter.decisionHistory || selectedCharacter.decisionHistory.length === 0) && characterChanges.length > 0 && (
                   <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Behavior Changes</h4>
                     {characterChanges.slice(0, 5).map((change, index) => (
                       <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div className="text-lg">
@@ -1058,8 +1151,10 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">No recent character behavior changes</p>
+                )}
+
+                {(!selectedCharacter.decisionHistory || selectedCharacter.decisionHistory.length === 0) && characterChanges.length === 0 && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No recent character behavior data available</p>
                 )}
               </div>
             </div>
