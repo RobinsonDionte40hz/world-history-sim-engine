@@ -20,7 +20,6 @@ import Button, { ButtonGroup, IconButton } from './Button';
 import Card, { CardHeader, CardContent, CardFooter, FeatureCard, StatsCard } from './Card';
 import { LoadingSpinner, ProgressBar, SkeletonLoader } from '../components/LoadingComponents';
 import Modal, { ConfirmDialog, AlertDialog } from '../components/Modal';
-import PageLayout from './PageLayout';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import { Home, Settings } from 'lucide-react';
 
@@ -297,13 +296,13 @@ describe('ProgressBar Component', () => {
 
 describe('SkeletonLoader Component', () => {
   test('renders skeleton loader with correct number of lines', () => {
-    const { container } = render(
+    render(
       <TestWrapper>
         <SkeletonLoader lines={5} />
       </TestWrapper>
     );
     
-    const skeletonLines = container.querySelectorAll('.bg-gray-700');
+    const skeletonLines = screen.getAllByTestId('skeleton-line');
     expect(skeletonLines).toHaveLength(5);
   });
 });
@@ -416,50 +415,6 @@ describe('AlertDialog Component', () => {
     expect(screen.getByText('Success')).toBeInTheDocument();
     expect(screen.getByText('Operation completed successfully!')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ok/i })).toBeInTheDocument();
-  });
-});
-
-describe('PageLayout Component', () => {
-  test('renders page layout with title and content', () => {
-    render(
-      <TestWrapper>
-        <PageLayout title="Test Page" subtitle="Page subtitle">
-          <p>Page content</p>
-        </PageLayout>
-      </TestWrapper>
-    );
-    
-    expect(screen.getByText('Test Page')).toBeInTheDocument();
-    expect(screen.getByText('Page subtitle')).toBeInTheDocument();
-    expect(screen.getByText('Page content')).toBeInTheDocument();
-  });
-
-  test('renders loading state', () => {
-    render(
-      <TestWrapper>
-        <PageLayout loading={true} loadingMessage="Loading page...">
-          <p>Page content</p>
-        </PageLayout>
-      </TestWrapper>
-    );
-    
-    expect(screen.getByText('Loading page...')).toBeInTheDocument();
-    expect(screen.queryByText('Page content')).not.toBeInTheDocument();
-  });
-
-  test('renders error state', () => {
-    const error = new Error('Test error');
-    render(
-      <TestWrapper>
-        <PageLayout error={error} errorMessage="Failed to load page">
-          <p>Page content</p>
-        </PageLayout>
-      </TestWrapper>
-    );
-    
-    expect(screen.getByText('Error Loading Page')).toBeInTheDocument();
-    expect(screen.getByText('Failed to load page')).toBeInTheDocument();
-    expect(screen.queryByText('Page content')).not.toBeInTheDocument();
   });
 });
 

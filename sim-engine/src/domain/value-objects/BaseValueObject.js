@@ -11,13 +11,6 @@ import {
  * Provides common functionality for immutability, validation, and serialization
  */
 export class BaseValueObject {
-  /**
-   * Constructor that sets up the value object
-   * Subclasses should call freeze() after setting all properties
-   */
-  constructor() {
-    // Base constructor - subclasses should call freeze() after initialization
-  }
 
   /**
    * Freezes the object to ensure immutability

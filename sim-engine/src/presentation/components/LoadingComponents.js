@@ -194,6 +194,7 @@ export const SkeletonLoader = ({
       {Array.from({ length: lines }).map((_, index) => (
         <div
           key={index}
+          data-testid="skeleton-line"
           className={`h-4 bg-gray-700 rounded ${
             animated ? 'animate-pulse' : ''
           }`}

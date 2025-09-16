@@ -1,7 +1,6 @@
 // src/domain/services/SettlementService.js
 
 import BaseDomainService from './BaseDomainService.js';
-import { NeedSatisfactionResult, NeedSatisfactionHistory, NeedSatisfactionTrends } from '../../shared/types/SystemTypes.js';
 
 /**
  * Service for managing settlement need satisfaction tracking and updates
