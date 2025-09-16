@@ -14,7 +14,7 @@ import { useWorldContext } from '../contexts/WorldContext';
 
 const WorldBuilderLandingPage = () => {
   const navigate = useNavigate();
-  const { importDemoWorld, getWorldById } = useWorldContext();
+  const { importDemoWorld } = useWorldContext();
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [cardsVisible, setCardsVisible] = useState([false, false, false]);
@@ -32,6 +32,36 @@ const WorldBuilderLandingPage = () => {
     navigate('/builder');
   };
 
+  // Additional validation helper for demo worlds
+  const validateDemoWorldForSimulation = (preparedWorld) => {
+    const errors = [];
+
+    // Check for simulation metadata (required by pipeline)
+    if (!preparedWorld.simulationMetadata) {
+      errors.push('Missing simulation metadata');
+    } else {
+      if (!['DemoService', 'WorldBuilder'].includes(preparedWorld.simulationMetadata.source)) {
+        errors.push('Invalid simulation metadata source');
+      }
+    }
+
+    // Check for Map data structures (required by simulation)
+    if (!(preparedWorld.nodes instanceof Map)) {
+      errors.push('Nodes must be a Map for simulation');
+    }
+
+    if (!(preparedWorld.characters instanceof Map)) {
+      errors.push('Characters must be a Map for simulation');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
+
+
   // Handle demo modal
   const handleOpenDemoModal = () => {
     setIsDemoModalOpen(true);
@@ -43,27 +73,65 @@ const WorldBuilderLandingPage = () => {
 
   const handleSelectDemo = async (demoWorld) => {
     try {
-      // First, import the demo world so it's saved and available
-      const demoInfo = demoWorld.metadata || { name: demoWorld.name || 'Demo World' };
+      // Step 1: Generate the demo info from the demo world data
+      const demoInfo = demoWorld.metadata || {
+        name: demoWorld.name || 'Demo World',
+        description: demoWorld.description || 'A demo world for exploration'
+      };
+
+      // Step 2: Import the demo world to save it using standard flows
       const worldId = await importDemoWorld(demoWorld, demoInfo);
-      
       console.log('Demo world imported with ID:', worldId);
-      
-      // Retrieve the saved world data to ensure we use the standardized format
-      const savedWorld = getWorldById(worldId);
-      if (!savedWorld) {
-        throw new Error('Failed to retrieve saved demo world');
+
+      // Step 3: Use the ORIGINAL prepared demo world for simulation
+      // This preserves the simulation metadata and Map structures from DemoService
+      const preparedWorld = demoWorld; // Already properly formatted by DemoService
+
+      // Step 4: Validate the prepared world before navigation
+      const validation = validateDemoWorldForSimulation(preparedWorld);
+      if (!validation.isValid) {
+        console.error('Demo world validation failed:', validation.errors);
+        // Enhanced fallback: Try to use raw demo data but warn user
+        navigate('/simulation', {
+          state: {
+            preparedWorld,
+            isDemoWorld: true,
+            hasError: true,
+            errorMessage: 'Demo world validation failed - running in temporary mode',
+            validationErrors: validation.errors
+          }
+        });
+        return;
       }
-      
-      // Use the saved world config (prepared world data) instead of raw demo data
-      const preparedWorld = savedWorld.worldConfig;
-      
-      // Navigate to simulation with the properly saved and validated world data
-      navigate('/simulation', { state: { preparedWorld, isDemoWorld: true } });
+
+      // Step 5: Navigate to simulation with the simulation-ready data
+      navigate('/simulation', {
+        state: {
+          preparedWorld,           // Use DemoService-prepared data
+          isDemoWorld: true,
+          savedWorldId: worldId    // Track saved version for potential editing
+        }
+      });
+
     } catch (error) {
       console.error('Failed to import demo world before simulation:', error);
-      // Fallback: still navigate to simulation even if import fails
-      navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
+
+      // Enhanced fallback: Try to use raw demo data but warn user
+      try {
+        const preparedWorld = demoWorld; // Still use simulation-ready format
+        navigate('/simulation', {
+          state: {
+            preparedWorld,
+            isDemoWorld: true,
+            hasError: true,
+            errorMessage: 'Demo world could not be saved - running in temporary mode'
+          }
+        });
+      } catch (fallbackError) {
+        console.error('Complete fallback failure:', fallbackError);
+        // Show user-friendly error message
+        alert('Unable to load demo world. Please try again or contact support.');
+      }
     }
   };
 

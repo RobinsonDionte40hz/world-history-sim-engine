@@ -1,4 +1,5 @@
 import SystemInteraction from './SystemInteraction.js';
+import Environment from '../../../domain/value-objects/Environment.js';
 
 /**
  * MovementInteraction - Handles character movement between nodes
@@ -259,17 +260,7 @@ class MovementInteraction extends SystemInteraction {
     // Reconstruct environment if present
     let environment = null;
     if (data.environment) {
-      // Use import() for dynamic loading in test environment
-      try {
-        const Environment = require('../../domain/value-objects/Environment.js').default;
-        environment = Environment.fromJSON(data.environment);
-      } catch (error) {
-        // In test environment, create a mock environment
-        environment = {
-          getMovementModifier: () => 1.0,
-          toJSON: () => data.environment
-        };
-      }
+      environment = Environment.fromJSON(data.environment);
     }
 
     return new MovementInteraction({

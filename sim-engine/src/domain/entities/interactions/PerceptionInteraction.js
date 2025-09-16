@@ -1,4 +1,5 @@
 import SystemInteraction from './SystemInteraction.js';
+import Environment from '../../../domain/value-objects/Environment.js';
 
 /**
  * PerceptionInteraction - Handles character perception actions
@@ -438,20 +439,7 @@ class PerceptionInteraction extends SystemInteraction {
     // Reconstruct environment if present
     let environment = null;
     if (data.environment) {
-      // Use import() for dynamic loading in test environment
-      try {
-        const Environment = require('../../domain/value-objects/Environment.js').default;
-        environment = Environment.fromJSON(data.environment);
-      } catch (error) {
-        // In test environment, create a mock environment
-        environment = {
-          getVisibilityModifier: () => 1.0,
-          lightLevel: 0.8,
-          ambientNoise: 0.2,
-          windStrength: 0.3,
-          toJSON: () => data.environment
-        };
-      }
+      environment = Environment.fromJSON(data.environment);
     }
 
     return new PerceptionInteraction({
