@@ -264,6 +264,11 @@ export const WorldProvider = ({ children }) => {
         );
     }, [worlds]);
 
+    // Get world by ID
+    const getWorldById = useCallback((worldId) => {
+        return worlds.get(worldId) || null;
+    }, [worlds]);
+
     // Simple sync - no world builder, just direct world management
     useEffect(() => {
         // Any additional sync logic would go here if needed
@@ -285,6 +290,7 @@ export const WorldProvider = ({ children }) => {
         deleteWorld,
         updateWorldConfig,
         importDemoWorld,
+        getWorldById,
 
         // Template management
         templateManager,
@@ -303,6 +309,7 @@ export const WorldProvider = ({ children }) => {
         deleteWorld,
         updateWorldConfig,
         importDemoWorld,
+        getWorldById,
         templateManager,
         worlds.size
     ]);

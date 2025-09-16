@@ -1,5 +1,5 @@
 // Quick validation test to check our fixes
-const SimulationService = require('./src/application/use-cases/services/SimulationService.js');
+import SimulationService from './src/application/use-cases/services/SimulationService.js';
 
 console.log('Testing basic SimulationService functionality...');
 

@@ -14,7 +14,7 @@ import { useWorldContext } from '../contexts/WorldContext';
 
 const WorldBuilderLandingPage = () => {
   const navigate = useNavigate();
-  const { importDemoWorld } = useWorldContext();
+  const { importDemoWorld, getWorldById } = useWorldContext();
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [cardsVisible, setCardsVisible] = useState([false, false, false]);
@@ -49,9 +49,17 @@ const WorldBuilderLandingPage = () => {
       
       console.log('Demo world imported with ID:', worldId);
       
-      // Navigate to simulation with the demo world data
-      // The demo world is already prepared for simulation, so we pass it directly
-      navigate('/simulation', { state: { preparedWorld: demoWorld, isDemoWorld: true } });
+      // Retrieve the saved world data to ensure we use the standardized format
+      const savedWorld = getWorldById(worldId);
+      if (!savedWorld) {
+        throw new Error('Failed to retrieve saved demo world');
+      }
+      
+      // Use the saved world config (prepared world data) instead of raw demo data
+      const preparedWorld = savedWorld.worldConfig;
+      
+      // Navigate to simulation with the properly saved and validated world data
+      navigate('/simulation', { state: { preparedWorld, isDemoWorld: true } });
     } catch (error) {
       console.error('Failed to import demo world before simulation:', error);
       // Fallback: still navigate to simulation even if import fails
