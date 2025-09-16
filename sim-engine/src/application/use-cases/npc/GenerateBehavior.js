@@ -125,7 +125,7 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   // Factor 9: Content interaction priority boost - THIS IS THE KEY FIX
   // Content interactions should generally be preferred over basic ones
   if (!interaction.isSystemInteraction || interaction.type === 'content' || interaction.constructor?.name === 'ContentInteraction') {
-    weight *= 1.5; // Boost weight for meaningful content interactions
+    weight *= 2.5; // Strong boost weight for meaningful content interactions (increased from 1.5x to 2.5x)
   }
   
   // Factor 10: D&D attribute modifiers
