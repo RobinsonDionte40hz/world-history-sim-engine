@@ -493,6 +493,9 @@ function executeInteraction(character, selectedInteraction, worldState) {
   let resolution = null;
 
   try {
+    // Use the interaction directly - it should already be a proper instance from InteractionManager
+    console.log(`Executing interaction: ${selectedInteraction.name} (type: ${selectedInteraction.constructor.name})`);
+
     // Step 1: Select a branch (works for both system and content interactions)
     if (selectedInteraction.selectBranch) {
       branch = selectedInteraction.selectBranch(character);
@@ -528,6 +531,7 @@ function executeInteraction(character, selectedInteraction, worldState) {
 
     // Step 5: Log the event to history (ALWAYS log, even for basic interactions)
     const latestDecision = character.decisionHistory?.[character.decisionHistory.length - 1];
+
     historyGenerator.logEvent({
       timestamp: worldState.time || Date.now(),
       character,
@@ -545,6 +549,15 @@ function executeInteraction(character, selectedInteraction, worldState) {
 
   } catch (error) {
     console.error(`Error executing interaction for ${character.name}:`, error);
+    console.error(`Interaction details:`, {
+      name: selectedInteraction.name,
+      type: selectedInteraction.type,
+      constructor: selectedInteraction.constructor.name,
+      hasSelectBranch: !!selectedInteraction.selectBranch,
+      hasIsAvailable: !!selectedInteraction.isAvailable,
+      hasCanExecute: !!selectedInteraction.canExecute,
+      hasMetRequirements: !!selectedInteraction.meetsRequirements
+    });
     
     // Create fallback resolution
     resolution = {

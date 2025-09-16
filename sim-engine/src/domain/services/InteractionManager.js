@@ -252,10 +252,12 @@ class InteractionManager {
 
     console.log(`Debug: Found ${currentNode.contentInteractions.length} content interactions in node`);
 
-    // Filter content interactions that can be executed
-    const filtered = currentNode.contentInteractions.filter(interaction => {
+    // Convert and filter content interactions that can be executed
+    const convertedAndFiltered = [];
+    
+    for (const interaction of currentNode.contentInteractions) {
       try {
-        console.log(`Debug: Checking interaction ${interaction.name} (${interaction.id})`);
+        console.log(`Debug: Processing interaction ${interaction.name} (${interaction.id})`);
         
         // Convert plain objects to ContentInteraction instances if needed
         let contentInteraction = interaction;
@@ -268,21 +270,22 @@ class InteractionManager {
 
         if (!contentInteraction.canExecute) {
           console.log('Debug: Interaction missing canExecute method');
-          return false;
+          continue;
         }
 
         const canExecute = contentInteraction.canExecute(character, world);
         console.log(`Debug: Interaction ${contentInteraction.name} canExecute result: ${canExecute}`);
 
-        return canExecute;
+        if (canExecute) {
+          convertedAndFiltered.push(contentInteraction); // Push the converted instance, not the original
+        }
       } catch (error) {
         console.warn(`Error checking if content interaction can execute:`, error.message);
-        return false;
       }
-    });
+    }
 
-    console.log(`Debug: Filtered to ${filtered.length} executable content interactions`);
-    return filtered;
+    console.log(`Debug: Filtered to ${convertedAndFiltered.length} executable content interactions`);
+    return convertedAndFiltered;
   }
 
   /**
