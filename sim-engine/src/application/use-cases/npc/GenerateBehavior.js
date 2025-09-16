@@ -489,28 +489,81 @@ function executeInteraction(character, selectedInteraction, worldState) {
   const evolutionService = new EvolutionService();
   const historyGenerator = new HistoryGenerator();
 
-  // Act: Resolve the interaction
-  const branch = selectedInteraction.selectBranch ? interactionResolver.selectBranch(character, selectedInteraction) : null;
-  const resolution = branch ? interactionResolver.resolve(character, selectedInteraction, branch.id, worldState) : null;
+  let branch = null;
+  let resolution = null;
 
-  // Learn: Evolve and log history
-  if (resolution) {
-    evolutionService.evolveFromInteraction(character, selectedInteraction, resolution.outcome);
+  try {
+    // Step 1: Select a branch (works for both system and content interactions)
+    if (selectedInteraction.selectBranch) {
+      branch = selectedInteraction.selectBranch(character);
+    } else if (selectedInteraction.branches && selectedInteraction.branches.length > 0) {
+      // Fallback: use first available branch
+      branch = selectedInteraction.branches[0];
+    }
 
-    // Enhanced history logging with decision context
+    // Step 2: Resolve the interaction
+    if (branch) {
+      resolution = interactionResolver.resolve(character, selectedInteraction, branch.id, worldState);
+    } else {
+      // Create a basic resolution for interactions without branches
+      resolution = {
+        success: true,
+        outcome: 'completed',
+        message: `${character.name} completed ${selectedInteraction.name || selectedInteraction.type || 'an interaction'}`,
+        branchId: null,
+        roll: null,
+        dc: null
+      };
+    }
+
+    // Step 3: Apply any direct effects from the interaction
+    if (selectedInteraction.execute) {
+      selectedInteraction.execute(character, worldState);
+    }
+
+    // Step 4: Evolve character based on interaction
+    if (resolution && resolution.success) {
+      evolutionService.evolveFromInteraction(character, selectedInteraction, resolution.outcome);
+    }
+
+    // Step 5: Log the event to history (ALWAYS log, even for basic interactions)
     const latestDecision = character.decisionHistory?.[character.decisionHistory.length - 1];
     historyGenerator.logEvent({
-      timestamp: worldState.time,
+      timestamp: worldState.time || Date.now(),
       character,
       interaction: selectedInteraction,
-      outcome: resolution.outcome,
-      roll: resolution.roll,
-      dc: resolution.dc,
+      outcome: resolution?.outcome || 'completed',
+      roll: resolution?.roll || null,
+      dc: resolution?.dc || null,
+      message: resolution?.message || `${character.name} performed ${selectedInteraction.name || selectedInteraction.type}`,
       decisionContext: latestDecision ? {
         reasoningFactors: latestDecision.reasoning,
         alternativeOptions: latestDecision.availableInteractions.slice(0, 5),
         selectionWeight: latestDecision.selectedInteraction.weight
       } : null
+    });
+
+  } catch (error) {
+    console.error(`Error executing interaction for ${character.name}:`, error);
+    
+    // Create fallback resolution
+    resolution = {
+      success: false,
+      outcome: 'error',
+      message: `Error executing ${selectedInteraction.name || selectedInteraction.type}: ${error.message}`,
+      branchId: branch?.id || null,
+      roll: null,
+      dc: null
+    };
+
+    // Still log the failed attempt
+    historyGenerator.logEvent({
+      timestamp: worldState.time || Date.now(),
+      character,
+      interaction: selectedInteraction,
+      outcome: 'error',
+      message: resolution.message,
+      error: error.message
     });
   }
 
