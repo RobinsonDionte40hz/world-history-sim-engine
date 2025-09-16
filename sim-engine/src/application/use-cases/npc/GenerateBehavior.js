@@ -13,9 +13,9 @@ const DEBUG_MODE = true;  // Enable for enhanced decision logging
 
 // SIMPLIFIED WEIGHT CALCULATION
 const calculateInteractionWeight = (character, interaction, worldState) => {
-  let weight = 0;
+  let weight = 1.0; // Base weight
   
-  // 1. GOAL PRIORITY (Make this DOMINANT)
+  // Factor 1: GOAL PRIORITY (Make this DOMINANT)
   if (character.goals?.length > 0) {
     const matchesGoal = character.goals.some(goal => 
       interaction.name.toLowerCase().includes(goal.id.toLowerCase()) ||
@@ -33,7 +33,7 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     }
   }
   
-  // 2. CRITICAL NEEDS (Override everything except goals)
+  // Factor 2: CRITICAL NEEDS (Override everything except goals)
   const energyPercent = character.energy / character.maxEnergy;
   
   if (interaction.type === 'rest') {
@@ -42,7 +42,7 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     else weight += 0.5;  // Low priority when not needed
   }
   
-  // 3. ENVIRONMENTAL SUITABILITY (Simple modifiers)
+  // Factor 3: ENVIRONMENTAL SUITABILITY (Simple modifiers)
   const environment = worldState.nodes.find(n => n.id === character.currentNodeId)?.environment;
   if (environment) {
     if (interaction.type === 'rest' && environment.isDangerous()) {
@@ -53,7 +53,7 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     }
   }
   
-  // 4. PERSONALITY INFLUENCE (Simplified)
+  // Factor 4: PERSONALITY INFLUENCE (Simplified)
   if (character.personality?.traits) {
     const traits = character.personality.traits;
     
@@ -69,12 +69,12 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     }
   }
   
-  // 5. MEMORY (Simple positive/negative)
+  // Factor 5: MEMORY (Simple positive/negative)
   const memoryService = new MemoryService();
   const memoryScore = memoryService.getMemoryInfluence(character, interaction);
   weight += memoryScore * 2;  // -2 to +2 based on past experience
   
-  // 6. EMOTIONAL STATE INFLUENCE (New consciousness-based emotions)
+  // Factor 6: EMOTIONAL STATE INFLUENCE (New consciousness-based emotions)
   if (character.consciousness && character.consciousness.getCurrentEmotionalState) {
     const emotionalState = character.consciousness.getCurrentEmotionalState();
     const emotionalModifier = getEmotionalModifier(emotionalState, interaction);
@@ -92,14 +92,14 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     }
   }
   
-  // 7. NEED-BASED MODIFIERS (From settlement need satisfaction)
+  // Factor 7: NEED-BASED MODIFIERS (From settlement need satisfaction)
   if (character.needBasedInteractionModifiers) {
     const interactionType = interaction.type || interaction.category || 'unknown';
     const modifier = character.needBasedInteractionModifiers[interactionType] || 1.0;
     weight *= modifier;
   }
 
-  // 8. NEED-BASED PRIORITIES (From settlement need satisfaction)
+  // Factor 8: NEED-BASED PRIORITIES (From settlement need satisfaction)
   if (character.needBasedBehaviorChanges) {
     const interactionType = interaction.type || interaction.category || 'unknown';
     
@@ -122,14 +122,181 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     }
   }
 
-  // 8. RANDOM VARIATION (Small, for variety)
+  // Factor 9: Content interaction priority boost - THIS IS THE KEY FIX
+  // Content interactions should generally be preferred over basic ones
+  if (!interaction.isSystemInteraction || interaction.type === 'content' || interaction.constructor?.name === 'ContentInteraction') {
+    weight *= 1.5; // Boost weight for meaningful content interactions
+  }
+  
+  // Factor 10: D&D attribute modifiers
+  if (character.attributes && interaction.requirements) {
+    const attrBonus = calculateAttributeBonus(
+      character.attributes,
+      interaction.requirements
+    );
+    weight *= (1 + attrBonus);
+  }
+  
+  // Factor 11: Consciousness state influence
+  if (character.consciousness) {
+    const consciousnessModifier = calculateConsciousnessInfluence(
+      character.consciousness,
+      interaction
+    );
+    weight *= consciousnessModifier;
+  }
+
+  // Factor 12: RANDOM VARIATION (Small, for variety)
   weight += Math.random() * 0.5;
   
   // Ensure non-negative
-  return Math.max(0, weight);
+  return Math.max(0.01, weight);
 };
 
-// Helper function to gather available interactions
+/**
+ * Helper function to calculate attribute bonus
+ */
+function calculateAttributeBonus(attributes, requirements) {
+  if (!attributes || !requirements) return 0;
+  
+  let bonus = 0;
+  
+  // Check if character's attributes exceed requirements
+  Object.entries(requirements).forEach(([attr, required]) => {
+    if (attributes[attr]) {
+      const value = attributes[attr].value || attributes[attr];
+      if (value > required) {
+        bonus += 0.1 * ((value - required) / required);
+      } else if (value < required) {
+        bonus -= 0.2; // Penalty for not meeting requirements
+      }
+    }
+  });
+  
+  return bonus;
+}
+
+/**
+ * Helper function to calculate consciousness influence
+ */
+function calculateConsciousnessInfluence(consciousness, interaction) {
+  if (!consciousness) return 1.0;
+  
+  // Higher coherence = better decision making
+  const coherence = consciousness.coherence || 0.5;
+  
+  // Base modifier from coherence
+  let modifier = 0.5 + coherence;
+  
+  // Specific consciousness states might prefer certain interactions
+  if (consciousness.state === 'focused' && interaction.type === 'content') {
+    modifier *= 1.3;
+  } else if (consciousness.state === 'tired' && interaction.type === 'rest') {
+    modifier *= 1.5;
+  }
+  
+  return modifier;
+}
+
+/**
+ * Calculate weights for all interactions based on character state
+ */
+function calculateInteractionWeights(character, interactions, context) {
+  const weights = {};
+  
+  // Calculate weight for each interaction
+  interactions.forEach(interaction => {
+    const weight = calculateInteractionWeight(character, interaction, context);
+    
+    // Use interaction name or ID as key
+    const key = interaction.name || interaction.id || interaction.type || 'unknown';
+    weights[key] = weight;
+  });
+  
+  // Normalize weights so they sum to approximately 1
+  const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
+  if (totalWeight > 0) {
+    Object.keys(weights).forEach(key => {
+      weights[key] = weights[key] / totalWeight;
+    });
+  }
+  
+  return weights;
+}
+
+/**
+ * Select an interaction based on weighted probabilities
+ */
+function selectWeightedInteraction(weights) {
+  const entries = Object.entries(weights);
+  if (entries.length === 0) return null;
+  
+  // Sort by weight for consistency
+  entries.sort((a, b) => b[1] - a[1]);
+  
+  // Use weighted random selection
+  const random = Math.random();
+  let cumulative = 0;
+  
+  for (const [interaction, weight] of entries) {
+    cumulative += weight;
+    if (random < cumulative) {
+      return interaction;
+    }
+  }
+  
+  // Fallback to highest weight
+  return entries[0][0];
+}
+
+/**
+ * Generate reasoning for the decision
+ */
+function generateDecisionReasoning(character, selected, interactionWeights, context) {
+  const currentNode = context.nodes.find(n => n.id === character.currentNodeId);
+  
+  return {
+    consciousnessInfluence: {
+      frequency: character.consciousness?.frequency || 0,
+      coherence: character.consciousness?.coherence || 0,
+      emotionalState: character.consciousness?.getCurrentEmotionalState ? 
+        character.consciousness.getCurrentEmotionalState() : null
+    },
+    personalityFactors: character.personality ? {
+      dominantTraits: Array.from(character.personality.traits.entries())
+        .filter(([_, trait]) => trait.value > 0.6)
+        .map(([name, trait]) => ({ name, value: trait.value }))
+        .slice(0, 3)
+    } : null,
+    environmentalFactors: currentNode ? {
+      nodeType: currentNode.type,
+      climate: currentNode.environmentalProperties?.climate,
+      isDangerous: currentNode.environment?.isDangerous?.() || false,
+      resources: currentNode.resources
+    } : null,
+    needFactors: {
+      energyLevel: character.energy / character.maxEnergy,
+      criticalNeeds: character.energy < (character.maxEnergy * 0.2) ? ['energy'] : [],
+      goals: character.goals?.slice(0, 3).map(g => g.id) || []
+    }
+  };
+}
+
+/**
+ * Get top alternatives to the selected interaction
+ */
+function getTopAlternatives(weights, selected, count = 3) {
+  const entries = Object.entries(weights)
+    .filter(([name, _]) => name !== selected)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count);
+    
+  return entries.map(([name, weight]) => ({ name, weight }));
+}
+
+/**
+ * Gather all available interactions for a character
+ */
 function gatherAvailableInteractions(character, worldState) {
   // Ensure we have a proper Character instance
   if (!(character instanceof Character)) {
@@ -168,23 +335,53 @@ function gatherAvailableInteractions(character, worldState) {
     currentNode
   });
 
+  // IMPORTANT: Ensure we're returning both basic and content interactions
+  const interactions = [];
+  
+  // Add system interactions (basic interactions)
+  if (availableInteractionsData.systemInteractions && Array.isArray(availableInteractionsData.systemInteractions)) {
+    interactions.push(...availableInteractionsData.systemInteractions);
+  }
+  
+  // Add content interactions - THIS IS THE KEY FIX
+  if (availableInteractionsData.contentInteractions && Array.isArray(availableInteractionsData.contentInteractions)) {
+    interactions.push(...availableInteractionsData.contentInteractions);
+  }
+
   // Filter available interactions based on character state
-  const availableInteractions = availableInteractionsData.allInteractions.filter(interaction => {
+  const availableInteractions = interactions.filter(interaction => {
     try {
       // System interactions use InteractionManager's validation
       if (interaction.isSystemInteraction) {
-        return interactionManager.canExecuteInteraction(interaction, { character, worldState, currentNode });
+        return interactionManager.canExecuteInteraction ? 
+          interactionManager.canExecuteInteraction(interaction, { character, worldState, currentNode }) : 
+          true; // Default to true if method doesn't exist
       }
 
       // Content interactions use canExecute method
-      const canExecuteResult = interaction.canExecute && interaction.canExecute(character, worldState);
+      if (interaction.canExecute) {
+        const canExecuteResult = interaction.canExecute(character, worldState);
+        return canExecuteResult;
+      }
 
-      return canExecuteResult;
+      // If no validation method exists, assume it's executable
+      console.log(`No validation method found for interaction ${interaction.name}, assuming executable`);
+      return true;
     } catch (error) {
       console.warn(`Error checking if interaction can execute:`, error.message);
       return false;
     }
   });
+
+  console.log(
+    `${character.name} has ${availableInteractions.length} total interactions available:`,
+    availableInteractions.map(i => i.name || i.type || 'unknown')
+  );
+  
+  // Log breakdown by type for debugging
+  const systemCount = availableInteractions.filter(i => i.isSystemInteraction).length;
+  const contentCount = availableInteractions.filter(i => !i.isSystemInteraction).length;
+  console.log(`  - ${systemCount} system interactions, ${contentCount} content interactions`);
 
   return availableInteractions;
 }// Emergency handler (separate from main weighting)
@@ -199,42 +396,12 @@ function handleEmergency(character, interactions, worldState) {
   return null;
 }
 
-// Biased selection (favors higher weights more strongly)
-function selectWithBias(weightedOptions) {
-  if (weightedOptions.length === 0) return null;
-  
-  // Normalize weights to prevent overflow with large values
-  const maxWeight = Math.max(...weightedOptions.map(opt => opt.weight));
-  const normalizedOptions = weightedOptions.map(opt => ({
-    ...opt,
-    normalizedWeight: opt.weight / maxWeight
-  }));
-  
-  // Apply bias with normalized weights
-  const biasedOptions = normalizedOptions.map(opt => ({
-    ...opt,
-    biasedWeight: Math.pow(opt.normalizedWeight, 1.5) // Softer bias than squared
-  }));
-  
-  const totalWeight = biasedOptions.reduce((sum, opt) => sum + opt.biasedWeight, 0);
-  
-  if (totalWeight === 0) return null;
-  
-  let random = Math.random() * totalWeight;
-  for (const opt of biasedOptions) {
-    random -= opt.biasedWeight;
-    if (random <= 0) return opt.interaction;
-  }
-  
-  return biasedOptions[0].interaction;
-}
-
 const generateBehavior = (character, worldState) => {
   if (!(character instanceof Character)) {
     throw new Error('Invalid character');
   }
   
-  // Get all available interactions
+  // Step 1: Gather all available interactions
   const availableInteractions = gatherAvailableInteractions(character, worldState);
   
   if (!availableInteractions.length) return null;
@@ -243,65 +410,54 @@ const generateBehavior = (character, worldState) => {
   const emergency = handleEmergency(character, availableInteractions, worldState);
   if (emergency) return executeInteraction(character, emergency, worldState);
   
-  // GOAL-DRIVEN SELECTION
-  const weights = availableInteractions.map(interaction => ({
-    interaction,
-    weight: calculateInteractionWeight(character, interaction, worldState)
-  }));
+  // Step 2: Calculate weights for ALL interactions (not just basic ones)
+  const interactionWeights = calculateInteractionWeights(
+    character,
+    availableInteractions,
+    worldState
+  );
   
-  // Sort by weight and add debug logging
-  weights.sort((a, b) => b.weight - a.weight);
+  // Debug logging
+  console.log(
+    `${character.name} interaction weights:`,
+    Object.entries(interactionWeights)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, weight]) => `${name}: ${weight.toFixed(2)}`)
+  );
   
-  if (DEBUG_MODE) {
-    console.log(`${character.name} interaction weights:`, 
-      weights.slice(0, 5).map(w => `${w.interaction.name}: ${w.weight.toFixed(2)}`)
-    );
-  }
+  // Step 3: Select interaction based on weights
+  const selected = selectWeightedInteraction(interactionWeights);
   
-  // Use weighted random selection with bias toward top choices
-  const selectedInteraction = selectWithBias(weights);
+  // Step 4: Generate reasoning for the decision
+  const reasoning = generateDecisionReasoning(
+    character,
+    selected,
+    interactionWeights,
+    worldState
+  );
+  
+  // Find the actual interaction object for the selected name
+  const selectedInteraction = availableInteractions.find(i => 
+    (i.name || i.id || i.type || 'unknown') === selected
+  );
+  
   if (!selectedInteraction) return null;
 
   // Enhanced Decision Logging - Store decision reasoning
-  const currentNode = worldState.nodes.find(n => n.id === character.currentNodeId);
   const decisionContext = {
     timestamp: worldState.time || Date.now(),
-    availableInteractions: weights.slice(0, 10).map(w => ({ 
-      name: w.interaction.name, 
-      weight: w.weight,
-      type: w.interaction.type || 'unknown'
+    availableInteractions: Object.entries(interactionWeights).slice(0, 10).map(([name, weight]) => ({ 
+      name, 
+      weight,
+      type: availableInteractions.find(i => (i.name || i.id || i.type || 'unknown') === name)?.type || 'unknown'
     })),
     selectedInteraction: {
-      name: selectedInteraction.name,
-      weight: weights.find(w => w.interaction === selectedInteraction)?.weight || 0,
+      name: selected,
+      weight: interactionWeights[selected] || 0,
       type: selectedInteraction.type || 'unknown'
     },
-    reasoning: {
-      emergencyOverride: emergency ? true : false,
-      consciousnessInfluence: {
-        frequency: character.consciousness?.frequency || 0,
-        coherence: character.consciousness?.coherence || 0,
-        emotionalState: character.consciousness?.getCurrentEmotionalState ? 
-          character.consciousness.getCurrentEmotionalState() : null
-      },
-      personalityFactors: character.personality ? {
-        dominantTraits: Array.from(character.personality.traits.entries())
-          .filter(([_, trait]) => trait.value > 0.6)
-          .map(([name, trait]) => ({ name, value: trait.value }))
-          .slice(0, 3)
-      } : null,
-      environmentalFactors: currentNode ? {
-        nodeType: currentNode.type,
-        climate: currentNode.environmentalProperties?.climate,
-        isDangerous: currentNode.environment?.isDangerous?.() || false,
-        resources: currentNode.resources
-      } : null,
-      needFactors: {
-        energyLevel: character.energy / character.maxEnergy,
-        criticalNeeds: character.energy < (character.maxEnergy * 0.2) ? ['energy'] : [],
-        goals: character.goals?.slice(0, 3).map(g => g.id) || []
-      }
-    }
+    reasoning: reasoning,
+    topAlternatives: getTopAlternatives(interactionWeights, selected, 3)
   };
 
   // Store decision in character's decision history
@@ -319,7 +475,7 @@ const generateBehavior = (character, worldState) => {
     console.log(`${character.name} decision context:`, {
       selected: decisionContext.selectedInteraction.name,
       reasoning: decisionContext.reasoning,
-      topAlternatives: decisionContext.availableInteractions.slice(0, 3)
+      topAlternatives: decisionContext.topAlternatives
     });
   }
 
