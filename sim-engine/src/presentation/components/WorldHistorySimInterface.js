@@ -1446,6 +1446,7 @@ const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
   // eslint-disable-next-line no-unused-vars
   const [movementHistory, setMovementHistory] = useState(new Map());
   const [recentlyMoved, setRecentlyMoved] = useState(new Set());
+  const [selectedNode, setSelectedNode] = useState(null);
 
   // Update movement tracking when characters change
   useEffect(() => {
@@ -1562,10 +1563,20 @@ const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
 
             const styling = getNodeStyling(node.type);
 
+            // Handle node click
+            const handleNodeClick = () => {
+              setSelectedNode(selectedNode === node.id ? null : node.id);
+            };
+
+            const isSelected = selectedNode === node.id;
+
             return (
               <div
                 key={node.id}
-                className={`relative ${styling.bg} border-2 ${styling.border} rounded-lg p-2 flex flex-col items-center justify-center min-h-[80px] ${styling.hover} transition-colors cursor-pointer`}
+                onClick={handleNodeClick}
+                className={`relative ${styling.bg} border-2 ${
+                  isSelected ? 'border-yellow-400 dark:border-yellow-300 ring-2 ring-yellow-300' : styling.border
+                } rounded-lg p-2 flex flex-col items-center justify-center min-h-[80px] ${styling.hover} transition-all cursor-pointer transform hover:scale-105`}
                 title={`${node.name} (${node.type || 'unknown'}) - ${nodeCharacters.length} characters${recentlyMovedChars.length > 0 ? ` (${recentlyMovedChars.length} recently moved)` : ''}`}
               >
                 {/* Node icon and name */}
@@ -1651,40 +1662,98 @@ const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
         </div>
       )}
 
-      {/* Enhanced Legend */}
-      <div className="absolute bottom-2 left-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border text-xs">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
+      {/* Selected Node Details Panel */}
+      {selectedNode && (
+        <div className="absolute top-2 left-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-3 shadow-lg max-w-xs">
+          {(() => {
+            const node = nodes.find(n => n.id === selectedNode);
+            if (!node) return null;
+            
+            const nodeCharacters = characters.filter(char => {
+              const charNodeId = char.currentNodeId || char.assignedNodeIds?.[0] ||
+                                (char.assignments?.nodes && Array.from(char.assignments.nodes)[0]);
+              return charNodeId === node.id;
+            });
+
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{node.name}</h4>
+                  <button 
+                    onClick={() => setSelectedNode(null)}
+                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div><span className="font-medium">Type:</span> {node.type || 'Unknown'}</div>
+                  <div><span className="font-medium">Population:</span> {nodeCharacters.length}</div>
+                  {node.environmentalProperties?.climate && (
+                    <div><span className="font-medium">Climate:</span> {node.environmentalProperties.climate}</div>
+                  )}
+                  {node.description && (
+                    <div className="mt-2">
+                      <div className="font-medium">Description:</div>
+                      <div className="text-gray-600 dark:text-gray-400">{node.description}</div>
+                    </div>
+                  )}
+                  {nodeCharacters.length > 0 && (
+                    <div className="mt-2">
+                      <div className="font-medium">Characters:</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {nodeCharacters.map((char, i) => (
+                          <span key={i} className="text-xs bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">
+                            {char.name || `Character ${i + 1}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Enhanced Legend - Made 50% smaller */}
+      <div className="absolute bottom-1 left-1 bg-white dark:bg-gray-800 p-1.5 rounded-md shadow-sm border text-xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>
-              <span>Settlement</span>
+              <div className="w-2 h-2 bg-blue-200 border border-blue-400 rounded"></div>
+              <span className="text-xs">Settlement</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-4 h-4 bg-green-200 border-2 border-green-400 rounded"></div>
-              <span>Wilderness</span>
+              <div className="w-2 h-2 bg-green-200 border border-green-400 rounded"></div>
+              <span className="text-xs">Wilderness</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-4 h-4 bg-orange-200 border-2 border-orange-400 rounded"></div>
-              <span>Outpost</span>
+              <div className="w-2 h-2 bg-orange-200 border border-orange-400 rounded"></div>
+              <span className="text-xs">Outpost</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Stationary Character</span>
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              <span className="text-xs">Character</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-              <span>Recently Moved</span>
+              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+              <span className="text-xs">Moved</span>
             </div>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 border-t pt-1">
-            Total: {characters.length} chars, {nodes.length} settlements
+            {characters.length} chars, {nodes.length} nodes
             {recentlyMovedCount > 0 && (
-              <span className="ml-2 text-yellow-600 dark:text-yellow-400">
-                • {recentlyMovedCount} recently moved
+              <span className="ml-1 text-yellow-600 dark:text-yellow-400">
+                • {recentlyMovedCount} moved
               </span>
             )}
+            <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+              💡 Click nodes for details
+            </div>
           </div>
         </div>
       </div>
