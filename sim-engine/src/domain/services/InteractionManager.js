@@ -256,15 +256,23 @@ class InteractionManager {
     const filtered = currentNode.contentInteractions.filter(interaction => {
       try {
         console.log(`Debug: Checking interaction ${interaction.name} (${interaction.id})`);
-        console.log(`Debug: Interaction has canExecute method: ${!!interaction.canExecute}`);
+        
+        // Convert plain objects to ContentInteraction instances if needed
+        let contentInteraction = interaction;
+        if (!interaction.canExecute && typeof interaction === 'object') {
+          console.log('Debug: Converting plain object to ContentInteraction instance');
+          contentInteraction = InteractionFactory.fromJSON(interaction);
+        }
+        
+        console.log(`Debug: Interaction has canExecute method: ${!!contentInteraction.canExecute}`);
 
-        if (!interaction.canExecute) {
+        if (!contentInteraction.canExecute) {
           console.log('Debug: Interaction missing canExecute method');
           return false;
         }
 
-        const canExecute = interaction.canExecute(character, world);
-        console.log(`Debug: Interaction ${interaction.name} canExecute result: ${canExecute}`);
+        const canExecute = contentInteraction.canExecute(character, world);
+        console.log(`Debug: Interaction ${contentInteraction.name} canExecute result: ${canExecute}`);
 
         return canExecute;
       } catch (error) {
@@ -362,7 +370,14 @@ class InteractionManager {
    */
   canExecuteInteraction(interaction, context) {
     try {
-      return interaction.canExecute(context.character, context.world || context.worldState);
+      // Handle potential plain objects that need conversion
+      let validInteraction = interaction;
+      if (!interaction.canExecute && typeof interaction === 'object') {
+        // Use the factory method for consistent conversion handling
+        validInteraction = InteractionFactory.fromJSON(interaction);
+      }
+      
+      return validInteraction.canExecute(context.character, context.world || context.worldState);
     } catch (error) {
       console.warn(`Error validating interaction ${interaction.name}:`, error.message);
       return false;

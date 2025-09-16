@@ -1,5 +1,7 @@
 // src/application/services/DemoService.js
 
+import InteractionFactory from '../../domain/entities/interactions/InteractionFactory.js';
+
 /**
  * DemoService - Provides pre-built demo worlds for quick exploration
  * 
@@ -130,14 +132,16 @@ class DemoService {
     const interactionsMap = new Map();
     if (rawWorldData.interactions && Array.isArray(rawWorldData.interactions)) {
       rawWorldData.interactions.forEach(interaction => {
-        // Ensure interaction has required properties
-        const processedInteraction = {
+        // Convert plain interaction objects to ContentInteraction instances using factory
+        const contentInteraction = InteractionFactory.createContent({
           ...interaction,
           id: interaction.id || `int_${Date.now()}_${Math.random()}`,
           name: interaction.name || 'Unnamed Interaction',
-          type: interaction.type || 'social'
-        };
-        interactionsMap.set(processedInteraction.id, processedInteraction);
+          type: interaction.type || 'content'
+        });
+        
+        // Store as serialized data for navigation compatibility
+        interactionsMap.set(contentInteraction.id, contentInteraction.toJSON());
       });
     }
     
@@ -404,6 +408,10 @@ class DemoService {
           description: 'Examine Lynn\'s collection of goods from distant lands',
           category: 'trade',
           assignedCharacterIds: ['trader_lynn'],
+          canExecute: (character, worldState) => {
+            // Could require charisma or currency, but keep accessible for demo
+            return true;
+          },
           branches: [
             {
               text: 'What exotic goods do you have?',
@@ -423,6 +431,10 @@ class DemoService {
           description: 'Speak with Old Willow about the secrets of nature',
           category: 'mystical',
           assignedCharacterIds: ['forest_hermit'],
+          canExecute: (character, worldState) => {
+            // Could require wisdom score or specific class, but keep open for demo
+            return true;
+          },
           branches: [
             {
               text: 'What do the trees whisper?',
@@ -443,6 +455,10 @@ class DemoService {
           description: 'Get updates on village security from Captain Thor',
           category: 'official',
           assignedCharacterIds: ['guard_captain_thor'],
+          canExecute: (character, worldState) => {
+            // Could require strength or reputation, but keep accessible
+            return true;
+          },
           branches: [
             {
               text: 'How secure are our borders?',

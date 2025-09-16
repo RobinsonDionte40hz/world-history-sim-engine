@@ -1326,6 +1326,7 @@ const UnifiedSettlementsView = ({ worldState, turnManager }) => {
 // Force module refresh: 2024-01-15
 const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
   // Track character movement history for visual indicators
+  // eslint-disable-next-line no-unused-vars
   const [movementHistory, setMovementHistory] = useState(new Map());
   const [recentlyMoved, setRecentlyMoved] = useState(new Set());
 
@@ -1333,38 +1334,41 @@ const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
   useEffect(() => {
     if (!characters.length) return;
 
-    const newMovementHistory = new Map(movementHistory);
-    const newRecentlyMoved = new Set();
+    setMovementHistory(prevMovementHistory => {
+      const newMovementHistory = new Map(prevMovementHistory);
+      const newRecentlyMoved = new Set();
 
-    characters.forEach(char => {
-      const currentNodeId = char.currentNodeId || char.assignedNodeIds?.[0] ||
-                           (char.assignments?.nodes && Array.from(char.assignments.nodes)[0]);
+      characters.forEach(char => {
+        const currentNodeId = char.currentNodeId || char.assignedNodeIds?.[0] ||
+                             (char.assignments?.nodes && Array.from(char.assignments.nodes)[0]);
 
-      if (currentNodeId) {
-        const previousNodeId = newMovementHistory.get(char.id);
+        if (currentNodeId) {
+          const previousNodeId = newMovementHistory.get(char.id);
 
-        // If character moved to a different node
-        if (previousNodeId && previousNodeId !== currentNodeId) {
-          newRecentlyMoved.add(char.id);
-          // Clear recent movement after 5 seconds
-          setTimeout(() => {
-            setRecentlyMoved(prev => {
-              const updated = new Set(prev);
-              updated.delete(char.id);
-              return updated;
-            });
-          }, 5000);
+          // If character moved to a different node
+          if (previousNodeId && previousNodeId !== currentNodeId) {
+            newRecentlyMoved.add(char.id);
+            // Clear recent movement after 5 seconds
+            setTimeout(() => {
+              setRecentlyMoved(prev => {
+                const updated = new Set(prev);
+                updated.delete(char.id);
+                return updated;
+              });
+            }, 5000);
+          }
+
+          newMovementHistory.set(char.id, currentNodeId);
         }
+      });
 
-        newMovementHistory.set(char.id, currentNodeId);
+      if (newRecentlyMoved.size > 0) {
+        setRecentlyMoved(newRecentlyMoved);
       }
-    });
 
-    setMovementHistory(newMovementHistory);
-    if (newRecentlyMoved.size > 0) {
-      setRecentlyMoved(newRecentlyMoved);
-    }
-  }, [characters, movementHistory]);
+      return newMovementHistory;
+    });
+  }, [characters]); // Remove movementHistory from dependencies
 
   // Create a simple grid layout for nodes
   const gridSize = Math.ceil(Math.sqrt(nodes.length || 1));

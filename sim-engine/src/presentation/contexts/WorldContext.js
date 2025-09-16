@@ -198,6 +198,19 @@ export const WorldProvider = ({ children }) => {
         try {
             const worldId = `demo_imported_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
             
+            // Build nodePopulations from characters' currentNodeId
+            const nodePopulations = {};
+            if (demoWorldData.characters) {
+                demoWorldData.characters.forEach(character => {
+                    if (character.currentNodeId) {
+                        if (!nodePopulations[character.currentNodeId]) {
+                            nodePopulations[character.currentNodeId] = [];
+                        }
+                        nodePopulations[character.currentNodeId].push(character.id);
+                    }
+                });
+            }
+
             // Convert demo world data to regular world config format
             const worldConfig = {
                 name: demoWorldData.name || demoInfo?.name || 'Imported Demo World',
@@ -207,7 +220,7 @@ export const WorldProvider = ({ children }) => {
                 nodes: demoWorldData.nodes || [],
                 interactions: demoWorldData.interactions || [],
                 characters: demoWorldData.characters || [],
-                nodePopulations: {},
+                nodePopulations: nodePopulations,
                 isComplete: true, // Demo worlds are complete by definition
                 isValid: true,
                 stepValidation: {

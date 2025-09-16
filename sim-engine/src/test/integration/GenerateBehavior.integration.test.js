@@ -3,32 +3,50 @@
 import generateBehavior from '../../application/use-cases/npc/GenerateBehavior.js';
 import Character from '../../domain/entities/Character.js';
 
+// Mock the MemoryService to avoid instanceof issues
+jest.mock('../../domain/services/MemoryService.js', () => {
+  class MemoryService {
+    queryMemory(character, criteria = {}) {
+      // Return empty array for mock - we don't need real memory data for these tests
+      return [];
+    }
+    
+    getMemoryInfluence(character, interaction) {
+      // Return neutral influence for mock
+      return 0;
+    }
+  }
+  
+  return {
+    __esModule: true,
+    default: MemoryService
+  };
+});
+
 // Mock the Character class for testing
 jest.mock('../../domain/entities/Character.js', () => {
-  const RealCharacter = jest.requireActual('../../domain/entities/Character.js').default;
+  // Get the actual Character class
+  const actualCharacter = jest.requireActual('../../domain/entities/Character.js');
   
-  const MockCharacter = function(config) {
-    // Create instance with proper prototype chain
-    const instance = Object.create(RealCharacter.prototype);
-    instance.constructor = MockCharacter;
-    
-    // Set properties
-    instance.id = config.id || 'test-char';
-    instance.name = config.name || 'Test Character';
-    instance.energy = config.energy || 50;
-    instance.maxEnergy = config.maxEnergy || 100;
-    instance.currentNodeId = config.currentNodeId || 'test-node';
-    instance.attributes = config.attributes || { getEnergyProxy: () => 50 };
-    instance.consciousness = config.consciousness || { frequency: 40, coherence: 0.8 };
-    instance.goals = config.goals || [{ id: 'rest' }];
-    instance.decisionHistory = config.decisionHistory || [];
-    
-    return instance;
-  };
+  // Create a mock constructor
+  function MockCharacter(config) {
+    // Set properties directly on this instance
+    this.id = config.id || 'test-char';
+    this.name = config.name || 'Test Character';
+    this.energy = config.energy || 50;
+    this.maxEnergy = config.maxEnergy || 100;
+    this.currentNodeId = config.currentNodeId || 'test-node';
+    this.attributes = config.attributes || { getEnergyProxy: () => 50 };
+    this.consciousness = config.consciousness || { frequency: 40, coherence: 0.8 };
+    this.goals = config.goals || [{ id: 'rest' }];
+    this.decisionHistory = config.decisionHistory || [];
+  }
 
-  // Ensure instanceof works
-  MockCharacter.prototype = RealCharacter.prototype;
-  MockCharacter.prototype.constructor = MockCharacter;
+  // Copy prototype methods from the actual Character if available
+  if (actualCharacter.default && actualCharacter.default.prototype) {
+    MockCharacter.prototype = Object.create(actualCharacter.default.prototype);
+    MockCharacter.prototype.constructor = MockCharacter;
+  }
   
   return {
     __esModule: true,

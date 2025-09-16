@@ -133,15 +133,25 @@ export const SimulationProvider = ({ children }) => {
       let unassignedCharacters = 0;
       
       worldData.characters.forEach((character, characterId) => {
-        // Check if character is assigned to valid nodes
-        const characterNodes = [];
-        worldData.nodes.forEach((node, nodeId) => {
-          if (node.characters && node.characters.some(c => c.id === characterId)) {
-            characterNodes.push(nodeId);
-          }
-        });
+        // Check if character has a valid currentNodeId assignment
+        let hasValidAssignment = false;
         
-        if (characterNodes.length === 0) {
+        if (character.currentNodeId) {
+          // Verify the node exists
+          if (worldData.nodes.has(character.currentNodeId)) {
+            hasValidAssignment = true;
+          }
+        } else if (character.assignments?.nodes?.size > 0) {
+          // Check if any assigned nodes are valid
+          for (const nodeId of character.assignments.nodes) {
+            if (worldData.nodes.has(nodeId)) {
+              hasValidAssignment = true;
+              break;
+            }
+          }
+        }
+        
+        if (!hasValidAssignment) {
           unassignedCharacters++;
         }
       });

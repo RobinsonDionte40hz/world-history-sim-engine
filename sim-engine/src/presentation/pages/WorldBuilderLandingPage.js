@@ -46,11 +46,11 @@ const WorldBuilderLandingPage = () => {
     }
 
     // Check for Map data structures (required by simulation)
-    if (!(preparedWorld.nodes instanceof Map)) {
+    if (!preparedWorld.nodes || typeof preparedWorld.nodes.get !== 'function' || typeof preparedWorld.nodes.size !== 'number') {
       errors.push('Nodes must be a Map for simulation');
     }
 
-    if (!(preparedWorld.characters instanceof Map)) {
+    if (!preparedWorld.characters || typeof preparedWorld.characters.get !== 'function' || typeof preparedWorld.characters.size !== 'number') {
       errors.push('Characters must be a Map for simulation');
     }
 

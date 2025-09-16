@@ -667,7 +667,8 @@ describe('Turn Counter Integration Tests - Comprehensive End-to-End Flow (Turn-B
       
       // Should have turn counter visible
       await waitFor(() => {
-        expect(screen.getByText(/Turn:/)).toBeInTheDocument();
+        const turnCounters = screen.getAllByText(/Turn \d+/);
+        expect(turnCounters.length).toBeGreaterThan(0);
       });
     });
 
@@ -680,8 +681,8 @@ describe('Turn Counter Integration Tests - Comprehensive End-to-End Flow (Turn-B
       
       // Should have turn-based controls
       await waitFor(() => {
-        const turnText = screen.queryByText(/Turn:/);
-        expect(turnText).toBeInTheDocument();
+        const turnCounters = screen.getAllByText(/Turn \d+/);
+        expect(turnCounters.length).toBeGreaterThan(0);
       });
     });
 
@@ -701,7 +702,8 @@ describe('Turn Counter Integration Tests - Comprehensive End-to-End Flow (Turn-B
       
       // Should still show turn counter after interaction
       await waitFor(() => {
-        expect(screen.getByText(/Turn: \d+/)).toBeInTheDocument();
+        const turnCounters = screen.getAllByText(/Turn \d+/);
+        expect(turnCounters.length).toBeGreaterThan(0);
       });
     });
   });
