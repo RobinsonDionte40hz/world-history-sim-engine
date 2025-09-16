@@ -238,23 +238,33 @@ class InteractionFactory {
 
     switch (type) {
       case 'waitinteraction':
+      case 'wait':
         return WaitInteraction.fromJSON(json);
       case 'restinteraction':
+      case 'rest':
         return RestInteraction.fromJSON(json);
       case 'examineinteraction':
+      case 'examine':
         return ExamineInteraction.fromJSON(json);
       case 'movementinteraction':
+      case 'movement':
+      case 'move':
         return MovementInteraction.fromJSON(json);
       case 'perceptioninteraction':
+      case 'perception':
+      case 'perceive':
         return PerceptionInteraction.fromJSON(json);
       case 'contentinteraction':
+      case 'content':
         return ContentInteraction.fromJSON(json);
       case 'systeminteraction':
+      case 'system':
         return SystemInteraction.fromJSON(json);
       case 'interactionbase':
+      case 'base':
         return InteractionBase.fromJSON(json);
       default:
-        throw new Error(`Unknown interaction type in JSON: ${json.type}`);
+        throw new Error(`Unknown interaction type in JSON: ${json.type}. Supported types: wait, rest, examine, movement, perception, content, system, base`);
     }
   }
 
