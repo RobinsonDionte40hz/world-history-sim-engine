@@ -1,0 +1,458 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Settlement Interactions API",
+    "description": "Multi-settlement management and development system for Valley of Echoes demo",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/settlements/{settlementId}/develop": {
+      "post": {
+        "summary": "Develop settlement infrastructure",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "developmentPath": { 
+                    "type": "string",
+                    "enum": ["economic", "military", "cultural", "diplomatic", "technological"]
+                  },
+                  "upgradeId": { "type": "string" },
+                  "resources": {
+                    "type": "object",
+                    "additionalProperties": { "type": "number" }
+                  },
+                  "priority": { 
+                    "type": "string", 
+                    "enum": ["low", "normal", "high", "urgent"] 
+                  }
+                },
+                "required": ["developmentPath", "upgradeId", "resources"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settlement development successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "upgradeId": { "type": "string" },
+                    "newLevel": { "type": "integer" },
+                    "effects": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/DevelopmentEffect" }
+                    },
+                    "unlockedUpgrades": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "resourcesConsumed": { "type": "object" },
+                    "duration": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Development failed - insufficient resources or prerequisites not met",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "error": { "type": "string" },
+                    "missingResources": { "type": "object" },
+                    "missingPrerequisites": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settlements/{settlementId}/nodes": {
+      "get": {
+        "summary": "Get all nodes belonging to settlement",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settlement nodes retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settlementId": { "type": "string" },
+                    "capitalNode": { "type": "string" },
+                    "nodes": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SettlementNode" }
+                    },
+                    "nodeConnections": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/NodeConnection" }
+                    },
+                    "totalPopulation": { "type": "integer" },
+                    "totalResources": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add new node to settlement",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nodeId": { "type": "string" },
+                  "nodeType": { 
+                    "type": "string",
+                    "enum": ["administrative", "economic", "military", "cultural", "residential"]
+                  },
+                  "connectionType": { 
+                    "type": "string",
+                    "enum": ["road", "river", "trade_route", "administrative"]
+                  },
+                  "connectToNode": { "type": "string" }
+                },
+                "required": ["nodeId", "nodeType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Node added to settlement successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "nodeId": { "type": "string" },
+                    "settlementId": { "type": "string" },
+                    "connections": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/NodeConnection" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settlements/{settlementId}/governance": {
+      "get": {
+        "summary": "Get settlement governance information",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Governance information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SettlementGovernance" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update settlement governance",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "governanceChanges": { "type": "object" },
+                  "reason": { "type": "string" },
+                  "transitionPeriod": { "type": "integer" }
+                },
+                "required": ["governanceChanges", "reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Governance updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "oldGovernance": { "$ref": "#/components/schemas/SettlementGovernance" },
+                    "newGovernance": { "$ref": "#/components/schemas/SettlementGovernance" },
+                    "transitionEffects": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    },
+                    "stabilityImpact": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settlements/{settlementId}/population-groups": {
+      "get": {
+        "summary": "Get all population groups in settlement",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Population groups retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settlementId": { "type": "string" },
+                    "totalPopulation": { "type": "integer" },
+                    "populationGroups": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/PopulationGroup" }
+                    },
+                    "heroNPCs": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Character" }
+                    },
+                    "demographicSummary": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settlements/{settlementId}/development-trees": {
+      "get": {
+        "summary": "Get settlement development trees and progress",
+        "parameters": [
+          {
+            "name": "settlementId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Development trees retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settlementId": { "type": "string" },
+                    "developmentTrees": {
+                      "type": "object",
+                      "additionalProperties": { "$ref": "#/components/schemas/DevelopmentTree" }
+                    },
+                    "availableUpgrades": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/UpgradeOption" }
+                    },
+                    "completedUpgrades": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "resourceRequirements": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SettlementNode": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { 
+            "type": "string",
+            "enum": ["administrative", "economic", "military", "cultural", "residential"]
+          },
+          "population": { "type": "integer" },
+          "specializations": { "type": "array", "items": { "type": "string" } },
+          "buildings": { "type": "array", "items": { "type": "object" } },
+          "resources": { "type": "object" },
+          "defenseLevel": { "type": "number" },
+          "cultureLevel": { "type": "number" }
+        }
+      },
+      "NodeConnection": {
+        "type": "object",
+        "properties": {
+          "fromNode": { "type": "string" },
+          "toNode": { "type": "string" },
+          "connectionType": { 
+            "type": "string",
+            "enum": ["road", "river", "trade_route", "administrative"]
+          },
+          "strength": { "type": "number" },
+          "travelTime": { "type": "number" },
+          "capacity": { "type": "number" }
+        }
+      },
+      "SettlementGovernance": {
+        "type": "object",
+        "properties": {
+          "type": { 
+            "type": "string",
+            "enum": ["democratic", "authoritarian", "theocratic", "oligarchic"]
+          },
+          "structure": { 
+            "type": "string",
+            "enum": ["council", "monarchy", "republic", "federation"]
+          },
+          "leadershipMethod": { 
+            "type": "string",
+            "enum": ["elected", "inherited", "appointed", "merit"]
+          },
+          "citizenParticipation": { "type": "number" },
+          "bureaucraticEfficiency": { "type": "number" },
+          "corruption": { "type": "number" },
+          "lawAndOrder": { "type": "number" },
+          "adaptability": { "type": "number" }
+        }
+      },
+      "DevelopmentTree": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "completedUpgrades": { "type": "array", "items": { "type": "string" } },
+          "availableUpgrades": { "type": "array", "items": { "type": "string" } },
+          "lockedUpgrades": { "type": "array", "items": { "type": "string" } },
+          "totalLevels": { "type": "integer" },
+          "currentLevel": { "type": "integer" }
+        }
+      },
+      "UpgradeOption": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "category": { "type": "string" },
+          "level": { "type": "integer" },
+          "costs": { "type": "object" },
+          "prerequisites": { "type": "array", "items": { "type": "string" } },
+          "effects": { "type": "object" },
+          "estimatedTime": { "type": "integer" }
+        }
+      },
+      "DevelopmentEffect": {
+        "type": "object",
+        "properties": {
+          "type": { 
+            "type": "string",
+            "enum": ["resource_modifier", "population_bonus", "efficiency_gain", "unlock_feature"]
+          },
+          "target": { "type": "string" },
+          "magnitude": { "type": "number" },
+          "duration": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "PopulationGroup": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "size": { "type": "integer" },
+          "nodeId": { "type": "string" },
+          "morale": { "type": "number" },
+          "productivity": { "type": "number" },
+          "specialization": { "type": "string" }
+        }
+      },
+      "Character": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "lodTier": { "type": "string" },
+          "settlementId": { "type": "string" },
+          "nodeId": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      }
+    }
+  }
+}

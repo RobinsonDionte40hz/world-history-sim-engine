@@ -52,7 +52,21 @@ class HistoryGenerator {
   // Generate a narrative description (simple for MVP)
   generateDescription(character, interaction, outcome) {
     const success = outcome === 'positive';
-    const attrMod = character.attributes.getTotalModifier('charisma');  // Proxy for narrative flavor
+    let attrMod = 0;
+
+    // Safely get charisma modifier
+    try {
+      if (character.attributes && typeof character.attributes.getTotalModifier === 'function') {
+        attrMod = character.attributes.getTotalModifier('charisma');
+      } else if (character.attributes && character.attributes.charisma) {
+        // Fallback for plain object format
+        attrMod = character.attributes.charisma.modifier || 0;
+      }
+    } catch (error) {
+      console.warn('Could not get charisma modifier for description:', error);
+      attrMod = 0;
+    }
+
     const descriptors = ['bravely', 'cautiously', 'cleverly', 'boldly'];
     const descriptor = descriptors[Math.floor(Math.random() * descriptors.length)];
 
@@ -590,6 +604,543 @@ class HistoryGenerator {
       type: 'settlement_prosperity',
       settlementId
     });
+  }
+
+  // ==================== CROSS-SETTLEMENT EVENT GENERATION ====================
+
+  /**
+   * Generate historical events for cross-settlement interactions
+   * @param {Object} sourceSettlement - Source settlement
+   * @param {Object} targetSettlement - Target settlement
+   * @param {string} interactionType - Type of interaction (trade, diplomacy, conflict, migration)
+   * @param {Object} interactionData - Data about the interaction
+   * @param {Array} consequences - Array of consequences generated
+   * @returns {Array} Array of historical events
+   */
+  generateCrossSettlementEvents(sourceSettlement, targetSettlement, interactionType, interactionData = {}, consequences = []) {
+    const events = [];
+    const timestamp = Date.now();
+
+    // Generate primary interaction event
+    const primaryEvent = this._generatePrimaryCrossSettlementEvent(
+      sourceSettlement, targetSettlement, interactionType, interactionData, timestamp
+    );
+    if (primaryEvent) {
+      events.push(primaryEvent);
+    }
+
+    // Generate consequence events
+    const consequenceEvents = this._generateCrossSettlementConsequenceEvents(
+      sourceSettlement, targetSettlement, consequences, timestamp
+    );
+    events.push(...consequenceEvents);
+
+    // Generate regional impact events
+    const regionalEvents = this._generateRegionalImpactEvents(
+      sourceSettlement, targetSettlement, interactionType, interactionData, timestamp
+    );
+    events.push(...regionalEvents);
+
+    // Save all events
+    events.forEach(event => this.saveEvent(event));
+
+    return events;
+  }
+
+  /**
+   * Generate primary cross-settlement interaction event
+   * @private
+   */
+  _generatePrimaryCrossSettlementEvent(sourceSettlement, targetSettlement, interactionType, interactionData, timestamp) {
+    const eventConfig = this._getCrossSettlementEventConfig(interactionType, interactionData);
+
+    return {
+      id: this.generateId(),
+      timestamp,
+      type: 'cross_settlement',
+      subtype: interactionType,
+      sourceSettlementId: sourceSettlement.id,
+      sourceSettlementName: sourceSettlement.name,
+      targetSettlementId: targetSettlement.id,
+      targetSettlementName: targetSettlement.name,
+      severity: eventConfig.severity,
+      description: this._generateCrossSettlementEventDescription(
+        sourceSettlement, targetSettlement, interactionType, interactionData, eventConfig
+      ),
+      location: `${sourceSettlement.id}-${targetSettlement.id}`,
+      participants: [], // Could include involved characters
+      significance: eventConfig.significance,
+      metadata: {
+        interactionType,
+        interactionData,
+        sourceSettlementType: sourceSettlement.type,
+        targetSettlementType: targetSettlement.type,
+        sourcePopulation: sourceSettlement.population?.total || 0,
+        targetPopulation: targetSettlement.population?.total || 0
+      }
+    };
+  }
+
+  /**
+   * Generate consequence events for cross-settlement interactions
+   * @private
+   */
+  _generateCrossSettlementConsequenceEvents(sourceSettlement, targetSettlement, consequences, timestamp) {
+    return consequences.map(consequence => ({
+      id: this.generateId(),
+      timestamp,
+      type: 'cross_settlement_consequence',
+      subtype: consequence.type,
+      sourceSettlementId: sourceSettlement.id,
+      targetSettlementId: targetSettlement.id,
+      severity: consequence.severity || 'moderate',
+      description: this._generateCrossSettlementConsequenceDescription(
+        sourceSettlement, targetSettlement, consequence
+      ),
+      location: `${sourceSettlement.id}-${targetSettlement.id}`,
+      participants: [],
+      significance: this._calculateCrossSettlementConsequenceSignificance(consequence),
+      metadata: {
+        consequenceType: consequence.type,
+        consequenceId: consequence.id,
+        sourceSettlementType: sourceSettlement.type,
+        targetSettlementType: targetSettlement.type
+      }
+    }));
+  }
+
+  /**
+   * Generate regional impact events
+   * @private
+   */
+  _generateRegionalImpactEvents(sourceSettlement, targetSettlement, interactionType, interactionData, timestamp) {
+    const events = [];
+
+    // Check for regional escalation potential
+    if (interactionType === 'conflict' && interactionData.severity === 'major') {
+      const escalationEvent = this._generateConflictEscalationEvent(
+        sourceSettlement, targetSettlement, interactionData, timestamp
+      );
+      if (escalationEvent) {
+        events.push(escalationEvent);
+      }
+    }
+
+    // Check for alliance formation
+    if (interactionType === 'diplomacy' && interactionData.outcome === 'alliance') {
+      const allianceEvent = this._generateAllianceFormationEvent(
+        sourceSettlement, targetSettlement, interactionData, timestamp
+      );
+      if (allianceEvent) {
+        events.push(allianceEvent);
+      }
+    }
+
+    // Check for trade network expansion
+    if (interactionType === 'trade' && interactionData.volume > 100) {
+      const networkEvent = this._generateTradeNetworkEvent(
+        sourceSettlement, targetSettlement, interactionData, timestamp
+      );
+      if (networkEvent) {
+        events.push(networkEvent);
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Get event configuration for cross-settlement interactions
+   * @private
+   */
+  _getCrossSettlementEventConfig(interactionType, interactionData) {
+    const configs = {
+      trade: {
+        severity: interactionData.volume > 100 ? 'major' : interactionData.volume > 50 ? 'moderate' : 'minor',
+        significance: Math.min(0.8, (interactionData.volume || 0) / 200)
+      },
+      diplomacy: {
+        severity: interactionData.outcome === 'alliance' ? 'major' : interactionData.outcome === 'treaty' ? 'moderate' : 'minor',
+        significance: interactionData.outcome === 'alliance' ? 0.9 : interactionData.outcome === 'treaty' ? 0.6 : 0.3
+      },
+      conflict: {
+        severity: interactionData.severity || 'moderate',
+        significance: interactionData.severity === 'major' ? 0.9 : interactionData.severity === 'moderate' ? 0.7 : 0.4
+      },
+      migration: {
+        severity: interactionData.migrantCount > 50 ? 'major' : interactionData.migrantCount > 20 ? 'moderate' : 'minor',
+        significance: Math.min(0.7, (interactionData.migrantCount || 0) / 100)
+      }
+    };
+
+    return configs[interactionType] || { severity: 'minor', significance: 0.2 };
+  }
+
+  /**
+   * Generate description for cross-settlement events
+   * @private
+   */
+  _generateCrossSettlementEventDescription(sourceSettlement, targetSettlement, interactionType, interactionData, eventConfig) {
+    const sourceName = sourceSettlement.name;
+    const targetName = targetSettlement.name;
+
+    const descriptions = {
+      trade: this._generateTradeEventDescription(sourceName, targetName, interactionData, eventConfig.severity),
+      diplomacy: this._generateDiplomacyEventDescription(sourceName, targetName, interactionData, eventConfig.severity),
+      conflict: this._generateConflictEventDescription(sourceName, targetName, interactionData, eventConfig.severity),
+      migration: this._generateMigrationEventDescription(sourceName, targetName, interactionData, eventConfig.severity)
+    };
+
+    return descriptions[interactionType] || `${sourceName} and ${targetName} engage in ${interactionType}.`;
+  }
+
+  /**
+   * Generate trade event descriptions
+   * @private
+   */
+  _generateTradeEventDescription(sourceName, targetName, interactionData, severity) {
+    const volume = interactionData.volume || 0;
+    const goods = interactionData.goods || ['goods'];
+
+    const templates = {
+      major: [
+        `${sourceName} establishes a major trade relationship with ${targetName}, exchanging ${volume} units of ${goods.join(', ')}.`,
+        `A significant trade agreement forms between ${sourceName} and ${targetName}, boosting economic activity in both settlements.`,
+        `${sourceName} and ${targetName} begin extensive trade in ${goods.join(', ')}, creating new economic opportunities.`
+      ],
+      moderate: [
+        `${sourceName} and ${targetName} establish trade relations, exchanging ${goods.join(', ')} between settlements.`,
+        `Trade begins between ${sourceName} and ${targetName}, fostering economic cooperation.`,
+        `${sourceName} opens trade routes to ${targetName}, exchanging valuable goods and resources.`
+      ],
+      minor: [
+        `${sourceName} and ${targetName} engage in limited trade of ${goods.join(', ')}.`,
+        `Small-scale trade begins between ${sourceName} and ${targetName}.`,
+        `${sourceName} establishes basic trade connections with ${targetName}.`
+      ]
+    };
+
+    const templateList = templates[severity] || templates.minor;
+    return templateList[Math.floor(Math.random() * templateList.length)];
+  }
+
+  /**
+   * Generate diplomacy event descriptions
+   * @private
+   */
+  _generateDiplomacyEventDescription(sourceName, targetName, interactionData, severity) {
+    const outcome = interactionData.outcome || 'negotiation';
+
+    const templates = {
+      alliance: [
+        `${sourceName} and ${targetName} form a powerful alliance, uniting their settlements against common threats.`,
+        `A historic alliance is forged between ${sourceName} and ${targetName}, strengthening both communities.`,
+        `${sourceName} and ${targetName} enter into a mutual defense and cooperation agreement.`
+      ],
+      treaty: [
+        `${sourceName} and ${targetName} sign a treaty establishing peaceful relations and cooperation.`,
+        `Diplomatic negotiations between ${sourceName} and ${targetName} result in a formal treaty.`,
+        `${sourceName} and ${targetName} reach diplomatic agreements to maintain peaceful coexistence.`
+      ],
+      negotiation: [
+        `${sourceName} and ${targetName} engage in diplomatic negotiations to resolve differences.`,
+        `Diplomatic talks begin between representatives of ${sourceName} and ${targetName}.`,
+        `${sourceName} and ${targetName} explore possibilities for diplomatic relations.`
+      ]
+    };
+
+    const templateList = templates[outcome] || templates.negotiation;
+    return templateList[Math.floor(Math.random() * templateList.length)];
+  }
+
+  /**
+   * Generate conflict event descriptions
+   * @private
+   */
+  _generateConflictEventDescription(sourceName, targetName, interactionData, severity) {
+    const conflictType = interactionData.type || 'dispute';
+
+    const templates = {
+      major: [
+        `A major ${conflictType} erupts between ${sourceName} and ${targetName}, threatening the stability of both settlements.`,
+        `War breaks out between ${sourceName} and ${targetName}, drawing in neighboring communities.`,
+        `${sourceName} and ${targetName} engage in full-scale conflict that could reshape the region.`
+      ],
+      moderate: [
+        `Tensions rise between ${sourceName} and ${targetName}, leading to armed conflict.`,
+        `${sourceName} and ${targetName} become embroiled in a significant ${conflictType}.`,
+        `Conflict emerges between ${sourceName} and ${targetName}, testing their relations.`
+      ],
+      minor: [
+        `A border ${conflictType} arises between ${sourceName} and ${targetName}.`,
+        `Minor conflicts occur between ${sourceName} and ${targetName}.`,
+        `${sourceName} and ${targetName} experience escalating tensions.`
+      ]
+    };
+
+    const templateList = templates[severity] || templates.minor;
+    return templateList[Math.floor(Math.random() * templateList.length)];
+  }
+
+  /**
+   * Generate migration event descriptions
+   * @private
+   */
+  _generateMigrationEventDescription(sourceName, targetName, interactionData, severity) {
+    const migrantCount = interactionData.migrantCount || 0;
+    const direction = interactionData.direction || 'to'; // 'to' target or 'from' source
+
+    const templates = {
+      major: [
+        `A large migration occurs as ${migrantCount} inhabitants move ${direction === 'to' ? `to ${targetName} from ${sourceName}` : `from ${sourceName} to ${targetName}`}.`,
+        `Mass migration affects both ${sourceName} and ${targetName} as populations shift between settlements.`,
+        `${sourceName} and ${targetName} experience significant demographic changes due to migration.`
+      ],
+      moderate: [
+        `Migration patterns shift as inhabitants move between ${sourceName} and ${targetName}.`,
+        `${sourceName} and ${targetName} see notable population movements between their settlements.`,
+        `Demographic changes occur as people migrate between ${sourceName} and ${targetName}.`
+      ],
+      minor: [
+        `Small groups migrate between ${sourceName} and ${targetName}.`,
+        `Limited migration occurs between the two settlements.`,
+        `Population movements are observed between ${sourceName} and ${targetName}.`
+      ]
+    };
+
+    const templateList = templates[severity] || templates.minor;
+    return templateList[Math.floor(Math.random() * templateList.length)];
+  }
+
+  /**
+   * Generate cross-settlement consequence descriptions
+   * @private
+   */
+  _generateCrossSettlementConsequenceDescription(sourceSettlement, targetSettlement, consequence) {
+    const sourceName = sourceSettlement.name;
+    const targetName = targetSettlement.name;
+    const consequenceType = consequence.type;
+
+    const descriptions = {
+      trade_disruption: `Trade between ${sourceName} and ${targetName} is severely disrupted, affecting both economies.`,
+      alliance_breakdown: `The alliance between ${sourceName} and ${targetName} breaks down, creating uncertainty in the region.`,
+      war_declaration: `War is declared between ${sourceName} and ${targetName}, plunging both settlements into conflict.`,
+      refugee_crisis: `A refugee crisis emerges as inhabitants flee ${sourceName} for ${targetName}.`,
+      economic_dependence: `${sourceName} becomes economically dependent on ${targetName} through extensive trade relations.`,
+      cultural_exchange: `Cultural exchange flourishes between ${sourceName} and ${targetName}, enriching both communities.`,
+      territorial_dispute: `Territorial disputes arise between ${sourceName} and ${targetName}, straining relations.`,
+      mutual_prosperity: `Both ${sourceName} and ${targetName} prosper from their cooperative relationship.`
+    };
+
+    return descriptions[consequenceType] || `${sourceName} and ${targetName} face ${consequenceType.replace('_', ' ')} consequences.`;
+  }
+
+  /**
+   * Generate conflict escalation event
+   * @private
+   */
+  _generateConflictEscalationEvent(sourceSettlement, targetSettlement, interactionData, timestamp) {
+    return {
+      id: this.generateId(),
+      timestamp,
+      type: 'regional_escalation',
+      subtype: 'conflict_spread',
+      sourceSettlementId: sourceSettlement.id,
+      targetSettlementId: targetSettlement.id,
+      severity: 'major',
+      description: `The conflict between ${sourceSettlement.name} and ${targetSettlement.name} threatens to draw in neighboring settlements.`,
+      location: `${sourceSettlement.id}-${targetSettlement.id}`,
+      participants: [],
+      significance: 0.8,
+      metadata: {
+        escalationType: 'conflict',
+        potentialImpact: 'regional',
+        sourceSettlementType: sourceSettlement.type,
+        targetSettlementType: targetSettlement.type
+      }
+    };
+  }
+
+  /**
+   * Generate alliance formation event
+   * @private
+   */
+  _generateAllianceFormationEvent(sourceSettlement, targetSettlement, interactionData, timestamp) {
+    return {
+      id: this.generateId(),
+      timestamp,
+      type: 'regional_stability',
+      subtype: 'alliance_formation',
+      sourceSettlementId: sourceSettlement.id,
+      targetSettlementId: targetSettlement.id,
+      severity: 'major',
+      description: `The alliance between ${sourceSettlement.name} and ${targetSettlement.name} brings stability to the region.`,
+      location: `${sourceSettlement.id}-${targetSettlement.id}`,
+      participants: [],
+      significance: 0.7,
+      metadata: {
+        allianceType: 'defensive',
+        regionalImpact: 'stabilizing',
+        sourceSettlementType: sourceSettlement.type,
+        targetSettlementType: targetSettlement.type
+      }
+    };
+  }
+
+  /**
+   * Generate trade network event
+   * @private
+   */
+  _generateTradeNetworkEvent(sourceSettlement, targetSettlement, interactionData, timestamp) {
+    return {
+      id: this.generateId(),
+      timestamp,
+      type: 'economic_network',
+      subtype: 'trade_expansion',
+      sourceSettlementId: sourceSettlement.id,
+      targetSettlementId: targetSettlement.id,
+      severity: 'moderate',
+      description: `The trade relationship between ${sourceSettlement.name} and ${targetSettlement.name} creates new economic opportunities in the region.`,
+      location: `${sourceSettlement.id}-${targetSettlement.id}`,
+      participants: [],
+      significance: 0.6,
+      metadata: {
+        networkType: 'trade',
+        economicImpact: 'expansion',
+        tradeVolume: interactionData.volume,
+        sourceSettlementType: sourceSettlement.type,
+        targetSettlementType: targetSettlement.type
+      }
+    };
+  }
+
+  /**
+   * Calculate significance for cross-settlement consequences
+   * @private
+   */
+  _calculateCrossSettlementConsequenceSignificance(consequence) {
+    const severityMultipliers = {
+      critical: 0.9,
+      major: 0.7,
+      moderate: 0.5,
+      minor: 0.3,
+      trivial: 0.1
+    };
+
+    const typeMultipliers = {
+      war_declaration: 0.9,
+      alliance_breakdown: 0.8,
+      refugee_crisis: 0.8,
+      trade_disruption: 0.7,
+      territorial_dispute: 0.6,
+      economic_dependence: 0.5,
+      cultural_exchange: 0.4,
+      mutual_prosperity: 0.4
+    };
+
+    const severity = consequence.severity || 'moderate';
+    const type = consequence.type || 'generic';
+
+    return Math.min(1.0, (severityMultipliers[severity] || 0.5) * (typeMultipliers[type] || 0.5));
+  }
+
+  // ==================== CROSS-SETTLEMENT EVENT RETRIEVAL ====================
+
+  /**
+   * Get cross-settlement events between two settlements
+   * @param {string} sourceSettlementId - Source settlement ID
+   * @param {string} targetSettlementId - Target settlement ID
+   * @returns {Array} Cross-settlement events
+   */
+  getCrossSettlementEvents(sourceSettlementId, targetSettlementId) {
+    return this.getEvents({
+      type: 'cross_settlement'
+    }).filter(event =>
+      (event.sourceSettlementId === sourceSettlementId && event.targetSettlementId === targetSettlementId) ||
+      (event.sourceSettlementId === targetSettlementId && event.targetSettlementId === sourceSettlementId)
+    );
+  }
+
+  /**
+   * Get cross-settlement events for a specific settlement
+   * @param {string} settlementId - Settlement ID
+   * @returns {Array} Cross-settlement events involving the settlement
+   */
+  getSettlementCrossSettlementEvents(settlementId) {
+    return this.getEvents({
+      type: 'cross_settlement'
+    }).filter(event =>
+      event.sourceSettlementId === settlementId || event.targetSettlementId === settlementId
+    );
+  }
+
+  /**
+   * Get cross-settlement consequence events
+   * @param {string} settlementId - Settlement ID (optional)
+   * @returns {Array} Cross-settlement consequence events
+   */
+  getCrossSettlementConsequenceEvents(settlementId = null) {
+    const events = this.getEvents({
+      type: 'cross_settlement_consequence'
+    });
+
+    if (settlementId) {
+      return events.filter(event =>
+        event.sourceSettlementId === settlementId || event.targetSettlementId === settlementId
+      );
+    }
+
+    return events;
+  }
+
+  /**
+   * Get regional impact events
+   * @returns {Array} Regional impact events
+   */
+  getRegionalImpactEvents() {
+    return this.getEvents({
+      type: ['regional_escalation', 'regional_stability', 'economic_network']
+    });
+  }
+
+  /**
+   * Get settlement relationship summary
+   * @param {string} settlementId - Settlement ID
+   * @returns {Object} Relationship summary with other settlements
+   */
+  getSettlementRelationshipSummary(settlementId) {
+    const crossSettlementEvents = this.getSettlementCrossSettlementEvents(settlementId);
+
+    const relationships = {};
+
+    crossSettlementEvents.forEach(event => {
+      const otherSettlementId = event.sourceSettlementId === settlementId
+        ? event.targetSettlementId
+        : event.sourceSettlementId;
+
+      const otherSettlementName = event.sourceSettlementId === settlementId
+        ? event.targetSettlementName
+        : event.sourceSettlementName;
+
+      if (!relationships[otherSettlementId]) {
+        relationships[otherSettlementId] = {
+          settlementId: otherSettlementId,
+          settlementName: otherSettlementName,
+          interactionCount: 0,
+          lastInteraction: null,
+          relationshipTypes: new Set(),
+          averageSignificance: 0
+        };
+      }
+
+      const rel = relationships[otherSettlementId];
+      rel.interactionCount++;
+      rel.lastInteraction = Math.max(rel.lastInteraction || 0, event.timestamp);
+      rel.relationshipTypes.add(event.subtype);
+      rel.averageSignificance = (rel.averageSignificance * (rel.interactionCount - 1) + event.significance) / rel.interactionCount;
+    });
+
+    return Object.values(relationships);
   }
 
   /**

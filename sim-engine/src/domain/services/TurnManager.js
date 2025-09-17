@@ -10,8 +10,9 @@
  */
 
 class TurnManager {
-  constructor(simulationService) {
+  constructor(simulationService, lodManager = null) {
     this.simulationService = simulationService;
+    this.lodManager = lodManager;
     this.currentTurn = 0;
     this.maxTurns = null; // null = unlimited
     this.isPaused = false;
@@ -96,18 +97,40 @@ class TurnManager {
       // Get current world state before processing
       const preProcessingState = this.simulationService.getCurrentWorldState();
       
+      // LOD Processing Phase 1: Pre-turn LOD updates
+      let lodPreProcessingResult = null;
+      if (this.lodManager) {
+        try {
+          lodPreProcessingResult = await this.lodManager.processPreTurnLOD(preProcessingState);
+        } catch (error) {
+          console.warn('LOD pre-processing failed:', error.message);
+        }
+      }
+      
       // Process turn through simulation service
       const turnResult = await this.simulationService.processTurn();
       
       // Get updated world state after processing
       const postProcessingState = this.simulationService.getCurrentWorldState();
       
-      // Generate turn summary
+      // LOD Processing Phase 2: Post-turn LOD updates and tier management
+      let lodPostProcessingResult = null;
+      if (this.lodManager) {
+        try {
+          lodPostProcessingResult = await this.lodManager.processPostTurnLOD(postProcessingState, turnResult);
+        } catch (error) {
+          console.warn('LOD post-processing failed:', error.message);
+        }
+      }
+      
+      // Generate turn summary including LOD events
       const turnSummary = this.generateTurnSummary(
         this.currentTurn,
         preProcessingState,
         postProcessingState,
-        turnResult
+        turnResult,
+        lodPreProcessingResult,
+        lodPostProcessingResult
       );
       
       // Store turn summary
@@ -170,9 +193,11 @@ class TurnManager {
    * @param {Object} beforeState - World state before processing
    * @param {Object} afterState - World state after processing
    * @param {Object} turnResult - Result from simulation processing
+   * @param {Object} lodPreResult - Result from LOD pre-processing
+   * @param {Object} lodPostResult - Result from LOD post-processing
    * @returns {Object} Turn summary
    */
-  generateTurnSummary(turnNumber, beforeState, afterState, turnResult) {
+  generateTurnSummary(turnNumber, beforeState, afterState, turnResult, lodPreResult = null, lodPostResult = null) {
     const summary = {
       turn: turnNumber,
       timestamp: new Date(),
@@ -182,6 +207,14 @@ class TurnManager {
       summary: ''
     };
 
+    // Add LOD events to the summary
+    if (lodPreResult && lodPreResult.events) {
+      summary.events.push(...lodPreResult.events);
+    }
+    if (lodPostResult && lodPostResult.events) {
+      summary.events.push(...lodPostResult.events);
+    }
+
     // Compare character states
     const characterChanges = this.compareCharacterStates(beforeState.characters, afterState.characters);
     summary.changes.push(...characterChanges);
@@ -190,13 +223,24 @@ class TurnManager {
     const nodeChanges = this.compareNodeStates(beforeState.nodes, afterState.nodes);
     summary.changes.push(...nodeChanges);
     
+    // Add LOD changes
+    if (lodPreResult && lodPreResult.changes) {
+      summary.changes.push(...lodPreResult.changes);
+    }
+    if (lodPostResult && lodPostResult.changes) {
+      summary.changes.push(...lodPostResult.changes);
+    }
+    
     // Calculate statistics
     summary.statistics = {
-      totalEvents: turnResult.events ? turnResult.events.length : 0,
+      totalEvents: summary.events.length,
       characterInteractions: turnResult.interactions || 0,
       economicActivity: turnResult.economicActivity || 0,
       populationChanges: turnResult.populationChanges || 0,
-      resourceChanges: turnResult.resourceChanges || 0
+      resourceChanges: turnResult.resourceChanges || 0,
+      lodPromotions: lodPostResult?.promotions || 0,
+      lodDemotions: lodPostResult?.demotions || 0,
+      lodProcessingTime: (lodPreResult?.processingTime || 0) + (lodPostResult?.processingTime || 0)
     };
     
     // Generate text summary
@@ -354,6 +398,16 @@ class TurnManager {
     const resourceChanges = summary.changes.filter(c => c.type === 'node_resources_changed').length;
     if (resourceChanges > 0) {
       parts.push(`${resourceChanges} resource updates`);
+    }
+    
+    const lodPromotions = summary.statistics.lodPromotions || 0;
+    if (lodPromotions > 0) {
+      parts.push(`${lodPromotions} character promotions`);
+    }
+    
+    const lodDemotions = summary.statistics.lodDemotions || 0;
+    if (lodDemotions > 0) {
+      parts.push(`${lodDemotions} character demotions`);
     }
     
     if (parts.length === 0) {

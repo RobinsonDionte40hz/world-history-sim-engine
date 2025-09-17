@@ -146,6 +146,43 @@ Everything uses assignment patterns:
 - **Tailwind CSS** with dark mode support
 - **Jest** for testing with integration test focus
 
+## Recent Development: Valley of Echoes Demo (September 2025)
+
+### Level of Detail (LOD) System
+New 3-tier character processing system for scalable NPC management:
+- **Hero NPCs**: Full consciousness simulation, individual event processing
+- **Population Groups**: Statistical modeling with sampling capabilities
+- **Background Demographics**: Pure aggregate tracking for performance
+
+Key components:
+- `LODManager.js` - Character tier processing and promotion/demotion
+- `PopulationGroupService.js` - Group-level character management
+- `PopulationGroup.js` entity - Aggregate character statistics
+
+### Multi-Settlement Architecture
+Extended Settlement.js entity to support:
+- Multi-node settlement structure (administrative, economic, military districts)
+- Settlement governance systems (democratic vs. hierarchical)
+- Development trees with prerequisite-based upgrades
+- Cross-settlement relationship management
+
+Key components:
+- `CrossSettlementService.js` - Inter-settlement diplomacy, trade, conflict
+- `SettlementDevelopmentService.js` - Development tree management
+- `SettlementGovernance.js` value object - Political system modeling
+
+### Performance Optimizations
+- React.memo patterns for large character lists
+- Batch processing for turn management
+- Memory management for tier transitions
+- Virtual scrolling for UI performance
+
+### Integration Points
+- LOD system integrates with existing quest, prestige, and alignment systems
+- Cross-settlement quests with multi-settlement consequences
+- Template system extensions for population groups and settlement content
+- Clean architecture maintained throughout new systems
+
 ## Key Files for Context
 
 When working with specific features, reference these architectural anchors:
@@ -154,3 +191,4 @@ When working with specific features, reference these architectural anchors:
 - `src/domain/entities/Character.js` - Complex character modeling
 - `src/domain/services/TextTemplateEngine.js` - Dynamic content system
 - `docs/TextTemplatingGuide.md` - Text templating patterns and usage
+- `specs/001-valley-of-echoes-demo/` - Complete Valley of Echoes implementation plan

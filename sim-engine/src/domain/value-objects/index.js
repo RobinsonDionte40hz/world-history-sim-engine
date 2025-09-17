@@ -6,6 +6,9 @@ export { BaseValueObject } from './BaseValueObject';
 // Export new value objects
 export { Alignment } from './Alignment';
 export { CharacterType } from './CharacterType';
+export { DevelopmentTree } from './DevelopmentTree';
+export { LODTier } from './LODTier';
+export { SettlementGovernance } from './SettlementGovernance';
 export { default as EconomicProfile } from './EconomicProfile';
 export { default as Environment } from './Environment';
 export { default as NodeConnection } from './NodeConnection';

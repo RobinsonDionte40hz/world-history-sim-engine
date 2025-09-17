@@ -1,0 +1,527 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Cross-Settlement API",
+    "description": "Inter-settlement diplomacy, trade, and conflict management for Valley of Echoes demo",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/cross-settlement/relationships/{settlement1Id}/{settlement2Id}": {
+      "get": {
+        "summary": "Get relationship between two settlements",
+        "parameters": [
+          {
+            "name": "settlement1Id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "settlement2Id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relationship retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CrossSettlementRelation" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Initialize or update relationship between settlements",
+        "parameters": [
+          {
+            "name": "settlement1Id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "settlement2Id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "interactionType": { 
+                    "type": "string",
+                    "enum": ["diplomatic", "economic", "cultural", "military"]
+                  },
+                  "proposal": { "type": "object" },
+                  "initiatingCharacter": { "type": "string" },
+                  "context": { "type": "object" }
+                },
+                "required": ["interactionType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Interaction initiated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "initiated": { "type": "boolean" },
+                    "interactionId": { "type": "string" },
+                    "relationshipChange": { "type": "number" },
+                    "consequences": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/InteractionConsequence" }
+                    },
+                    "followUpActions": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cross-settlement/diplomacy/initiate": {
+      "post": {
+        "summary": "Initiate diplomatic interaction between settlements",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fromSettlement": { "type": "string" },
+                  "toSettlement": { "type": "string" },
+                  "proposalType": { 
+                    "type": "string",
+                    "enum": ["alliance", "trade_agreement", "non_aggression", "cultural_exchange", "border_demarcation"]
+                  },
+                  "terms": { "type": "object" },
+                  "diplomat": { "type": "string" },
+                  "urgency": { 
+                    "type": "string", 
+                    "enum": ["low", "normal", "high", "critical"] 
+                  }
+                },
+                "required": ["fromSettlement", "toSettlement", "proposalType", "terms"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Diplomatic proposal initiated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "proposalId": { "type": "string" },
+                    "status": { 
+                      "type": "string", 
+                      "enum": ["pending", "under_review", "accepted", "rejected", "countered"] 
+                    },
+                    "estimatedResponseTime": { "type": "integer" },
+                    "diplomaticImpact": { "type": "number" },
+                    "requiredApprovals": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cross-settlement/trade/negotiate": {
+      "post": {
+        "summary": "Negotiate trade agreement between settlements",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "settlement1Id": { "type": "string" },
+                  "settlement2Id": { "type": "string" },
+                  "tradeProposal": {
+                    "type": "object",
+                    "properties": {
+                      "exports": { "type": "object" },
+                      "imports": { "type": "object" },
+                      "duration": { "type": "integer" },
+                      "tradeRoutes": { "type": "array", "items": { "type": "string" } },
+                      "specialTerms": { "type": "array", "items": { "type": "string" } }
+                    }
+                  },
+                  "negotiator": { "type": "string" }
+                },
+                "required": ["settlement1Id", "settlement2Id", "tradeProposal"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Trade negotiation processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "negotiationId": { "type": "string" },
+                    "outcome": { 
+                      "type": "string", 
+                      "enum": ["agreement", "counter_proposal", "rejection", "requires_approval"] 
+                    },
+                    "finalTerms": { "type": "object" },
+                    "economicImpact": {
+                      "type": "object",
+                      "properties": {
+                        "settlement1": { "type": "object" },
+                        "settlement2": { "type": "object" }
+                      }
+                    },
+                    "implementationDate": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cross-settlement/conflicts/initiate": {
+      "post": {
+        "summary": "Initiate conflict or dispute between settlements",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "settlement1Id": { "type": "string" },
+                  "settlement2Id": { "type": "string" },
+                  "conflictType": { 
+                    "type": "string",
+                    "enum": ["resource_dispute", "border_conflict", "trade_dispute", "cultural_clash", "military_action"]
+                  },
+                  "grievance": { "type": "string" },
+                  "severity": { 
+                    "type": "string", 
+                    "enum": ["minor", "moderate", "major", "critical"] 
+                  },
+                  "initiatingParty": { "type": "string" },
+                  "evidence": { "type": "array", "items": { "type": "object" } }
+                },
+                "required": ["settlement1Id", "settlement2Id", "conflictType", "grievance", "severity"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conflict initiated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conflictId": { "type": "string" },
+                    "status": { 
+                      "type": "string", 
+                      "enum": ["active", "mediation", "escalating", "resolved"] 
+                    },
+                    "resolutionOptions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ResolutionOption" }
+                    },
+                    "relationshipImpact": { "type": "number" },
+                    "thirdPartyInvolvement": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cross-settlement/conflicts/{conflictId}/resolve": {
+      "post": {
+        "summary": "Resolve ongoing conflict between settlements",
+        "parameters": [
+          {
+            "name": "conflictId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resolutionMethod": { 
+                    "type": "string",
+                    "enum": ["negotiation", "mediation", "arbitration", "force", "compromise"]
+                  },
+                  "terms": { "type": "object" },
+                  "mediator": { "type": "string" },
+                  "compensation": { "type": "object" }
+                },
+                "required": ["resolutionMethod", "terms"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conflict resolved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resolved": { "type": "boolean" },
+                    "resolution": { "type": "object" },
+                    "relationshipChange": { "type": "number" },
+                    "consequences": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/InteractionConsequence" }
+                    },
+                    "precedentSet": { "type": "boolean" },
+                    "futureImplications": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cross-settlement/cultural-exchange": {
+      "post": {
+        "summary": "Initiate cultural exchange between settlements",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "settlement1Id": { "type": "string" },
+                  "settlement2Id": { "type": "string" },
+                  "exchangeType": { 
+                    "type": "string",
+                    "enum": ["festival", "knowledge_sharing", "artisan_exchange", "diplomatic_visit", "youth_exchange"]
+                  },
+                  "duration": { "type": "integer" },
+                  "participants": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "culturalAspects": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "required": ["settlement1Id", "settlement2Id", "exchangeType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cultural exchange initiated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "exchangeId": { "type": "string" },
+                    "status": { "type": "string" },
+                    "culturalImpact": {
+                      "type": "object",
+                      "properties": {
+                        "settlement1": { "type": "number" },
+                        "settlement2": { "type": "number" }
+                      }
+                    },
+                    "knowledgeTransfer": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    },
+                    "relationshipBonus": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cross-settlement/events/generate": {
+      "post": {
+        "summary": "Generate cross-settlement events for current turn",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "world": { "type": "object" },
+                  "turn": { "type": "integer" },
+                  "eventTypes": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "maxEvents": { "type": "integer" }
+                },
+                "required": ["world", "turn"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cross-settlement events generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CrossSettlementEvent" }
+                    },
+                    "eventCount": { "type": "integer" },
+                    "affectedRelationships": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CrossSettlementRelation": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "settlements": { "type": "array", "items": { "type": "string" } },
+          "diplomaticStanding": { "type": "number" },
+          "recognitionStatus": { 
+            "type": "string", 
+            "enum": ["allied", "neutral", "hostile", "unknown"] 
+          },
+          "tradeVolume": { "type": "number" },
+          "tradeBalance": { "type": "number" },
+          "culturalExchange": { "type": "number" },
+          "militaryTension": { "type": "number" },
+          "formalAgreements": { "type": "array", "items": { "type": "string" } },
+          "relationshipHistory": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RelationshipEvent" }
+          },
+          "lastInteraction": { "type": "object" },
+          "stability": { "type": "number" }
+        }
+      },
+      "InteractionConsequence": {
+        "type": "object",
+        "properties": {
+          "type": { 
+            "type": "string",
+            "enum": ["diplomatic", "economic", "cultural", "military", "reputation"]
+          },
+          "target": { "type": "string" },
+          "effect": { "type": "string" },
+          "magnitude": { "type": "number" },
+          "duration": { "type": "string" },
+          "affectedParties": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ResolutionOption": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "method": { "type": "string" },
+          "description": { "type": "string" },
+          "requirements": { "type": "array", "items": { "type": "string" } },
+          "likelihood": { "type": "number" },
+          "consequences": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/InteractionConsequence" }
+          },
+          "cost": { "type": "object" }
+        }
+      },
+      "RelationshipEvent": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string" },
+          "type": { "type": "string" },
+          "description": { "type": "string" },
+          "change": { "type": "number" },
+          "reason": { "type": "string" },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "significance": { "type": "integer" }
+        }
+      },
+      "CrossSettlementEvent": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "settlements": { "type": "array", "items": { "type": "string" } },
+          "description": { "type": "string" },
+          "significance": { "type": "integer" },
+          "consequences": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/InteractionConsequence" }
+          },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "turn": { "type": "integer" },
+          "duration": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
