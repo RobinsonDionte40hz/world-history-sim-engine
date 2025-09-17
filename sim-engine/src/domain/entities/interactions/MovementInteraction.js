@@ -1,5 +1,5 @@
-import SystemInteraction from './SystemInteraction.js';
-import Environment from '../../../domain/value-objects/Environment.js';
+const SystemInteraction = require('./SystemInteraction.js');
+const Environment = require('../../../domain/value-objects/Environment.js');
 
 /**
  * MovementInteraction - Handles character movement between nodes
@@ -272,4 +272,4 @@ class MovementInteraction extends SystemInteraction {
   }
 }
 
-export default MovementInteraction;
+module.exports = MovementInteraction;

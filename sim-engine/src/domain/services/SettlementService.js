@@ -1,12 +1,12 @@
 // src/domain/services/SettlementService.js
 
-import BaseDomainService from './BaseDomainService.js';
+const BaseDomainService = require('./BaseDomainService.js');
 
 /**
  * Service for managing settlement need satisfaction tracking and updates
  * Extends BaseDomainService for consistent validation and error handling
  */
-export default class SettlementService extends BaseDomainService {
+class SettlementService extends BaseDomainService {
   /**
    * Initialize need satisfaction tracking for a new settlement
    * @param {Object} settlement - Settlement object to initialize
@@ -397,3 +397,5 @@ export default class SettlementService extends BaseDomainService {
     };
   }
 }
+
+module.exports = SettlementService;

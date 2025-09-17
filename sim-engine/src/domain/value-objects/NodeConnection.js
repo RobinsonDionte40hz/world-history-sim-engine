@@ -1,14 +1,14 @@
 // src/domain/value-objects/NodeConnection.js
 
-import BaseValueObject from './BaseValueObject.js';
-import { ConnectionTypes, isValidConnectionType, getConnectionBaseDifficulty } from '../../shared/constants/ConnectionTypes.js';
-import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+const BaseValueObject = require('./BaseValueObject.js');
+const { ConnectionTypes, isValidConnectionType, getConnectionBaseDifficulty } = require('../../shared/constants/ConnectionTypes.js');
+const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
 
 /**
  * NodeConnection value object represents a relationship between two nodes
  * with rich metadata including connection type, difficulty, distance, and travel conditions
  */
-export class NodeConnection extends BaseValueObject {
+class NodeConnection extends BaseValueObject {
   /**
    * Creates a new NodeConnection
    * @param {Object} config - Configuration object
@@ -446,4 +446,4 @@ export class NodeConnection extends BaseValueObject {
   }
 }
 
-export default NodeConnection;
+module.exports = NodeConnection;

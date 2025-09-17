@@ -1,4 +1,4 @@
-import InteractionFactory from '../entities/interactions/InteractionFactory.js';
+const InteractionFactory = require('../entities/interactions/InteractionFactory.js');
 
 /**
  * InteractionManager - Service to coordinate interaction types and provide unified access
@@ -412,4 +412,4 @@ class InteractionManager {
   }
 }
 
-export default InteractionManager;
+module.exports = InteractionManager;

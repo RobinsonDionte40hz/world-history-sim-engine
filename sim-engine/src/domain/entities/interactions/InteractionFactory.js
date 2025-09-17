@@ -1,11 +1,11 @@
-import InteractionBase from './InteractionBase.js';
-import SystemInteraction from './SystemInteraction.js';
-import ContentInteraction from './ContentInteraction.js';
-import WaitInteraction from './WaitInteraction.js';
-import RestInteraction from './RestInteraction.js';
-import ExamineInteraction from './ExamineInteraction.js';
-import MovementInteraction from './MovementInteraction.js';
-import PerceptionInteraction from './PerceptionInteraction.js';
+const InteractionBase = require('./InteractionBase.js');
+const SystemInteraction = require('./SystemInteraction.js');
+const ContentInteraction = require('./ContentInteraction.js');
+const WaitInteraction = require('./WaitInteraction.js');
+const RestInteraction = require('./RestInteraction.js');
+const ExamineInteraction = require('./ExamineInteraction.js');
+const MovementInteraction = require('./MovementInteraction.js');
+const PerceptionInteraction = require('./PerceptionInteraction.js');
 
 /**
  * InteractionFactory - Factory class for creating interaction instances
@@ -300,4 +300,4 @@ class InteractionFactory {
   }
 }
 
-export default InteractionFactory;
+module.exports = InteractionFactory;

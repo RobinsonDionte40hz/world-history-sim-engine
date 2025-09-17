@@ -4,7 +4,7 @@
  * Immutable value object representing a character's prestige across multiple tracks
  * Tracks prestige values with levels, decay mechanics, and historical change tracking
  */
-export class Prestige {
+class Prestige {
   constructor(tracks = [], values = {}, history = {}) {
     // Validate inputs
     if (!Array.isArray(tracks) || tracks.length === 0) {
@@ -462,3 +462,5 @@ export class Prestige {
     return Object.freeze(deserialized);
   }
 }
+
+module.exports = Prestige;

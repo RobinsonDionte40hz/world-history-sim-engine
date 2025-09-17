@@ -976,7 +976,7 @@ class PersonalityProfile {
 }
 
 // Export personality traits type definition for backward compatibility
-export const PersonalityTraits = {
+const PersonalityTraits = {
     introvert: { min: 0, max: 1, weight: 1 },
     extrovert: { min: 0, max: 1, weight: 1 },
     analytical: { min: 0, max: 1, weight: 1 },
@@ -989,5 +989,9 @@ export const PersonalityTraits = {
     spontaneous: { min: 0, max: 1, weight: 1 }
 };
 
-export { PersonalityTrait, Attribute, EmotionalTendency, CognitiveTrait };
-export default PersonalityProfile;
+module.exports = PersonalityProfile;
+module.exports.PersonalityTraits = PersonalityTraits;
+module.exports.PersonalityTrait = PersonalityTrait;
+module.exports.Attribute = Attribute;
+module.exports.EmotionalTendency = EmotionalTendency;
+module.exports.CognitiveTrait = CognitiveTrait;

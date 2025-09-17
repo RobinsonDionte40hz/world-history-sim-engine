@@ -1,12 +1,12 @@
 // src/domain/services/NeedConsequenceService.js
 
-import BaseDomainService from './BaseDomainService.js';
+const BaseDomainService = require('./BaseDomainService.js');
 
 /**
  * Service for generating and managing consequences from unmet settlement needs
  * Handles consequence creation, severity calculation, and resolution tracking
  */
-export default class NeedConsequenceService extends BaseDomainService {
+class NeedConsequenceService extends BaseDomainService {
   
   // Consequence generation thresholds
   static CONSEQUENCE_THRESHOLDS = {
@@ -577,3 +577,5 @@ export default class NeedConsequenceService extends BaseDomainService {
     return settlement.buildings?.some(building => building.type === 'healer');
   }
 }
+
+module.exports = NeedConsequenceService;

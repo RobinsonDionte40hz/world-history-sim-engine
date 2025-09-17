@@ -1,16 +1,16 @@
 // src/domain/value-objects/BaseValueObject.js
 
-import {
+const {
   SerializationUtils,
   SerializationError,
   ValidationError
-} from '../../shared/types/ValueObjectTypes';
+} = require('../../shared/types/ValueObjectTypes');
 
 /**
  * Abstract base class for all value objects in the system
  * Provides common functionality for immutability, validation, and serialization
  */
-export class BaseValueObject {
+class BaseValueObject {
 
   /**
    * Freezes the object to ensure immutability
@@ -137,4 +137,4 @@ export class BaseValueObject {
   }
 }
 
-export default BaseValueObject;
+module.exports = BaseValueObject;

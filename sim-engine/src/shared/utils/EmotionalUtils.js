@@ -4,7 +4,7 @@
  * Practical emotional state modifiers for simulation behavior
  * Maps emotional states to interaction multipliers
  */
-export function getEmotionalModifier(emotionalState, interaction) {
+function getEmotionalModifier(emotionalState, interaction) {
   const modifiers = {
     // Low energy states
     'exhausted': {
@@ -163,7 +163,7 @@ export function getEmotionalModifier(emotionalState, interaction) {
 /**
  * Get emotional reaction to interaction outcomes
  */
-export function getEmotionalReaction(interaction, outcome, character) {
+function getEmotionalReaction(interaction, outcome, character) {
   const reactionMap = {
     'positive': {
       social: 'friendship',
@@ -195,7 +195,7 @@ export function getEmotionalReaction(interaction, outcome, character) {
 /**
  * Calculate emotional contagion between characters
  */
-export function calculateEmotionalContagion(sourceCharacter, targetCharacter, proximity = 1.0) {
+function calculateEmotionalContagion(sourceCharacter, targetCharacter, proximity = 1.0) {
   if (!sourceCharacter.consciousness || !targetCharacter.consciousness) {
     return null;
   }
@@ -229,7 +229,7 @@ export function calculateEmotionalContagion(sourceCharacter, targetCharacter, pr
 /**
  * Resolve emotional conflicts when multiple strong emotions overlap
  */
-export function resolveEmotionalConflicts(emotions) {
+function resolveEmotionalConflicts(emotions) {
   // Handle edge cases
   if (!emotions) {
     return null;
@@ -386,7 +386,7 @@ function blendSimilarEmotions(emotions) {
 /**
  * Get behavioral modifiers for complex emotional states
  */
-export function getComplexEmotionalModifier(complexEmotion, interaction) {
+function getComplexEmotionalModifier(complexEmotion, interaction) {
   if (!complexEmotion.isComplex && !complexEmotion.isBlended) {
     return getEmotionalModifier(complexEmotion, interaction);
   }
@@ -469,7 +469,7 @@ export function getComplexEmotionalModifier(complexEmotion, interaction) {
  * Create an emotional memory that links events to emotional states
  * This enhances memory formation and retrieval based on emotional significance
  */
-export function createEmotionalMemory(event, emotionalState) {
+function createEmotionalMemory(event, emotionalState) {
   return {
     ...event,
     emotionalContext: {
@@ -676,7 +676,7 @@ function getFrequencyRange(frequency) {
  * Retrieve memories based on current emotional state
  * This allows emotional state to trigger relevant past memories
  */
-export function retrieveEmotionalMemories(character, currentEmotionalState, maxResults = 10) {
+function retrieveEmotionalMemories(character, currentEmotionalState, maxResults = 10) {
   if (!character.decisionHistory) {
     return [];
   }
@@ -768,7 +768,7 @@ function calculateEmotionalResonance(pastEmotion, currentEmotion) {
 /**
  * Enhanced memory formation that considers emotional context
  */
-export function enhanceMemoryWithEmotion(character, event, emotionalState) {
+function enhanceMemoryWithEmotion(character, event, emotionalState) {
   // Create emotional memory
   const emotionalMemory = createEmotionalMemory(event, emotionalState);
   
@@ -795,7 +795,7 @@ export function enhanceMemoryWithEmotion(character, event, emotionalState) {
   return emotionalMemory;
 }
 
-const EmotionalUtils = {
+module.exports = {
   getEmotionalModifier,
   getEmotionalReaction,
   calculateEmotionalContagion,
@@ -805,5 +805,3 @@ const EmotionalUtils = {
   retrieveEmotionalMemories,
   enhanceMemoryWithEmotion
 };
-
-export default EmotionalUtils;

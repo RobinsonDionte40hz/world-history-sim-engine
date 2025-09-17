@@ -1,19 +1,19 @@
 // src/domain/entities/Character.js
 
-import { Alignment } from '../value-objects/Alignment.js';
-import { Influence } from '../value-objects/Influence.js';
-import { Prestige } from '../value-objects/Prestige.js';
-import PersonalityProfile from '../value-objects/PersonalityProfile.js';
-import { RacialTraits } from '../value-objects/RacialTraits.js';
-import { CharacterType } from '../value-objects/CharacterType.js';
-import Attributes from '../value-objects/Attributes.js';
-import EconomicProfile from '../value-objects/EconomicProfile.js';
-import AlignmentService from '../services/AlignmentService.js';
-import InfluenceService from '../services/InfluenceService.js';
-import PrestigeService from '../services/PrestigeService.js';
-import { PrerequisiteValidator } from '../services/PrerequisiteValidator.js';
-import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
-import MemoryService from '../services/MemoryService.js';
+const Alignment = require('../value-objects/Alignment.js');
+const Influence = require('../value-objects/Influence.js');
+const Prestige = require('../value-objects/Prestige.js');
+const PersonalityProfile = require('../value-objects/PersonalityProfile.js');
+const RacialTraits = require('../value-objects/RacialTraits.js');
+const CharacterType = require('../value-objects/CharacterType.js');
+const Attributes = require('../value-objects/Attributes.js');
+const EconomicProfile = require('../value-objects/EconomicProfile.js');
+const AlignmentService = require('../services/AlignmentService.js');
+const InfluenceService = require('../services/InfluenceService.js');
+const PrestigeService = require('../services/PrestigeService.js');
+const { PrerequisiteValidator } = require('../services/PrerequisiteValidator.js');
+const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
+const MemoryService = require('../services/MemoryService.js');
 
 class Character {
   constructor(config = {}) {
@@ -22,6 +22,39 @@ class Character {
     this.name = config.name || 'Unnamed Character';
     this.age = config.age !== undefined ? config.age : 25;
     this.level = config.level || 1;
+
+    // LOD tier - affects how this character is processed
+    this.lodTier = config.lodTier || 'hero';
+
+    // Handle population groups differently - they don't need full character initialization
+    if (this.lodTier === 'group') {
+      this.populationGroupId = config.populationGroupId;
+      this.groupStatistics = config.groupStatistics || {
+        averageWealth: 0,
+        morale: 0.5,
+        productivity: 0.5,
+        loyalty: 0.5
+      };
+      this.assignments = config.assignments || {
+        nodes: new Set(),
+        interactions: new Set(),
+        quests: new Set(),
+        settlements: new Set(),
+        factions: new Set(),
+        investments: new Set()
+      };
+      // Set minimal required properties for population groups
+      this.energy = 50;
+      this.maxEnergy = 100;
+      this.health = 100;
+      this.mood = 50;
+      this.consciousness = { frequency: 0.5, coherence: 0.5 };
+      this.goals = [];
+      this.decisionHistory = [];
+      this.needBasedBehaviorChanges = [];
+      this.needBasedInteractionModifiers = {};
+      return; // Skip full initialization for population groups
+    }
 
     // Character type for validation and field requirements
     this.characterType = config.characterType instanceof CharacterType
@@ -1158,7 +1191,8 @@ class Character {
       // Other properties
       inventory: data.inventory,
       quests: data.quests,
-      relationships: data.relationships ? new Map(data.relationships) : undefined,
+      // Relationships (handle both array format from config and Map entries from serialization)
+      relationships: data.relationships ? Character._deserializeRelationships(data.relationships) : new Map(),
       memories: data.memories,
       location: data.location,
 
@@ -1544,6 +1578,46 @@ class Character {
   }
 
   /**
+   * Deserialize relationships from various formats (static method)
+   * @param {Array|string|Map} data - Relationships data
+   * @returns {Map} - Deserialized relationships Map
+   * @static
+   */
+  static _deserializeRelationships(data) {
+    const relationships = new Map();
+
+    if (!data) return relationships;
+
+    // Handle array of relationship IDs (from config)
+    if (Array.isArray(data)) {
+      data.forEach(relationshipId => {
+        relationships.set(relationshipId, {
+          type: 'acquaintance',
+          strength: 0.5,
+          trust: 0.5,
+          lastInteraction: null
+        });
+      });
+      return relationships;
+    }
+
+    // Handle Map entries format (from serialization)
+    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
+      return new Map(data);
+    }
+
+    // Handle object format (fallback)
+    if (typeof data === 'object') {
+      Object.entries(data).forEach(([id, relationshipData]) => {
+        relationships.set(id, relationshipData);
+      });
+      return relationships;
+    }
+
+    return relationships;
+  }
+
+  /**
    * Logs a decision made by the character for memory tracking
    * @param {string} interactionId - ID of the interaction executed
    * @param {string} outcome - Outcome of the interaction ('positive', 'negative', 'neutral')
@@ -1629,4 +1703,4 @@ class Character {
   }
 }
 
-export default Character;
+module.exports = Character;

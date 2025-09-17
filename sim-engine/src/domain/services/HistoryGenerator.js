@@ -1,7 +1,7 @@
 // src/domain/services/HistoryGenerator.js
 
-import Character from '../entities/Character.js';
-import InteractionBase from '../entities/interactions/InteractionBase.js';
+const Character = require('../entities/Character.js');
+const InteractionBase = require('../entities/interactions/InteractionBase.js');
 
 class HistoryGenerator {
   constructor() {
@@ -84,12 +84,15 @@ class HistoryGenerator {
     this.events.push(event);
 
     // Also save to localStorage for persistence (legacy compatibility)
-    try {
-      const events = JSON.parse(localStorage.getItem('historicalEvents') || '[]');
-      events.push(event);
-      localStorage.setItem('historicalEvents', JSON.stringify(events));
-    } catch (error) {
-      console.warn('Failed to save event to localStorage:', error);
+    // Only attempt if localStorage is available (browser environment)
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const events = JSON.parse(localStorage.getItem('historicalEvents') || '[]');
+        events.push(event);
+        localStorage.setItem('historicalEvents', JSON.stringify(events));
+      } catch (error) {
+        console.warn('Failed to save event to localStorage:', error);
+      }
     }
   }
 
@@ -126,7 +129,9 @@ class HistoryGenerator {
   // Clear events (for testing)
   clearEvents() {
     this.events = [];
-    localStorage.removeItem('historicalEvents');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('historicalEvents');
+    }
   }
 
   // Generate a unique ID for events
@@ -1194,4 +1199,4 @@ class HistoryGenerator {
   }
 }
 
-export default HistoryGenerator;
+module.exports = HistoryGenerator;

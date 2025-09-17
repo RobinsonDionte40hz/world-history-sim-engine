@@ -1,13 +1,13 @@
 // src/domain/services/ConsequenceLifecycleManager.js
 
-import BaseDomainService from './BaseDomainService.js';
-import NeedConsequenceService from './NeedConsequenceService.js';
+const BaseDomainService = require('./BaseDomainService.js');
+const NeedConsequenceService = require('./NeedConsequenceService.js');
 
 /**
  * Service for managing the lifecycle of need satisfaction consequences
  * Handles consequence tracking, aging, resolution detection, and cleanup
  */
-export default class ConsequenceLifecycleManager extends BaseDomainService {
+class ConsequenceLifecycleManager extends BaseDomainService {
 
   /**
    * Initialize the consequence lifecycle manager
@@ -663,3 +663,5 @@ class TriggerDetectionService {
     return housingCapacity >= settlement.population?.total * 0.9;
   }
 }
+
+module.exports = ConsequenceLifecycleManager;

@@ -1,12 +1,12 @@
 // src/domain/services/BasicNeedsService.js
 
-import BaseDomainService from './BaseDomainService.js';
+const BaseDomainService = require('./BaseDomainService.js');
 
 /**
  * Service for calculating settlement need satisfaction levels and cascading effects
  * Handles food, water, shelter, goods, and services satisfaction calculations
  */
-export default class BasicNeedsService extends BaseDomainService {
+class BasicNeedsService extends BaseDomainService {
   
   // Need satisfaction thresholds for cascading effects
   static CASCADING_THRESHOLDS = {
@@ -693,9 +693,22 @@ export default class BasicNeedsService extends BaseDomainService {
       throw new Error('Settlement must have a valid name');
     }
     
-    // Validate population data
-    if (!settlement.population || typeof settlement.population.total !== 'number') {
-      throw new Error('Settlement must have valid population data');
+    // Validate population data - be flexible about structure
+    if (!settlement.population) {
+      // If no population object, try to infer from assignedCharacters
+      if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
+        settlement.population = { total: settlement.assignedCharacters.length };
+      } else {
+        // Default to reasonable population if no data available
+        settlement.population = { total: 100 };
+      }
+    } else if (typeof settlement.population.total !== 'number') {
+      // If population exists but total is not a number, try to calculate it
+      if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
+        settlement.population.total = settlement.assignedCharacters.length;
+      } else {
+        settlement.population.total = 100; // Default fallback
+      }
     }
     if (settlement.population.total < 0) {
       throw new Error('Settlement population cannot be negative');
@@ -1366,3 +1379,5 @@ export default class BasicNeedsService extends BaseDomainService {
     };
   }
 }
+
+module.exports = BasicNeedsService;

@@ -1,12 +1,18 @@
 // src/domain/services/MemoryService.js
 
-import Character from '../entities/Character.js';
-
 class MemoryService {
   // Query memory for relevant past interactions
   queryMemory(character, criteria = {}) {
-    if (!(character instanceof Character)) {
-      throw new Error('Invalid character');
+    // More flexible validation - check for required properties instead of instanceof
+    if (!character || typeof character !== 'object') {
+      throw new Error('Invalid character: must be an object');
+    }
+
+    // Check for required properties that a character should have
+    const requiredProps = ['id', 'name', 'decisionHistory'];
+    const missingProps = requiredProps.filter(prop => !(prop in character));
+    if (missingProps.length > 0) {
+      throw new Error(`Invalid character: missing required properties: ${missingProps.join(', ')}`);
     }
 
     const { interactionId, participantId, outcome, minSignificance = 0 } = criteria;
@@ -34,8 +40,16 @@ class MemoryService {
 
   // Update memory with new decision (called post-interaction)
   updateMemory(character, interactionId, outcome) {
-    if (!(character instanceof Character)) {
-      throw new Error('Invalid character');
+    // More flexible validation - check for required properties instead of instanceof
+    if (!character || typeof character !== 'object') {
+      throw new Error('Invalid character: must be an object');
+    }
+
+    // Check for required properties that a character should have
+    const requiredProps = ['id', 'name', 'decisionHistory'];
+    const missingProps = requiredProps.filter(prop => !(prop in character));
+    if (missingProps.length > 0) {
+      throw new Error(`Invalid character: missing required properties: ${missingProps.join(', ')}`);
     }
 
     character.logDecision(interactionId, outcome);  // Reuse Character method
@@ -310,4 +324,4 @@ class MemoryService {
   }
 }
 
-export default MemoryService;
+module.exports = MemoryService;

@@ -1,14 +1,13 @@
 // src/domain/entities/EnvironmentalHazard.js
 
-import { 
-  HazardTypes, 
-  isValidHazardType, 
-  getHazardDescription, 
+const {
+  isValidHazardType,
+  getHazardDescription,
   getHazardBaseDanger,
   getHazardCategory,
   HAZARD_ATTRIBUTE_MODIFIERS
-} from '../../shared/constants/HazardTypes.js';
-import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+} = require('../../shared/constants/HazardTypes.js');
+const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
 
 /**
  * EnvironmentalHazard entity represents environmental dangers that can affect characters
@@ -281,4 +280,4 @@ class EnvironmentalHazard {
   }
 }
 
-export default EnvironmentalHazard;
+module.exports = EnvironmentalHazard;

@@ -1,5 +1,5 @@
-import SystemInteraction from './SystemInteraction.js';
-import Environment from '../../../domain/value-objects/Environment.js';
+const SystemInteraction = require('./SystemInteraction.js');
+const Environment = require('../../../domain/value-objects/Environment.js');
 
 /**
  * RestInteraction - Allows characters to rest and recover energy/health
@@ -224,4 +224,4 @@ class RestInteraction extends SystemInteraction {
   }
 }
 
-export default RestInteraction;
+module.exports = RestInteraction;

@@ -1,6 +1,6 @@
 // src/domain/entities/interactions/ContentInteraction.js
 
-import InteractionBase from './InteractionBase.js';
+const InteractionBase = require('./InteractionBase.js');
 
 /**
  * ContentInteraction - Base class for user-defined content interactions
@@ -10,7 +10,7 @@ import InteractionBase from './InteractionBase.js';
  * and can be modified at runtime. Unlike system interactions, they are not
  * immutable and maintain backward compatibility with existing Interaction entities.
  */
-export default class ContentInteraction extends InteractionBase {
+class ContentInteraction extends InteractionBase {
   /**
    * Creates a new content interaction instance
    * @param {Object} config - Configuration object
@@ -291,3 +291,5 @@ export default class ContentInteraction extends InteractionBase {
     return new this(data);
   }
 }
+
+module.exports = ContentInteraction;

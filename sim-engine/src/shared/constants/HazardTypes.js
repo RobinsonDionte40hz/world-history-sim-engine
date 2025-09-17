@@ -1,8 +1,4 @@
-/**
- * Environmental hazard type constants
- * Defines all available hazard types for environmental system
- */
-export const HazardTypes = {
+const HazardTypes = {
   EXTREME_HEAT: 'extreme_heat',
   EXTREME_COLD: 'extreme_cold',
   TOXIC_AIR: 'toxic_air',
@@ -18,12 +14,12 @@ export const HazardTypes = {
 /**
  * Array of all hazard type values for validation and iteration
  */
-export const HAZARD_TYPE_VALUES = Object.values(HazardTypes);
+const HAZARD_TYPE_VALUES = Object.values(HazardTypes);
 
 /**
  * Hazard type descriptions for UI display
  */
-export const HAZARD_DESCRIPTIONS = {
+const HAZARD_DESCRIPTIONS = {
   [HazardTypes.EXTREME_HEAT]: 'Dangerously high temperatures that can cause heat exhaustion',
   [HazardTypes.EXTREME_COLD]: 'Freezing conditions that risk hypothermia and frostbite',
   [HazardTypes.TOXIC_AIR]: 'Poisonous gases or polluted atmosphere',
@@ -39,7 +35,7 @@ export const HAZARD_DESCRIPTIONS = {
 /**
  * Hazard categories for grouping and filtering
  */
-export const HAZARD_CATEGORIES = {
+const HAZARD_CATEGORIES = {
   ENVIRONMENTAL: [
     HazardTypes.EXTREME_HEAT,
     HazardTypes.EXTREME_COLD,
@@ -65,7 +61,7 @@ export const HAZARD_CATEGORIES = {
 /**
  * Base danger contribution for each hazard type (0.0 to 1.0)
  */
-export const HAZARD_BASE_DANGER = {
+const HAZARD_BASE_DANGER = {
   [HazardTypes.EXTREME_HEAT]: 0.3,
   [HazardTypes.EXTREME_COLD]: 0.3,
   [HazardTypes.TOXIC_AIR]: 0.4,
@@ -81,7 +77,7 @@ export const HAZARD_BASE_DANGER = {
 /**
  * Attribute modifiers applied by each hazard type
  */
-export const HAZARD_ATTRIBUTE_MODIFIERS = {
+const HAZARD_ATTRIBUTE_MODIFIERS = {
   [HazardTypes.EXTREME_HEAT]: { constitution: -2, endurance: -3 },
   [HazardTypes.EXTREME_COLD]: { constitution: -2, dexterity: -1 },
   [HazardTypes.TOXIC_AIR]: { constitution: -3, perception: -1 },
@@ -99,7 +95,7 @@ export const HAZARD_ATTRIBUTE_MODIFIERS = {
  * @param {string} hazardType - The hazard type to validate
  * @returns {boolean} True if valid, false otherwise
  */
-export const isValidHazardType = (hazardType) => {
+const isValidHazardType = (hazardType) => {
   return HAZARD_TYPE_VALUES.includes(hazardType);
 };
 
@@ -108,7 +104,7 @@ export const isValidHazardType = (hazardType) => {
  * @param {string} hazardType - The hazard type
  * @returns {string} The description or empty string if invalid
  */
-export const getHazardDescription = (hazardType) => {
+const getHazardDescription = (hazardType) => {
   return HAZARD_DESCRIPTIONS[hazardType] || '';
 };
 
@@ -117,7 +113,7 @@ export const getHazardDescription = (hazardType) => {
  * @param {string} hazardType - The hazard type
  * @returns {number} The base danger value (0.0-1.0) or 0.1 if invalid
  */
-export const getHazardBaseDanger = (hazardType) => {
+const getHazardBaseDanger = (hazardType) => {
   return HAZARD_BASE_DANGER[hazardType] || 0.1;
 };
 
@@ -126,11 +122,24 @@ export const getHazardBaseDanger = (hazardType) => {
  * @param {string} hazardType - The hazard type
  * @returns {string} The category name or 'unknown' if not found
  */
-export const getHazardCategory = (hazardType) => {
+const getHazardCategory = (hazardType) => {
   for (const [category, hazards] of Object.entries(HAZARD_CATEGORIES)) {
     if (hazards.includes(hazardType)) {
       return category.toLowerCase();
     }
   }
   return 'unknown';
+};
+
+module.exports = {
+  HazardTypes,
+  HAZARD_TYPE_VALUES,
+  HAZARD_DESCRIPTIONS,
+  HAZARD_CATEGORIES,
+  HAZARD_BASE_DANGER,
+  HAZARD_ATTRIBUTE_MODIFIERS,
+  isValidHazardType,
+  getHazardDescription,
+  getHazardBaseDanger,
+  getHazardCategory
 };

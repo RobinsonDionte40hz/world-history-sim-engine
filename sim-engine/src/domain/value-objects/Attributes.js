@@ -81,4 +81,4 @@ class Attributes {
   }
 }
 
-export default Attributes;
+module.exports = Attributes;

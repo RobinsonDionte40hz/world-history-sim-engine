@@ -15,9 +15,9 @@
  * - 100+ characters: <2 seconds total
  */
 
-import { LODTier } from '../value-objects/LODTier.js';
+const { LODTier } = require('../value-objects/LODTier.js');
 
-export class LODManager {
+class LODManager {
   constructor() {
     this.processingMetrics = {
       totalProcessed: 0,
@@ -615,4 +615,4 @@ export class LODManager {
   }
 }
 
-export default LODManager;
+module.exports = LODManager;

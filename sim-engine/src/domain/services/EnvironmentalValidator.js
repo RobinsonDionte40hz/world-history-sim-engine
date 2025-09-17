@@ -1,31 +1,31 @@
 // src/domain/services/EnvironmentalValidator.js
 
-import { 
+const { 
   TerrainTypes, 
   isValidTerrainType, 
   TERRAIN_TYPE_VALUES 
-} from '../../shared/constants/TerrainTypes.js';
-import { 
+} = require('../../shared/constants/TerrainTypes.js');
+const { 
   ClimateTypes, 
   isValidClimateType, 
   CLIMATE_TYPE_VALUES 
-} from '../../shared/constants/ClimateTypes.js';
-import { 
+} = require('../../shared/constants/ClimateTypes.js');
+const { 
   LightingTypes, 
   isValidLightingType, 
   LIGHTING_TYPE_VALUES 
-} from '../../shared/constants/LightingTypes.js';
-import { 
+} = require('../../shared/constants/LightingTypes.js');
+const { 
   ConnectionTypes, 
   isValidConnectionType, 
   CONNECTION_TYPE_VALUES 
-} from '../../shared/constants/ConnectionTypes.js';
-import { 
+} = require('../../shared/constants/ConnectionTypes.js');
+const { 
   HazardTypes, 
   isValidHazardType, 
   HAZARD_TYPE_VALUES,
   getHazardCategory 
-} from '../../shared/constants/HazardTypes.js';
+} = require('../../shared/constants/HazardTypes.js');
 
 /**
  * EnvironmentalValidator service provides comprehensive validation for environmental data
@@ -632,4 +632,4 @@ class EnvironmentalValidator {
   }
 }
 
-export default EnvironmentalValidator;
+module.exports = EnvironmentalValidator;

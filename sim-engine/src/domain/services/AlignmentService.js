@@ -1,6 +1,6 @@
 // src/domain/services/AlignmentService.js
 
-import { Alignment } from '../value-objects/Alignment.js';
+const { Alignment } = require('../value-objects/Alignment.js');
 
 /**
  * Domain service for handling alignment evolution and moral choice processing
@@ -217,7 +217,6 @@ class AlignmentService {
     // War tends to shift people toward more extreme positions
     for (const axisId of alignment.getAxisIds()) {
       const currentValue = alignment.getValue(axisId);
-      const axis = alignment.getAxis(axisId);
       
       if (axisId === 'moral') {
         // War can make people more pragmatic (shift toward neutral) or more extreme
@@ -448,7 +447,6 @@ class AlignmentService {
     
     for (const axisId of alignment.getAxisIds()) {
       const currentValue = alignment.getValue(axisId);
-      const axis = alignment.getAxis(axisId);
       
       // Calculate target value based on personality
       let targetValue = this._calculatePersonalityTarget(axisId, personalityTraits);
@@ -576,4 +574,4 @@ class AlignmentService {
   }
 }
 
-export default AlignmentService;
+module.exports = AlignmentService;

@@ -1,13 +1,13 @@
 // src/domain/value-objects/LODTier.js
 
-import { BaseValueObject } from './BaseValueObject.js';
+const BaseValueObject = require('./BaseValueObject.js');
 
 /**
  * Immutable value object representing a Level of Detail (LOD) tier for character processing
  * Defines processing characteristics, promotion/demotion rules, and performance parameters
  * for the 3-tier LOD system: hero, group, background
  */
-export class LODTier extends BaseValueObject {
+class LODTier extends BaseValueObject {
   constructor(tier, config = {}) {
     super();
 
@@ -333,4 +333,4 @@ export class LODTier extends BaseValueObject {
   }
 }
 
-export default LODTier;
+module.exports = { LODTier };

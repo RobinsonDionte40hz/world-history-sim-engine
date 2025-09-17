@@ -4,11 +4,11 @@
  * a valid and simulation-ready world configuration.
  */
 
-import WorldValidator from './WorldValidator.js';
-import Character from '../entities/Character.js';
-import Node from '../entities/Node.js';
-import NodeMigrationService from './NodeMigrationService.js';
-import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+const WorldValidator = require('./WorldValidator.js');
+const Character = require('../entities/Character.js');
+const Node = require('../entities/Node.js');
+const NodeMigrationService = require('./NodeMigrationService.js');
+const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
 
 class WorldBuilder {
   constructor(templateManager = null) {
@@ -1391,4 +1391,4 @@ class WorldBuilder {
   }
 }
 
-export default WorldBuilder;
+module.exports = WorldBuilder;

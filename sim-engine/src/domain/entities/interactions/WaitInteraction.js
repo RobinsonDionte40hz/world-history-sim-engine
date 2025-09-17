@@ -1,6 +1,6 @@
 // src/domain/entities/interactions/WaitInteraction.js
 
-import SystemInteraction from './SystemInteraction.js';
+const SystemInteraction = require('./SystemInteraction.js');
 
 /**
  * WaitInteraction - A system interaction that allows characters to wait/pass time
@@ -9,7 +9,7 @@ import SystemInteraction from './SystemInteraction.js';
  * spend time without performing other actions. It has minimal energy cost and
  * is always available, making it useful for strategic timing or recovery.
  */
-export default class WaitInteraction extends SystemInteraction {
+class WaitInteraction extends SystemInteraction {
   /**
    * Creates a new wait interaction instance
    * @param {Object} config - Configuration object
@@ -139,3 +139,5 @@ export default class WaitInteraction extends SystemInteraction {
     return new this(data);
   }
 }
+
+module.exports = WaitInteraction;

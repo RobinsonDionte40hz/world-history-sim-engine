@@ -1,6 +1,6 @@
 // src/domain/services/InfluenceService.js
 
-import { Influence } from '../value-objects/Influence.js';
+const Influence = require('../value-objects/Influence.js');
 
 /**
  * Domain service for handling influence evolution and settlement-based changes
@@ -179,7 +179,6 @@ class InfluenceService {
   analyzeInfluenceDistribution(influence) {
     this._validateInfluence(influence);
     
-    const summary = influence.getSummary();
     const domainIds = influence.getDomainIds();
     
     const analysis = {
@@ -475,7 +474,6 @@ class InfluenceService {
     
     for (const domainId of influence.getDomainIds()) {
       const currentValue = influence.getValue(domainId);
-      const domain = influence.getDomain(domainId);
       
       // Calculate decay rate for this domain
       let domainDecayRate = baseDecayRate;
@@ -629,4 +627,4 @@ class InfluenceService {
   }
 }
 
-export default InfluenceService;
+module.exports = InfluenceService;

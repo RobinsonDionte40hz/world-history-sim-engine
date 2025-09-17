@@ -1,14 +1,14 @@
 // src/domain/services/PrerequisiteValidator.js
 
-import { Alignment } from '../value-objects/Alignment.js';
-import { Influence } from '../value-objects/Influence.js';
-import { Prestige } from '../value-objects/Prestige.js';
+const { Alignment } = require('../value-objects/Alignment.js');
+const { Influence } = require('../value-objects/Influence.js');
+const { Prestige } = require('../value-objects/Prestige.js');
 
 /**
  * Enhanced PrerequisiteValidator service for validating prerequisites across
  * interactions, historical events, and character actions
  */
-export class PrerequisiteValidator {
+class PrerequisiteValidator {
   /**
    * Validate prerequisites for an interaction (existing functionality enhanced)
    */
@@ -882,3 +882,5 @@ export class PrerequisiteValidator {
     return { isValid: conditionMet, errors, warnings };
   }
 }
+
+module.exports = { PrerequisiteValidator };

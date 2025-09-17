@@ -4,7 +4,7 @@
  * Base class for all domain services
  * Provides common functionality for validation and error handling
  */
-export default class BaseDomainService {
+class BaseDomainService {
   /**
    * Helper method to create a successful validation result
    */
@@ -160,3 +160,5 @@ export default class BaseDomainService {
     return new Date(timestamp);
   }
 }
+
+module.exports = BaseDomainService;

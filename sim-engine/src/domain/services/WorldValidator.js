@@ -1,5 +1,5 @@
-import EnvironmentalValidator from './EnvironmentalValidator.js';
-import Node from '../entities/Node.js';
+const EnvironmentalValidator = require('./EnvironmentalValidator.js');
+const Node = require('../entities/Node.js');
 
 /**
  * WorldValidator - Service for validating world configurations through preparation phases.
@@ -1501,4 +1501,4 @@ class WorldValidator {
   }
 }
 
-export default WorldValidator;
+module.exports = WorldValidator;

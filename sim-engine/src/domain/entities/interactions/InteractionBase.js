@@ -5,7 +5,7 @@
  * Provides core interface methods that all interaction types must implement.
  * This class establishes the foundation for both system and content interactions.
  */
-export default class InteractionBase {
+class InteractionBase {
   /**
    * Creates a new interaction base instance
    * @param {Object} config - Configuration object
@@ -99,3 +99,5 @@ export default class InteractionBase {
     return new this(data);
   }
 }
+
+module.exports = InteractionBase;

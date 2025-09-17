@@ -1,13 +1,13 @@
 // src/domain/value-objects/CharacterType.js
 
-import BaseValueObject from './BaseValueObject.js';
-import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+const BaseValueObject = require('./BaseValueObject.js');
+const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
 
 /**
  * CharacterType value object that defines character types and their field requirements
  * Manages validation rules and field visibility based on character type
  */
-export class CharacterType extends BaseValueObject {
+class CharacterType extends BaseValueObject {
   constructor(config = {}) {
     super();
     
@@ -540,4 +540,4 @@ export class CharacterType extends BaseValueObject {
   }
 }
 
-export default CharacterType;
+module.exports = CharacterType;

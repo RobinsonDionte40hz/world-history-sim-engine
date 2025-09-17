@@ -4,7 +4,7 @@
  * Immutable value object representing a character's influence across multiple domains
  * Tracks influence values with tiers and historical change tracking
  */
-export class Influence {
+class Influence {
   constructor(domains = [], values = {}, history = {}) {
     // Validate inputs
     if (!Array.isArray(domains) || domains.length === 0) {
@@ -371,3 +371,5 @@ export class Influence {
     return Object.freeze(deserialized);
   }
 }
+
+module.exports = Influence;

@@ -4,7 +4,7 @@
  * Immutable value object representing a character's moral and ethical alignment
  * Tracks alignment values across multiple axes with historical change tracking
  */
-export class Alignment {
+class Alignment {
   constructor(axes = [], values = {}, history = {}) {
     // Validate inputs
     if (!Array.isArray(axes) || axes.length === 0) {
@@ -310,3 +310,5 @@ export class Alignment {
     return Object.freeze(copy);
   }
 }
+
+module.exports = Alignment;

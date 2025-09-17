@@ -1,10 +1,10 @@
 // src/domain/entities/Node.js
 // Enhanced Node class with environmental properties and connections
 
-import Interaction from './Interaction.js';
-import InteractionBase from './interactions/InteractionBase.js';
-import Environment from '../value-objects/Environment.js';
-import NodeConnection from '../value-objects/NodeConnection.js';
+const Interaction = require('./Interaction.js');
+const InteractionBase = require('./interactions/InteractionBase.js');
+const Environment = require('../value-objects/Environment.js');
+const NodeConnection = require('../value-objects/NodeConnection.js');
 
 class Node {
   constructor(config = {}) {
@@ -456,4 +456,4 @@ class Node {
   }
 }
 
-export default Node;
+module.exports = Node;

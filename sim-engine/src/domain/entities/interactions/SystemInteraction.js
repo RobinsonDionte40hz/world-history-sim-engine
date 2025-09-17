@@ -1,6 +1,6 @@
 // src/domain/entities/interactions/SystemInteraction.js
 
-import InteractionBase from './InteractionBase.js';
+const InteractionBase = require('./InteractionBase.js');
 
 /**
  * SystemInteraction - Base class for system-level interactions
@@ -9,7 +9,7 @@ import InteractionBase from './InteractionBase.js';
  * and follow strict rules. They are immutable once instantiated and integrate
  * with the Environment system for realistic environmental effects.
  */
-export default class SystemInteraction extends InteractionBase {
+class SystemInteraction extends InteractionBase {
   /**
    * Creates a new system interaction instance
    * @param {Object} config - Configuration object
@@ -134,3 +134,5 @@ export default class SystemInteraction extends InteractionBase {
     return new this(data);
   }
 }
+
+module.exports = SystemInteraction;

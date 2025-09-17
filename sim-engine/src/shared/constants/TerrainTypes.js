@@ -2,7 +2,7 @@
  * Terrain type constants for environmental system
  * Defines all available terrain types for nodes
  */
-export const TerrainTypes = {
+const TerrainTypes = {
   PLAINS: 'plains',
   FOREST: 'forest',
   MOUNTAINS: 'mountains',
@@ -18,12 +18,12 @@ export const TerrainTypes = {
 /**
  * Array of all terrain type values for validation and iteration
  */
-export const TERRAIN_TYPE_VALUES = Object.values(TerrainTypes);
+const TERRAIN_TYPE_VALUES = Object.values(TerrainTypes);
 
 /**
  * Terrain type descriptions for UI display
  */
-export const TERRAIN_DESCRIPTIONS = {
+const TERRAIN_DESCRIPTIONS = {
   [TerrainTypes.PLAINS]: 'Open grasslands and fields',
   [TerrainTypes.FOREST]: 'Dense woodlands and groves',
   [TerrainTypes.MOUNTAINS]: 'High peaks and rocky terrain',
@@ -41,7 +41,7 @@ export const TERRAIN_DESCRIPTIONS = {
  * @param {string} terrainType - The terrain type to validate
  * @returns {boolean} True if valid, false otherwise
  */
-export const isValidTerrainType = (terrainType) => {
+const isValidTerrainType = (terrainType) => {
   return TERRAIN_TYPE_VALUES.includes(terrainType);
 };
 
@@ -50,6 +50,14 @@ export const isValidTerrainType = (terrainType) => {
  * @param {string} terrainType - The terrain type
  * @returns {string} The description or empty string if invalid
  */
-export const getTerrainDescription = (terrainType) => {
+const getTerrainDescription = (terrainType) => {
   return TERRAIN_DESCRIPTIONS[terrainType] || '';
+};
+
+module.exports = {
+  TerrainTypes,
+  TERRAIN_TYPE_VALUES,
+  TERRAIN_DESCRIPTIONS,
+  isValidTerrainType,
+  getTerrainDescription
 };

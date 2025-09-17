@@ -1,14 +1,14 @@
 // src/application/use-cases/simulation/ProcessTurnWithLOD.js
 
-import Character from '../../../domain/entities/Character.js';
-import generateBehavior from '../npc/GenerateBehavior.js';
-import EvolutionService from '../../../domain/services/EvolutionService.js';
-import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
-import BasicNeedsService from '../../../domain/services/BasicNeedsService.js';
-import NeedConsequenceService from '../../../domain/services/NeedConsequenceService.js';
-import ConsequenceLifecycleManager from '../../../domain/services/ConsequenceLifecycleManager.js';
-import SettlementService from '../../../domain/services/SettlementService.js';
-import CharacterBehaviorModifierService from '../../../domain/services/CharacterBehaviorModifierService.js';
+const Character = require('../../../domain/entities/Character.js');
+const generateBehavior = require('../npc/GenerateBehavior.js');
+const EvolutionService = require('../../../domain/services/EvolutionService.js');
+const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js');
+const BasicNeedsService = require('../../../domain/services/BasicNeedsService.js');
+const NeedConsequenceService = require('../../../domain/services/NeedConsequenceService.js');
+const ConsequenceLifecycleManager = require('../../../domain/services/ConsequenceLifecycleManager.js');
+const SettlementService = require('../../../domain/services/SettlementService.js');
+const CharacterBehaviorModifierService = require('../../../domain/services/CharacterBehaviorModifierService.js');
 
 /**
  * Process a complete turn with Level of Detail (LOD) integration
@@ -422,4 +422,4 @@ const checkTradeOpportunity = (settlementA, settlementB, worldState) => {
   return { shouldTrade: false };
 };
 
-export default processTurnWithLOD;
+module.exports = processTurnWithLOD;

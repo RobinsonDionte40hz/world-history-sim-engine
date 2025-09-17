@@ -1,7 +1,7 @@
 // src/domain/services/InteractionResolver.js
 
-import InteractionBase from '../entities/interactions/InteractionBase.js';
-import Character from '../entities/Character.js';
+const InteractionBase = require('../entities/interactions/InteractionBase.js');
+const Character = require('../entities/Character.js');
 
 class InteractionResolver {
   // Resolve an interaction for a character, returning outcome and applying effects
@@ -113,4 +113,4 @@ function weightedSelect(options, weightFn) {
   return options[options.length - 1];  // Fallback
 }
 
-export default InteractionResolver;
+module.exports = InteractionResolver;

@@ -2,7 +2,7 @@
  * Climate type constants for environmental system
  * Defines all available climate types for nodes
  */
-export const ClimateTypes = {
+const ClimateTypes = {
   ARCTIC: 'arctic',
   TEMPERATE: 'temperate',
   TROPICAL: 'tropical',
@@ -14,12 +14,12 @@ export const ClimateTypes = {
 /**
  * Array of all climate type values for validation and iteration
  */
-export const CLIMATE_TYPE_VALUES = Object.values(ClimateTypes);
+const CLIMATE_TYPE_VALUES = Object.values(ClimateTypes);
 
 /**
  * Climate type descriptions for UI display
  */
-export const CLIMATE_DESCRIPTIONS = {
+const CLIMATE_DESCRIPTIONS = {
   [ClimateTypes.ARCTIC]: 'Extremely cold with ice and snow year-round',
   [ClimateTypes.TEMPERATE]: 'Moderate temperatures with seasonal variation',
   [ClimateTypes.TROPICAL]: 'Hot and humid with high rainfall',
@@ -31,7 +31,7 @@ export const CLIMATE_DESCRIPTIONS = {
 /**
  * Default temperature ranges for each climate type (in Celsius)
  */
-export const CLIMATE_TEMPERATURE_RANGES = {
+const CLIMATE_TEMPERATURE_RANGES = {
   [ClimateTypes.ARCTIC]: { min: -30, max: -5, average: -10 },
   [ClimateTypes.TEMPERATE]: { min: 5, max: 25, average: 15 },
   [ClimateTypes.TROPICAL]: { min: 20, max: 35, average: 28 },
@@ -45,7 +45,7 @@ export const CLIMATE_TEMPERATURE_RANGES = {
  * @param {string} climateType - The climate type to validate
  * @returns {boolean} True if valid, false otherwise
  */
-export const isValidClimateType = (climateType) => {
+const isValidClimateType = (climateType) => {
   return CLIMATE_TYPE_VALUES.includes(climateType);
 };
 
@@ -54,7 +54,7 @@ export const isValidClimateType = (climateType) => {
  * @param {string} climateType - The climate type
  * @returns {string} The description or empty string if invalid
  */
-export const getClimateDescription = (climateType) => {
+const getClimateDescription = (climateType) => {
   return CLIMATE_DESCRIPTIONS[climateType] || '';
 };
 
@@ -63,7 +63,17 @@ export const getClimateDescription = (climateType) => {
  * @param {string} climateType - The climate type
  * @returns {number} The average temperature or 15 if invalid
  */
-export const getDefaultTemperature = (climateType) => {
+const getDefaultTemperature = (climateType) => {
   const range = CLIMATE_TEMPERATURE_RANGES[climateType];
   return range ? range.average : 15;
+};
+
+module.exports = {
+  ClimateTypes,
+  CLIMATE_TYPE_VALUES,
+  CLIMATE_DESCRIPTIONS,
+  CLIMATE_TEMPERATURE_RANGES,
+  isValidClimateType,
+  getClimateDescription,
+  getDefaultTemperature
 };

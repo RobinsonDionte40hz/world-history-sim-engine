@@ -1,6 +1,6 @@
 // src/domain/services/EvolutionService.js
 
-import Character from '../entities/Character.js';
+const Character = require('../entities/Character.js');
 
 class EvolutionService {
   // Evolve a character based on an interaction outcome
@@ -166,4 +166,4 @@ class EvolutionService {
   }
 }
 
-export default EvolutionService;
+module.exports = EvolutionService;

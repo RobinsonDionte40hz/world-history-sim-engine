@@ -1,6 +1,6 @@
 // src/domain/services/PrestigeService.js
 
-import { Prestige } from '../value-objects/Prestige.js';
+const Prestige = require('../value-objects/Prestige.js');
 
 /**
  * Domain service for handling prestige evolution and reputation management
@@ -606,7 +606,6 @@ class PrestigeService {
   
   _calculateSettlementPercentile(value, track, settlement) {
     // This is a simplified calculation - in a real system, this would use actual population data
-    const settlementSize = settlement.population || 1000;
     const settlementType = settlement.type || 'town';
     
     // Adjust expectations based on settlement characteristics
@@ -653,6 +652,9 @@ class PrestigeService {
       case 'cultural_center':
         weights.cultural = 2.0;
         weights.social = 1.3;
+        break;
+      default:
+        // Default weights for unrecognized settlement types
         break;
     }
     
@@ -787,6 +789,10 @@ class PrestigeService {
           });
         }
         break;
+        
+      default:
+        // No prestige impact for unrecognized interaction types
+        break;
     }
     
     return changes;
@@ -855,4 +861,4 @@ class PrestigeService {
   }
 }
 
-export default PrestigeService;
+module.exports = PrestigeService;

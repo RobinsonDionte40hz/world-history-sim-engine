@@ -4,7 +4,7 @@
  * Immutable value object representing a character's racial traits and modifiers
  * Provides racial bonuses, features, and lifespan information for character generation
  */
-export class RacialTraits {
+class RacialTraits {
   constructor(raceId, subraceId = null, customModifiers = {}) {
     // Validate inputs
     if (!raceId || typeof raceId !== 'string') {
@@ -242,6 +242,8 @@ export class RacialTraits {
           influence.community_focus = 0.1;
         }
         break;
+      default:
+        break;
     }
 
     return Object.freeze(influence);
@@ -278,6 +280,8 @@ export class RacialTraits {
         if (this._subraceId === 'Mountain Dwarf') {
           influence.lawful = 0.2; // Even more structured
         }
+        break;
+      default:
         break;
     }
 
@@ -333,6 +337,8 @@ export class RacialTraits {
         
         case 'Wise':
           enhancedCapabilities.wisdomBonus = (enhancedCapabilities.wisdomBonus || 0) + 1;
+          break;
+        default:
           break;
       }
     });
@@ -413,6 +419,8 @@ export class RacialTraits {
           modifiers.wisdom = 1.3;
           modifiers.crafting = 1.4;
         }
+        break;
+      default:
         break;
     }
 
@@ -749,3 +757,5 @@ export class RacialTraits {
 
 // Initialize race definitions when the module loads
 RacialTraits._initializeRaces();
+
+module.exports = RacialTraits;
