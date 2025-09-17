@@ -1,0 +1,53 @@
+{
+  "technical": {
+    "totalCharacters": true,
+    "heroCharacters": false,
+    "groupCharacters": true,
+    "backgroundCharacters": false,
+    "settlementCount": true,
+    "settlementStructure": true,
+    "lodSystemInitialized": true,
+    "characterTierAssignment": true
+  },
+  "gameplay": {
+    "relationshipEstablished": true,
+    "initialDiplomaticStanding": true,
+    "tradeRoutesEstablished": true,
+    "culturalExchangeMetrics": true
+  },
+  "integration": {
+    "developmentTreeProgression": true,
+    "upgradeEffectsApplied": true,
+    "resourceManagement": true,
+    "populationGroupEffects": false,
+    "multiSettlementQuests": true,
+    "prestigeSystemIntegration": false,
+    "alignmentSystemEffects": false,
+    "questChoiceConsequences": false,
+    "majorDecisionConsequences": false,
+    "settlementDevelopmentAffected": false,
+    "populationMoraleChanges": false,
+    "relationshipStability": false,
+    "demoCompletionSuccess": true,
+    "systemIntegrity": false,
+    "saveLoadFunctionality": true,
+    "emergentNarratives": false
+  },
+  "performance": {
+    "turnProcessingTime": true,
+    "memoryUsage": true,
+    "performanceConsistency": true,
+    "lodSystemEfficiency": false
+  },
+  "errors": [],
+  "warnings": [],
+  "summary": {
+    "successRate": 59.375,
+    "totalPassed": 19,
+    "totalChecks": 32,
+    "avgTurnTime": 35.06050416666667,
+    "maxMemory": 4.352531433105469,
+    "totalEvents": 19,
+    "developmentUpgrades": 1
+  }
+}

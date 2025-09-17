@@ -1,0 +1,22 @@
+{
+  "prestige": {
+    "applied": true,
+    "errors": []
+  },
+  "alignment": {
+    "applied": true,
+    "errors": []
+  },
+  "quest": {
+    "applied": true,
+    "errors": []
+  },
+  "population": {
+    "applied": true,
+    "errors": []
+  },
+  "crossSettlement": {
+    "applied": true,
+    "errors": []
+  }
+}

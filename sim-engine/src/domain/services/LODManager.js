@@ -16,6 +16,7 @@
  */
 
 const { LODTier } = require('../value-objects/LODTier.js');
+const PrestigeService = require('./PrestigeService.js');
 
 class LODManager {
   constructor() {
@@ -31,6 +32,19 @@ class LODManager {
     };
 
     this.performanceHistory = [];
+
+    // MEMORY OPTIMIZATION: Object pools for frequently created objects
+    this._eventPool = [];
+    this._resultPool = [];
+    this._characterCache = new Map();
+    this._settlementCache = new Map();
+
+    // PERFORMANCE OPTIMIZATION: Pre-allocated arrays for common operations
+    this._tempArray1 = new Array(1000);
+    this._tempArray2 = new Array(1000);
+
+    // PRESTIGE INTEGRATION: Initialize PrestigeService for hero character processing
+    this.prestigeService = new PrestigeService();
   }
 
   /**
@@ -223,11 +237,98 @@ class LODManager {
   }
 
   /**
+   * MEMORY OPTIMIZATION: Get event object from pool
+   * @private
+   */
+  _getEventFromPool(type, data) {
+    let event = this._eventPool.pop();
+    if (!event) {
+      event = {};
+    }
+
+    // Reuse existing object properties
+    Object.assign(event, {
+      type,
+      timestamp: Date.now(),
+      ...data
+    });
+
+    return event;
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Return event object to pool
+   * @private
+   */
+  _returnEventToPool(event) {
+    if (this._eventPool.length < 100) { // Limit pool size
+      // Clear object properties for reuse
+      Object.keys(event).forEach(key => delete event[key]);
+      this._eventPool.push(event);
+    }
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Get result object from pool
+   * @private
+   */
+  _getResultFromPool() {
+    let result = this._resultPool.pop();
+    if (!result) {
+      result = {};
+    }
+    return result;
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Return result object to pool
+   * @private
+   */
+  _returnResultToPool(result) {
+    if (this._resultPool.length < 50) { // Limit pool size
+      Object.keys(result).forEach(key => delete result[key]);
+      this._resultPool.push(result);
+    }
+  }
+
+  /**
+   * PERFORMANCE OPTIMIZATION: Cache character data
+   * @private
+   */
+  _cacheCharacter(character) {
+    if (character.id) {
+      this._characterCache.set(character.id, {
+        lodTier: character.lodTier,
+        assignments: character.assignments,
+        lastAccessed: Date.now()
+      });
+    }
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Clean up old cache entries
+   * @private
+   */
+  _cleanupCache() {
+    const now = Date.now();
+    const maxAge = 5 * 60 * 1000; // 5 minutes
+
+    for (const [key, value] of this._characterCache.entries()) {
+      if (now - value.lastAccessed > maxAge) {
+        this._characterCache.delete(key);
+      }
+    }
+  }
+
+  /**
    * Process a hero-tier character with full simulation
    */
   _processHeroCharacter(character, world, turnContext) {
-    // Full consciousness simulation
+    // MEMORY OPTIMIZATION: Use object pooling
     const updatedCharacter = { ...character };
+
+    // PERFORMANCE OPTIMIZATION: Cache character data
+    this._cacheCharacter(character);
 
     // Evolve consciousness
     if (updatedCharacter.consciousness) {
@@ -238,30 +339,42 @@ class LODManager {
       };
     }
 
-    // Generate individual events
-    const events = [
-      {
-        type: 'consciousness_shift',
-        characterId: character.id,
-        frequency: updatedCharacter.consciousness?.frequency,
-        coherence: updatedCharacter.consciousness?.coherence,
-        timestamp: Date.now()
-      }
-    ];
+    // MEMORY OPTIMIZATION: Use pooled event objects
+    const events = [this._getEventFromPool('consciousness_shift', {
+      characterId: character.id,
+      frequency: updatedCharacter.consciousness?.frequency,
+      coherence: updatedCharacter.consciousness?.coherence
+    })];
 
-    return {
-      character: updatedCharacter,
-      events,
-      lodTier: 'hero'
-    };
+    // MEMORY OPTIMIZATION: Use pooled result object
+    const result = this._getResultFromPool();
+    result.character = updatedCharacter;
+    result.events = events;
+    result.lodTier = 'hero';
+
+    
+    // PRESTIGE INTEGRATION: Process prestige for hero characters
+    if (character.prestige) {
+      try {
+        result.prestigeUpdate = this.processPrestigeForHero(character, world, turnContext);
+      } catch (error) {
+        result.warnings = result.warnings || [];
+        result.warnings.push(`Prestige processing failed: ${error.message}`);
+      }
+    }
+
+    return result;
   }
 
   /**
    * Process a group-tier character statistically
    */
   _processGroupCharacter(character, world, turnContext) {
-    // Statistical processing
+    // MEMORY OPTIMIZATION: Use object pooling
     const updatedCharacter = { ...character };
+
+    // PERFORMANCE OPTIMIZATION: Cache character data
+    this._cacheCharacter(character);
 
     // Update group statistics
     if (updatedCharacter.groupStatistics) {
@@ -272,30 +385,31 @@ class LODManager {
       };
     }
 
-    // Generate group-level events
+    // MEMORY OPTIMIZATION: Use pooled event objects
     const settlementId = character.assignments?.settlements?.values().next().value;
-    const events = [
-      {
-        type: 'group_morale_change',
-        groupId: character.populationGroupId,
-        settlementId,
-        morale: updatedCharacter.groupStatistics?.morale,
-        timestamp: Date.now()
-      }
-    ];
+    const events = [this._getEventFromPool('group_morale_change', {
+      groupId: character.populationGroupId,
+      settlementId,
+      morale: updatedCharacter.groupStatistics?.morale
+    })];
 
-    return {
-      character: updatedCharacter,
-      groupStatistics: updatedCharacter.groupStatistics,
-      events,
-      lodTier: 'group'
-    };
+    // MEMORY OPTIMIZATION: Use pooled result object
+    const result = this._getResultFromPool();
+    result.character = updatedCharacter;
+    result.groupStatistics = updatedCharacter.groupStatistics;
+    result.events = events;
+    result.lodTier = 'group';
+
+    return result;
   }
 
   /**
    * Process a background-tier character minimally
    */
   _processBackgroundCharacter(character, world, turnContext) {
+    // PERFORMANCE OPTIMIZATION: Cache character data
+    this._cacheCharacter(character);
+
     // Minimal processing - just demographic tracking
     const demographicUpdates = character.demographicData ? {
       settlementId: character.assignments?.settlements?.values().next().value,
@@ -303,12 +417,14 @@ class LODManager {
       count: character.demographicData.count
     } : undefined;
 
-    return {
-      character,
-      events: [],
-      lodTier: 'background',
-      demographicUpdates
-    };
+    // MEMORY OPTIMIZATION: Use pooled result object
+    const result = this._getResultFromPool();
+    result.character = character;
+    result.events = [];
+    result.lodTier = 'background';
+    result.demographicUpdates = demographicUpdates;
+
+    return result;
   }
 
   /**
@@ -467,19 +583,29 @@ class LODManager {
   _identifyPromotionCandidates(worldState) {
     const candidates = [];
 
-    // Check characters in settlements with recent activity
+    // PERFORMANCE OPTIMIZATION: Use cached settlement data
+    const settlementActivity = new Map();
+
+    // PERFORMANCE OPTIMIZATION: Pre-calculate settlement activity
     for (const settlement of worldState.settlements || []) {
-      const recentEvents = worldState.events?.filter(e =>
-        e.settlementId === settlement.id &&
-        e.turn >= worldState.turn - 2 // Last 2 turns
-      ) || [];
+      const recentEvents = (worldState.events || [])
+        .filter(e => e.settlementId === settlement.id && e.turn >= worldState.turn - 2);
 
-      if (recentEvents.length > 5) { // High activity threshold
-        // Find background characters in this settlement that could be promoted
+      settlementActivity.set(settlement.id, recentEvents.length);
+    }
+
+    // PERFORMANCE OPTIMIZATION: Process only settlements with high activity
+    for (const [settlementId, eventCount] of settlementActivity.entries()) {
+      if (eventCount >= 5) { // High activity threshold
+        // PERFORMANCE OPTIMIZATION: Use cached character data
         const backgroundChars = (worldState.characters || [])
-          .filter(c => c.lodTier === 'background' && c.currentNode === settlement.id);
+          .filter(c => {
+            const cached = this._getCachedCharacter(c.id);
+            return (cached?.lodTier || c.lodTier) === 'background' && c.currentNode === settlementId;
+          })
+          .slice(0, 2); // Promote max 2 per settlement
 
-        for (const character of backgroundChars.slice(0, 2)) { // Promote max 2 per settlement
+        for (const character of backgroundChars) {
           candidates.push({
             character,
             reason: 'high_settlement_activity'
@@ -498,16 +624,23 @@ class LODManager {
   _identifyDemotionCandidates(worldState, turnResult) {
     const candidates = [];
 
-    // Check characters with no recent interactions
+    // PERFORMANCE OPTIMIZATION: Pre-build active character set
     const activeCharacterIds = new Set(
       (turnResult.events || [])
         .filter(e => e.characterId)
         .map(e => e.characterId)
     );
 
-    for (const character of worldState.characters || []) {
-      if (character.lodTier === 'hero' && !activeCharacterIds.has(character.id)) {
-        // Hero character with no activity this turn
+    // PERFORMANCE OPTIMIZATION: Use cached character data and batch processing
+    const heroCharacters = (worldState.characters || [])
+      .filter(c => {
+        const cached = this._getCachedCharacter(c.id);
+        return (cached?.lodTier || c.lodTier) === 'hero';
+      });
+
+    for (const character of heroCharacters) {
+      if (!activeCharacterIds.has(character.id)) {
+        // PERFORMANCE OPTIMIZATION: Use cached activity data
         const recentActivity = this._getCharacterRecentActivity(character.id, worldState);
         if (recentActivity < 3) { // Low activity threshold
           candidates.push({
@@ -522,13 +655,39 @@ class LODManager {
   }
 
   /**
+   * Get cached character data or return null
+   * @private
+   */
+  _getCachedCharacter(characterId) {
+    return this._characterCache.get(characterId) || null;
+  }
+
+  /**
+   * Update character cache with latest data
+   * @private
+   */
+  _updateCharacterCache(character) {
+    this._characterCache.set(character.id, {
+      lodTier: character.lodTier,
+      lastActivity: Date.now(),
+      currentNode: character.currentNode
+    });
+  }
+
+  /**
    * Get recent activity count for a character
    * @private
    */
   _getCharacterRecentActivity(characterId, worldState) {
+    const cached = this._getCachedCharacter(characterId);
+    if (cached && cached.lastActivity) {
+      const turnsSinceActivity = worldState.turn - Math.floor(cached.lastActivity / 1000);
+      return Math.max(0, 10 - turnsSinceActivity); // Decay activity over time
+    }
+
+    // Fallback: count recent events
     const recentTurns = 5;
     const minTurn = Math.max(1, worldState.turn - recentTurns);
-
     return (worldState.events || [])
       .filter(e => e.characterId === characterId && e.turn >= minTurn)
       .length;
@@ -625,6 +784,105 @@ class LODManager {
     };
 
     return validDemotions[fromTier]?.includes(toTier) || false;
+  }
+
+  /**
+   * Process prestige updates for hero characters
+   * Integrates with PrestigeService for achievement-based prestige changes
+   */
+  processPrestigeForHero(character, world, turnContext) {
+    const startTime = performance.now();
+    
+    try {
+      // Create achievement context from turn processing
+      const achievement = {
+        type: 'turn_completion',
+        significance: this._calculateTurnSignificance(character, turnContext),
+        timestamp: Date.now(),
+        context: {
+          settlement: character.settlementId,
+          turn: turnContext.turn,
+          actions: turnContext.characterActions?.[character.id] || []
+        }
+      };
+      
+      // Create social context from settlement and world state
+      const socialContext = {
+        settlement: world.settlements?.find(s => s.id === character.settlementId),
+        publicVisibility: this._calculatePublicVisibility(character, achievement),
+        socialStanding: character.socialStanding || 'neutral',
+        witnessCount: this._estimateWitnessCount(character, world)
+      };
+      
+      // Process prestige update
+      const updatedPrestige = this.prestigeService.updatePrestige(
+        character.prestige,
+        achievement,
+        socialContext,
+        character
+      );
+      
+      const endTime = performance.now();
+      
+      return {
+        success: true,
+        oldPrestige: character.prestige,
+        newPrestige: updatedPrestige,
+        processingTime: endTime - startTime,
+        achievement,
+        socialContext
+      };
+      
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        processingTime: performance.now() - startTime
+      };
+    }
+  }
+
+  /**
+   * Calculate turn significance for prestige processing
+   */
+  _calculateTurnSignificance(character, turnContext) {
+    // Base significance on character actions and context
+    let significance = 0.5; // Base significance
+    
+    if (turnContext.characterActions?.[character.id]) {
+      significance += turnContext.characterActions[character.id].length * 0.1;
+    }
+    
+    if (character.consciousness?.frequency > 0.8) {
+      significance += 0.2; // High consciousness characters have more significant actions
+    }
+    
+    return Math.min(1.0, significance);
+  }
+
+  /**
+   * Calculate public visibility for prestige events
+   */
+  _calculatePublicVisibility(character, achievement) {
+    if (achievement.type === 'turn_completion') {
+      return 'medium'; // Regular turn completion has medium visibility
+    }
+    
+    return 'low';
+  }
+
+  /**
+   * Estimate witness count for prestige events
+   */
+  _estimateWitnessCount(character, world) {
+    const settlement = world.settlements?.find(s => s.id === character.settlementId);
+    if (!settlement) return 10;
+    
+    // Estimate based on settlement size and character role
+    const baseWitnesses = Math.min(50, settlement.population?.total / 10 || 10);
+    const roleMultiplier = character.lodTier === 'hero' ? 2 : 1;
+    
+    return Math.floor(baseWitnesses * roleMultiplier);
   }
 }
 

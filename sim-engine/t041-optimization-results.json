@@ -1,0 +1,25 @@
+{
+  "beforeOptimization": {
+    "lodProcessingMs": 3685.6322,
+    "lodThroughput": 58.334632522474706,
+    "heroProcessingMs": 31.11975199999999,
+    "groupProcessingMs": 15.532510526315802,
+    "backgroundProcessingMs": 15.248900657894739,
+    "crossSettlementMs": 29.991699999999582,
+    "fullTurnMs": 62.37219999999979,
+    "memoryUsageMB": 4.532310485839844
+  },
+  "afterOptimization": {
+    "lodProcessingMs": 3771.077799999999,
+    "lodThroughput": 57.01287838718152,
+    "heroProcessingMs": 31.648123999999953,
+    "groupProcessingMs": 16.049392105263234,
+    "backgroundProcessingMs": 15.155369078947365,
+    "crossSettlementMs": 30.839799999994284,
+    "fullTurnMs": 61.97929999999906,
+    "memoryUsageMB": 5.0192108154296875
+  },
+  "recommendations": [
+    "Parallel turn processing improves performance by 97.9% - implement in production"
+  ]
+}

@@ -8,11 +8,13 @@ const WorldValidator = require('./WorldValidator.js');
 const Character = require('../entities/Character.js');
 const Node = require('../entities/Node.js');
 const NodeMigrationService = require('./NodeMigrationService.js');
+const LODManager = require('./LODManager.js');
 const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
 
 class WorldBuilder {
   constructor(templateManager = null) {
     this.templateManager = templateManager;
+    this.lodManager = new LODManager();
 
     // Mappless world configuration
     this.worldConfig = {
@@ -373,6 +375,11 @@ class WorldBuilder {
       assignedInteractions: characterConfig.assignedInteractions || []
     };
 
+    // Assign LOD tier if not already specified
+    if (!characterData.lodTier) {
+      characterData.lodTier = this._assignLODForCharacter(characterData, characterConfig);
+    }
+
     // Check for duplicates
     if (this.getCharacter(characterData.id)) {
       throw new ValidationError('characterId', characterData.id, 'Character with this ID already exists');
@@ -726,6 +733,27 @@ class WorldBuilder {
         });
       }
 
+      // Validate LOD tier
+      const lodTier = characterData.lodTier || 'background';
+      const validTiers = ['hero', 'group', 'background'];
+      if (!validTiers.includes(lodTier)) {
+        errors.push({
+          field: 'lodTier',
+          type: 'invalid_value',
+          message: `Invalid LOD tier '${lodTier}'. Must be one of: ${validTiers.join(', ')}`
+        });
+      }
+
+      // Validate LOD tier assignment appropriateness (warning)
+      const suggestedTier = this._assignLODForCharacter(characterData, {});
+      if (lodTier !== suggestedTier) {
+        warnings.push({
+          field: 'lodTier',
+          type: 'suboptimal_assignment',
+          message: `Character '${characterData.name}' has LOD tier '${lodTier}' but properties suggest '${suggestedTier}'`
+        });
+      }
+
     } catch (error) {
       errors.push({
         field: 'character',
@@ -809,6 +837,11 @@ class WorldBuilder {
       assignmentStatus: {
         assigned: 0,
         unassigned: 0
+      },
+      lodDistribution: {
+        hero: 0,
+        group: 0,
+        background: 0
       }
     };
 
@@ -842,9 +875,159 @@ class WorldBuilder {
       } else {
         stats.assignmentStatus.unassigned++;
       }
+
+      // LOD tier distribution
+      const lodTier = character.lodTier || 'background';
+      if (stats.lodDistribution.hasOwnProperty(lodTier)) {
+        stats.lodDistribution[lodTier]++;
+      }
     });
 
     return stats;
+  }
+
+  /**
+   * Promotes a character to a higher LOD tier
+   * @param {string} characterId - ID of character to promote
+   * @param {string} reason - Reason for promotion
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  promoteCharacter(characterId, reason = 'manual') {
+    const character = this.worldConfig.characters.find(c => c.id === characterId);
+    if (!character) {
+      throw new ValidationError('characterId', characterId, 'Character not found');
+    }
+
+    const currentTier = character.lodTier || 'background';
+    const promotionResult = this.lodManager.promoteCharacter(characterId, currentTier, 'higher', reason);
+
+    if (promotionResult.success) {
+      character.lodTier = promotionResult.toTier;
+      console.log(`Promoted character ${character.name} from ${currentTier} to ${character.lodTier} (${reason})`);
+    } else {
+      throw new ValidationError('promotion', { characterId, currentTier }, promotionResult.error);
+    }
+
+    return this;
+  }
+
+  /**
+   * Demotes a character to a lower LOD tier
+   * @param {string} characterId - ID of character to demote
+   * @param {string} reason - Reason for demotion
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  demoteCharacter(characterId, reason = 'manual') {
+    const character = this.worldConfig.characters.find(c => c.id === characterId);
+    if (!character) {
+      throw new ValidationError('characterId', characterId, 'Character not found');
+    }
+
+    const currentTier = character.lodTier || 'background';
+    const demotionResult = this.lodManager.demoteCharacter(characterId, currentTier, 'lower', reason);
+
+    if (demotionResult.success) {
+      character.lodTier = demotionResult.toTier;
+      console.log(`Demoted character ${character.name} from ${currentTier} to ${character.lodTier} (${reason})`);
+    } else {
+      throw new ValidationError('demotion', { characterId, currentTier }, demotionResult.error);
+    }
+
+    return this;
+  }
+
+  /**
+   * Sets a specific LOD tier for a character
+   * @param {string} characterId - ID of character
+   * @param {string} lodTier - LOD tier to set ('hero', 'group', 'background')
+   * @param {string} reason - Reason for tier change
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  setCharacterLODTier(characterId, lodTier, reason = 'manual') {
+    const validTiers = ['hero', 'group', 'background'];
+    if (!validTiers.includes(lodTier)) {
+      throw new ValidationError('lodTier', lodTier, `Invalid LOD tier. Must be one of: ${validTiers.join(', ')}`);
+    }
+
+    const character = this.worldConfig.characters.find(c => c.id === characterId);
+    if (!character) {
+      throw new ValidationError('characterId', characterId, 'Character not found');
+    }
+
+    const previousTier = character.lodTier || 'background';
+    character.lodTier = lodTier;
+
+    console.log(`Set character ${character.name} LOD tier from ${previousTier} to ${lodTier} (${reason})`);
+    return this;
+  }
+
+  /**
+   * Gets characters by LOD tier
+   * @param {string} lodTier - LOD tier to filter by
+   * @returns {Array} Array of characters with the specified LOD tier
+   */
+  getCharactersByLODTier(lodTier) {
+    const validTiers = ['hero', 'group', 'background'];
+    if (!validTiers.includes(lodTier)) {
+      throw new ValidationError('lodTier', lodTier, `Invalid LOD tier. Must be one of: ${validTiers.join(', ')}`);
+    }
+
+    return this.worldConfig.characters.filter(character => (character.lodTier || 'background') === lodTier);
+  }
+
+  /**
+   * Gets LOD tier distribution statistics
+   * @returns {Object} LOD tier distribution
+   */
+  getLODTierDistribution() {
+    const distribution = {
+      hero: 0,
+      group: 0,
+      background: 0,
+      total: this.worldConfig.characters.length
+    };
+
+    this.worldConfig.characters.forEach(character => {
+      const tier = character.lodTier || 'background';
+      if (distribution.hasOwnProperty(tier)) {
+        distribution[tier]++;
+      }
+    });
+
+    return distribution;
+  }
+
+  /**
+   * Automatically assigns LOD tiers to all characters based on their properties
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  autoAssignLODTiers() {
+    console.log('Auto-assigning LOD tiers to characters...');
+
+    let heroCount = 0;
+    let groupCount = 0;
+    let backgroundCount = 0;
+
+    this.worldConfig.characters.forEach(character => {
+      const newTier = this._assignLODForCharacter(character, {});
+      const oldTier = character.lodTier || 'none';
+
+      if (newTier !== oldTier) {
+        character.lodTier = newTier;
+        console.log(`Assigned ${character.name} to ${newTier} tier (was ${oldTier})`);
+      }
+
+      // Count assignments
+      switch (newTier) {
+        case 'hero': heroCount++; break;
+        case 'group': groupCount++; break;
+        case 'background': backgroundCount++; break;
+        default: backgroundCount++; break; // Default to background for unknown tiers
+      }
+    });
+
+    console.log(`LOD tier assignment complete: ${heroCount}H / ${groupCount}G / ${backgroundCount}B`);
+    return this;
   }
 
   /**
@@ -1188,12 +1371,20 @@ class WorldBuilder {
       nodes: simulationNodes,
       characters: simulationCharacters,
       interactions: simulationInteractions,
+      lodManager: this.lodManager, // Include LOD manager for simulation
+      lodDistribution: this.getLODTierDistribution(), // Include LOD distribution stats
       simulationMetadata: {
         preparedAt: new Date().toISOString(),
         source: 'WorldBuilder',
         worldId: `world_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         version: '2.0.0',
-        pipelineVersion: '1.0.0'
+        pipelineVersion: '1.0.0',
+        lodEnabled: true, // Indicate LOD system is active
+        lodTiers: {
+          hero: simulationCharacters.size ? Array.from(simulationCharacters.values()).filter(c => c.lodTier === 'hero').length : 0,
+          group: simulationCharacters.size ? Array.from(simulationCharacters.values()).filter(c => c.lodTier === 'group').length : 0,
+          background: simulationCharacters.size ? Array.from(simulationCharacters.values()).filter(c => c.lodTier === 'background').length : 0
+        }
       },
     };
   }
@@ -1223,6 +1414,35 @@ class WorldBuilder {
 
     if (this.worldConfig.interactions.length > 0 && this.worldConfig.characters.length === 0) {
       warnings.push('Interactions defined but no characters to use them');
+    }
+
+    // LOD-specific validations
+    if (this.worldConfig.characters.length > 0) {
+      const lodDistribution = this.getLODTierDistribution();
+
+      // Check for reasonable LOD distribution
+      const heroPercentage = (lodDistribution.hero / lodDistribution.total) * 100;
+
+      // Warn if too many characters are in hero tier (performance concern)
+      if (heroPercentage > 20) {
+        warnings.push(`High hero tier percentage (${heroPercentage.toFixed(1)}%) may impact performance. Consider demoting some characters to group or background tier.`);
+      }
+
+      // Warn if no hero-tier characters exist (may indicate incomplete setup)
+      if (lodDistribution.hero === 0 && lodDistribution.total > 5) {
+        warnings.push('No hero-tier characters found. Consider promoting key characters for detailed simulation.');
+      }
+
+      // Check for LOD tier consistency
+      const inconsistentCharacters = this.worldConfig.characters.filter(character => {
+        const currentTier = character.lodTier || 'background';
+        const suggestedTier = this._assignLODForCharacter(character, {});
+        return currentTier !== suggestedTier;
+      });
+
+      if (inconsistentCharacters.length > 0) {
+        warnings.push(`${inconsistentCharacters.length} characters have LOD tiers that don't match their properties. Consider running autoAssignLODTiers().`);
+      }
     }
 
     const isValid = errors.length === 0;
@@ -1388,6 +1608,70 @@ class WorldBuilder {
     }
 
     return enhancedConfig;
+  }
+
+  /**
+   * Assigns an appropriate LOD tier to a character based on its properties and world context
+   * @param {Object} characterData - Character data
+   * @param {Object} originalConfig - Original character configuration
+   * @returns {string} LOD tier ('hero', 'group', or 'background')
+   * @private
+   */
+  _assignLODForCharacter(characterData, originalConfig) {
+    // If LOD tier is explicitly specified in config, use it
+    if (originalConfig.lodTier) {
+      const validTiers = ['hero', 'group', 'background'];
+      if (validTiers.includes(originalConfig.lodTier)) {
+        return originalConfig.lodTier;
+      }
+    }
+
+    // Determine LOD tier based on character properties and world context
+    const level = characterData.level || 1;
+    const characterType = characterData.characterType?.category || 'npc';
+    const hasSpecialAttributes = this._hasSpecialAttributes(characterData);
+
+    // Hero tier criteria: High-level characters with special attributes or specific types
+    if (level >= 5 || characterType === 'player' || hasSpecialAttributes) {
+      return 'hero';
+    }
+
+    // Group tier criteria: Mid-level characters that could be important
+    if (level >= 2 && level <= 4) {
+      return 'group';
+    }
+
+    // Background tier: Default for most characters
+    return 'background';
+  }
+
+  /**
+   * Checks if a character has special attributes that warrant hero-tier processing
+   * @param {Object} characterData - Character data
+   * @returns {boolean} True if character has special attributes
+   * @private
+   */
+  _hasSpecialAttributes(characterData) {
+    // Check for high attribute scores
+    const attributes = characterData.attributes || {};
+    const highAttributes = Object.values(attributes).filter(attr => attr >= 15);
+    if (highAttributes.length >= 2) {
+      return true;
+    }
+
+    // Check for unique character types or special designations
+    const specialTypes = ['leader', 'quest_giver', 'antagonist', 'protagonist'];
+    if (specialTypes.includes(characterData.characterType?.typeId)) {
+      return true;
+    }
+
+    // Check for characters with complex consciousness
+    const consciousness = characterData.consciousness || {};
+    if (consciousness.frequency > 60 || consciousness.coherence > 0.7) {
+      return true;
+    }
+
+    return false;
   }
 }
 
