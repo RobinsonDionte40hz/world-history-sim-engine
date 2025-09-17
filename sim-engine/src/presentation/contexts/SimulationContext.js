@@ -13,7 +13,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import TemplateManager from '../../template/TemplateManager.js';
 import pipelineValidationService from '../../application/services/PipelineValidationService.js';
 import simulationService from '../../application/use-cases/services/SimulationService.js';
-import { LODManager } from '../../domain/services/LODManager.js';
+import LODManager from '../../domain/services/LODManager.js';
 import { LODTier } from '../../domain/value-objects/LODTier.js';
 
 const SimulationContext = createContext();

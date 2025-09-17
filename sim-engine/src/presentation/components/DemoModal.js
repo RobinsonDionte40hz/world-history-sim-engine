@@ -73,10 +73,10 @@ const DemoModal = ({ isOpen, onClose, onSelectDemo, onImportDemo }) => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">
-              Explore Demo Worlds
+              Demo Worlds
             </h2>
             <p className="text-gray-300">
-              Jump into pre-built worlds and experience the simulation engine in action
+              Select a demo world from the list to view details and launch options
             </p>
           </div>
           <button
@@ -87,124 +87,197 @@ const DemoModal = ({ isOpen, onClose, onSelectDemo, onImportDemo }) => {
           </button>
         </div>
 
-        {/* Demo World Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {demoWorlds.map((demo) => (
-            <div
-              key={demo.id}
-              className={`group cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                selectedDemo === demo.id ? 'ring-2 ring-blue-500' : ''
-              }`}
-              onClick={() => setSelectedDemo(demo.id)}
-            >
+        {/* Demo World Tabs */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Tab List */}
+          <div className="lg:w-1/3">
+            <div className="space-y-2">
+              {demoWorlds.map((demo) => (
+                <div
+                  key={demo.id}
+                  onClick={() => setSelectedDemo(demo.id)}
+                  className={`cursor-pointer p-4 rounded-lg border transition-all duration-200 ${
+                    selectedDemo === demo.id
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600 hover:bg-gray-800/70'
+                  }`}
+                  style={{
+                    background: selectedDemo === demo.id
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : 'rgba(15, 23, 42, 0.6)',
+                    backdropFilter: 'blur(8px)'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Demo Icon */}
+                    <div
+                      className="flex items-center justify-center w-8 h-8 rounded-md flex-shrink-0"
+                      style={{
+                        background: demo.category === 'fantasy'
+                          ? 'linear-gradient(135deg, #10b981, #34d399)'
+                          : demo.category === 'sci-fi'
+                          ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
+                          : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                        color: 'white'
+                      }}
+                    >
+                      {getDemoIcon(demo.category)}
+                    </div>
+
+                    {/* Demo Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-white truncate">
+                        {demo.name}
+                      </h3>
+                      <p className="text-xs text-gray-400 truncate">
+                        {demo.description}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{demo.estimatedTime}</span>
+                      </div>
+                    </div>
+
+                    {/* Selection Indicator */}
+                    {selectedDemo === demo.id && (
+                      <div className="w-2 h-8 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="lg:w-2/3">
+            {selectedDemo ? (
               <div
-                className="bg-gray-800 rounded-lg p-6 h-full border border-gray-700 hover:border-gray-600"
+                className="bg-gray-800 rounded-lg p-6 border border-gray-700"
                 style={{
                   background: 'rgba(15, 23, 42, 0.6)',
-                  backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(71, 85, 105, 0.3)'
+                  backdropFilter: 'blur(8px)'
                 }}
               >
-                {/* Demo Icon */}
-                <div className="flex items-center justify-center w-12 h-12 rounded-lg mb-4 mx-auto"
-                     style={{
-                       background: demo.category === 'fantasy' 
-                         ? 'linear-gradient(135deg, #10b981, #34d399)'
-                         : demo.category === 'sci-fi'
-                         ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
-                         : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                       color: 'white'
-                     }}>
-                  {getDemoIcon(demo.category)}
-                </div>
+                {(() => {
+                  const demo = demoWorlds.find(d => d.id === selectedDemo);
+                  return (
+                    <>
+                      {/* Header */}
+                      <div className="flex items-start gap-4 mb-6">
+                        <div
+                          className="flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0"
+                          style={{
+                            background: demo.category === 'fantasy'
+                              ? 'linear-gradient(135deg, #10b981, #34d399)'
+                              : demo.category === 'sci-fi'
+                              ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
+                              : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                            color: 'white'
+                          }}
+                        >
+                          {getDemoIcon(demo.category)}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold text-white mb-2">
+                            {demo.name}
+                          </h3>
+                          <p className="text-gray-300 mb-4 leading-relaxed">
+                            {demo.description}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm text-gray-400">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              <span>{demo.estimatedTime}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4" />
+                              <span className="capitalize">{demo.category}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                {/* Demo Info */}
-                <h3 className="text-lg font-semibold text-white mb-2 text-center">
-                  {demo.name}
-                </h3>
-                
-                <p className="text-gray-300 text-sm mb-4 text-center leading-relaxed">
-                  {demo.description}
-                </p>
+                      {/* Features */}
+                      <div className="mb-6">
+                        <h4 className="text-lg font-semibold text-white mb-3">Features</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {demo.features.map((feature, index) => (
+                            <div key={index} className="flex items-center gap-2 text-sm text-gray-300">
+                              <div className="w-1.5 h-1.5 bg-gray-500 rounded-full flex-shrink-0"></div>
+                              <span>{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                {/* Estimated Time */}
-                <div className="flex items-center justify-center gap-1 mb-4 text-gray-400 text-xs">
-                  <Clock className="w-3 h-3" />
-                  <span>{demo.estimatedTime}</span>
-                </div>
+                      {/* Action Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {/* Import as Editable World Button */}
+                        <button
+                          onClick={() => handleImportDemo(demo.id)}
+                          disabled={isLoading}
+                          className="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                        >
+                          {isLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="w-4 h-4" />
+                              Import & Edit
+                            </>
+                          )}
+                        </button>
 
-                {/* Features */}
-                <div className="space-y-1 mb-4">
-                  {demo.features.slice(0, 3).map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-xs text-gray-300">
-                      <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                  {demo.features.length > 3 && (
-                    <div className="text-xs text-gray-400 text-center">
-                      +{demo.features.length - 3} more features
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-2">
-                  {/* Import as Editable World Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleImportDemo(demo.id);
-                    }}
-                    disabled={isLoading}
-                    className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
-                  >
-                    {isLoading && selectedDemo === demo.id ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="w-4 h-4" />
-                        Import & Edit
-                      </>
-                    )}
-                  </button>
-
-                  {/* Direct Launch Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelectDemo(demo.id);
-                    }}
-                    disabled={isLoading}
-                    className="w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 group-hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{
-                      background: demo.category === 'fantasy' 
-                        ? 'linear-gradient(135deg, #10b981, #34d399)'
-                        : demo.category === 'sci-fi'
-                        ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
-                        : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                      color: 'white'
-                    }}
-                  >
-                    {isLoading && selectedDemo === demo.id ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        Launch Demo
-                      </>
-                    )}
-                  </button>
+                        {/* Direct Launch Button */}
+                        <button
+                          onClick={() => handleSelectDemo(demo.id)}
+                          disabled={isLoading}
+                          className="flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          style={{
+                            background: demo.category === 'fantasy'
+                              ? 'linear-gradient(135deg, #10b981, #34d399)'
+                              : demo.category === 'sci-fi'
+                              ? 'linear-gradient(135deg, #3b82f6, #60a5fa)'
+                              : 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                            color: 'white'
+                          }}
+                        >
+                          {isLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              Launch Demo
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div
+                className="bg-gray-800 rounded-lg p-8 border border-gray-700 text-center"
+                style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
+                <div className="text-gray-400 mb-4">
+                  <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold text-white mb-2">Select a Demo World</h3>
+                  <p>Choose a demo from the list to view details and launch options</p>
                 </div>
               </div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
 
         {/* Footer */}

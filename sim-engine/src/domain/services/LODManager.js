@@ -884,6 +884,60 @@ class LODManager {
     
     return Math.floor(baseWitnesses * roleMultiplier);
   }
+
+  /**
+   * Initialize LOD manager for a specific world
+   * @param {Object} worldState - The world state to initialize with
+   */
+  async initializeForWorld(worldState) {
+    if (!worldState) {
+      throw new Error('World state is required for LOD initialization');
+    }
+
+    // Initialize character LOD tiers if not already set
+    if (worldState.characters) {
+      for (const [, character] of worldState.characters) {
+        if (!character.lodTier) {
+          // Default to background tier for new characters
+          character.lodTier = 'background';
+        }
+      }
+    }
+
+    // Cache world state for performance
+    this._worldState = worldState;
+
+    console.log('LODManager initialized for world with', worldState.characters?.size || 0, 'characters');
+    return true;
+  }
+
+  /**
+   * Change a character's LOD tier
+   * @param {string} characterId - The character ID to change
+   * @param {string} newTier - The new tier ('hero', 'group', 'background')
+   * @returns {boolean} Success status
+   */
+  async changeCharacterTier(characterId, newTier) {
+    if (!this._worldState?.characters) {
+      throw new Error('LODManager not initialized with world state');
+    }
+
+    const character = this._worldState.characters.get(characterId);
+    if (!character) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+
+    const validTiers = ['hero', 'group', 'background'];
+    if (!validTiers.includes(newTier)) {
+      throw new Error(`Invalid LOD tier: ${newTier}`);
+    }
+
+    const oldTier = character.lodTier;
+    character.lodTier = newTier;
+
+    console.log(`Character ${characterId} changed from ${oldTier} to ${newTier} tier`);
+    return true;
+  }
 }
 
 module.exports = LODManager;
