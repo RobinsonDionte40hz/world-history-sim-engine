@@ -446,4 +446,4 @@ const checkTradeOpportunity = (settlementA, settlementB, worldState) => {
   return { shouldTrade: false };
 };
 
-module.exports = processTurnWithLOD;
+export default processTurnWithLOD;

@@ -1,6 +1,6 @@
 // src/domain/services/PrestigeService.js
 
-const Prestige = require('../value-objects/Prestige.js');
+import Prestige from '../value-objects/Prestige.js';
 
 /**
  * Domain service for handling prestige evolution and reputation management
@@ -861,4 +861,4 @@ class PrestigeService {
   }
 }
 
-module.exports = PrestigeService;
+export default PrestigeService;

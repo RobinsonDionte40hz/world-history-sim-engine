@@ -15,8 +15,8 @@
  * - 100+ characters: <2 seconds total
  */
 
-const { LODTier } = require('../value-objects/LODTier.js');
-const PrestigeService = require('./PrestigeService.js');
+import { LODTier } from '../value-objects/LODTier.js';
+import PrestigeService from './PrestigeService.js';
 
 class LODManager {
   constructor() {
@@ -626,7 +626,7 @@ class LODManager {
 
     // PERFORMANCE OPTIMIZATION: Pre-build active character set
     const activeCharacterIds = new Set(
-      (turnResult.events || [])
+      (turnResult?.events || [])
         .filter(e => e.characterId)
         .map(e => e.characterId)
     );
@@ -756,7 +756,7 @@ class LODManager {
       turn: worldState.turn,
       timestamp: new Date(),
       charactersProcessed: worldState.characters?.length || 0,
-      eventsGenerated: turnResult.events?.length || 0,
+      eventsGenerated: turnResult?.events?.length || 0,
       tierBreakdown: {
         hero: worldState.characters?.filter(c => c.lodTier === 'hero').length || 0,
         group: worldState.characters?.filter(c => c.lodTier === 'group').length || 0,
@@ -940,4 +940,4 @@ class LODManager {
   }
 }
 
-module.exports = LODManager;
+export default LODManager;

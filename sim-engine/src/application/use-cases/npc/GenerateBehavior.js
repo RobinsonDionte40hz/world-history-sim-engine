@@ -1,13 +1,13 @@
 // src/application/use-cases/npc/GenerateBehavior.js
 
-const Character = require('../../../domain/entities/Character.js');
-// const Interaction = require('../../../domain/entities/Interaction.js'); // Currently unused
-const InteractionResolver = require('../../../domain/services/InteractionResolver.js');
-const MemoryService = require('../../../domain/services/MemoryService.js');
-const EvolutionService = require('../../../domain/services/EvolutionService.js');
-const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js');
-const InteractionManager = require('../../../domain/services/InteractionManager.js');
-const { getEmotionalModifier } = require('../../../shared/utils/EmotionalUtils.js');
+import Character from '../../../domain/entities/Character.js';
+// import Interaction from '../../../domain/entities/Interaction.js'; // Currently unused
+import InteractionResolver from '../../../domain/services/InteractionResolver.js';
+import MemoryService from '../../../domain/services/MemoryService.js';
+import EvolutionService from '../../../domain/services/EvolutionService.js';
+import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
+import InteractionManager from '../../../domain/services/InteractionManager.js';
+import { getEmotionalModifier } from '../../../shared/utils/EmotionalUtils.js';
 
 const DEBUG_MODE = true;  // Enable for enhanced decision logging
 
@@ -587,4 +587,4 @@ function executeInteraction(character, selectedInteraction, worldState) {
   };
 }
 
-module.exports = generateBehavior;
+export default generateBehavior;

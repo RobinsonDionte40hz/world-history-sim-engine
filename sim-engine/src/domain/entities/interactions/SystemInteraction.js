@@ -1,6 +1,6 @@
 // src/domain/entities/interactions/SystemInteraction.js
 
-const InteractionBase = require('./InteractionBase.js');
+import InteractionBase from './InteractionBase.js';
 
 /**
  * SystemInteraction - Base class for system-level interactions
@@ -135,4 +135,4 @@ class SystemInteraction extends InteractionBase {
   }
 }
 
-module.exports = SystemInteraction;
+export default SystemInteraction;

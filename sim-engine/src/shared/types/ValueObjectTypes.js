@@ -3,7 +3,7 @@
 /**
  * Base serialization utilities for Maps and Sets
  */
-class SerializationUtils {
+export class SerializationUtils {
   /**
    * Serialize a Map to an array of key-value pairs
    */
@@ -59,7 +59,7 @@ class SerializationUtils {
 /**
  * Base error types for value objects
  */
-class ValueObjectError extends Error {
+export class ValueObjectError extends Error {
   constructor(message, context) {
     super(message);
     this.name = 'ValueObjectError';
@@ -67,23 +67,16 @@ class ValueObjectError extends Error {
   }
 }
 
-class SerializationError extends ValueObjectError {
+export class SerializationError extends ValueObjectError {
   constructor(operation, cause, context) {
     super(`Failed to ${operation}: ${cause.message}`, context);
     this.name = 'SerializationError';
   }
 }
 
-class ValidationError extends ValueObjectError {
+export class ValidationError extends ValueObjectError {
   constructor(field, value, constraint, context) {
     super(`Validation failed for field '${field}' with value '${value}': ${constraint}`, context);
     this.name = 'ValidationError';
   }
 }
-
-module.exports = {
-  SerializationUtils,
-  ValueObjectError,
-  SerializationError,
-  ValidationError
-};

@@ -155,7 +155,7 @@ export const SimulationProvider = ({ children }) => {
     }
   }, [lodManager, updateLODStats]);
 
-  const processLODTurn = useCallback(async (worldState) => {
+  const processLODTurn = useCallback(async (worldState, turnResult = null) => {
     if (!isLODInitialized || !worldState) return worldState;
 
     const startTime = Date.now();
@@ -166,7 +166,7 @@ export const SimulationProvider = ({ children }) => {
       const preTurnResult = await lodManager.processPreTurnLOD(worldState);
 
       // Process post-turn LOD operations
-      const postTurnResult = await lodManager.processPostTurnLOD(preTurnResult);
+      const postTurnResult = await lodManager.processPostTurnLOD(preTurnResult, turnResult);
 
       // Update statistics
       updateLODStats(postTurnResult);
@@ -478,10 +478,10 @@ export const SimulationProvider = ({ children }) => {
   const processTurn = useCallback(async () => {
     if (!currentSimulationState || isProcessingTurn || !isInitialized) {
       console.warn('Cannot process turn: no simulation state, already processing, or not initialized');
-      console.warn('State check:', { 
-        hasCurrentSimulationState: !!currentSimulationState, 
-        isProcessingTurn, 
-        isInitialized 
+      console.warn('State check:', {
+        hasCurrentSimulationState: !!currentSimulationState,
+        isProcessingTurn,
+        isInitialized
       });
       return;
     }
@@ -489,24 +489,42 @@ export const SimulationProvider = ({ children }) => {
     setIsProcessingTurn(true);
     try {
       // Process LOD pre-turn operations (currently just logging, full integration would use ProcessTurnWithLOD use case)
-      await processLODTurn(currentSimulationState);
-      
+      console.log('Processing LOD pre-turn operations...');
+      const preLODState = await processLODTurn(currentSimulationState);
+      console.log('Pre-turn LOD processing complete, state valid:', !!preLODState);
+
       // SimulationService.processTurn() uses its internal worldState, but we can pass LOD-processed state
       // Note: In a full implementation, ProcessTurnWithLOD use case would handle this integration
+      console.log('Processing simulation turn...');
       const turnResult = await simulationService.processTurn();
-      
+      console.log('Simulation turn processed:', turnResult);
+
+      // Validate turn result
+      if (!turnResult || !turnResult.worldState) {
+        console.error('Invalid turn result:', turnResult);
+        throw new Error('Simulation turn failed - no worldState returned');
+      }
+
       // Process LOD post-turn operations on the simulation result
-      const finalWorldState = await processLODTurn(turnResult.worldState);
-      
+      console.log('Processing LOD post-turn operations...');
+      const finalWorldState = await processLODTurn(turnResult.worldState, turnResult);
+      console.log('Post-turn LOD processing complete');
+
+      // Validate final world state
+      if (!finalWorldState) {
+        console.error('LOD post-turn processing failed - no worldState returned');
+        throw new Error('LOD post-turn processing failed');
+      }
+
       setCurrentSimulationState(finalWorldState);
       setWorldState(finalWorldState); // Update worldState with the new simulation state
       setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
       setCurrentTurn(prev => prev + 1);
-      
+
       console.log('Turn processed successfully with LOD integration:', turnResult);
       console.log('Turn summary:', turnResult.turnSummary);
       console.log('World state events:', finalWorldState.events?.length || 0);
-      
+
       return turnResult;
     } catch (error) {
       console.error('Error processing turn:', error);

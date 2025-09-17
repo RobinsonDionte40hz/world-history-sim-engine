@@ -1,6 +1,6 @@
 // src/domain/value-objects/__tests__/RacialTraits.test.js
 
-import { RacialTraits } from '../RacialTraits';
+import RacialTraits from '../RacialTraits';
 
 describe('RacialTraits Value Object', () => {
   describe('Construction', () => {

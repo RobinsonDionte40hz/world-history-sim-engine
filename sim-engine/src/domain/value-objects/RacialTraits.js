@@ -758,4 +758,4 @@ class RacialTraits {
 // Initialize race definitions when the module loads
 RacialTraits._initializeRaces();
 
-module.exports = RacialTraits;
+export default RacialTraits;

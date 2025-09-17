@@ -1,19 +1,19 @@
 // src/domain/entities/Character.js
 
-const Alignment = require('../value-objects/Alignment.js');
-const Influence = require('../value-objects/Influence.js');
-const Prestige = require('../value-objects/Prestige.js');
-const PersonalityProfile = require('../value-objects/PersonalityProfile.js');
-const RacialTraits = require('../value-objects/RacialTraits.js');
-const CharacterType = require('../value-objects/CharacterType.js');
-const Attributes = require('../value-objects/Attributes.js');
-const EconomicProfile = require('../value-objects/EconomicProfile.js');
-const AlignmentService = require('../services/AlignmentService.js');
-const InfluenceService = require('../services/InfluenceService.js');
-const PrestigeService = require('../services/PrestigeService.js');
-const { PrerequisiteValidator } = require('../services/PrerequisiteValidator.js');
-const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
-const MemoryService = require('../services/MemoryService.js');
+import { Alignment } from '../value-objects/Alignment.js';
+import Influence from '../value-objects/Influence.js';
+import Prestige from '../value-objects/Prestige.js';
+import PersonalityProfile from '../value-objects/PersonalityProfile.js';
+import RacialTraits from '../value-objects/RacialTraits.js';
+import CharacterType from '../value-objects/CharacterType.js';
+import Attributes from '../value-objects/Attributes.js';
+import EconomicProfile from '../value-objects/EconomicProfile.js';
+import AlignmentService from '../services/AlignmentService.js';
+import InfluenceService from '../services/InfluenceService.js';
+import PrestigeService from '../services/PrestigeService.js';
+import { PrerequisiteValidator } from '../services/PrerequisiteValidator.js';
+import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+import MemoryService from '../services/MemoryService.js';
 
 class Character {
   constructor(config = {}) {
@@ -1703,4 +1703,4 @@ class Character {
   }
 }
 
-module.exports = Character;
+export default Character;

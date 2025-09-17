@@ -989,9 +989,5 @@ const PersonalityTraits = {
     spontaneous: { min: 0, max: 1, weight: 1 }
 };
 
-module.exports = PersonalityProfile;
-module.exports.PersonalityTraits = PersonalityTraits;
-module.exports.PersonalityTrait = PersonalityTrait;
-module.exports.Attribute = Attribute;
-module.exports.EmotionalTendency = EmotionalTendency;
-module.exports.CognitiveTrait = CognitiveTrait;
+export default PersonalityProfile;
+export { PersonalityTraits, PersonalityTrait, Attribute, EmotionalTendency, CognitiveTrait };

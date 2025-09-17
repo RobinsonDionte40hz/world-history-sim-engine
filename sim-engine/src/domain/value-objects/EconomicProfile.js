@@ -1,7 +1,7 @@
 // src/domain/value-objects/EconomicProfile.js
 
-const BaseValueObject = require('./BaseValueObject.js');
-const { ValidationError, SerializationError } = require('../../shared/types/ValueObjectTypes.js');
+import BaseValueObject from './BaseValueObject.js';
+import { ValidationError, SerializationError } from '../../shared/types/ValueObjectTypes.js';
 
 /**
  * EconomicProfile value object for character economic investment data
@@ -537,4 +537,4 @@ class EconomicProfile extends BaseValueObject {
   }
 }
 
-module.exports = EconomicProfile;
+export default EconomicProfile;

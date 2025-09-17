@@ -463,4 +463,4 @@ class Prestige {
   }
 }
 
-module.exports = Prestige;
+export default Prestige;

@@ -77,10 +77,19 @@ const useSimulation = (preparedWorldData = null, validationToken = null) => {
     if (preparedWorldData && isPreparedWorldValid(preparedWorldData)) {
       // Validate token if provided
       if (validationToken) {
-        const tokenValidation = pipelineValidationService.validateToken(preparedWorldData, validationToken);
-        if (!tokenValidation.isValid) {
-          console.error('useSimulation: Token validation failed:', tokenValidation.error);
-          setInitializationError(tokenValidation.error);
+        try {
+          const tokenValidation = pipelineValidationService.validateToken(preparedWorldData, validationToken);
+          console.log('Token validation result:', tokenValidation);
+          if (!tokenValidation || !tokenValidation.isValid) {
+            console.error('useSimulation: Token validation failed:', tokenValidation?.error);
+            setInitializationError(tokenValidation?.error || 'Token validation failed');
+            setIsInitialized(false);
+            setWorldState(null);
+            return;
+          }
+        } catch (error) {
+          console.error('useSimulation: Token validation error:', error);
+          setInitializationError('Token validation error: ' + error.message);
           setIsInitialized(false);
           setWorldState(null);
           return;

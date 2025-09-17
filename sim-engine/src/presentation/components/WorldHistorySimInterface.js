@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // No Lucide React imports needed - using emojis instead
 import { useSimulationContext } from '../contexts/SimulationContext.js';
 import DecisionAnalysisService from '../../domain/services/DecisionAnalysisService.js';
@@ -322,10 +322,15 @@ const WorldHistorySimInterface = ({
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [simulationSpeed, setSimulationSpeed] = useState(1);
 
+  // Track if we've already auto-initialized to prevent unwanted resaving on refresh
+  const hasAutoInitializedRef = useRef(false);
+
   // Auto-initialize simulation when prepared world data is available but not initialized
   useEffect(() => {
-    if (simulationReadinessStatus.isSimulationReady && !isInitialized && preparedWorldData) {
+    if (simulationReadinessStatus.isSimulationReady && !isInitialized && preparedWorldData && !hasAutoInitializedRef.current) {
       console.log('Auto-initializing simulation with prepared world data');
+      // Mark that we've auto-initialized to prevent repeated saves on refresh
+      hasAutoInitializedRef.current = true;
       // Trigger a reset which should initialize the simulation
       resetSimulation();
     }
@@ -688,12 +693,22 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
     }
   };
 
-  // Use characters array if available, fall back to npcs
-  const characters = displayWorldState.characters || displayWorldState.npcs || [];
+  // Use characters array if available, fall back to npcs, ensure it's always an array
+  const characters = Array.isArray(displayWorldState.characters)
+    ? displayWorldState.characters
+    : Array.isArray(displayWorldState.npcs)
+    ? displayWorldState.npcs
+    : [];
+
+  // Ensure nodes is always an array
+  const nodes = Array.isArray(displayWorldState.nodes) ? displayWorldState.nodes : [];
+
+  // Ensure events is always an array
+  const events = Array.isArray(displayWorldState.events) ? displayWorldState.events : [];
 
   // Debug logging for events
-  console.log('DashboardView - displayWorldState.events:', displayWorldState.events);
-  console.log('DashboardView - events length:', displayWorldState.events?.length || 0);
+  console.log('DashboardView - displayWorldState.events:', events);
+  console.log('DashboardView - events length:', events.length);
   console.log('DashboardView - characters length:', characters.length);
 
   // Ensure resources object exists and has required properties
@@ -704,7 +719,7 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
     population: characters.length
   };
 
-  const filteredEvents = (displayWorldState.events || []);
+  const filteredEvents = events;
   console.log('DashboardView - filteredEvents length:', filteredEvents.length);
 
   // Get real timeline events for recent activity
@@ -732,8 +747,8 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
         <StatCard 
           icon={<span className="text-2xl">🏘️</span>}
           label="Active Settlements"
-          value={displayWorldState.nodes.length}
-          trend={displayWorldState.nodes.length > 0 ? "+Established" : "Planning"}
+          value={nodes.length}
+          trend={nodes.length > 0 ? "+Established" : "Planning"}
           color="purple"
         />
         <StatCard 
@@ -884,8 +899,7 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
         </h3>
         <div className="h-96 bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-lg p-4">
           <NodeVisualization 
-            key={`${displayWorldState.nodes.length}-${characters.length}-${currentTurn}`}
-            nodes={displayWorldState.nodes} 
+            nodes={nodes} 
             characters={characters}
             turnManager={turnManager}
           />
@@ -893,7 +907,7 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
         
         {/* Settlement Quick Stats */}
         <div className="mt-4 grid grid-cols-3 gap-2">
-          {displayWorldState.nodes.slice(0, 6).map(node => {
+          {nodes.slice(0, 6).map(node => {
             // Get real character count for this node
             const nodeCharacters = characters.filter(char =>
               char.currentNodeId === node.id ||
@@ -1029,7 +1043,13 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
 // Updated: Force module refresh
 const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, setSelectedCharacter }) => {
   const displayWorldState = worldState || { npcs: [], characters: [] };
-  const characters = displayWorldState.characters || displayWorldState.npcs || [];
+  
+  // Ensure characters is always an array
+  const characters = Array.isArray(displayWorldState.characters)
+    ? displayWorldState.characters
+    : Array.isArray(displayWorldState.npcs)
+    ? displayWorldState.npcs
+    : [];
   const recentSummaries = turnManager?.getRecentTurnSummaries?.(3) || [];
   const characterChanges = recentSummaries.flatMap(summary =>
     (summary.changes || []).filter(change => change.type.includes('character'))
@@ -1306,7 +1326,9 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
 // Unified Settlements View - Combines settlement list with behavior analysis
 const UnifiedSettlementsView = ({ worldState, turnManager }) => {
   const displayWorldState = worldState || { nodes: [] };
-  const nodes = displayWorldState.nodes || [];
+  
+  // Ensure nodes is always an array
+  const nodes = Array.isArray(displayWorldState.nodes) ? displayWorldState.nodes : [];
   const recentSummaries = turnManager?.getRecentTurnSummaries?.(3) || [];
   const settlementChanges = recentSummaries.flatMap(summary =>
     (summary.changes || []).filter(change =>
@@ -1461,10 +1483,21 @@ const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
   const [movementHistory, setMovementHistory] = useState(new Map());
   const [recentlyMoved, setRecentlyMoved] = useState(new Set());
   const [selectedNode, setSelectedNode] = useState(null);
+  
+  // Use ref to track processed characters to avoid infinite loops
+  const processedCharactersRef = useRef(new Set());
 
   // Update movement tracking when characters change
   useEffect(() => {
     if (!characters.length) return;
+
+    // Create a stable identifier for the current characters state
+    const currentCharactersKey = characters.map(char => `${char.id}-${char.currentNodeId || char.assignedNodeIds?.[0] || (char.assignments?.nodes && Array.from(char.assignments.nodes)[0])}`).sort().join('|');
+    
+    // Skip if we've already processed this exact state
+    if (processedCharactersRef.current.has(currentCharactersKey)) {
+      return;
+    }
 
     setMovementHistory(prevMovementHistory => {
       const newMovementHistory = new Map(prevMovementHistory);
@@ -1500,7 +1533,16 @@ const NodeVisualization = ({ nodes = [], characters = [], turnManager }) => {
 
       return newMovementHistory;
     });
-  }, [characters]); // Remove movementHistory from dependencies
+    
+    // Mark this state as processed
+    processedCharactersRef.current.add(currentCharactersKey);
+    
+    // Clean up old keys to prevent memory leaks (keep last 10)
+    if (processedCharactersRef.current.size > 10) {
+      const keysArray = Array.from(processedCharactersRef.current);
+      processedCharactersRef.current = new Set(keysArray.slice(-10));
+    }
+  }, [characters]); // Keep characters as dependency but prevent infinite loops
 
   // Create a simple grid layout for nodes
   const gridSize = Math.ceil(Math.sqrt(nodes.length || 1));
@@ -2088,8 +2130,8 @@ const UnifiedTimelineView = ({ worldState, turnManager, currentTurn }) => {
 
   // Get timeline events using real world state data
   const timelineEvents = getTimelineEvents(turnManager, worldState, currentTurn);
-  const characters = worldState?.characters || [];
-  const nodes = worldState?.nodes || [];
+  const characters = Array.isArray(worldState?.characters) ? worldState.characters : [];
+  const nodes = Array.isArray(worldState?.nodes) ? worldState.nodes : [];
 
   // Filter events based on criteria
   const filteredEvents = timelineEvents.filter(event => {
@@ -2561,7 +2603,7 @@ const UnifiedTimelineView = ({ worldState, turnManager, currentTurn }) => {
 
 // Unified Relationships View - Combines relationship visualization with details
 const UnifiedRelationshipsView = ({ worldState, turnManager }) => {
-  const characters = worldState?.characters || [];
+  const characters = Array.isArray(worldState?.characters) ? worldState.characters : [];
   const recentSummaries = turnManager?.getRecentTurnSummaries?.(3) || [];
   const relationshipData = recentSummaries.flatMap(summary => [
     ...(summary.changes || []).filter(change => change.type.includes('relationship')),

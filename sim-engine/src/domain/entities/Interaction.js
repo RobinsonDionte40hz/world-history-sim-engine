@@ -1,6 +1,6 @@
 // src/domain/entities/Interaction.js
 
-const ContentInteraction = require('./interactions/ContentInteraction.js');
+import ContentInteraction from './interactions/ContentInteraction.js';
 
 class Interaction extends ContentInteraction {
   constructor(config = {}) {
@@ -101,4 +101,4 @@ function weightedSelect(options, weightFn) {
   return options[options.length - 1];  // Fallback
 }
 
-module.exports = Interaction;
+export default Interaction;

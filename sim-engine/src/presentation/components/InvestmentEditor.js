@@ -30,7 +30,7 @@ import {
   Lightbulb
 } from 'lucide-react';
 import CharacterEconomicService from '../../domain/services/CharacterEconomicService';
-import { EconomicProfile } from '../../domain/value-objects/EconomicProfile';
+import EconomicProfile from '../../domain/value-objects/EconomicProfile';
 import BulkControls from './BulkControls';
 
 const InvestmentEditor = ({ 

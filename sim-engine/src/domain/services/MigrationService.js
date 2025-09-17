@@ -4,7 +4,7 @@ import { Alignment } from '../value-objects/Alignment.js';
 import { Influence } from '../value-objects/Influence.js';
 import { Prestige } from '../value-objects/Prestige.js';
 import PersonalityProfile from '../value-objects/PersonalityProfile.js';
-import { RacialTraits } from '../value-objects/RacialTraits.js';
+import RacialTraits from '../value-objects/RacialTraits.js';
 
 /**
  * Migration service for converting legacy system data to new value objects

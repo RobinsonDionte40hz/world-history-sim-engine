@@ -3,7 +3,7 @@
 import Character from '../domain/entities/Character.js';
 import SettlementFamilyService from '../domain/services/SettlementFamilyService.js';
 import WorldBuilder from '../domain/services/WorldBuilder.js';
-import { RacialTraits } from '../domain/value-objects/RacialTraits.js';
+import RacialTraits from '../domain/value-objects/RacialTraits.js';
 
 /**
  * Settlement Family Integration Example

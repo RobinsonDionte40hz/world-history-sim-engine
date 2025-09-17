@@ -1,6 +1,6 @@
 // src/domain/services/NeedConsequenceService.js
 
-const BaseDomainService = require('./BaseDomainService.js');
+import BaseDomainService from './BaseDomainService.js';
 
 /**
  * Service for generating and managing consequences from unmet settlement needs
@@ -578,4 +578,4 @@ class NeedConsequenceService extends BaseDomainService {
   }
 }
 
-module.exports = NeedConsequenceService;
+export default NeedConsequenceService;

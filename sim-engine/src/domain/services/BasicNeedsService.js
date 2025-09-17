@@ -1,6 +1,6 @@
 // src/domain/services/BasicNeedsService.js
 
-const BaseDomainService = require('./BaseDomainService.js');
+import BaseDomainService from './BaseDomainService.js';
 
 /**
  * Service for calculating settlement need satisfaction levels and cascading effects
@@ -702,6 +702,10 @@ class BasicNeedsService extends BaseDomainService {
         // Default to reasonable population if no data available
         settlement.population = { total: 100 };
       }
+    } else if (typeof settlement.population !== 'object') {
+      // If population is not an object (e.g., it's a number), convert it to an object
+      const populationValue = typeof settlement.population === 'number' ? settlement.population : 100;
+      settlement.population = { total: populationValue };
     } else if (typeof settlement.population.total !== 'number') {
       // If population exists but total is not a number, try to calculate it
       if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
@@ -1380,4 +1384,4 @@ class BasicNeedsService extends BaseDomainService {
   }
 }
 
-module.exports = BasicNeedsService;
+export default BasicNeedsService;

@@ -795,7 +795,7 @@ function enhanceMemoryWithEmotion(character, event, emotionalState) {
   return emotionalMemory;
 }
 
-module.exports = {
+export {
   getEmotionalModifier,
   getEmotionalReaction,
   calculateEmotionalContagion,

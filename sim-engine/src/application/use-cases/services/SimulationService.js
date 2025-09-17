@@ -17,6 +17,7 @@ class SimulationService {
     this.turnHistory = [];
     this.maxTurnHistory = 100;
     this.currentTurnSummary = null;
+    this.isInitialized = false; // Track initialization status
   }
 
   /**
@@ -45,7 +46,8 @@ class SimulationService {
     if (preparedWorldData.simulationMetadata.source !== 'WorldBuilder' && 
         preparedWorldData.simulationMetadata.source !== 'DemoService') {
       throw new Error(
-        'Invalid world data source. World must be prepared through WorldBuilder.prepareForSimulation() or DemoService.generateDemoWorld()'
+        'SimulationService.initialize() now requires prepared world data. ' +
+        'Use WorldBuilder.prepareForSimulation() followed by SimulationContext.acceptPreparedWorld()'
       );
     }
 
@@ -83,6 +85,7 @@ class SimulationService {
     this.worldState = this.processPreparedWorldData(preparedWorldData);
     this.initializeTurnHistory();
     this.saveState();  // Persist initial state
+    this.isInitialized = true; // Mark as initialized after successful setup
     return this.worldState;
   }
 
@@ -93,6 +96,23 @@ class SimulationService {
    * @returns {Object} Simulation world state
    */
   processPreparedWorldData(preparedWorldData) {
+    // Validate that this looks like prepared world data
+    if (!preparedWorldData.worldProperties || !preparedWorldData.worldProperties.name) {
+      throw new Error('Invalid prepared world data structure: missing required worldProperties.name');
+    }
+
+    if (!(preparedWorldData.nodes instanceof Map)) {
+      throw new Error('Invalid prepared world data structure: nodes must be a Map');
+    }
+
+    if (!(preparedWorldData.characters instanceof Map)) {
+      throw new Error('Invalid prepared world data structure: characters must be a Map');
+    }
+
+    if (!(preparedWorldData.interactions instanceof Map)) {
+      throw new Error('Invalid prepared world data structure: interactions must be a Map');
+    }
+
     const { worldProperties, nodes, characters, interactions, settlements } = preparedWorldData;
     
     // Convert Maps to arrays for simulation processing
@@ -420,6 +440,7 @@ class SimulationService {
     this.worldState = null;
     this.turnHistory = [];
     this.currentTurnSummary = null;
+    this.isInitialized = false; // Reset initialization status
     localStorage.removeItem('worldState'); // Clear saved state
     // Note: reset() no longer auto-initializes - requires valid world config
     return null;

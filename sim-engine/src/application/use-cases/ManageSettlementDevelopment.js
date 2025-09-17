@@ -316,4 +316,4 @@ class ManageSettlementDevelopment {
   }
 }
 
-module.exports = ManageSettlementDevelopment;
+export default ManageSettlementDevelopment;

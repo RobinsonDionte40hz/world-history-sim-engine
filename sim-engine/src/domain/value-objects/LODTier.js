@@ -1,6 +1,6 @@
 // src/domain/value-objects/LODTier.js
 
-const BaseValueObject = require('./BaseValueObject.js');
+import BaseValueObject from './BaseValueObject.js';
 
 /**
  * Immutable value object representing a Level of Detail (LOD) tier for character processing
@@ -333,4 +333,4 @@ class LODTier extends BaseValueObject {
   }
 }
 
-module.exports = { LODTier };
+export { LODTier };

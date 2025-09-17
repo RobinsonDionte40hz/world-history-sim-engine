@@ -1,12 +1,12 @@
 // src/domain/value-objects/Environment.js
 
-const BaseValueObject = require('./BaseValueObject.js');
-const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
-const { TerrainTypes, isValidTerrainType } = require('../../shared/constants/TerrainTypes.js');
-const { ClimateTypes, isValidClimateType, getDefaultTemperature } = require('../../shared/constants/ClimateTypes.js');
-const { LightingTypes, isValidLightingType } = require('../../shared/constants/LightingTypes.js');
-const { getHazardBaseDanger } = require('../../shared/constants/HazardTypes.js');
-const EnvironmentalHazard = require('../entities/EnvironmentalHazard.js');
+import BaseValueObject from './BaseValueObject.js';
+import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
+import { TerrainTypes, isValidTerrainType } from '../../shared/constants/TerrainTypes.js';
+import { ClimateTypes, isValidClimateType, getDefaultTemperature } from '../../shared/constants/ClimateTypes.js';
+import { LightingTypes, isValidLightingType } from '../../shared/constants/LightingTypes.js';
+import { getHazardBaseDanger } from '../../shared/constants/HazardTypes.js';
+import EnvironmentalHazard from '../entities/EnvironmentalHazard.js';
 
 /**
  * Environment value object encapsulates all environmental properties for a node
@@ -496,4 +496,4 @@ class Environment extends BaseValueObject {
   }
 }
 
-module.exports = Environment;
+export default Environment;

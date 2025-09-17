@@ -1,7 +1,7 @@
 // src/domain/services/HistoryGenerator.js
 
-const Character = require('../entities/Character.js');
-const InteractionBase = require('../entities/interactions/InteractionBase.js');
+import Character from '../entities/Character.js';
+import InteractionBase from '../entities/interactions/InteractionBase.js';
 
 class HistoryGenerator {
   constructor() {
@@ -1199,4 +1199,4 @@ class HistoryGenerator {
   }
 }
 
-module.exports = HistoryGenerator;
+export default HistoryGenerator;

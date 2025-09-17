@@ -372,4 +372,4 @@ class Influence {
   }
 }
 
-module.exports = Influence;
+export default Influence;

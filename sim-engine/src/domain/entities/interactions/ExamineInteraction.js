@@ -1,5 +1,5 @@
-const SystemInteraction = require('./SystemInteraction.js');
-const Environment = require('../../../domain/value-objects/Environment.js');
+import SystemInteraction from './SystemInteraction.js';
+import Environment from '../../../domain/value-objects/Environment.js';
 
 /**
  * ExamineInteraction - Allows characters to examine objects, characters, or features
@@ -519,4 +519,4 @@ class ExamineInteraction extends SystemInteraction {
   }
 }
 
-module.exports = ExamineInteraction;
+export default ExamineInteraction;

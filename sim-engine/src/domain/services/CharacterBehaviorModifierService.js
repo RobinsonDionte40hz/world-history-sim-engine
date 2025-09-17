@@ -1,7 +1,7 @@
 // src/domain/services/CharacterBehaviorModifierService.js
 
-const BaseDomainService = require('./BaseDomainService.js');
-const Character = require('../entities/Character.js');
+import BaseDomainService from './BaseDomainService.js';
+import Character from '../entities/Character.js';
 
 /**
  * Domain service for modifying character behavior based on need satisfaction
@@ -359,4 +359,4 @@ class CharacterBehaviorModifierService extends BaseDomainService {
   }
 }
 
-module.exports = CharacterBehaviorModifierService;
+export default CharacterBehaviorModifierService;

@@ -2,7 +2,7 @@
 
 import Character from '../domain/entities/Character.js';
 import ChildGenerationService from '../domain/services/ChildGenerationService.js';
-import { RacialTraits } from '../domain/value-objects/RacialTraits.js';
+import RacialTraits from '../domain/value-objects/RacialTraits.js';
 
 /**
  * Example demonstrating child generation from parent characters

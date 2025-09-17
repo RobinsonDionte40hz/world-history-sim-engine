@@ -1,9 +1,9 @@
 // src/domain/services/NodeMigrationService.js
 
-const { TerrainTypes } = require('../../shared/constants/TerrainTypes.js');
-const { ClimateTypes } = require('../../shared/constants/ClimateTypes.js');
-const { LightingTypes } = require('../../shared/constants/LightingTypes.js');
-const { ConnectionTypes } = require('../../shared/constants/ConnectionTypes.js');
+import { TerrainTypes } from '../../shared/constants/TerrainTypes.js';
+import { ClimateTypes } from '../../shared/constants/ClimateTypes.js';
+import { LightingTypes } from '../../shared/constants/LightingTypes.js';
+import { ConnectionTypes } from '../../shared/constants/ConnectionTypes.js';
 
 /**
  * NodeMigrationService handles backward compatibility by migrating old node data
@@ -393,4 +393,4 @@ class NodeMigrationService {
   }
 }
 
-module.exports = NodeMigrationService;
+export default NodeMigrationService;

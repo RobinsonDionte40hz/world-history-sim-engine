@@ -4,7 +4,7 @@ import { describe, test, expect, beforeEach } from '@jest/globals';
 import Character from '../domain/entities/Character.js';
 import SettlementFamilyService from '../domain/services/SettlementFamilyService.js';
 import WorldBuilder from '../domain/services/WorldBuilder.js';
-import { RacialTraits } from '../domain/value-objects/RacialTraits.js';
+import RacialTraits from '../domain/value-objects/RacialTraits.js';
 
 describe('SettlementFamilyService', () => {
   let settlementFamilyService;

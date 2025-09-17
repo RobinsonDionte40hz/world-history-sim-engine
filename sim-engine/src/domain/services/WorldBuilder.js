@@ -4,12 +4,12 @@
  * a valid and simulation-ready world configuration.
  */
 
-const WorldValidator = require('./WorldValidator.js');
-const Character = require('../entities/Character.js');
-const Node = require('../entities/Node.js');
-const NodeMigrationService = require('./NodeMigrationService.js');
-const LODManager = require('./LODManager.js');
-const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
+import WorldValidator from './WorldValidator.js';
+import Character from '../entities/Character.js';
+import Node from '../entities/Node.js';
+import NodeMigrationService from './NodeMigrationService.js';
+import LODManager from './LODManager.js';
+import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 class WorldBuilder {
   constructor(templateManager = null) {
@@ -1088,7 +1088,25 @@ class WorldBuilder {
         };
       }
 
+      // Ensure assignments.interactions is a Set (handle both Set and array formats)
+      if (!character.assignments) {
+        character.assignments = {
+          nodes: new Set(),
+          interactions: new Set(),
+          quests: new Set(),
+          settlements: new Set(),
+          factions: new Set(),
+          investments: new Set()
+        };
+      }
+
+      // Convert array to Set if necessary
       if (!character.assignments.interactions) {
+        character.assignments.interactions = new Set();
+      } else if (Array.isArray(character.assignments.interactions)) {
+        character.assignments.interactions = new Set(character.assignments.interactions);
+      } else if (!(character.assignments.interactions instanceof Set)) {
+        // Handle other formats by creating a new Set
         character.assignments.interactions = new Set();
       }
 
@@ -1328,7 +1346,46 @@ class WorldBuilder {
 
     // Create simulation-optimized data structures
     const simulationNodes = new Map(this.worldConfig.nodes.map(node => [node.id, { ...node, characters: [], contentInteractions: [] }]));
-    const simulationCharacters = new Map(this.worldConfig.characters.map(char => [char.id, { ...char }]));
+    const simulationCharacters = new Map(this.worldConfig.characters.map(char => {
+      // Ensure character assignments are Sets, not arrays
+      const processedChar = { ...char };
+      
+      // Convert assignments to Sets if they're arrays
+      if (processedChar.assignments) {
+        processedChar.assignments = {
+          nodes: processedChar.assignments.nodes instanceof Set ? 
+            processedChar.assignments.nodes : 
+            new Set(processedChar.assignments.nodes || []),
+          interactions: processedChar.assignments.interactions instanceof Set ? 
+            processedChar.assignments.interactions : 
+            new Set(processedChar.assignments.interactions || []),
+          quests: processedChar.assignments.quests instanceof Set ? 
+            processedChar.assignments.quests : 
+            new Set(processedChar.assignments.quests || []),
+          settlements: processedChar.assignments.settlements instanceof Set ? 
+            processedChar.assignments.settlements : 
+            new Set(processedChar.assignments.settlements || []),
+          factions: processedChar.assignments.factions instanceof Set ? 
+            processedChar.assignments.factions : 
+            new Set(processedChar.assignments.factions || []),
+          investments: processedChar.assignments.investments instanceof Set ? 
+            processedChar.assignments.investments : 
+            new Set(processedChar.assignments.investments || [])
+        };
+      } else {
+        // Initialize empty assignments if missing
+        processedChar.assignments = {
+          nodes: new Set(),
+          interactions: new Set(),
+          quests: new Set(),
+          settlements: new Set(),
+          factions: new Set(),
+          investments: new Set()
+        };
+      }
+      
+      return [char.id, processedChar];
+    }));
     const simulationInteractions = new Map(this.worldConfig.interactions.map(i => [i.id, { ...i }]));
 
     // Populate nodes with character references and content interactions
@@ -1675,4 +1732,4 @@ class WorldBuilder {
   }
 }
 
-module.exports = WorldBuilder;
+export default WorldBuilder;

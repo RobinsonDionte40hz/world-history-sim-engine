@@ -280,4 +280,4 @@ class EnvironmentalHazard {
   }
 }
 
-module.exports = EnvironmentalHazard;
+export default EnvironmentalHazard;

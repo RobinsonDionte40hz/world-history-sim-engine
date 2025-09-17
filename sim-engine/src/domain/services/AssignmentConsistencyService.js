@@ -14,7 +14,7 @@
  * 5. Performance-Optimized Operations
  */
 
-const { PatternValidator } = require('./PatternValidator.js');
+import { PatternValidator } from './PatternValidator.js';
 
 class AssignmentConsistencyService {
   constructor() {
@@ -466,4 +466,4 @@ class AssignmentConsistencyService {
   }
 }
 
-module.exports = AssignmentConsistencyService;
+export default AssignmentConsistencyService;

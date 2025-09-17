@@ -3,7 +3,7 @@
  * Demonstrates how to use the WorldValidator for comprehensive world validation
  */
 
-const WorldValidator = require('./WorldValidator');
+import WorldValidator from './WorldValidator';
 
 // Example 1: Valid world configuration
 const validWorldConfig = {
@@ -256,13 +256,13 @@ function demonstrateValidation() {
 }
 
 // Export for use in other modules
-module.exports = {
+export {
   validWorldConfig,
   invalidWorldConfig,
   demonstrateValidation
 };
 
 // Run demonstration if this file is executed directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   demonstrateValidation();
 }

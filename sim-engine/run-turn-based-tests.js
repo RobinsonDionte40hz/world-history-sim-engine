@@ -13,7 +13,7 @@ console.log('🚀 Turn-Based Simulation Integration Test Runner\n');
 const testSuites = [
   {
     name: 'Primary Working Suite',
-    file: 'turn-counter-integration-working.test.js',
+    file: 'turn-counter-integration-comprehensive-new.test.js',
     description: 'Core turn-based functionality (RECOMMENDED)',
     priority: 1
   },

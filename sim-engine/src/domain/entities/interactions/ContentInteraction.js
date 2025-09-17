@@ -1,6 +1,6 @@
 // src/domain/entities/interactions/ContentInteraction.js
 
-const InteractionBase = require('./InteractionBase.js');
+import InteractionBase from './InteractionBase.js';
 
 /**
  * ContentInteraction - Base class for user-defined content interactions
@@ -292,4 +292,4 @@ class ContentInteraction extends InteractionBase {
   }
 }
 
-module.exports = ContentInteraction;
+export default ContentInteraction;

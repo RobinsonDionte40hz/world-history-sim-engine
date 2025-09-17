@@ -1,7 +1,7 @@
 // src/domain/services/ConsequenceLifecycleManager.js
 
-const BaseDomainService = require('./BaseDomainService.js');
-const NeedConsequenceService = require('./NeedConsequenceService.js');
+import BaseDomainService from './BaseDomainService.js';
+import NeedConsequenceService from './NeedConsequenceService.js';
 
 /**
  * Service for managing the lifecycle of need satisfaction consequences
@@ -664,4 +664,4 @@ class TriggerDetectionService {
   }
 }
 
-module.exports = ConsequenceLifecycleManager;
+export default ConsequenceLifecycleManager;

@@ -1,5 +1,5 @@
-const SystemInteraction = require('./SystemInteraction.js');
-const Environment = require('../../../domain/value-objects/Environment.js');
+import SystemInteraction from './SystemInteraction.js';
+import Environment from '../../../domain/value-objects/Environment.js';
 
 /**
  * PerceptionInteraction - Handles character perception actions
@@ -452,4 +452,4 @@ class PerceptionInteraction extends SystemInteraction {
   }
 }
 
-module.exports = PerceptionInteraction;
+export default PerceptionInteraction;

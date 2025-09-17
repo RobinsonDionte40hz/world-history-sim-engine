@@ -3,7 +3,7 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import Character from '../domain/entities/Character.js';
 import ChildGenerationService from '../domain/services/ChildGenerationService.js';
-import { RacialTraits } from '../domain/value-objects/RacialTraits.js';
+import RacialTraits from '../domain/value-objects/RacialTraits.js';
 import PersonalityProfile from '../domain/value-objects/PersonalityProfile.js';
 
 describe('ChildGenerationService', () => {

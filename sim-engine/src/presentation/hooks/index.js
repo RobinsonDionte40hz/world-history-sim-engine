@@ -19,6 +19,7 @@ export { default as useWorldBuilder } from './useWorldBuilder';
 
 // Text Templating Hooks
 export { default as useTextTemplating } from './useTextTemplating';
+export { default as useTemplates } from './useTemplates';
 export { default as useTemplatePerformance } from './useTemplatePerformance';
 export { default as useDebouncedTemplating } from './useDebouncedTemplating';
 export { default as useCachedSuggestions } from './useCachedSuggestions';

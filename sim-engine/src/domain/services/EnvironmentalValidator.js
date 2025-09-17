@@ -1,31 +1,31 @@
 // src/domain/services/EnvironmentalValidator.js
 
-const { 
-  TerrainTypes, 
-  isValidTerrainType, 
-  TERRAIN_TYPE_VALUES 
-} = require('../../shared/constants/TerrainTypes.js');
-const { 
-  ClimateTypes, 
-  isValidClimateType, 
-  CLIMATE_TYPE_VALUES 
-} = require('../../shared/constants/ClimateTypes.js');
-const { 
-  LightingTypes, 
-  isValidLightingType, 
-  LIGHTING_TYPE_VALUES 
-} = require('../../shared/constants/LightingTypes.js');
-const { 
-  ConnectionTypes, 
-  isValidConnectionType, 
-  CONNECTION_TYPE_VALUES 
-} = require('../../shared/constants/ConnectionTypes.js');
-const { 
-  HazardTypes, 
-  isValidHazardType, 
+import {
+  TerrainTypes,
+  isValidTerrainType,
+  TERRAIN_TYPE_VALUES
+} from '../../shared/constants/TerrainTypes.js';
+import {
+  ClimateTypes,
+  isValidClimateType,
+  CLIMATE_TYPE_VALUES
+} from '../../shared/constants/ClimateTypes.js';
+import {
+  LightingTypes,
+  isValidLightingType,
+  LIGHTING_TYPE_VALUES
+} from '../../shared/constants/LightingTypes.js';
+import {
+  ConnectionTypes,
+  isValidConnectionType,
+  CONNECTION_TYPE_VALUES
+} from '../../shared/constants/ConnectionTypes.js';
+import {
+  HazardTypes,
+  isValidHazardType,
   HAZARD_TYPE_VALUES,
-  getHazardCategory 
-} = require('../../shared/constants/HazardTypes.js');
+  getHazardCategory
+} from '../../shared/constants/HazardTypes.js';
 
 /**
  * EnvironmentalValidator service provides comprehensive validation for environmental data
@@ -632,4 +632,4 @@ class EnvironmentalValidator {
   }
 }
 
-module.exports = EnvironmentalValidator;
+export default EnvironmentalValidator;

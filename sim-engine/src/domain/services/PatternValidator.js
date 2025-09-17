@@ -53,4 +53,4 @@ const PatternValidator = {
   }
 };
 
-module.exports = { PatternValidator };
+export { PatternValidator };

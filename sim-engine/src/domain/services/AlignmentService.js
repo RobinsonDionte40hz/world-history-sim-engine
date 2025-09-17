@@ -574,4 +574,4 @@ class AlignmentService {
   }
 }
 
-module.exports = AlignmentService;
+export default AlignmentService;

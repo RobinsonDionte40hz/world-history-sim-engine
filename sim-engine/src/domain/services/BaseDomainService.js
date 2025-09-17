@@ -161,4 +161,4 @@ class BaseDomainService {
   }
 }
 
-module.exports = BaseDomainService;
+export default BaseDomainService;

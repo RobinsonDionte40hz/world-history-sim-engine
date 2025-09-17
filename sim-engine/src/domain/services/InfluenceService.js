@@ -1,6 +1,6 @@
 // src/domain/services/InfluenceService.js
 
-const Influence = require('../value-objects/Influence.js');
+import Influence from '../value-objects/Influence.js';
 
 /**
  * Domain service for handling influence evolution and settlement-based changes
@@ -627,4 +627,4 @@ class InfluenceService {
   }
 }
 
-module.exports = InfluenceService;
+export default InfluenceService;
