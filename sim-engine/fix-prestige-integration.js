@@ -129,7 +129,7 @@ class PrestigeIntegrationFixer {
       console.log('   ⭐ Adding hero prestige processing...');
       
       // Find the processHeroCharacter method and add prestige processing
-      const heroMethodPattern = /processHeroCharacter\(character, world, turnContext\) \{[\s\S]*?(?=\n  \w|$)/;
+      const heroMethodPattern = /processHeroCharacter\(character, world, turnContext\) \{[\s\S]*?(?=\n{2}\w|$)/;
       const heroMethodMatch = lodContent.match(heroMethodPattern);
       
       if (heroMethodMatch) {

@@ -101,8 +101,8 @@
 - [ ] T040 Integrate LOD system with WorldBuilder in src/domain/services/WorldBuilder.js
 
 ## Phase 3.8: Performance & Polish
-- [ ] T041 Performance optimization and memory management validation
-- [ ] T042 Execute Valley of Echoes demo validation per quickstart.md
+- [x] T041 Performance optimization and memory management validation
+- [x] T042 Execute Valley of Echoes demo validation per quickstart.md
 
 ## Dependencies
 

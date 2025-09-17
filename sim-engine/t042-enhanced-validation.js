@@ -7,7 +7,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 /**
  * Enhanced Demo Validator with Integration Fixes
@@ -698,7 +697,6 @@ class EnhancedValleyOfEchoesDemoValidator {
     
     for (let turn = 1; turn <= 5; turn++) {
       const startTime = performance.now();
-      const initialMemory = this.getCurrentMemoryUsage();
       
       // Enhanced turn processing with integrations
       await this.processEnhancedTurn(turn);
@@ -835,7 +833,7 @@ class EnhancedValleyOfEchoesDemoValidator {
     console.log('\n📋 Enhanced Valley of Echoes Demo Validation Report');
     console.log('===================================================');
     
-    const { technical, gameplay, integration, performance } = this.validationResults;
+    const { technical, integration, performance } = this.validationResults;
     
     // Enhanced technical validation
     console.log('\n🔧 Enhanced Technical Validation:');

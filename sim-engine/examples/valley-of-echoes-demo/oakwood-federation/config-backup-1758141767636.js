@@ -31,11 +31,10 @@ const oakwoodFederationConfig = {
       type: 'administrative',
       description: 'The heart of Oakwood governance and diplomacy',
       environmentalProperties: {
-        terrain: 'forest',
         climate: 'temperate',
-        lighting: 'natural',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['administrative', 'diplomatic'],
+        terrain: 'urban'
       },
       culturalContext: {
         language: 'common',
@@ -53,11 +52,10 @@ const oakwoodFederationConfig = {
       type: 'economic',
       description: 'Bustling trade center with artisans and merchants',
       environmentalProperties: {
-        terrain: 'forest',
         climate: 'temperate',
-        lighting: 'natural',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['goods', 'food', 'crafts'],
+        terrain: 'urban'
       },
       culturalContext: {
         language: 'common',
@@ -75,11 +73,10 @@ const oakwoodFederationConfig = {
       type: 'agricultural',
       description: 'Fertile farmlands producing abundant crops',
       environmentalProperties: {
-        terrain: 'forest',
         climate: 'temperate',
-        lighting: 'natural',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['food', 'grain', 'livestock'],
+        terrain: 'rural'
       },
       culturalContext: {
         language: 'common',
@@ -97,11 +94,10 @@ const oakwoodFederationConfig = {
       type: 'residential',
       description: 'Homes and community spaces for Oakwood residents',
       environmentalProperties: {
-        terrain: 'forest',
         climate: 'temperate',
-        lighting: 'natural',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['housing', 'community'],
+        terrain: 'urban'
       },
       culturalContext: {
         language: 'common',
@@ -132,10 +128,7 @@ const oakwoodFederationConfig = {
         productivity: 0.9,
         loyalty: 0.9
       },
-      assignments: {
-        nodes: new Set(['oakwood-farming-valley']),
-        interactions: new Set([])
-      }
+      assignedNode: 'oakwood-farming-valley'
     },
     {
       id: 'oakwood-artisans',
@@ -152,10 +145,7 @@ const oakwoodFederationConfig = {
         productivity: 0.95,
         loyalty: 0.85
       },
-      assignments: {
-        nodes: new Set(['oakwood-market-district']),
-        interactions: new Set([])
-      }
+      assignedNode: 'oakwood-market-district'
     },
     {
       id: 'oakwood-merchants',
@@ -172,10 +162,7 @@ const oakwoodFederationConfig = {
         productivity: 0.85,
         loyalty: 0.8
       },
-      assignments: {
-        nodes: new Set(['oakwood-market-district']),
-        interactions: new Set([])
-      }
+      assignedNode: 'oakwood-market-district'
     },
     {
       id: 'oakwood-administrators',
@@ -192,10 +179,7 @@ const oakwoodFederationConfig = {
         productivity: 0.8,
         loyalty: 0.95
       },
-      assignments: {
-        nodes: new Set(['oakwood-administrative-center']),
-        interactions: new Set([])
-      }
+      assignedNode: 'oakwood-administrative-center'
     }
   ],
 
@@ -210,21 +194,18 @@ const oakwoodFederationConfig = {
         background: 'former_merchant_turned_politician'
       },
       attributes: {
-        strength: { score: 12, modifier: +1 },
-        dexterity: { score: 14, modifier: +2 },
-        constitution: { score: 13, modifier: +1 },
-        intelligence: { score: 16, modifier: +3 },
-        wisdom: { score: 17, modifier: +3 },
-        charisma: { score: 18, modifier: +4 }
+        strength: 12,
+        dexterity: 14,
+        constitution: 13,
+        intelligence: 16,
+        wisdom: 17,
+        charisma: 18
       },
       consciousness: {
         frequency: 0.8,
         coherence: 0.85
       },
-      assignments: {
-        nodes: new Set(['oakwood-administrative-center']),
-        interactions: new Set([])
-      },
+      assignedNode: 'oakwood-administrative-center',
       relationships: ['merchant-guild-leader', 'head-farmer']
     },
     {
@@ -236,21 +217,18 @@ const oakwoodFederationConfig = {
         background: 'successful_trader'
       },
       attributes: {
-        strength: { score: 14, modifier: +2 },
-        dexterity: { score: 15, modifier: +2 },
-        constitution: { score: 14, modifier: +2 },
-        intelligence: { score: 15, modifier: +2 },
-        wisdom: { score: 13, modifier: +1 },
-        charisma: { score: 17, modifier: +3 }
+        strength: 14,
+        dexterity: 15,
+        constitution: 14,
+        intelligence: 15,
+        wisdom: 13,
+        charisma: 17
       },
       consciousness: {
         frequency: 0.75,
         coherence: 0.8
       },
-      assignments: {
-        nodes: new Set(['oakwood-market-district']),
-        interactions: new Set([])
-      },
+      assignedNode: 'oakwood-market-district',
       relationships: ['council-chair-elara', 'master-artisan']
     },
     {
@@ -262,21 +240,18 @@ const oakwoodFederationConfig = {
         background: 'lifelong_farmer'
       },
       attributes: {
-        strength: { score: 16, modifier: +3 },
-        dexterity: { score: 13, modifier: +1 },
-        constitution: { score: 17, modifier: +3 },
-        intelligence: { score: 12, modifier: +1 },
-        wisdom: { score: 15, modifier: +2 },
-        charisma: { score: 14, modifier: +2 }
+        strength: 16,
+        dexterity: 13,
+        constitution: 17,
+        intelligence: 12,
+        wisdom: 15,
+        charisma: 14
       },
       consciousness: {
         frequency: 0.7,
         coherence: 0.9
       },
-      assignments: {
-        nodes: new Set(['oakwood-farming-valley']),
-        interactions: new Set([])
-      },
+      assignedNode: 'oakwood-farming-valley',
       relationships: ['council-chair-elara', 'master-artisan']
     },
     {
@@ -288,21 +263,18 @@ const oakwoodFederationConfig = {
         background: 'master_craftsman'
       },
       attributes: {
-        strength: { score: 15, modifier: +2 },
-        dexterity: { score: 17, modifier: +3 },
-        constitution: { score: 14, modifier: +2 },
-        intelligence: { score: 14, modifier: +2 },
-        wisdom: { score: 13, modifier: +1 },
-        charisma: { score: 15, modifier: +2 }
+        strength: 15,
+        dexterity: 17,
+        constitution: 14,
+        intelligence: 14,
+        wisdom: 13,
+        charisma: 15
       },
       consciousness: {
         frequency: 0.75,
         coherence: 0.8
       },
-      assignments: {
-        nodes: new Set(['oakwood-market-district']),
-        interactions: new Set([])
-      },
+      assignedNode: 'oakwood-market-district',
       relationships: ['merchant-guild-leader', 'head-farmer']
     }
   ],

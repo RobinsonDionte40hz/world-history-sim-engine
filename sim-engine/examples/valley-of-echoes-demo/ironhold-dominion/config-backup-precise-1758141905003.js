@@ -31,11 +31,10 @@ const ironholdDominionConfig = {
       type: 'military',
       description: 'Military command and defensive coordination center',
       environmentalProperties: {
-        terrain: 'forest',
-        climate: 'temperate',
-        lighting: 'natural',
+        climate: 'mountain',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['military', 'strategic'],
+        terrain: 'fortified'
       },
       culturalContext: {
         language: 'common',
@@ -53,11 +52,10 @@ const ironholdDominionConfig = {
       type: 'industrial',
       description: 'Smithing and metalworking center producing weapons and tools',
       environmentalProperties: {
-        terrain: 'forest',
-        climate: 'temperate',
-        lighting: 'natural',
+        climate: 'mountain',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['metal', 'weapons', 'tools'],
+        terrain: 'industrial'
       },
       culturalContext: {
         language: 'common',
@@ -75,11 +73,10 @@ const ironholdDominionConfig = {
       type: 'industrial',
       description: 'Deep mines extracting ore and precious minerals',
       environmentalProperties: {
-        terrain: 'forest',
-        climate: 'temperate',
-        lighting: 'natural',
+        climate: 'mountain',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['ore', 'minerals', 'gems'],
+        terrain: 'underground'
       },
       culturalContext: {
         language: 'common',
@@ -97,11 +94,10 @@ const ironholdDominionConfig = {
       type: 'military',
       description: 'Housing and training facilities for military personnel',
       environmentalProperties: {
-        terrain: 'forest',
-        climate: 'temperate',
-        lighting: 'natural',
+        climate: 'mountain',
         season: 'spring',
-        timeOfDay: 'day'
+        resources: ['military', 'training'],
+        terrain: 'fortified'
       },
       culturalContext: {
         language: 'common',
@@ -132,10 +128,7 @@ const ironholdDominionConfig = {
         productivity: 0.85,
         loyalty: 0.9
       },
-      assignments: {
-        nodes: new Set(['ironhold-mining-complex']),
-        interactions: new Set([])
-      }
+      assignedNode: 'ironhold-mining-complex'
     },
     {
       id: 'ironhold-smiths',
@@ -152,10 +145,7 @@ const ironholdDominionConfig = {
         productivity: 0.95,
         loyalty: 0.85
       },
-      assignments: {
-        nodes: new Set(['ironhold-forge-district']),
-        interactions: new Set([])
-      }
+      assignedNode: 'ironhold-forge-district'
     },
     {
       id: 'ironhold-soldiers',
@@ -172,10 +162,7 @@ const ironholdDominionConfig = {
         productivity: 0.8,
         loyalty: 0.95
       },
-      assignments: {
-        nodes: new Set(['ironhold-barracks']),
-        interactions: new Set([])
-      }
+      assignedNode: 'ironhold-barracks'
     },
     {
       id: 'ironhold-engineers',
@@ -192,10 +179,7 @@ const ironholdDominionConfig = {
         productivity: 0.9,
         loyalty: 0.9
       },
-      assignments: {
-        nodes: new Set(['ironhold-command-center']),
-        interactions: new Set([])
-      }
+      assignedNode: 'ironhold-command-center'
     }
   ],
 
@@ -210,21 +194,18 @@ const ironholdDominionConfig = {
         background: 'veteran_commander'
       },
       attributes: {
-        strength: { score: 18, modifier: +4 },
-        dexterity: { score: 14, modifier: +2 },
-        constitution: { score: 17, modifier: +3 },
-        intelligence: { score: 15, modifier: +2 },
-        wisdom: { score: 16, modifier: +3 },
-        charisma: { score: 13, modifier: +1 }
+        strength: 18,
+        dexterity: 14,
+        constitution: 17,
+        intelligence: 15,
+        wisdom: 16,
+        charisma: 13
       },
       consciousness: {
         frequency: 0.75,
         coherence: 0.85
       },
-      assignments: {
-        nodes: new Set(['ironhold-command-center']),
-        interactions: new Set([])
-      },
+      assignedNode: 'ironhold-command-center',
       relationships: ['master-smith', 'mining-foreman', 'captain-garrison']
     },
     {
@@ -236,21 +217,18 @@ const ironholdDominionConfig = {
         background: 'legendary_smith'
       },
       attributes: {
-        strength: { score: 16, modifier: +3 },
-        dexterity: { score: 18, modifier: +4 },
-        constitution: { score: 15, modifier: +2 },
-        intelligence: { score: 14, modifier: +2 },
-        wisdom: { score: 12, modifier: +1 },
-        charisma: { score: 15, modifier: +2 }
+        strength: 16,
+        dexterity: 18,
+        constitution: 15,
+        intelligence: 14,
+        wisdom: 12,
+        charisma: 15
       },
       consciousness: {
         frequency: 0.7,
         coherence: 0.8
       },
-      assignments: {
-        nodes: new Set(['ironhold-forge-district']),
-        interactions: new Set([])
-      },
+      assignedNode: 'ironhold-forge-district',
       relationships: ['lord-protector-garret', 'mining-foreman']
     },
     {
@@ -262,21 +240,18 @@ const ironholdDominionConfig = {
         background: 'lifelong_miner'
       },
       attributes: {
-        strength: { score: 17, modifier: +3 },
-        dexterity: { score: 13, modifier: +1 },
-        constitution: { score: 18, modifier: +4 },
-        intelligence: { score: 12, modifier: +1 },
-        wisdom: { score: 14, modifier: +2 },
-        charisma: { score: 11, modifier: +0 }
+        strength: 17,
+        dexterity: 13,
+        constitution: 18,
+        intelligence: 12,
+        wisdom: 14,
+        charisma: 11
       },
       consciousness: {
         frequency: 0.65,
         coherence: 0.9
       },
-      assignments: {
-        nodes: new Set(['ironhold-mining-complex']),
-        interactions: new Set([])
-      },
+      assignedNode: 'ironhold-mining-complex',
       relationships: ['lord-protector-garret', 'master-smith']
     },
     {
@@ -288,21 +263,18 @@ const ironholdDominionConfig = {
         background: 'career_soldier'
       },
       attributes: {
-        strength: { score: 16, modifier: +3 },
-        dexterity: { score: 16, modifier: +3 },
-        constitution: { score: 16, modifier: +3 },
-        intelligence: { score: 13, modifier: +1 },
-        wisdom: { score: 15, modifier: +2 },
-        charisma: { score: 14, modifier: +2 }
+        strength: 16,
+        dexterity: 16,
+        constitution: 16,
+        intelligence: 13,
+        wisdom: 15,
+        charisma: 14
       },
       consciousness: {
         frequency: 0.7,
         coherence: 0.8
       },
-      assignments: {
-        nodes: new Set(['ironhold-barracks']),
-        interactions: new Set([])
-      },
+      assignedNode: 'ironhold-barracks',
       relationships: ['lord-protector-garret']
     }
   ],
