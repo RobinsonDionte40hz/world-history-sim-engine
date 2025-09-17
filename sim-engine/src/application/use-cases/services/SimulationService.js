@@ -5,6 +5,7 @@ import runTick from '../simulation/RunTick.js';
 import analyzeHistory from '../history/AnalyzeHistory.js';
 import Character from '../../../domain/entities/Character.js';
 import Node from '../../../domain/entities/Node.js';
+import DataStructureUtils from '../../../shared/utils/DataStructureUtils.js';
 
 class SimulationService {
   constructor() {
@@ -96,26 +97,23 @@ class SimulationService {
    * @returns {Object} Simulation world state
    */
   processPreparedWorldData(preparedWorldData) {
+    // Validate data structure consistency first
+    const validation = DataStructureUtils.validateStructureConsistency(preparedWorldData);
+    if (!validation.isValid) {
+      throw new Error(`Data structure inconsistency detected: ${validation.error}`);
+    }
+
+    // Ensure we have Map structure for simulation processing
+    const mapData = DataStructureUtils.ensureMapStructure(preparedWorldData);
+
     // Validate that this looks like prepared world data
-    if (!preparedWorldData.worldProperties || !preparedWorldData.worldProperties.name) {
+    if (!mapData.worldProperties || !mapData.worldProperties.name) {
       throw new Error('Invalid prepared world data structure: missing required worldProperties.name');
     }
 
-    if (!(preparedWorldData.nodes instanceof Map)) {
-      throw new Error('Invalid prepared world data structure: nodes must be a Map');
-    }
-
-    if (!(preparedWorldData.characters instanceof Map)) {
-      throw new Error('Invalid prepared world data structure: characters must be a Map');
-    }
-
-    if (!(preparedWorldData.interactions instanceof Map)) {
-      throw new Error('Invalid prepared world data structure: interactions must be a Map');
-    }
-
-    const { worldProperties, nodes, characters, interactions, settlements } = preparedWorldData;
+    const { worldProperties, nodes, characters, interactions, settlements } = mapData;
     
-    // Convert Maps to arrays for simulation processing
+    // Keep Maps for efficient lookups, but create arrays for iteration where needed
     const nodeArray = Array.from(nodes.values());
     const characterArray = Array.from(characters.values());
     const interactionArray = Array.from(interactions.values());

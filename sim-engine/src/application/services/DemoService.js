@@ -1,6 +1,7 @@
 // src/application/services/DemoService.js
 
 import InteractionFactory from '../../domain/entities/interactions/InteractionFactory.js';
+import DataStructureUtils from '../../shared/utils/DataStructureUtils.js';
 
 /**
  * DemoService - Provides pre-built demo worlds for quick exploration
@@ -175,7 +176,7 @@ class DemoService {
     };
 
     // Create pipeline-compatible world data structure
-    return {
+    const worldData = {
       worldProperties,
       nodes: nodesMap,
       characters: charactersMap,
@@ -192,6 +193,14 @@ class DemoService {
         version: '2.0.0'
       }
     };
+
+    // Validate data structure consistency before returning
+    const validation = DataStructureUtils.validateStructureConsistency(worldData);
+    if (!validation.isValid) {
+      throw new Error(`DemoService created inconsistent data structure: ${validation.error}`);
+    }
+
+    return worldData;
   }
 
   /**

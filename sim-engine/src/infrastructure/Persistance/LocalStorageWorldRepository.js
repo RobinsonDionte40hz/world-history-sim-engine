@@ -1,16 +1,19 @@
 // src/infrastructure/persistence/LocalStorageWorldRepository.js
 
 import IWorldRepository from '../../application/use-cases/ports/IWorldRepository.js';
-import Position from '../../domain/value-objects/Positions.js';
 import Character from '../../domain/entities/Character.js';
 import Node from '../../domain/entities/Node.js';
 import NodeMigrationService from '../../domain/services/NodeMigrationService.js';
+import DataStructureUtils from '../../shared/utils/DataStructureUtils.js';
 
 const LocalStorageWorldRepository = {
   saveWorld: async (worldState) => {
+    // Ensure data is in Array format for storage
+    const arrayData = DataStructureUtils.ensureArrayStructure(worldState);
+    
     const stateToSave = {
-      time: worldState.time,
-      nodes: worldState.nodes.map(node => {
+      time: arrayData.time,
+      nodes: arrayData.nodes ? arrayData.nodes.map(node => {
         // Handle both enhanced Node entities and plain objects
         if (node instanceof Node) {
           return node.toJSON();
@@ -33,11 +36,14 @@ const LocalStorageWorldRepository = {
           };
         }
         return node;
-      }),
-      npcs: worldState.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc),
-      resources: worldState.resources,
+      }) : [],
+      npcs: arrayData.npcs ? arrayData.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc) : [],
+      characters: arrayData.characters ? arrayData.characters.map(char => char.toJSON ? char.toJSON() : char) : [],
+      interactions: arrayData.interactions ? arrayData.interactions.map(int => int.toJSON ? int.toJSON() : int) : [],
+      settlements: arrayData.settlements ? arrayData.settlements.map(set => set.toJSON ? set.toJSON() : set) : [],
+      resources: arrayData.resources,
       // Preserve additional world state properties
-      ...worldState
+      ...arrayData
     };
     localStorage.setItem('worldState', JSON.stringify(stateToSave));
     return Promise.resolve();
@@ -201,6 +207,22 @@ const LocalStorageWorldRepository = {
         legacyNodes: 0,
         errors: [error.message]
       };
+    }
+  },
+
+  /**
+   * Clear all simulation state from localStorage to prevent contamination
+   * Use this when switching between worlds or resetting simulation
+   * @returns {Promise<void>}
+   */
+  clearSimulationState: async () => {
+    try {
+      localStorage.removeItem('worldState');
+      console.log('Cleared simulation state from localStorage');
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Failed to clear simulation state from localStorage:', error);
+      return Promise.reject(error);
     }
   }
 };

@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import TemplateManager from '../../template/TemplateManager';
+import StorageCleanupService from '../../application/services/StorageCleanupService.js';
 
 const WorldContext = createContext();
 
@@ -168,6 +169,14 @@ export const WorldProvider = ({ children }) => {
         if (currentWorldId === worldId) {
             const remainingWorlds = Array.from(newWorlds.keys());
             setCurrentWorldId(remainingWorlds.length > 0 ? remainingWorlds[0] : null);
+            
+            // Clear simulation state when deleting the current world to prevent contamination
+            const cleanupResult = StorageCleanupService.clearWorldState();
+            if (cleanupResult.success) {
+                console.log('StorageCleanupService: Cleared state after deleting current world:', cleanupResult.keysCleared);
+            } else {
+                console.warn('StorageCleanupService: Failed to clear state after world deletion:', cleanupResult.error);
+            }
         }
 
         setError(null);

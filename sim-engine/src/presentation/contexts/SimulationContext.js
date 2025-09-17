@@ -15,6 +15,8 @@ import pipelineValidationService from '../../application/services/PipelineValida
 import simulationService from '../../application/use-cases/services/SimulationService.js';
 import LODManager from '../../domain/services/LODManager.js';
 import { LODTier } from '../../domain/value-objects/LODTier.js';
+import StorageCleanupService from '../../application/services/StorageCleanupService.js';
+import DataStructureUtils from '../../shared/utils/DataStructureUtils.js';
 
 const SimulationContext = createContext();
 
@@ -57,6 +59,45 @@ export const SimulationProvider = ({ children }) => {
   const [lodTierTransitions, setLodTierTransitions] = useState([]);
   const [isLODInitialized, setIsLODInitialized] = useState(false);
   const [isLODProcessing, setIsLODProcessing] = useState(false);
+  
+  // Helper function to convert world state for dashboard consumption
+  const formatWorldStateForDashboard = useCallback((rawWorldState) => {
+    if (!rawWorldState) return null;
+    
+    try {
+      // Ensure data is in Array format for dashboard consumption
+      const arrayData = DataStructureUtils.ensureArrayStructure(rawWorldState);
+      
+      // Ensure the dashboard gets both 'characters' and 'npcs' for compatibility
+      // SimulationService uses 'npcs', but dashboard might expect 'characters'
+      const dashboardState = {
+        ...arrayData,
+        // Ensure characters field exists (fallback to npcs if needed)
+        characters: arrayData.characters || arrayData.npcs || [],
+        // Keep npcs for backward compatibility
+        npcs: arrayData.npcs || arrayData.characters || [],
+        // Ensure events array exists and persists
+        events: arrayData.events || [],
+        // Ensure nodes array exists
+        nodes: arrayData.nodes || [],
+        // Ensure time is preserved
+        time: arrayData.time || 0
+      };
+      
+      console.log('Dashboard state formatted:', {
+        characters: dashboardState.characters.length,
+        npcs: dashboardState.npcs.length,
+        nodes: dashboardState.nodes.length,
+        events: dashboardState.events.length,
+        time: dashboardState.time
+      });
+      
+      return dashboardState;
+    } catch (error) {
+      console.error('Error formatting world state for dashboard:', error);
+      return rawWorldState; // Fallback to original state
+    }
+  }, []);
   
   // State for prepared world data (only accepts pipeline output)
   const [preparedWorldData, setPreparedWorldData] = useState(null);
@@ -253,7 +294,7 @@ export const SimulationProvider = ({ children }) => {
       try {
         const initialState = simulationService.initialize(preparedWorldData);
         setCurrentSimulationState(initialState);
-        setWorldState(initialState); // Use the simulation state, not the prepared data
+        setWorldState(formatWorldStateForDashboard(initialState)); // Use the simulation state, not the prepared data
         setIsInitialized(true);
         setInitializationError(null);
         console.log('Simulation initialized successfully with state:', initialState);
@@ -267,7 +308,7 @@ export const SimulationProvider = ({ children }) => {
         setIsInitialized(false);
       }
     }
-  }, [preparedWorldData, validationToken, isInitialized, initializeLODSystem]);
+  }, [preparedWorldData, validationToken, isInitialized, initializeLODSystem, formatWorldStateForDashboard]);
   
   // Validation function to ensure world data comes from WorldBuilder pipeline
   const validatePreparedWorld = useCallback((worldData) => {
@@ -388,6 +429,14 @@ export const SimulationProvider = ({ children }) => {
       // Reset previous errors
       setPipelineValidationError(null);
       
+      // Clear any existing localStorage state before accepting new world
+      const cleanupResult = StorageCleanupService.clearWorldState();
+      if (cleanupResult.success) {
+        console.log('StorageCleanupService: Cleared state before accepting new prepared world:', cleanupResult.keysCleared);
+      } else {
+        console.warn('StorageCleanupService: Failed to clear state:', cleanupResult.error);
+      }
+      
       // Validate that world comes from preparation pipeline
       const validation = validatePreparedWorld(worldData);
       
@@ -464,6 +513,14 @@ export const SimulationProvider = ({ children }) => {
     // Reset LOD system
     resetLODSystem();
     
+    // Clear localStorage keys that might contaminate new simulations
+    const cleanupResult = StorageCleanupService.clearWorldState();
+    if (cleanupResult.success) {
+      console.log('StorageCleanupService: Cleared state during clearPreparedWorld:', cleanupResult.keysCleared);
+    } else {
+      console.warn('StorageCleanupService: Failed to clear state:', cleanupResult.error);
+    }
+    
     setSimulationReadinessStatus({
       hasPreparedWorld: false,
       isSimulationReady: false,
@@ -517,7 +574,7 @@ export const SimulationProvider = ({ children }) => {
       }
 
       setCurrentSimulationState(finalWorldState);
-      setWorldState(finalWorldState); // Update worldState with the new simulation state
+      setWorldState(formatWorldStateForDashboard(finalWorldState)); // Update worldState with the new simulation state
       setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
       setCurrentTurn(prev => prev + 1);
 
@@ -532,7 +589,7 @@ export const SimulationProvider = ({ children }) => {
     } finally {
       setIsProcessingTurn(false);
     }
-  }, [currentSimulationState, isProcessingTurn, isInitialized, processLODTurn]);
+  }, [currentSimulationState, isProcessingTurn, isInitialized, processLODTurn, formatWorldStateForDashboard]);
 
   // Reset simulation function
   const resetSimulation = useCallback(() => {
@@ -546,12 +603,20 @@ export const SimulationProvider = ({ children }) => {
     // Reset LOD system as well
     resetLODSystem();
     
+    // Clear localStorage keys that might contaminate resets
+    const cleanupResult = StorageCleanupService.clearWorldState();
+    if (cleanupResult.success) {
+      console.log('StorageCleanupService: Cleared state during simulation reset:', cleanupResult.keysCleared);
+    } else {
+      console.warn('StorageCleanupService: Failed to clear state during reset:', cleanupResult.error);
+    }
+    
     // Re-initialize if we have prepared world data
     if (preparedWorldData && validationToken) {
       try {
         const initialState = simulationService.initialize(preparedWorldData);
         setCurrentSimulationState(initialState);
-        setWorldState(initialState); // Use the simulation state, not the prepared data
+        setWorldState(formatWorldStateForDashboard(initialState)); // Use the simulation state, not the prepared data
         setIsInitialized(true);
         console.log('Simulation reset and re-initialized');
         
@@ -562,7 +627,7 @@ export const SimulationProvider = ({ children }) => {
         setInitializationError(error.message);
       }
     }
-  }, [preparedWorldData, validationToken, resetLODSystem, initializeLODSystem]);
+  }, [preparedWorldData, validationToken, resetLODSystem, initializeLODSystem, formatWorldStateForDashboard]);
   
   // Combined context value with simulation state and preparation pipeline integration
   const contextValue = {
