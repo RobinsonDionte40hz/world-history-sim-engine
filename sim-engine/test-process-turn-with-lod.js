@@ -4,12 +4,12 @@ console.log('🧪 Testing ProcessTurnWithLOD Use Case...\n');
 
 async function runTests() {
   try {
-    console.log('Testing ES6 imports with dynamic import...');
+    console.log('Testing CommonJS imports...');
 
-    // Use dynamic import for ES6 modules
-    const { default: processTurnWithLOD } = await import('./src/application/use-cases/simulation/ProcessTurnWithLOD.js');
-    const { LODManager } = await import('./src/domain/services/LODManager.js');
-    const { default: HistoryGenerator } = await import('./src/domain/services/HistoryGenerator.js');
+    // Use CommonJS require for compatibility
+    const processTurnWithLOD = require('./src/application/use-cases/simulation/ProcessTurnWithLOD.js');
+    const LODManager = require('./src/domain/services/LODManager.js');
+    const HistoryGenerator = require('./src/domain/services/HistoryGenerator.js');
 
     console.log('✅ Imports successful');
 

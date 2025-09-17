@@ -141,24 +141,53 @@ const processMainTurn = async (worldState, historyGenerator) => {
   if (worldState.characters && Array.isArray(worldState.characters)) {
     results.updatedWorldState.characters = [...worldState.characters];
 
+    // PERFORMANCE OPTIMIZATION: Pre-allocate services outside the loop
+    const evolutionService = new EvolutionService();
+    const behaviorModifierService = new CharacterBehaviorModifierService();
+
+    // PERFORMANCE OPTIMIZATION: Create settlement lookup map for O(1) access
+    const settlementMap = new Map();
+    if (worldState.settlements) {
+      worldState.settlements.forEach(settlement => {
+        settlementMap.set(settlement.id, settlement);
+        // Also map by assigned characters for reverse lookup
+        if (settlement.assignedCharacters) {
+          settlement.assignedCharacters.forEach(charId => {
+            settlementMap.set(`char_${charId}`, settlement);
+          });
+        }
+      });
+    }
+
     for (let index = 0; index < worldState.characters.length; index++) {
       const character = worldState.characters[index];
 
       try {
-        // Skip characters that are not active (LOD demoted)
+        // PERFORMANCE OPTIMIZATION: Skip background characters early
         if (character.lodTier === 'background') {
           continue; // Background characters are processed statistically by LODManager
         }
 
         let characterInstance = character;
 
-        // Ensure we have a proper Character instance
+        // PERFORMANCE OPTIMIZATION: Only create Character instance if needed
         if (!(character instanceof Character)) {
           characterInstance = Character.fromJSON(character);
         }
 
+        // PERFORMANCE OPTIMIZATION: Use settlement map for O(1) lookup
+        const characterSettlement = settlementMap.get(characterInstance.currentNodeId) ||
+                                   settlementMap.get(`char_${characterInstance.id}`);
+
         // Process character turn
-        const characterResult = await processCharacterTurn(characterInstance, worldState, historyGenerator);
+        const characterResult = await processCharacterTurn(
+          characterInstance,
+          worldState,
+          historyGenerator,
+          evolutionService,
+          behaviorModifierService,
+          characterSettlement
+        );
 
         if (characterResult.event) {
           results.characterEvents.push(characterResult.event);
@@ -178,6 +207,7 @@ const processMainTurn = async (worldState, historyGenerator) => {
   if (worldState.settlements && Array.isArray(worldState.settlements)) {
     results.updatedWorldState.settlements = [...worldState.settlements];
 
+    // PERFORMANCE OPTIMIZATION: Pre-allocate services outside the loop
     const basicNeedsService = new BasicNeedsService();
     const needConsequenceService = new NeedConsequenceService();
     const consequenceLifecycleManager = new ConsequenceLifecycleManager();
@@ -276,27 +306,21 @@ const processMainTurn = async (worldState, historyGenerator) => {
  * Process a single character's turn
  * @private
  */
-const processCharacterTurn = async (character, worldState, historyGenerator) => {
+const processCharacterTurn = async (character, worldState, historyGenerator, evolutionService, behaviorModifierService, characterSettlement) => {
   const result = {
     updatedCharacter: character,
     event: null
   };
 
   try {
-    // Apply evolution over time
-    const evolutionService = new EvolutionService();
+    // PERFORMANCE OPTIMIZATION: Reuse pre-allocated evolution service
     const evolvedCharacter = evolutionService.evolveOverTime(character, 1);
 
-    // Apply need satisfaction modifiers
-    const behaviorModifierService = new CharacterBehaviorModifierService();
+    // PERFORMANCE OPTIMIZATION: Only apply modifiers if settlement exists
     let modifiedCharacter = evolvedCharacter;
 
-    const characterSettlement = worldState.settlements?.find(settlement =>
-      settlement.assignedCharacters?.includes(evolvedCharacter.id) ||
-      settlement.id === evolvedCharacter.currentNodeId
-    );
-
     if (characterSettlement) {
+      // PERFORMANCE OPTIMIZATION: Reuse pre-allocated behavior modifier service
       modifiedCharacter = behaviorModifierService.applyNeedSatisfactionModifiers(
         evolvedCharacter,
         characterSettlement,
@@ -308,11 +332,11 @@ const processCharacterTurn = async (character, worldState, historyGenerator) => 
     const behavior = generateBehavior(modifiedCharacter, worldState);
 
     if (behavior && behavior.resolution) {
-      // Create updated character with interaction tracking
-      const characterWithInteraction = new Character({
-        ...modifiedCharacter.toJSON(),
-        lastInteractionType: behavior.interaction.type
-      });
+      // PERFORMANCE OPTIMIZATION: Avoid unnecessary object creation
+      const characterData = modifiedCharacter.toJSON();
+      characterData.lastInteractionType = behavior.interaction.type;
+
+      const characterWithInteraction = new Character(characterData);
 
       // Log historical event
       const event = historyGenerator.logEvent({

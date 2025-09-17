@@ -41,6 +41,7 @@ class LODManager {
 
     let result;
 
+    // PERFORMANCE OPTIMIZATION: Use tier-specific processing methods directly
     switch (character.lodTier) {
       case 'hero':
         result = this._processHeroCharacter(character, world, turnContext);
@@ -61,15 +62,14 @@ class LODManager {
     const endTime = performance.now();
     const processingTime = endTime - startTime;
 
-    // Update metrics
+    // PERFORMANCE OPTIMIZATION: Update metrics more efficiently
     this.processingMetrics.totalProcessed++;
-    this.processingMetrics.tierBreakdown[character.lodTier]++;
+    this.processingMetrics.tierBreakdown[character.lodTier] = (this.processingMetrics.tierBreakdown[character.lodTier] || 0) + 1;
     this._updateAverageProcessingTime(processingTime);
 
-    return {
-      ...result,
-      processingTime
-    };
+    // PERFORMANCE OPTIMIZATION: Return result with processing time
+    result.processingTime = processingTime;
+    return result;
   }
 
   /**
@@ -78,9 +78,22 @@ class LODManager {
   processCharacterTier(tier, characters, world, turnContext) {
     const startTime = performance.now();
 
-    const results = characters.map(character =>
-      this.processCharacter(character, world, turnContext)
-    );
+    // PERFORMANCE OPTIMIZATION: Early return for empty arrays
+    if (!characters || characters.length === 0) {
+      return {
+        processedCount: 0,
+        averageProcessingTime: 0,
+        results: [],
+        byTier: { hero: 0, group: 0, background: 0 }
+      };
+    }
+
+    // PERFORMANCE OPTIMIZATION: Pre-allocate results array
+    const results = new Array(characters.length);
+
+    for (let i = 0; i < characters.length; i++) {
+      results[i] = this.processCharacter(characters[i], world, turnContext);
+    }
 
     const endTime = performance.now();
     const totalTime = endTime - startTime;

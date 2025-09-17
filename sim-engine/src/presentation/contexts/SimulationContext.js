@@ -13,6 +13,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import TemplateManager from '../../template/TemplateManager.js';
 import pipelineValidationService from '../../application/services/PipelineValidationService.js';
 import simulationService from '../../application/use-cases/services/SimulationService.js';
+import { LODManager } from '../../domain/services/LODManager.js';
+import { LODTier } from '../../domain/value-objects/LODTier.js';
 
 const SimulationContext = createContext();
 
@@ -27,6 +29,34 @@ export const SimulationProvider = ({ children }) => {
   
   // Initialize template manager for template operations (read-only in simulation context)
   const [templateManager] = useState(() => new TemplateManager());
+  
+  // Initialize LOD manager for level-of-detail processing
+  const [lodManager] = useState(() => new LODManager());
+  
+  // LOD State
+  const [lodStats, setLodStats] = useState({
+    hero: 0,
+    group: 0,
+    background: 0,
+    total: 0
+  });
+  
+  const [lodTierConfigurations] = useState({
+    hero: LODTier.HERO,
+    group: LODTier.GROUP,
+    background: LODTier.BACKGROUND
+  });
+  
+  const [lodProcessingMetrics, setLodProcessingMetrics] = useState({
+    lastTurnDuration: 0,
+    averageTurnDuration: 0,
+    totalProcessed: 0,
+    performanceHistory: []
+  });
+  
+  const [lodTierTransitions, setLodTierTransitions] = useState([]);
+  const [isLODInitialized, setIsLODInitialized] = useState(false);
+  const [isLODProcessing, setIsLODProcessing] = useState(false);
   
   // State for prepared world data (only accepts pipeline output)
   const [preparedWorldData, setPreparedWorldData] = useState(null);
@@ -50,6 +80,171 @@ export const SimulationProvider = ({ children }) => {
   const [turnHistory, setTurnHistory] = useState([]);
   const [isProcessingTurn, setIsProcessingTurn] = useState(false);
   
+  // LOD Helper Functions
+  const updateLODStats = useCallback((worldState) => {
+    if (!worldState?.characters) return;
+
+    const characters = Array.from(worldState.characters.values());
+    const stats = {
+      hero: characters.filter(c => c.lodTier === 'hero').length,
+      group: characters.filter(c => c.lodTier === 'group').length,
+      background: characters.filter(c => c.lodTier === 'background').length,
+      total: characters.length
+    };
+
+    setLodStats(stats);
+  }, []);
+
+  const updateLODPerformanceMetrics = useCallback((duration) => {
+    setLodProcessingMetrics(prev => {
+      const newHistory = [...prev.performanceHistory, duration].slice(-10); // Keep last 10
+      const average = newHistory.reduce((sum, d) => sum + d, 0) / newHistory.length;
+
+      return {
+        lastTurnDuration: duration,
+        averageTurnDuration: average,
+        totalProcessed: prev.totalProcessed + 1,
+        performanceHistory: newHistory
+      };
+    });
+  }, []);
+
+  const recordLODTierTransitions = useCallback((oldState, newState) => {
+    if (!oldState?.characters || !newState?.characters) return;
+
+    const transitions = [];
+
+    oldState.characters.forEach((oldChar, charId) => {
+      const newChar = newState.characters.get(charId);
+      if (oldChar && newChar && oldChar.lodTier !== newChar.lodTier) {
+        transitions.push({
+          characterId: charId,
+          characterName: oldChar.name || `Character ${charId}`,
+          fromTier: oldChar.lodTier,
+          toTier: newChar.lodTier,
+          timestamp: Date.now(),
+          reason: 'automatic'
+        });
+      }
+    });
+
+    if (transitions.length > 0) {
+      setLodTierTransitions(prev => [...prev, ...transitions].slice(-20)); // Keep last 20
+    }
+  }, []);
+
+  const initializeLODSystem = useCallback(async (worldState) => {
+    if (!worldState) return;
+
+    try {
+      setIsLODProcessing(true);
+
+      // Initialize LOD manager with world state
+      await lodManager.initializeForWorld(worldState);
+
+      // Update initial statistics
+      updateLODStats(worldState);
+
+      setIsLODInitialized(true);
+      console.log('LOD system initialized successfully in SimulationContext');
+
+    } catch (error) {
+      console.error('Failed to initialize LOD system:', error);
+    } finally {
+      setIsLODProcessing(false);
+    }
+  }, [lodManager, updateLODStats]);
+
+  const processLODTurn = useCallback(async (worldState) => {
+    if (!isLODInitialized || !worldState) return worldState;
+
+    const startTime = Date.now();
+    setIsLODProcessing(true);
+
+    try {
+      // Process pre-turn LOD operations
+      const preTurnResult = await lodManager.processPreTurnLOD(worldState);
+
+      // Process post-turn LOD operations
+      const postTurnResult = await lodManager.processPostTurnLOD(preTurnResult);
+
+      // Update statistics
+      updateLODStats(postTurnResult);
+
+      // Record performance metrics
+      const duration = Date.now() - startTime;
+      updateLODPerformanceMetrics(duration);
+
+      // Record tier transitions
+      recordLODTierTransitions(worldState, postTurnResult);
+
+      return postTurnResult;
+
+    } catch (error) {
+      console.error('LOD turn processing failed:', error);
+      return worldState;
+    } finally {
+      setIsLODProcessing(false);
+    }
+  }, [isLODInitialized, lodManager, updateLODStats, updateLODPerformanceMetrics, recordLODTierTransitions]);
+
+  const changeCharacterLODTier = useCallback(async (characterId, newTier) => {
+    if (!isLODInitialized) return false;
+
+    try {
+      const success = await lodManager.changeCharacterTier(characterId, newTier);
+      if (success) {
+        // Update stats after tier change
+        if (worldState) {
+          updateLODStats(worldState);
+        }
+        console.log(`Character ${characterId} moved to ${newTier} tier`);
+      }
+      return success;
+    } catch (error) {
+      console.error('Failed to change character LOD tier:', error);
+      return false;
+    }
+  }, [isLODInitialized, lodManager, worldState, updateLODStats]);
+
+  const getLODProcessingRecommendations = useCallback(() => {
+    const recommendations = [];
+
+    // Performance-based recommendations
+    if (lodProcessingMetrics.averageTurnDuration > 100) {
+      recommendations.push({
+        type: 'performance',
+        message: 'Consider increasing background tier population to reduce processing time',
+        severity: 'warning'
+      });
+    }
+
+    // Balance recommendations
+    const totalChars = lodStats.total;
+    if (totalChars > 0) {
+      const heroRatio = lodStats.hero / totalChars;
+      const groupRatio = lodStats.group / totalChars;
+
+      if (heroRatio > 0.3) {
+        recommendations.push({
+          type: 'balance',
+          message: 'High hero character ratio may impact performance',
+          severity: 'info'
+        });
+      }
+
+      if (groupRatio < 0.2) {
+        recommendations.push({
+          type: 'balance',
+          message: 'Consider promoting more characters to group tier for better statistical processing',
+          severity: 'info'
+        });
+      }
+    }
+
+    return recommendations;
+  }, [lodProcessingMetrics, lodStats]);
+
   // Initialize simulation when prepared world data is available
   useEffect(() => {
     if (preparedWorldData && validationToken && !isInitialized) {
@@ -63,13 +258,16 @@ export const SimulationProvider = ({ children }) => {
         setInitializationError(null);
         console.log('Simulation initialized successfully with state:', initialState);
         console.log('SimulationService internal state check:', simulationService.getCurrentWorldState());
+        
+        // Initialize LOD system with the initial world state
+        initializeLODSystem(initialState);
       } catch (error) {
         console.error('Failed to initialize simulation:', error);
         setInitializationError(error.message);
         setIsInitialized(false);
       }
     }
-  }, [preparedWorldData, validationToken, isInitialized]);
+  }, [preparedWorldData, validationToken, isInitialized, initializeLODSystem]);
   
   // Validation function to ensure world data comes from WorldBuilder pipeline
   const validatePreparedWorld = useCallback((worldData) => {
@@ -169,6 +367,21 @@ export const SimulationProvider = ({ children }) => {
     };
   }, []);
 
+  const resetLODSystem = useCallback(() => {
+    setLodStats({ hero: 0, group: 0, background: 0, total: 0 });
+    setLodProcessingMetrics({
+      lastTurnDuration: 0,
+      averageTurnDuration: 0,
+      totalProcessed: 0,
+      performanceHistory: []
+    });
+    setLodTierTransitions([]);
+    setIsLODInitialized(false);
+    setIsLODProcessing(false);
+
+    console.log('LOD system reset');
+  }, []);
+
   // Exclusive method to accept prepared world data from WorldBuilder pipeline
   const acceptPreparedWorld = useCallback((worldData) => {
     try {
@@ -247,6 +460,10 @@ export const SimulationProvider = ({ children }) => {
     setTurnHistory([]);
     setIsProcessingTurn(false);
     setValidationToken(null);
+    
+    // Reset LOD system
+    resetLODSystem();
+    
     setSimulationReadinessStatus({
       hasPreparedWorld: false,
       isSimulationReady: false,
@@ -255,7 +472,7 @@ export const SimulationProvider = ({ children }) => {
       source: null,
       hasValidToken: false
     });
-  }, []);
+  }, [resetLODSystem]);
 
   // Process turn function
   const processTurn = useCallback(async () => {
@@ -271,17 +488,24 @@ export const SimulationProvider = ({ children }) => {
 
     setIsProcessingTurn(true);
     try {
-      // SimulationService.processTurn() doesn't take parameters - it uses its internal worldState
+      // Process LOD pre-turn operations (currently just logging, full integration would use ProcessTurnWithLOD use case)
+      await processLODTurn(currentSimulationState);
+      
+      // SimulationService.processTurn() uses its internal worldState, but we can pass LOD-processed state
+      // Note: In a full implementation, ProcessTurnWithLOD use case would handle this integration
       const turnResult = await simulationService.processTurn();
       
-      setCurrentSimulationState(turnResult.worldState);
-      setWorldState(turnResult.worldState); // Update worldState with the new simulation state
+      // Process LOD post-turn operations on the simulation result
+      const finalWorldState = await processLODTurn(turnResult.worldState);
+      
+      setCurrentSimulationState(finalWorldState);
+      setWorldState(finalWorldState); // Update worldState with the new simulation state
       setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
       setCurrentTurn(prev => prev + 1);
       
-      console.log('Turn processed successfully:', turnResult);
+      console.log('Turn processed successfully with LOD integration:', turnResult);
       console.log('Turn summary:', turnResult.turnSummary);
-      console.log('World state events:', turnResult.worldState.events?.length || 0);
+      console.log('World state events:', finalWorldState.events?.length || 0);
       
       return turnResult;
     } catch (error) {
@@ -290,7 +514,7 @@ export const SimulationProvider = ({ children }) => {
     } finally {
       setIsProcessingTurn(false);
     }
-  }, [currentSimulationState, isProcessingTurn, isInitialized]);
+  }, [currentSimulationState, isProcessingTurn, isInitialized, processLODTurn]);
 
   // Reset simulation function
   const resetSimulation = useCallback(() => {
@@ -301,6 +525,9 @@ export const SimulationProvider = ({ children }) => {
     setTurnHistory([]);
     setIsProcessingTurn(false);
     
+    // Reset LOD system as well
+    resetLODSystem();
+    
     // Re-initialize if we have prepared world data
     if (preparedWorldData && validationToken) {
       try {
@@ -309,12 +536,15 @@ export const SimulationProvider = ({ children }) => {
         setWorldState(initialState); // Use the simulation state, not the prepared data
         setIsInitialized(true);
         console.log('Simulation reset and re-initialized');
+        
+        // Re-initialize LOD system
+        initializeLODSystem(initialState);
       } catch (error) {
         console.error('Failed to re-initialize simulation:', error);
         setInitializationError(error.message);
       }
     }
-  }, [preparedWorldData, validationToken]);
+  }, [preparedWorldData, validationToken, resetLODSystem, initializeLODSystem]);
   
   // Combined context value with simulation state and preparation pipeline integration
   const contextValue = {
@@ -349,7 +579,25 @@ export const SimulationProvider = ({ children }) => {
     // Simulation readiness status
     isSimulationReady: simulationReadinessStatus.isSimulationReady,
     hasPreparedWorld: simulationReadinessStatus.hasPreparedWorld,
-    canInitializeSimulation: simulationReadinessStatus.isSimulationReady && !isInitialized
+    canInitializeSimulation: simulationReadinessStatus.isSimulationReady && !isInitialized,
+    
+    // LOD System Integration
+    lodStats,
+    lodTierConfigurations,
+    lodProcessingMetrics,
+    lodTierTransitions,
+    isLODInitialized,
+    isLODProcessing,
+    
+    // LOD Actions
+    initializeLODSystem,
+    processLODTurn,
+    changeCharacterLODTier,
+    getLODProcessingRecommendations,
+    resetLODSystem,
+    
+    // LOD Manager reference (for advanced operations)
+    lodManager
   };
 
   return (
