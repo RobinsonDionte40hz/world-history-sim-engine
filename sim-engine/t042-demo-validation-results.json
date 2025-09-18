@@ -3,7 +3,7 @@
     "totalCharacters": true,
     "heroCharacters": false,
     "groupCharacters": true,
-    "backgroundCharacters": false,
+    "backgroundCharacters": true,
     "settlementCount": true,
     "settlementStructure": true,
     "lodSystemInitialized": true,
@@ -42,12 +42,12 @@
   "errors": [],
   "warnings": [],
   "summary": {
-    "successRate": 59.375,
-    "totalPassed": 19,
+    "successRate": 62.5,
+    "totalPassed": 20,
     "totalChecks": 32,
-    "avgTurnTime": 35.06050416666667,
-    "maxMemory": 4.352531433105469,
+    "avgTurnTime": 33.9280875,
+    "maxMemory": 4.359977722167969,
     "totalEvents": 19,
-    "developmentUpgrades": 1
+    "developmentUpgrades": 2
   }
 }

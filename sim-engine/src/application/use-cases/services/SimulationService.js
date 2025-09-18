@@ -175,7 +175,7 @@ class SimulationService {
       worldName: worldProperties.name,
       worldId: preparedWorldData.simulationMetadata.worldId || this._generateId(),
       nodes: nodeArray,
-      npcs: characterArray,
+      characters: characterArray, // Changed from npcs to characters to match LODManager expectations
       interactions: interactionArray,
       settlements: settlementArray,
       resources: {
@@ -287,11 +287,11 @@ class SimulationService {
     }
 
     // Phase 4: Characters exist with assigned interactions
-    if (!worldState.npcs || worldState.npcs.length === 0) {
+    if (!worldState.characters || worldState.characters.length === 0) {
       missingPhases.push('Phase 4: No characters created');
     } else {
-      const charactersWithoutInteractions = worldState.npcs.filter(npc => 
-        !npc.assignedInteractions || npc.assignedInteractions.length === 0
+      const charactersWithoutInteractions = worldState.characters.filter(character => 
+        !character.assignedInteractions || character.assignedInteractions.length === 0
       );
       if (charactersWithoutInteractions.length > 0) {
         missingPhases.push('Phase 4: Some characters have no assigned interactions');
@@ -309,8 +309,8 @@ class SimulationService {
     }
 
     // Phase 6: All characters are assigned to nodes
-    if (worldState.npcs) {
-      const charactersWithoutNodes = worldState.npcs.filter(npc => !npc.currentNodeId);
+    if (worldState.characters) {
+      const charactersWithoutNodes = worldState.characters.filter(character => !character.currentNodeId);
       if (charactersWithoutNodes.length > 0) {
         missingPhases.push('Phase 6: Some characters are not assigned to nodes');
       }
@@ -369,29 +369,43 @@ class SimulationService {
         if (!this.worldState) {
           throw new Error('World state is null or undefined');
         }
-        if (!Array.isArray(this.worldState.nodes) || !Array.isArray(this.worldState.npcs)) {
+        if (!Array.isArray(this.worldState.nodes) || !Array.isArray(this.worldState.characters || this.worldState.npcs)) {
           throw new Error('Invalid world state structure');
         }
       }
       
       // Process the turn using existing runTick logic
-      const updatedState = runTick(this.worldState);
+      // Ensure world state has npcs field for runTick compatibility
+      const worldStateForRunTick = {
+        ...this.worldState,
+        npcs: this.worldState.characters || this.worldState.npcs || []
+      };
+      const runTickResult = runTick(worldStateForRunTick);
+      
+      // Extract the updated world state (runTick returns { ...worldState, tickDelay })
+      const { tickDelay, ...updatedState } = runTickResult;
+      
+      // Update our world state with the processed data
+      this.worldState = {
+        ...this.worldState,
+        ...updatedState,
+        // Ensure characters field is updated from npcs if needed
+        characters: updatedState.npcs || updatedState.characters || this.worldState.characters
+      };
 
       // Validate that the turn operation succeeded
-      if (!updatedState) {
+      if (!this.worldState) {
         throw new Error('Turn processing failed - invalid state returned');
       }
 
-      if (typeof updatedState.time !== 'number' || updatedState.time <= previousTime) {
-        throw new Error(`Turn processing failed - invalid time progression from ${previousTime} to ${updatedState.time}`);
+      if (typeof this.worldState.time !== 'number' || this.worldState.time <= previousTime) {
+        throw new Error(`Turn processing failed - invalid time progression from ${previousTime} to ${this.worldState.time}`);
       }
-
-      this.worldState = updatedState;
 
       // Generate turn summary
       const turnSummary = this.generateTurnSummary(
         previousState, 
-        updatedState, 
+        this.worldState, 
         Date.now() - turnStartTime
       );
       
@@ -403,19 +417,19 @@ class SimulationService {
       // Save state
       const saveSuccess = this.saveState();
       if (!saveSuccess) {
-        console.warn(`Failed to save state after turn ${updatedState.time}`);
+        console.warn(`Failed to save state after turn ${this.worldState.time}`);
       }
 
       // Trigger UI callback if set
       if (this.onTick) {
         try {
-          this.onTick(updatedState);
+          this.onTick(this.worldState);
         } catch (callbackError) {
           console.error('Error in onTick callback:', callbackError);
         }
       }
 
-      console.log(`Turn ${updatedState.time} processed successfully`);
+      console.log(`Turn ${this.worldState.time} processed successfully`);
       console.log('SimulationService.processTurn() - AFTER:', {
         newWorldState: this.worldState,
         newEventsCount: this.worldState?.events?.length || 0,
@@ -506,25 +520,25 @@ class SimulationService {
     };
 
     // Track character changes and actions
-    if (previousState.npcs && currentState.npcs) {
-      currentState.npcs.forEach((currentNpc, index) => {
-        const previousNpc = previousState.npcs[index];
+    if (previousState.characters && currentState.characters) {
+      currentState.characters.forEach((currentCharacter, index) => {
+        const previousCharacter = previousState.characters[index];
         
-        if (previousNpc) {
+        if (previousCharacter) {
           // Check for significant changes
-          const hasChanges = this.hasSignificantCharacterChanges(previousNpc, currentNpc);
+          const hasChanges = this.hasSignificantCharacterChanges(previousCharacter, currentCharacter);
           
           if (hasChanges) {
             summary.changes.charactersChanged++;
             
             // Track character action if they performed an interaction
-            if (currentNpc.lastInteractionType) {
+            if (currentCharacter.lastInteractionType) {
               summary.characterActions.push({
-                characterId: currentNpc.id,
-                characterName: currentNpc.name,
-                action: currentNpc.lastInteractionType,
-                nodeId: currentNpc.currentNodeId,
-                nodeName: this.getNodeName(currentNpc.currentNodeId, currentState.nodes)
+                characterId: currentCharacter.id,
+                characterName: currentCharacter.name,
+                action: currentCharacter.lastInteractionType,
+                nodeId: currentCharacter.currentNodeId,
+                nodeName: this.getNodeName(currentCharacter.currentNodeId, currentState.nodes)
               });
             }
           }
@@ -583,16 +597,16 @@ class SimulationService {
   }
 
   // Check if character has significant changes worth reporting
-  hasSignificantCharacterChanges(previousNpc, currentNpc) {
+  hasSignificantCharacterChanges(previousCharacter, currentCharacter) {
     // Check for interaction activity
-    if (currentNpc.lastInteractionType !== previousNpc.lastInteractionType) {
+    if (currentCharacter.lastInteractionType !== previousCharacter.lastInteractionType) {
       return true;
     }
     
     // Check for significant stat changes (>5 points)
     const statChanges = ['energy', 'health', 'mood'].some(stat => {
-      const prev = previousNpc[stat] || 0;
-      const curr = currentNpc[stat] || 0;
+      const prev = previousCharacter[stat] || 0;
+      const curr = currentCharacter[stat] || 0;
       return Math.abs(curr - prev) > 5;
     });
     
@@ -785,8 +799,8 @@ class SimulationService {
         initialConditions: this.worldState.initialConditions || {},
         nodes: Array.isArray(this.worldState.nodes) ? 
           this.worldState.nodes.map(node => node.toJSON ? node.toJSON() : node) : [],
-        npcs: Array.isArray(this.worldState.npcs) ? 
-          this.worldState.npcs.map(npc => npc.toJSON ? npc.toJSON() : npc) : [],
+        characters: Array.isArray(this.worldState.characters) ? 
+          this.worldState.characters.map(character => character.toJSON ? character.toJSON() : character) : [],
         interactions: this.worldState.interactions || [],
         settlements: Array.isArray(this.worldState.settlements) ? 
           this.worldState.settlements.map(settlement => settlement.toJSON ? settlement.toJSON() : settlement) : [],
@@ -839,30 +853,30 @@ class SimulationService {
         }
       }).filter(node => node !== null) : [];
 
-      // Handle NPCs (might not exist or be empty for simple test states)
-      const reconstructedNPCs = Array.isArray(savedState.npcs) ? savedState.npcs.map(npcData => {
+      // Handle characters (might not exist or be empty for simple test states)
+      const reconstructedCharacters = Array.isArray(savedState.characters || savedState.npcs) ? (savedState.characters || savedState.npcs).map(characterData => {
         try {
-          if (npcData && typeof npcData === 'object') {
+          if (characterData && typeof characterData === 'object') {
             // For simple test states, don't validate currentNodeId if no nodes exist
             if (reconstructedNodes.length > 0) {
               const nodeIds = reconstructedNodes.map(n => n.id);
-              // Check if NPC's currentNodeId is valid
-              if (!npcData.currentNodeId || !nodeIds.includes(npcData.currentNodeId)) {
-                console.warn(`SimulationService: NPC ${npcData.name} has invalid currentNodeId: ${npcData.currentNodeId}`);
+              // Check if character's currentNodeId is valid
+              if (!characterData.currentNodeId || !nodeIds.includes(characterData.currentNodeId)) {
+                console.warn(`SimulationService: Character ${characterData.name} has invalid currentNodeId: ${characterData.currentNodeId}`);
                 // Assign to first available node if exists
-                npcData.currentNodeId = reconstructedNodes[0].id;
-                console.log(`SimulationService: Reassigned NPC ${npcData.name} to node ${npcData.currentNodeId}`);
+                characterData.currentNodeId = reconstructedNodes[0].id;
+                console.log(`SimulationService: Reassigned character ${characterData.name} to node ${characterData.currentNodeId}`);
               }
             }
-            return Character.fromJSON ? Character.fromJSON(npcData) : npcData;
+            return Character.fromJSON ? Character.fromJSON(characterData) : characterData;
           }
-          console.warn('SimulationService: Invalid NPC data, skipping:', npcData);
+          console.warn('SimulationService: Invalid character data, skipping:', characterData);
           return null;
         } catch (error) {
-          console.error('SimulationService: Failed to reconstruct NPC:', error, npcData);
+          console.error('SimulationService: Failed to reconstruct character:', error, characterData);
           return null;
         }
-      }).filter(npc => npc !== null) : [];
+      }).filter(character => character !== null) : [];
 
       // Handle settlements (might not exist in older save files)
       const reconstructedSettlements = Array.isArray(savedState.settlements) ? savedState.settlements : [];
@@ -874,7 +888,7 @@ class SimulationService {
         rules: savedState.rules || {},
         initialConditions: savedState.initialConditions || {},
         nodes: reconstructedNodes,
-        npcs: reconstructedNPCs,
+        characters: reconstructedCharacters,
         interactions: savedState.interactions || [],
         settlements: reconstructedSettlements,
         resources: savedState.resources && typeof savedState.resources === 'object' ? savedState.resources : {}
@@ -891,7 +905,7 @@ class SimulationService {
       }
 
       console.log(`SimulationService: Loaded state from localStorage with turn ${reconstructedState.time}`);
-      console.log(`SimulationService: ${reconstructedNodes.length} nodes, ${reconstructedNPCs.length} NPCs`);
+      console.log(`SimulationService: ${reconstructedNodes.length} nodes, ${reconstructedCharacters.length} characters`);
       return reconstructedState;
     } catch (error) {
       console.error('SimulationService: Failed to load state from localStorage:', error);
@@ -912,7 +926,7 @@ class SimulationService {
     }
 
     // Check if required arrays exist (can be empty)
-    if (!Array.isArray(state.nodes) || !Array.isArray(state.npcs)) {
+    if (!Array.isArray(state.nodes) || !Array.isArray(state.characters || state.npcs)) {
       return false;
     }
 
@@ -1005,15 +1019,15 @@ class SimulationService {
       throw new Error('World state nodes must be an array');
     }
 
-    if (!Array.isArray(this.worldState.npcs)) {
-      throw new Error('World state npcs must be an array');
+    if (!Array.isArray(this.worldState.characters)) {
+      throw new Error('World state characters must be an array');
     }
 
     // Validate character-node relationships
     const nodeIds = new Set(this.worldState.nodes.map(node => node.id));
     const orphanedCharacters = [];
 
-    this.worldState.npcs.forEach(character => {
+    this.worldState.characters.forEach(character => {
       if (!character.currentNodeId) {
         // Try to assign from character assignments
         if (character.assignments?.nodes?.size > 0) {

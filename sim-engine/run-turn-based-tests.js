@@ -6,6 +6,7 @@
  */
 
 const { exec } = require('child_process');
+const path = require('path');
 
 console.log('🚀 Turn-Based Simulation Integration Test Runner\n');
 
@@ -54,14 +55,15 @@ function runTest(testSuite) {
   return new Promise((resolve) => {
     const watchFlag = watch ? '' : '--watchAll=false';
     const verboseFlag = verbose ? '--verbose' : '';
-    const command = `npm test -- --testPathPattern=${testSuite.file} ${watchFlag} ${verboseFlag}`;
+    // Change to sim-engine directory before running npm test
+    const command = `cd sim-engine && npm test -- --testPathPattern=${testSuite.file} ${watchFlag} ${verboseFlag}`;
     
     console.log(`\n📋 Running: ${testSuite.name}`);
     console.log(`📝 Description: ${testSuite.description}`);
     console.log(`⚙️  Command: ${command}\n`);
 
     const startTime = Date.now();
-    const testProcess = exec(command, (error, stdout, stderr) => {
+    const testProcess = exec(command, { cwd: path.dirname(__dirname) }, (error, stdout, stderr) => {
       const endTime = Date.now();
       const duration = ((endTime - startTime) / 1000).toFixed(2);
       

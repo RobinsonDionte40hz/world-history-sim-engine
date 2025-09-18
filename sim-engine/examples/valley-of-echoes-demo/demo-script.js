@@ -79,37 +79,69 @@ class ValleyOfEchoesDemo {
       nodes: config.nodes,
       assignedCharacters: [
         ...config.heroCharacters.map(char => char.id),
-        ...config.populationGroups.map(group => group.id)
+        ...config.populationGroups.flatMap(group =>
+          Array.from({ length: group.size }, (_, i) => `${group.id}-bg-${i}`)
+        )
       ],
       needSatisfaction: config.needSatisfaction,
       development: config.development,
       economy: config.economy
     };
 
-    const worldData = {
-      settlement: settlement,
-      characters: [
-        ...config.heroCharacters.map(char => ({
-          ...char,
-          lodTier: 'hero',
-          assignments: {
-            nodes: new Set([char.assignedNode]),
-            interactions: new Set(),
-            settlements: new Set([config.id])
-          }
-        })),
-        ...config.populationGroups.map(group => ({
-          id: group.id,
-          name: group.name,
-          lodTier: 'group',
+    // Create hero characters
+    const heroCharacters = config.heroCharacters.map(char => ({
+      ...char,
+      lodTier: 'hero',
+      assignments: {
+        nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+        interactions: new Set(),
+        settlements: new Set([config.id])
+      }
+    }));
+
+    // Create group-level characters for population groups
+    const groupCharacters = config.populationGroups.map(group => ({
+      id: group.id,
+      name: group.name,
+      lodTier: 'group',
+      populationGroupId: group.id,
+      groupStatistics: group.statistics,
+      assignments: {
+        nodes: new Set([group.assignedNode]),
+        interactions: new Set(),
+        settlements: new Set([config.id])
+      }
+    }));
+
+    // Create individual background characters for each population group
+    const backgroundCharacters = [];
+    config.populationGroups.forEach(group => {
+      for (let i = 0; i < group.size; i++) {
+        backgroundCharacters.push({
+          id: `${group.id}-bg-${i}`,
+          name: `${group.name} ${i + 1}`,
+          lodTier: 'background',
           populationGroupId: group.id,
-          groupStatistics: group.statistics,
+          demographicData: {
+            occupation: group.demographics.occupation,
+            ageGroup: group.demographics.ageGroup,
+            economicClass: group.demographics.economicClass
+          },
           assignments: {
             nodes: new Set([group.assignedNode]),
             interactions: new Set(),
             settlements: new Set([config.id])
           }
-        }))
+        });
+      }
+    });
+
+    const worldData = {
+      settlement: settlement,
+      characters: [
+        ...heroCharacters,
+        ...groupCharacters,
+        ...backgroundCharacters
       ],
       nodes: config.nodes,
       interactions: []

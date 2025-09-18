@@ -25,8 +25,18 @@ const LODStatusIndicator = ({
     if (!worldState?.characters || !lodManager) return;
 
     try {
+      // Handle both Map and Array structures
+      let characters;
+      if (worldState.characters instanceof Map) {
+        characters = Array.from(worldState.characters.values());
+      } else if (Array.isArray(worldState.characters)) {
+        characters = worldState.characters;
+      } else {
+        console.warn('LODStatusIndicator: characters is neither Map nor Array:', typeof worldState.characters);
+        return;
+      }
+
       // Get current LOD breakdown
-      const characters = worldState.characters;
       const stats = {
         hero: characters.filter(c => c.lodTier === 'hero').length,
         group: characters.filter(c => c.lodTier === 'group').length,

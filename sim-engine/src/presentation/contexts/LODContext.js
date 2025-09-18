@@ -49,7 +49,17 @@ export const LODProvider = ({ children }) => {
   const updateLODStats = useCallback((worldState) => {
     if (!worldState?.characters) return;
 
-    const characters = worldState.characters;
+    // Handle both Map and Array structures
+    let characters;
+    if (worldState.characters instanceof Map) {
+      characters = Array.from(worldState.characters.values());
+    } else if (Array.isArray(worldState.characters)) {
+      characters = worldState.characters;
+    } else {
+      console.warn('updateLODStats: characters is neither Map nor Array:', typeof worldState.characters);
+      return;
+    }
+
     const stats = {
       hero: characters.filter(c => c.lodTier === 'hero').length,
       group: characters.filter(c => c.lodTier === 'group').length,
@@ -104,12 +114,34 @@ export const LODProvider = ({ children }) => {
 
     const transitions = [];
 
-    oldState.characters.forEach((oldChar, index) => {
-      const newChar = newState.characters[index];
-      if (oldChar && newChar && oldChar.id === newChar.id && oldChar.lodTier !== newChar.lodTier) {
+    // Handle both Map and Array structures for oldState
+    let oldCharacters;
+    if (oldState.characters instanceof Map) {
+      oldCharacters = oldState.characters;
+    } else if (Array.isArray(oldState.characters)) {
+      oldCharacters = new Map(oldState.characters.map(c => [c.id, c]));
+    } else {
+      console.warn('recordTierTransitions: oldState.characters is neither Map nor Array');
+      return;
+    }
+
+    // Handle both Map and Array structures for newState
+    let newCharacters;
+    if (newState.characters instanceof Map) {
+      newCharacters = newState.characters;
+    } else if (Array.isArray(newState.characters)) {
+      newCharacters = new Map(newState.characters.map(c => [c.id, c]));
+    } else {
+      console.warn('recordTierTransitions: newState.characters is neither Map nor Array');
+      return;
+    }
+
+    oldCharacters.forEach((oldChar, charId) => {
+      const newChar = newCharacters.get(charId);
+      if (oldChar && newChar && oldChar.lodTier !== newChar.lodTier) {
         transitions.push({
-          characterId: oldChar.id,
-          characterName: oldChar.name || `Character ${oldChar.id}`,
+          characterId: charId,
+          characterName: oldChar.name || `Character ${charId}`,
           fromTier: oldChar.lodTier,
           toTier: newChar.lodTier,
           timestamp: Date.now(),

@@ -125,7 +125,17 @@ export const SimulationProvider = ({ children }) => {
   const updateLODStats = useCallback((worldState) => {
     if (!worldState?.characters) return;
 
-    const characters = Array.from(worldState.characters.values());
+    // Handle both Map and Array structures
+    let characters;
+    if (worldState.characters instanceof Map) {
+      characters = Array.from(worldState.characters.values());
+    } else if (Array.isArray(worldState.characters)) {
+      characters = worldState.characters;
+    } else {
+      console.warn('updateLODStats: characters is neither Map nor Array:', typeof worldState.characters);
+      return;
+    }
+
     const stats = {
       hero: characters.filter(c => c.lodTier === 'hero').length,
       group: characters.filter(c => c.lodTier === 'group').length,
@@ -155,8 +165,30 @@ export const SimulationProvider = ({ children }) => {
 
     const transitions = [];
 
-    oldState.characters.forEach((oldChar, charId) => {
-      const newChar = newState.characters.get(charId);
+    // Handle both Map and Array structures for oldState
+    let oldCharacters;
+    if (oldState.characters instanceof Map) {
+      oldCharacters = oldState.characters;
+    } else if (Array.isArray(oldState.characters)) {
+      oldCharacters = new Map(oldState.characters.map(c => [c.id, c]));
+    } else {
+      console.warn('recordLODTierTransitions: oldState.characters is neither Map nor Array');
+      return;
+    }
+
+    // Handle both Map and Array structures for newState
+    let newCharacters;
+    if (newState.characters instanceof Map) {
+      newCharacters = newState.characters;
+    } else if (Array.isArray(newState.characters)) {
+      newCharacters = new Map(newState.characters.map(c => [c.id, c]));
+    } else {
+      console.warn('recordLODTierTransitions: newState.characters is neither Map nor Array');
+      return;
+    }
+
+    oldCharacters.forEach((oldChar, charId) => {
+      const newChar = newCharacters.get(charId);
       if (oldChar && newChar && oldChar.lodTier !== newChar.lodTier) {
         transitions.push({
           characterId: charId,
@@ -180,11 +212,14 @@ export const SimulationProvider = ({ children }) => {
     try {
       setIsLODProcessing(true);
 
-      // Initialize LOD manager with world state
-      await lodManager.initializeForWorld(worldState);
+      // Ensure worldState has Map structure for LODManager
+      const mapStructuredState = DataStructureUtils.ensureMapStructure(worldState);
 
-      // Update initial statistics
-      updateLODStats(worldState);
+      // Initialize LOD manager with Map-structured world state
+      await lodManager.initializeForWorld(mapStructuredState);
+
+      // Update initial statistics using the Map structure
+      updateLODStats(mapStructuredState);
 
       setIsLODInitialized(true);
       console.log('LOD system initialized successfully in SimulationContext');
@@ -562,7 +597,10 @@ export const SimulationProvider = ({ children }) => {
       // Note: In a full implementation, ProcessTurnWithLOD use case would handle this integration
       console.log('Processing simulation turn...');
       const turnResult = await simulationService.processTurn();
-      console.log('Simulation turn processed:', turnResult);
+      console.log('Simulation turn processed - FULL RESULT:', turnResult);
+      console.log('Turn result worldState:', turnResult?.worldState);
+      console.log('Turn result worldState.time:', turnResult?.worldState?.time);
+      console.log('Turn result worldState.events:', turnResult?.worldState?.events);
 
       // Validate turn result
       if (!turnResult || !turnResult.worldState) {
@@ -573,7 +611,11 @@ export const SimulationProvider = ({ children }) => {
       // Process LOD post-turn operations on the simulation result
       console.log('Processing LOD post-turn operations...');
       const finalWorldState = await processLODTurn(turnResult.worldState, turnResult);
-      console.log('Post-turn LOD processing complete');
+      console.log('Post-turn LOD processing complete, finalWorldState:', finalWorldState);
+      
+      // Use LOD-processed state if available, otherwise use the original world state
+      const worldStateToUse = finalWorldState && finalWorldState.worldState ? finalWorldState.worldState : turnResult.worldState;
+      console.log('Using world state:', worldStateToUse);
 
       // Validate final world state
       if (!finalWorldState) {
@@ -582,8 +624,9 @@ export const SimulationProvider = ({ children }) => {
       }
 
       // CRITICAL: Update all relevant state
-      setCurrentSimulationState(finalWorldState);
-      setWorldState(formatWorldStateForDashboard(finalWorldState)); // Make sure this line exists
+      console.log('Setting currentSimulationState to:', worldStateToUse);
+      setCurrentSimulationState(worldStateToUse);
+      setWorldState(formatWorldStateForDashboard(worldStateToUse)); // Use the corrected world state
       setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
       setCurrentTurn(prev => prev + 1);
       

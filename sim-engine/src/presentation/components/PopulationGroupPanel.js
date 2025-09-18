@@ -28,7 +28,17 @@ const PopulationGroupPanel = ({
   const populationStats = useMemo(() => {
     if (!worldState?.characters) return null;
 
-    const characters = worldState.characters;
+    // Handle both Map and Array structures
+    let characters;
+    if (worldState.characters instanceof Map) {
+      characters = Array.from(worldState.characters.values());
+    } else if (Array.isArray(worldState.characters)) {
+      characters = worldState.characters;
+    } else {
+      console.warn('PopulationGroupPanel: characters is neither Map nor Array:', typeof worldState.characters);
+      return null;
+    }
+
     const groups = characters.filter(c => c.isPopulationGroup || c.groupSize > 1);
     const individuals = characters.filter(c => !c.isPopulationGroup && (!c.groupSize || c.groupSize <= 1));
 
@@ -75,7 +85,18 @@ const PopulationGroupPanel = ({
   const populationGroups = useMemo(() => {
     if (!worldState?.characters) return [];
 
-    return worldState.characters
+    // Handle both Map and Array structures
+    let characters;
+    if (worldState.characters instanceof Map) {
+      characters = Array.from(worldState.characters.values());
+    } else if (Array.isArray(worldState.characters)) {
+      characters = worldState.characters;
+    } else {
+      console.warn('PopulationGroupPanel: characters is neither Map nor Array:', typeof worldState.characters);
+      return [];
+    }
+
+    return characters
       .filter(c => c.isPopulationGroup || c.groupSize > 1)
       .map(group => ({
         id: group.id,
