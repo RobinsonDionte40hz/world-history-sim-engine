@@ -44,6 +44,9 @@ class Encounter {
     // Node restrictions - which nodes this encounter can occur in
     this.nodeRestrictions = config.nodeRestrictions || [];
     
+    // Connection restrictions - which connections this encounter can occur on during travel
+    this.connectionRestrictions = config.connectionRestrictions || [];
+    
     // Prerequisites that must be met
     this.prerequisites = config.prerequisites || [];
     
@@ -96,6 +99,13 @@ class Encounter {
     // Check node restrictions
     if (this.nodeRestrictions.length > 0 && context.nodeId) {
       if (!this.nodeRestrictions.includes(context.nodeId)) {
+        return false;
+      }
+    }
+    
+    // Check connection restrictions (for travel encounters)
+    if (this.connectionRestrictions.length > 0 && context.connectionId) {
+      if (!this.connectionRestrictions.includes(context.connectionId)) {
         return false;
       }
     }
@@ -311,6 +321,8 @@ class Encounter {
         outcomes: this.outcomes,
         prerequisites: this.prerequisites,
         rewards: this.rewards,
+        nodeRestrictions: this.nodeRestrictions,
+        connectionRestrictions: this.connectionRestrictions,
         cooldown: this.cooldown
       }
     };
@@ -332,6 +344,8 @@ class Encounter {
       outcomes: overrides.outcomes || template.template?.outcomes || [],
       prerequisites: overrides.prerequisites || template.template?.prerequisites || [],
       rewards: overrides.rewards || template.template?.rewards || [],
+      nodeRestrictions: overrides.nodeRestrictions || template.template?.nodeRestrictions || [],
+      connectionRestrictions: overrides.connectionRestrictions || template.template?.connectionRestrictions || [],
       cooldown: overrides.cooldown || template.template?.cooldown || 0,
       template: {
         isTemplate: false,
@@ -359,6 +373,7 @@ class Encounter {
       difficulty: this.difficulty,
       challengeRating: this.challengeRating,
       nodeRestrictions: this.nodeRestrictions,
+      connectionRestrictions: this.connectionRestrictions,
       prerequisites: this.prerequisites,
       rewards: this.rewards,
       cooldown: this.cooldown,

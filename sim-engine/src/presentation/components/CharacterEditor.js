@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import InvestmentEditor from './InvestmentEditor.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
@@ -763,6 +763,10 @@ const PersonalitySliders = ({ personality, onChange }) => {
     { id: 'sociability', label: 'Sociability', description: 'How social' }
   ];
 
+  // Ensure personality and traits are initialized
+  const safePersonality = personality || { traits: {}, beliefs: '', fears: [] };
+  const safeTraits = safePersonality.traits || {};
+
   return (
     <div>
       <label className="block text-sm font-medium text-white mb-3">
@@ -777,7 +781,7 @@ const PersonalitySliders = ({ personality, onChange }) => {
                 <span className="text-xs text-gray-400 ml-2">{trait.description}</span>
               </div>
               <span className="text-sm font-mono text-gray-300">
-                {(personality.traits?.[trait.id] || 0.5).toFixed(1)}
+                {(safeTraits[trait.id] || 0.5).toFixed(1)}
               </span>
             </div>
             <input
@@ -785,11 +789,11 @@ const PersonalitySliders = ({ personality, onChange }) => {
               min="0"
               max="1"
               step="0.1"
-              value={personality.traits?.[trait.id] || 0.5}
+              value={safeTraits[trait.id] || 0.5}
               onChange={(e) => onChange({
-                ...personality,
+                ...safePersonality,
                 traits: {
-                  ...personality.traits,
+                  ...safeTraits,
                   [trait.id]: parseFloat(e.target.value)
                 }
               })}
@@ -1000,6 +1004,204 @@ const NPCTemplateForm = ({
   );
 };
 
+// Interaction template assignment panel
+const InteractionTemplateAssignmentPanel = ({ 
+  character, 
+  assignedInteractionTemplates, 
+  onAssignTemplate, 
+  onUnassignTemplate 
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Get available interaction templates from the template system
+  const availableTemplates = useMemo(() => {
+    // This would typically come from a hook or context that provides interaction templates
+    // For now, we'll use a placeholder that would be replaced with actual template data
+    return [
+      {
+        id: 'template_combat_basic',
+        name: 'Basic Combat',
+        description: 'Standard combat interactions including attacks and defenses',
+        category: 'combat',
+        tags: ['combat', 'physical', 'aggressive']
+      },
+      {
+        id: 'template_social_greeting',
+        name: 'Social Greeting',
+        description: 'Basic social interactions for introductions and greetings',
+        category: 'social',
+        tags: ['social', 'communication', 'friendly']
+      },
+      {
+        id: 'template_trade_merchant',
+        name: 'Merchant Trading',
+        description: 'Trading interactions for merchants and shopkeepers',
+        category: 'economic',
+        tags: ['trade', 'economic', 'negotiation']
+      },
+      {
+        id: 'template_quest_giver',
+        name: 'Quest Giver',
+        description: 'Interactions for NPCs who give quests to players',
+        category: 'quest',
+        tags: ['quest', 'narrative', 'guidance']
+      }
+    ];
+  }, []);
+
+  // Filter templates based on search and category
+  const filteredTemplates = useMemo(() => {
+    return availableTemplates.filter(template => {
+      const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [availableTemplates, searchTerm, selectedCategory]);
+
+  // Get unique categories
+  const categories = useMemo(() => {
+    const cats = ['all', ...new Set(availableTemplates.map(t => t.category))];
+    return cats;
+  }, [availableTemplates]);
+
+  return (
+    <div className="space-y-4">
+      {/* Assigned Templates */}
+      {assignedInteractionTemplates.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-medium text-white">Assigned Interaction Templates</h4>
+          {assignedInteractionTemplates.map(templateId => {
+            const template = availableTemplates.find(t => t.id === templateId);
+            return (
+              <div
+                key={templateId}
+                className="flex items-center justify-between p-3 bg-blue-500/20 rounded-lg border border-blue-500/30"
+              >
+                <div>
+                  <p className="font-medium text-white">{template?.name || templateId}</p>
+                  <p className="text-sm text-gray-400">
+                    {template?.description || 'Template description'}
+                  </p>
+                  {template?.tags && (
+                    <div className="flex gap-1 mt-1">
+                      {template.tags.map(tag => (
+                        <span key={tag} className="px-2 py-1 bg-white/10 text-xs text-gray-300 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => onUnassignTemplate(templateId)}
+                  className="text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-500/20"
+                >
+                  Remove
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Template Browser */}
+      <div className="border-2 border-dashed border-white/20 rounded-lg p-4">
+        <h4 className="font-medium text-white mb-3">Available Interaction Templates</h4>
+        
+        {/* Search and Filter */}
+        <div className="flex gap-3 mb-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search templates..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+            />
+          </div>
+          <div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            >
+              {categories.map(category => (
+                <option key={category} value={category} className="bg-gray-800">
+                  {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Template List */}
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredTemplates.map(template => {
+            const isAssigned = assignedInteractionTemplates.includes(template.id);
+            return (
+              <div
+                key={template.id}
+                className={`
+                  p-3 rounded-lg border transition-all
+                  ${isAssigned 
+                    ? 'bg-green-500/20 border-green-500/30' 
+                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }
+                `}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h5 className="font-medium text-white">{template.name}</h5>
+                      <span className="px-2 py-1 bg-white/10 text-xs text-gray-300 rounded">
+                        {template.category}
+                      </span>
+                      {isAssigned && (
+                        <span className="px-2 py-1 bg-green-500/20 text-xs text-green-400 rounded border border-green-500/30">
+                          Assigned
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-400 mb-2">{template.description}</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {template.tags.map(tag => (
+                        <span key={tag} className="px-2 py-1 bg-white/10 text-xs text-gray-300 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => isAssigned ? onUnassignTemplate(template.id) : onAssignTemplate(template.id)}
+                    className={`
+                      px-3 py-1 rounded text-sm font-medium transition-colors
+                      ${isAssigned
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                        : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                      }
+                    `}
+                  >
+                    {isAssigned ? 'Remove' : 'Assign'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredTemplates.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            No interaction templates found matching your criteria.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Relationships template editor
 const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
   const [newTemplate, setNewTemplate] = useState({
@@ -1145,7 +1347,7 @@ const CharacterEditor = ({
 }) => {
   // Form state
   const [characterData, setCharacterData] = useState({
-    id: initialCharacter?.id || `character_${Date.now()}`,
+    id: initialCharacter?.id || (mode === 'create' ? '' : `character_${Date.now()}`),
     name: initialCharacter?.name || '',
     description: initialCharacter?.description || '',
     archetype: initialCharacter?.archetype || 'warrior',
@@ -1170,6 +1372,7 @@ const CharacterEditor = ({
     skills: initialCharacter?.skills || {},
     goals: initialCharacter?.goals || [],
     assignedInteractions: initialCharacter?.assignedInteractions || [],
+    assignedInteractionTemplates: initialCharacter?.assignedInteractionTemplates || [], // New field for interaction templates
     equipment: initialCharacter?.equipment || {},
     relationshipTemplates: initialCharacter?.relationshipTemplates || [],
     background: initialCharacter?.background || '',
@@ -1199,7 +1402,7 @@ const CharacterEditor = ({
   useEffect(() => {
     if (initialCharacter) {
       setCharacterData({
-        id: initialCharacter.id || `character_${Date.now()}`,
+        id: initialCharacter.id || (mode === 'create' ? '' : `character_${Date.now()}`),
         name: initialCharacter.name || '',
         description: initialCharacter.description || '',
         archetype: initialCharacter.archetype || 'warrior',
@@ -1224,6 +1427,7 @@ const CharacterEditor = ({
         skills: initialCharacter.skills || {},
         goals: initialCharacter.goals || [],
         assignedInteractions: initialCharacter.assignedInteractions || [],
+        assignedInteractionTemplates: initialCharacter.assignedInteractionTemplates || [], // New field for interaction templates
         equipment: initialCharacter.equipment || {},
         relationshipTemplates: initialCharacter.relationshipTemplates || [],
         background: initialCharacter.background || '',
@@ -1240,7 +1444,7 @@ const CharacterEditor = ({
       // Clear any previous errors
       setErrors({});
     }
-  }, [initialCharacter]);
+  }, [initialCharacter, mode]);
 
   // Validation using unified utility with mode-specific requirements
   const validateCharacter = useCallback(() => {
@@ -1292,10 +1496,15 @@ const CharacterEditor = ({
         newErrors.skills = 'At least one skill should be defined';
       }
     }
+
+    // ID validation for create mode
+    if (mode === 'create' && !characterData.id?.trim()) {
+      newErrors.id = 'Character ID is required';
+    }
     
     setErrors(newErrors);
     return validationResult.isValid && Object.keys(newErrors).length === 0;
-  }, [characterData, creationMode]);
+  }, [characterData, creationMode, mode]);
 
   // Handle save
   const handleSave = useCallback(async () => {
@@ -1308,11 +1517,17 @@ const CharacterEditor = ({
     setSaveSuccess(false);
 
     try {
+      // Auto-generate ID if empty in create mode
+      const finalCharacterData = {
+        ...characterData,
+        id: characterData.id?.trim() || `character_${Date.now()}`
+      };
+
       // Check if we're creating a template or regular character
       if (mode === 'create' && creationMode === CHARACTER_CREATION_MODES.TEMPLATE) {
         // Call template creation handler
         if (onCreateTemplate) {
-          await onCreateTemplate(characterData);
+          await onCreateTemplate(finalCharacterData);
           setSaveSuccess(true);
           
           // Clear success message after 3 seconds
@@ -1321,7 +1536,7 @@ const CharacterEditor = ({
       } else {
         // Call regular save handler
         if (onSave) {
-          await onSave(characterData);
+          await onSave(finalCharacterData);
           setSaveSuccess(true);
           
           // Clear success message after 3 seconds
@@ -1537,6 +1752,7 @@ const CharacterEditor = ({
         { id: 'skills', label: 'Skills', icon: '⭐' },
         { id: 'goals', label: 'Goals', icon: '🎯' },
         { id: 'interactions', label: 'Interactions', icon: '⚡' },
+        { id: 'interaction-templates', label: 'Interaction Templates', icon: '📋' }, // New tab for interaction templates
         { id: 'investments', label: 'Investments', icon: '💰' },
         { id: 'equipment', label: 'Equipment', icon: '🎒' },
         { id: 'relationships', label: 'Relationships', icon: '🤝' },
@@ -1650,14 +1866,38 @@ const CharacterEditor = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
-                Character ID
+                Character ID {mode === 'create' && <span className="text-red-500">*</span>}
               </label>
-              <input
-                type="text"
-                value={characterData.id}
-                disabled
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-400"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={characterData.id}
+                  onChange={(e) => setCharacterData({...characterData, id: e.target.value})}
+                  disabled={mode === 'edit'}
+                  className={`flex-1 px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                    ${mode === 'edit' ? 'text-gray-400' : ''}
+                    ${errors.id ? 'border-red-500' : 'border-white/20'}
+                  `}
+                  placeholder={mode === 'create' ? "Enter custom ID or leave empty for auto-generation..." : ""}
+                />
+                {mode === 'create' && (
+                  <button
+                    onClick={() => setCharacterData({...characterData, id: `character_${Date.now()}`})}
+                    className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm whitespace-nowrap"
+                    title="Auto-generate ID"
+                  >
+                    🎲 Generate
+                  </button>
+                )}
+              </div>
+              {errors.id && (
+                <p className="text-red-500 text-sm mt-1">{errors.id}</p>
+              )}
+              {mode === 'create' && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Leave empty to auto-generate a unique ID, or enter a custom ID.
+                </p>
+              )}
             </div>
 
             <div>
@@ -1893,6 +2133,33 @@ const CharacterEditor = ({
               onUnassignInteraction={handleUnassignInteraction}
               onCreateInteraction={onCreateInteraction}
               onEditInteraction={onEditInteraction}
+            />
+          </div>
+        )}
+
+        {/* Interaction Templates Tab */}
+        {activeTab === 'interaction-templates' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Assign interaction templates to this character template. When NPCs are generated from this template, they will automatically get interactions created from these templates.
+            </p>
+            <InteractionTemplateAssignmentPanel
+              character={characterData}
+              assignedInteractionTemplates={characterData.assignedInteractionTemplates}
+              onAssignTemplate={(templateId) => {
+                if (!characterData.assignedInteractionTemplates.includes(templateId)) {
+                  setCharacterData({
+                    ...characterData,
+                    assignedInteractionTemplates: [...characterData.assignedInteractionTemplates, templateId]
+                  });
+                }
+              }}
+              onUnassignTemplate={(templateId) => {
+                setCharacterData({
+                  ...characterData,
+                  assignedInteractionTemplates: characterData.assignedInteractionTemplates.filter(id => id !== templateId)
+                });
+              }}
             />
           </div>
         )}

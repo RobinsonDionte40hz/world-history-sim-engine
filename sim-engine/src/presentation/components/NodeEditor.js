@@ -627,7 +627,7 @@ const NodeEditor = ({
 }) => {
   // Form state
   const [nodeData, setNodeData] = useState({
-    id: initialNode?.id || `node_${Date.now()}`,
+    id: mode === 'create' ? '' : (initialNode?.id || `node_${Date.now()}`),
     name: initialNode?.name || '',
     description: initialNode?.description || '',
     type: initialNode?.type || 'settlement',
@@ -659,6 +659,13 @@ const NodeEditor = ({
     }
   }, [nodeData, onChange]);
 
+  // Handle ID initialization for edit mode
+  useEffect(() => {
+    if (mode === 'edit' && initialNode?.id && !nodeData.id) {
+      setNodeData(prev => ({ ...prev, id: initialNode.id }));
+    }
+  }, [mode, initialNode?.id, nodeData.id]);
+
   // Validation using centralized domain validator
   const validateNode = useCallback(() => {
     const validation = WorldValidator.validateSingleNode(nodeData);
@@ -669,23 +676,37 @@ const NodeEditor = ({
       newErrors[error.field] = error.message;
     });
 
+    // Add ID validation for create mode
+    if (mode === 'create' && !nodeData.id.trim()) {
+      newErrors.id = 'Node ID is required';
+    }
+
     // Log warnings to console
     if (validation.warnings.length > 0) {
       console.warn('Node validation warnings:', validation.warnings);
     }
 
     setErrors(newErrors);
-    return validation.isValid;
-  }, [nodeData]);
+    return validation.isValid && Object.keys(newErrors).length === 0;
+  }, [nodeData, mode]);
 
   // Handle save
   const handleSave = useCallback(() => {
+    // Auto-generate ID if empty
+    const finalNodeData = {
+      ...nodeData,
+      id: nodeData.id.trim() || `node_${Date.now()}`
+    };
+
+    // Update state with final data
+    setNodeData(finalNodeData);
+
     if (!validateNode()) {
       return;
     }
 
     if (onSave) {
-      onSave(nodeData);
+      onSave(finalNodeData);
     }
   }, [nodeData, onSave, validateNode]);
 
@@ -875,14 +896,34 @@ const NodeEditor = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
-                Node ID
+                Node ID {mode === 'create' && <span className="text-red-500">*</span>}
               </label>
-              <input
-                type="text"
-                value={nodeData.id}
-                disabled
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-400"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={nodeData.id}
+                  onChange={(e) => setNodeData({ ...nodeData, id: e.target.value })}
+                  disabled={mode === 'edit'}
+                  className={`
+                    flex-1 px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400
+                    ${errors.id ? 'border-red-500' : 'border-white/20'}
+                    ${mode === 'edit' ? 'text-gray-400' : ''}
+                  `}
+                  placeholder={mode === 'create' ? 'Enter custom node ID...' : ''}
+                />
+                {mode === 'create' && (
+                  <button
+                    onClick={() => setNodeData({ ...nodeData, id: `node_${Date.now()}` })}
+                    className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm whitespace-nowrap"
+                    title="Auto-generate ID"
+                  >
+                    Auto ID
+                  </button>
+                )}
+              </div>
+              {errors.id && (
+                <p className="text-red-500 text-sm mt-1">{errors.id}</p>
+              )}
             </div>
 
             <div>

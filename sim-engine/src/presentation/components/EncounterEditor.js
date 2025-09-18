@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, X, Settings, Dice6, Clock, Target, Gift, AlertTriangle, Info } from 'lucide-react';
+import { Plus, X, Settings, Dice6, Clock, Target, Gift, AlertTriangle, Info, MapPin, Route } from 'lucide-react';
 import PlaceholderEditor from './text-templating/PlaceholderEditor';
 import EditorContextService from '../../application/services/EditorContextService';
 import QuestTextTemplatingService from '../../application/services/QuestTextTemplatingService';
@@ -27,29 +27,45 @@ const EncounterEditor = ({
   currentWorld = null,
   participants = []
 }) => {
-  const [encounter, setEncounter] = useState(initialEncounter || {
-    name: '',
-    description: '',
-    type: 'combat',
-    difficulty: 'medium',
-    challengeRating: 1,
-    turnBased: {
-      duration: 1,
-      initiative: 'random',
-      timing: 'immediate',
-      sequencing: 'simultaneous'
-    },
-    triggers: [],
-    participants: [],
-    outcomes: [],
-    prerequisites: [],
-    rewards: [],
-    cooldown: 0,
-    nodeRestrictions: [],
-    // Quest integration fields
-    questObjectives: [],
-    completionMessage: '',
-    questRewards: []
+  const [encounter, setEncounter] = useState(() => {
+    const baseEncounter = initialEncounter || {
+      name: '',
+      description: '',
+      type: 'combat',
+      difficulty: 'medium',
+      challengeRating: 1,
+      turnBased: {
+        duration: 1,
+        initiative: 'random',
+        timing: 'immediate',
+        sequencing: 'simultaneous'
+      },
+      triggers: [],
+      participants: [],
+      outcomes: [],
+      prerequisites: [],
+      rewards: [],
+      cooldown: 0,
+      nodeRestrictions: [],
+      connectionRestrictions: [],
+      // Quest integration fields
+      questObjectives: [],
+      completionMessage: '',
+      questRewards: []
+    };
+
+    // Ensure all required arrays are initialized
+    return {
+      ...baseEncounter,
+      nodeRestrictions: baseEncounter.nodeRestrictions || [],
+      connectionRestrictions: baseEncounter.connectionRestrictions || [],
+      triggers: baseEncounter.triggers || [],
+      outcomes: baseEncounter.outcomes || [],
+      prerequisites: baseEncounter.prerequisites || [],
+      rewards: baseEncounter.rewards || [],
+      questObjectives: baseEncounter.questObjectives || [],
+      questRewards: baseEncounter.questRewards || []
+    };
   });
 
   const [activeTab, setActiveTab] = useState('basic');
@@ -1062,12 +1078,354 @@ const EncounterEditor = ({
     </div>
   );
 
+  const renderLocationsTab = () => {
+    // Get available nodes from current world
+    const availableNodes = currentWorld?.worldConfig?.nodes || [];
+    
+    const addNodeRestriction = (nodeId) => {
+      if (!encounter.nodeRestrictions.includes(nodeId)) {
+        updateEncounter({
+          nodeRestrictions: [...encounter.nodeRestrictions, nodeId]
+        });
+      }
+    };
+
+    const removeNodeRestriction = (nodeId) => {
+      updateEncounter({
+        nodeRestrictions: encounter.nodeRestrictions.filter(id => id !== nodeId)
+      });
+    };
+
+    const clearAllRestrictions = () => {
+      updateEncounter({ nodeRestrictions: [] });
+    };
+
+    const addAllNodes = () => {
+      const allNodeIds = availableNodes.map(node => node.id);
+      updateEncounter({ nodeRestrictions: allNodeIds });
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/10 border border-white/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-lg font-semibold text-white">Location Restrictions</h3>
+          </div>
+          <p className="text-sm text-gray-400 mb-4">
+            Control where this encounter can occur by restricting it to specific nodes (locations).
+            If no nodes are selected, the encounter can occur anywhere.
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              onClick={addAllNodes}
+              disabled={availableNodes.length === 0}
+              className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add All Nodes
+            </button>
+            <button
+              onClick={clearAllRestrictions}
+              disabled={encounter.nodeRestrictions.length === 0}
+              className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <X className="w-4 h-4" />
+              Clear All
+            </button>
+          </div>
+
+          {/* Current Restrictions */}
+          {encounter.nodeRestrictions.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-md font-medium text-gray-300 mb-3">
+                Restricted to {encounter.nodeRestrictions.length} location{encounter.nodeRestrictions.length !== 1 ? 's' : ''}:
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {encounter.nodeRestrictions.map(nodeId => {
+                  const node = availableNodes.find(n => n.id === nodeId);
+                  return (
+                    <div key={nodeId} className="bg-indigo-600/20 border border-indigo-600/30 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">
+                          {node?.name || `Node ${nodeId}`}
+                        </span>
+                        <button
+                          onClick={() => removeNodeRestriction(nodeId)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {node?.type && (
+                        <div className="text-xs text-gray-400 capitalize">
+                          {node.type}
+                        </div>
+                      )}
+                      {node?.description && (
+                        <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                          {node.description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Available Nodes */}
+          <div>
+            <h4 className="text-md font-medium text-gray-300 mb-3">
+              Available Locations ({availableNodes.length}):
+            </h4>
+            
+            {availableNodes.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No nodes available in the current world.</p>
+                <p className="text-sm">Create nodes first to restrict encounters to specific locations.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableNodes.map(node => {
+                  const isSelected = encounter.nodeRestrictions.includes(node.id);
+                  return (
+                    <div
+                      key={node.id}
+                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-indigo-600/20 border-indigo-600/50'
+                          : 'bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30'
+                      }`}
+                      onClick={() => isSelected ? removeNodeRestriction(node.id) : addNodeRestriction(node.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">
+                          {node.name || `Node ${node.id}`}
+                        </span>
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-indigo-600 border-indigo-600'
+                            : 'border-gray-400'
+                        }`}>
+                          {isSelected && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                      </div>
+                      {node.type && (
+                        <div className="text-xs text-gray-400 capitalize mb-1">
+                          {node.type}
+                        </div>
+                      )}
+                      {node.description && (
+                        <div className="text-xs text-gray-400 line-clamp-2">
+                          {node.description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Help Text */}
+          <div className="mt-6 p-3 bg-blue-600/10 border border-blue-600/30 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-blue-400 mt-0.5" />
+              <div className="text-sm text-blue-300">
+                <strong>Location Restrictions:</strong> If you select specific nodes, this encounter can only occur at those locations.
+                If no nodes are selected, the encounter can occur at any location in the world.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderConnectionsTab = () => {
+    // Get all available connections from the world
+    const availableConnections = [];
+    const availableNodes = currentWorld?.worldConfig?.nodes || [];
+    
+    // Build list of all connections from all nodes
+    availableNodes.forEach(node => {
+      if (node.connections && Array.isArray(node.connections)) {
+        node.connections.forEach(connection => {
+          // Create a unique ID for the connection
+          const connectionId = `${node.id}-${connection.targetNodeId}-${connection.type}`;
+          const targetNode = availableNodes.find(n => n.id === connection.targetNodeId);
+          
+          availableConnections.push({
+            id: connectionId,
+            sourceNode: node,
+            targetNode: targetNode,
+            connection: connection,
+            displayName: `${node.name || node.id} → ${targetNode?.name || connection.targetNodeId} (${connection.type})`
+          });
+        });
+      }
+    });
+
+    const addConnectionRestriction = (connectionId) => {
+      if (!encounter.connectionRestrictions.includes(connectionId)) {
+        updateEncounter({
+          connectionRestrictions: [...encounter.connectionRestrictions, connectionId]
+        });
+      }
+    };
+
+    const removeConnectionRestriction = (connectionId) => {
+      updateEncounter({
+        connectionRestrictions: encounter.connectionRestrictions.filter(id => id !== connectionId)
+      });
+    };
+
+    const clearAllConnectionRestrictions = () => {
+      updateEncounter({ connectionRestrictions: [] });
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/10 border border-white/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Route className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-lg font-semibold text-white">Travel Route Restrictions</h3>
+          </div>
+          <p className="text-sm text-gray-400 mb-4">
+            Control where this encounter can occur during travel by restricting it to specific routes between locations.
+            If no routes are selected, the encounter can occur on any travel route.
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              onClick={clearAllConnectionRestrictions}
+              disabled={encounter.connectionRestrictions.length === 0}
+              className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <X className="w-4 h-4" />
+              Clear All
+            </button>
+          </div>
+
+          {/* Current Restrictions */}
+          {encounter.connectionRestrictions.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-md font-medium text-gray-300 mb-3">
+                Restricted to {encounter.connectionRestrictions.length} route{encounter.connectionRestrictions.length !== 1 ? 's' : ''}:
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {encounter.connectionRestrictions.map(connectionId => {
+                  const connection = availableConnections.find(c => c.id === connectionId);
+                  return (
+                    <div key={connectionId} className="bg-indigo-600/20 border border-indigo-600/30 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">
+                          {connection?.displayName || `Route ${connectionId}`}
+                        </span>
+                        <button
+                          onClick={() => removeConnectionRestriction(connectionId)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {connection && (
+                        <div className="text-xs text-gray-400">
+                          Difficulty: {connection.connection.difficulty}, Distance: {connection.connection.distance}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Available Connections */}
+          <div>
+            <h4 className="text-md font-medium text-gray-300 mb-3">
+              Available Travel Routes ({availableConnections.length}):
+            </h4>
+            
+            {availableConnections.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Route className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No travel routes available in the current world.</p>
+                <p className="text-sm">Create nodes with connections first to restrict encounters to specific travel routes.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableConnections.map(connection => {
+                  const isSelected = encounter.connectionRestrictions.includes(connection.id);
+                  return (
+                    <div
+                      key={connection.id}
+                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-indigo-600/20 border-indigo-600/50'
+                          : 'bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30'
+                      }`}
+                      onClick={() => isSelected ? removeConnectionRestriction(connection.id) : addConnectionRestriction(connection.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">
+                          {connection.displayName}
+                        </span>
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-indigo-600 border-indigo-600'
+                            : 'border-gray-400'
+                        }`}>
+                          {isSelected && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Difficulty: {connection.connection.difficulty}, Distance: {connection.connection.distance}
+                      </div>
+                      {connection.connection.conditions && connection.connection.conditions.length > 0 && (
+                        <div className="text-xs text-orange-400 mt-1">
+                          Has special conditions
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Help Text */}
+          <div className="mt-6 p-3 bg-blue-600/10 border border-blue-600/30 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-blue-400 mt-0.5" />
+              <div className="text-sm text-blue-300">
+                <strong>Travel Route Restrictions:</strong> If you select specific routes, this encounter can only occur while traveling along those routes.
+                If no routes are selected, the encounter can occur on any travel route in the world.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: Info },
     { id: 'turnbased', label: 'Turn-Based', icon: Clock },
     { id: 'triggers', label: 'Triggers', icon: Target },
     { id: 'outcomes', label: 'Outcomes', icon: Dice6 },
     { id: 'prerequisites', label: 'Prerequisites', icon: AlertTriangle },
+    { id: 'locations', label: 'Locations', icon: MapPin },
+    { id: 'connections', label: 'Travel Routes', icon: Route },
     { id: 'rewards', label: 'Rewards', icon: Gift }
   ];
 
@@ -1103,6 +1461,8 @@ const EncounterEditor = ({
         {activeTab === 'triggers' && renderTriggersTab()}
         {activeTab === 'outcomes' && renderOutcomesTab()}
         {activeTab === 'prerequisites' && renderPrerequisitesTab()}
+        {activeTab === 'locations' && renderLocationsTab()}
+        {activeTab === 'connections' && renderConnectionsTab()}
         {activeTab === 'rewards' && renderRewardsTab()}
       </div>
 

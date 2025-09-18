@@ -1403,4 +1403,4 @@ class DemoService {
   }
 }
 
-module.exports = DemoService;
+export default DemoService;

@@ -6,6 +6,7 @@ import PlaceholderEditor from './text-templating/PlaceholderEditor';
 import DialoguePatterns from './text-templating/DialoguePatterns';
 import EditorContextService from '../../application/services/EditorContextService';
 import BulkControls from './BulkControls';
+import { useSimulationContext } from '../contexts/SimulationContext';
 
 // Note: Redux integration will need to be implemented when store is available
 // import { useDispatch } from 'react-redux';
@@ -679,15 +680,17 @@ const InteractionEditor = ({
   editorContext = {}
 }) => {
   const dispatch = useDispatch();
+  const { worldState } = useSimulationContext();
   
   // Form state
   const [interactionData, setInteractionData] = useState({
-    id: initialInteraction?.id || `interaction_${Date.now()}`,
+    id: initialInteraction?.id || (mode === 'create' ? '' : `interaction_${Date.now()}`),
     name: initialInteraction?.name || '',
     description: initialInteraction?.description || '',
     category: initialInteraction?.category || 'dialogue',
     type: initialInteraction?.type || 'content', // 'system' or 'content'
     nodeId: initialInteraction?.nodeId || '',
+    assignedCharacters: initialInteraction?.assignedCharacters || [],
     prerequisites: initialInteraction?.prerequisites || [],
     choices: initialInteraction?.choices || [],
     effects: initialInteraction?.effects || [],
@@ -747,6 +750,10 @@ const InteractionEditor = ({
   const validateInteraction = useCallback(() => {
     const newErrors = {};
     
+    if (mode === 'create' && !interactionData.id.trim()) {
+      newErrors.id = 'ID is required when creating a new interaction';
+    }
+    
     if (!interactionData.name.trim()) {
       newErrors.name = 'Name is required';
     }
@@ -761,22 +768,28 @@ const InteractionEditor = ({
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [interactionData]);
+  }, [interactionData, mode]);
 
   // Handle save
   const handleSave = useCallback(() => {
+    // Auto-generate ID if empty in create mode
+    let finalData = { ...interactionData };
+    if (mode === 'create' && !finalData.id.trim()) {
+      finalData.id = `interaction_${Date.now()}`;
+    }
+    
     if (!validateInteraction()) {
       return;
     }
 
     const action = mode === 'create' 
-      ? createInteractionTemplate(interactionData)
-      : updateInteractionTemplate(interactionData);
+      ? createInteractionTemplate(finalData)
+      : updateInteractionTemplate(finalData);
     
     dispatch(action);
     
     if (onSave) {
-      onSave(interactionData);
+      onSave(finalData);
     }
   }, [interactionData, mode, dispatch, onSave, validateInteraction]);
 
@@ -837,6 +850,7 @@ const InteractionEditor = ({
   // Tabs configuration
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: '📝' },
+    { id: 'characters', label: 'Characters', icon: '👥' },
     { id: 'prerequisites', label: 'Prerequisites', icon: '🔒' },
     { id: 'choices', label: 'Choices', icon: '🔀' },
     { id: 'effects', label: 'Global Effects', icon: '⚡' },
@@ -881,30 +895,44 @@ const InteractionEditor = ({
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Interaction ID
+                  Interaction ID {mode === 'create' && <span className="text-red-500">*</span>}
                 </label>
-                <input
-                  type="text"
-                  value={interactionData.id}
-                  disabled
-                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-gray-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Node ID
-                </label>
-                <input
-                  type="text"
-                  value={interactionData.nodeId}
-                  onChange={(e) => handleDataChange({ nodeId: e.target.value })}
-                  placeholder="Node where this interaction occurs"
-                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={interactionData.id}
+                    onChange={(e) => handleDataChange({ id: e.target.value })}
+                    disabled={mode === 'edit'}
+                    className={`flex-1 px-4 py-2 bg-white/10 border rounded-lg text-white placeholder-gray-400 ${
+                      mode === 'edit' 
+                        ? 'border-gray-500 text-gray-400' 
+                        : errors.id 
+                          ? 'border-red-500' 
+                          : 'border-white/20'
+                    }`}
+                    placeholder={mode === 'create' ? 'Enter custom ID or leave empty for auto-generation' : ''}
+                  />
+                  {mode === 'create' && (
+                    <button
+                      onClick={() => handleDataChange({ id: `interaction_${Date.now()}` })}
+                      className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm whitespace-nowrap"
+                      title="Generate a new auto ID"
+                    >
+                      🎲 Auto
+                    </button>
+                  )}
+                </div>
+                {mode === 'create' && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Choose a memorable ID or leave empty to auto-generate one
+                  </p>
+                )}
+                {errors.id && (
+                  <p className="text-red-500 text-sm mt-1">{errors.id}</p>
+                )}
               </div>
             </div>
 
@@ -1049,6 +1077,30 @@ const InteractionEditor = ({
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
               />
             </div>
+          </div>
+        )}
+
+        {/* Characters Tab */}
+        {activeTab === 'characters' && (
+          <div>
+            <p className="text-sm text-gray-400 mb-4">
+              Assign this interaction directly to specific characters instead of nodes
+            </p>
+            <CharacterAssignmentPanel
+              assignedCharacters={interactionData.assignedCharacters}
+              onAssign={(characterId) => handleDataChange({
+                assignedCharacters: [...interactionData.assignedCharacters, characterId]
+              })}
+              onUnassign={(characterId) => handleDataChange({
+                assignedCharacters: interactionData.assignedCharacters.filter(id => id !== characterId)
+              })}
+              availableCharacters={worldState?.characters ? Array.from(worldState.characters.values()).map(char => ({
+                id: char.id,
+                name: char.name,
+                race: char.race || 'Unknown',
+                role: char.role || 'Unknown'
+              })) : []}
+            />
           </div>
         )}
 
@@ -1232,6 +1284,10 @@ const InteractionEditor = ({
           <div>
             <span className="font-medium text-gray-300">Priority:</span>{' '}
             <span className="text-white">{interactionData.priority}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-300">Assigned Characters:</span>{' '}
+            <span className="text-white">{interactionData.assignedCharacters.length}</span>
           </div>
           <div>
             <span className="font-medium text-gray-300">Prerequisites:</span>{' '}
@@ -1880,6 +1936,150 @@ const RelationshipEffectForm = ({ onAdd }) => {
       >
         Add Relationship Effect
       </button>
+    </div>
+  );
+};
+
+// Character Assignment Panel Component
+const CharacterAssignmentPanel = ({ assignedCharacters, onAssign, onUnassign, availableCharacters: propCharacters }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAvailable, setShowAvailable] = useState(true);
+
+  // Use provided characters or fallback to mock data
+  const availableCharacters = useMemo(() => {
+    if (propCharacters && Array.isArray(propCharacters)) {
+      return propCharacters;
+    }
+
+    // Fallback mock data for development/testing
+    return [
+      { id: 'char_hero_001', name: 'Elara Voss', race: 'Human', role: 'Protagonist' },
+      { id: 'char_guard_001', name: 'Marcus Ironfist', race: 'Dwarf', role: 'Guard Captain' },
+      { id: 'char_merchant_001', name: 'Lira Goldweaver', race: 'Elf', role: 'Merchant' },
+      { id: 'char_mage_001', name: 'Thorne Shadowcaster', race: 'Human', role: 'Court Mage' },
+      { id: 'char_commoner_001', name: 'Bryn Meadowfarmer', race: 'Halfling', role: 'Farmer' },
+      { id: 'char_noble_001', name: 'Lord Cedric Valtorius', race: 'Human', role: 'Noble' }
+    ];
+  }, [propCharacters]);
+
+  const filteredCharacters = useMemo(() => {
+    return availableCharacters.filter(character =>
+      !assignedCharacters.includes(character.id) &&
+      (character.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       character.race.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       character.role.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [availableCharacters, assignedCharacters, searchTerm]);
+
+  const assignedCharacterObjects = availableCharacters.filter(char =>
+    assignedCharacters.includes(char.id)
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Search and Filter */}
+      <div className="flex gap-4 items-center">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search characters by name, race, or role..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+          />
+        </div>
+        <button
+          onClick={() => setShowAvailable(!showAvailable)}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            showAvailable
+              ? 'bg-blue-600 text-white'
+              : 'bg-white/10 hover:bg-white/20 text-gray-300'
+          }`}
+        >
+          {showAvailable ? 'Show Assigned' : 'Show Available'}
+        </button>
+      </div>
+
+      {/* Character Lists */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Available Characters */}
+        {showAvailable && (
+          <div className="space-y-2">
+            <h4 className="font-medium text-white">Available Characters</h4>
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {filteredCharacters.length === 0 ? (
+                <p className="text-gray-400 text-sm p-4 text-center">
+                  {searchTerm ? 'No characters match your search' : 'All characters are already assigned'}
+                </p>
+              ) : (
+                filteredCharacters.map(character => (
+                  <div
+                    key={character.id}
+                    className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium text-white">{character.name}</div>
+                      <div className="text-sm text-gray-400">
+                        {character.race} • {character.role}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onAssign(character.id)}
+                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                    >
+                      Assign
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Assigned Characters */}
+        <div className="space-y-2">
+          <h4 className="font-medium text-white">Assigned Characters ({assignedCharacters.length})</h4>
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {assignedCharacterObjects.length === 0 ? (
+              <p className="text-gray-400 text-sm p-4 text-center">
+                No characters assigned yet
+              </p>
+            ) : (
+              assignedCharacterObjects.map(character => (
+                <div
+                  key={character.id}
+                  className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-white">{character.name}</div>
+                    <div className="text-sm text-gray-400">
+                      {character.race} • {character.role}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onUnassign(character.id)}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="mt-4 p-3 bg-white/5 rounded-lg">
+        <p className="text-sm text-gray-300">
+          <span className="font-medium text-white">{assignedCharacters.length}</span> character{assignedCharacters.length !== 1 ? 's' : ''} assigned to this interaction.
+          {assignedCharacters.length > 0 && (
+            <span className="ml-2 text-blue-400">
+              These characters will have access to this interaction regardless of their current location.
+            </span>
+          )}
+        </p>
+      </div>
     </div>
   );
 };

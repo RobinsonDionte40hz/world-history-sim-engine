@@ -936,6 +936,7 @@ const EncounterEditorPage = () => {
                   onSave={handleSave}
                   onCancel={handleCancel}
                   mode={currentEncounter ? 'edit' : 'create'}
+                  currentWorld={currentWorld}
                 />
               </div>
             )}
