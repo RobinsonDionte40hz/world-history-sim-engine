@@ -110,5 +110,5 @@ const testContentInteractions = () => {
 };
 
 // Run the test
-const result = testContentInteractions();
+testContentInteractions();
 console.log('\n🎯 Test completed successfully!');
