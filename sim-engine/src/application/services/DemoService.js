@@ -160,6 +160,35 @@ class DemoService {
           type: interaction.type || 'content'
         };
 
+        // IMPORTANT: Process assignedCharacterIds and update character assignments
+        if (interaction.assignedCharacterIds && Array.isArray(interaction.assignedCharacterIds)) {
+          interaction.assignedCharacterIds.forEach(characterId => {
+            const character = charactersMap.get(characterId);
+            if (character) {
+              // Ensure character has assignments structure
+              if (!character.assignments) {
+                character.assignments = {
+                  nodes: new Set(),
+                  interactions: new Set()
+                };
+              }
+              if (!character.assignments.interactions) {
+                character.assignments.interactions = new Set();
+              }
+              // Add this interaction to the character's assignments
+              character.assignments.interactions.add(contentInteraction.id);
+
+              // Also set assignedInteractions array for compatibility
+              if (!character.assignedInteractions) {
+                character.assignedInteractions = [];
+              }
+              if (!character.assignedInteractions.includes(contentInteraction.id)) {
+                character.assignedInteractions.push(contentInteraction.id);
+              }
+            }
+          });
+        }
+
         // Store as serialized data for navigation compatibility
         interactionsMap.set(contentInteraction.id, contentInteraction);
       });
@@ -214,7 +243,7 @@ class DemoService {
    * @private
    */
   static _generateFantasyVillage() {
-    return {
+    const worldData = {
       // World Foundation
       name: 'Greenwood Village',
       description: 'A peaceful village nestled between ancient forests and rolling hills, where merchants trade stories as readily as gold.',
@@ -324,7 +353,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['village_center']),
-            interactions: new Set(['wise_counsel', 'village_lore'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'village_center',
           background: 'The village elder who has guided Greenwood for over three decades'
@@ -350,7 +379,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['merchant_quarter']),
-            interactions: new Set(['trade_goods', 'travel_stories'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'merchant_quarter',
           background: 'A traveling merchant who has made Greenwood her semi-permanent base'
@@ -376,7 +405,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['village_center', 'forest_edge']),
-            interactions: new Set(['security_briefing', 'patrol_report'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'village_center',
           background: 'The stalwart defender of Greenwood, respected by all who know him'
@@ -402,7 +431,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['forest_edge']),
-            interactions: new Set(['nature_wisdom', 'forest_secrets'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'forest_edge',
           background: 'An ancient elf who has watched over these forests for centuries'
@@ -516,6 +545,31 @@ class DemoService {
         readyForSimulation: true
       }
     };
+
+    // Process assignedCharacterIds to update character assignments
+    worldData.interactions.forEach(interaction => {
+      if (interaction.assignedCharacterIds) {
+        interaction.assignedCharacterIds.forEach(charId => {
+          const character = worldData.characters.find(c => c.id === charId);
+          if (character) {
+            if (!character.assignments) {
+              character.assignments = { nodes: new Set(), interactions: new Set() };
+            }
+            character.assignments.interactions.add(interaction.id);
+
+            // Also set assignedInteractions array for compatibility
+            if (!character.assignedInteractions) {
+              character.assignedInteractions = [];
+            }
+            if (!character.assignedInteractions.includes(interaction.id)) {
+              character.assignedInteractions.push(interaction.id);
+            }
+          }
+        });
+      }
+    });
+
+    return worldData;
   }
 
   /**
@@ -523,7 +577,7 @@ class DemoService {
    * @private
    */
   static _generateSpaceColony() {
-    return {
+    const worldData = {
       // World Foundation
       name: 'New Mars Settlement',
       description: 'A struggling colony on the red planet facing resource challenges, mysterious signals, and the harsh realities of extraterrestrial survival.',
@@ -653,7 +707,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['colony_habitat']),
-            interactions: new Set(['colony_briefing', 'resource_allocation'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'colony_habitat',
           background: 'Former UN administrator who volunteered for the Mars mission to lead humanity\'s first extraterrestrial colony'
@@ -679,7 +733,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['research_lab']),
-            interactions: new Set(['scientific_discovery', 'mysterious_signal'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'research_lab',
           background: 'Leading xenobiologist who specializes in extraterrestrial life forms and planetary geology'
@@ -705,7 +759,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['mining_outpost']),
-            interactions: new Set(['mining_report', 'equipment_maintenance'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'mining_outpost',
           background: 'Former military engineer who leads the mining operations and maintains colony infrastructure'
@@ -731,7 +785,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['communication_array']),
-            interactions: new Set(['signal_analysis', 'earth_contact'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'communication_array',
           background: 'Communications specialist monitoring all signals to and from Earth, including mysterious anomalies'
@@ -832,6 +886,31 @@ class DemoService {
         readyForSimulation: true
       }
     };
+
+    // Process assignedCharacterIds to update character assignments
+    worldData.interactions.forEach(interaction => {
+      if (interaction.assignedCharacterIds) {
+        interaction.assignedCharacterIds.forEach(charId => {
+          const character = worldData.characters.find(c => c.id === charId);
+          if (character) {
+            if (!character.assignments) {
+              character.assignments = { nodes: new Set(), interactions: new Set() };
+            }
+            character.assignments.interactions.add(interaction.id);
+
+            // Also set assignedInteractions array for compatibility
+            if (!character.assignedInteractions) {
+              character.assignedInteractions = [];
+            }
+            if (!character.assignedInteractions.includes(interaction.id)) {
+              character.assignedInteractions.push(interaction.id);
+            }
+          }
+        });
+      }
+    });
+
+    return worldData;
   }
 
   /**
@@ -839,7 +918,7 @@ class DemoService {
    * @private
    */
   static _generatePiratePort() {
-    return {
+    const worldData = {
       // World Foundation
       name: 'Port Royal Haven',
       description: 'A notorious pirate stronghold where treasure and treachery flow like rum, and every shadow hides opportunity or danger.',
@@ -969,7 +1048,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['tavern_row']),
-            interactions: new Set(['pirate_council', 'treasure_hunt'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'tavern_row',
           background: 'Legendary pirate captain whose fearsome reputation strikes terror into the hearts of merchant captains'
@@ -995,7 +1074,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['fortress']),
-            interactions: new Set(['colonial_audience', 'smuggling_deal'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'fortress',
           background: 'Corrupt colonial governor who secretly profits from pirate activities while publicly condemning them'
@@ -1021,7 +1100,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['merchant_quarter']),
-            interactions: new Set(['trade_negotiation', 'information_network'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'merchant_quarter',
           background: 'Wealthy Spanish merchant who maintains profitable relationships with both pirates and colonial authorities'
@@ -1047,7 +1126,7 @@ class DemoService {
           },
           assignments: {
             nodes: new Set(['tavern_row']),
-            interactions: new Set(['rumor_mill', 'safe_haven'])
+            interactions: new Set() // Will be populated below
           },
           currentNodeId: 'tavern_row',
           background: 'Sharp-witted tavern owner who knows everyone\'s secrets and maintains neutrality in the port\'s conflicts'
@@ -1148,6 +1227,31 @@ class DemoService {
         readyForSimulation: true
       }
     };
+
+    // Process assignedCharacterIds to update character assignments
+    worldData.interactions.forEach(interaction => {
+      if (interaction.assignedCharacterIds) {
+        interaction.assignedCharacterIds.forEach(charId => {
+          const character = worldData.characters.find(c => c.id === charId);
+          if (character) {
+            if (!character.assignments) {
+              character.assignments = { nodes: new Set(), interactions: new Set() };
+            }
+            character.assignments.interactions.add(interaction.id);
+
+            // Also set assignedInteractions array for compatibility
+            if (!character.assignedInteractions) {
+              character.assignedInteractions = [];
+            }
+            if (!character.assignedInteractions.includes(interaction.id)) {
+              character.assignedInteractions.push(interaction.id);
+            }
+          }
+        });
+      }
+    });
+
+    return worldData;
   }
 
   /**
@@ -1495,6 +1599,378 @@ class DemoService {
         note: 'Valley of Echoes demo with full LOD system: 8 heroes, 8 groups, 200 background characters'
       }
     };
+  }
+
+  /**
+   * Generate Valley of Echoes demo (work in progress)
+   * @private
+   */
+  static _generateValleyOfEchoes() {
+    // Import the proper Valley of Echoes demo components
+    const oakwoodConfig = require('../../configs/valley-of-echoes/oakwood-config.js');
+    const ironholdConfig = require('../../configs/valley-of-echoes/ironhold-config.js');
+
+    // Build Oakwood Federation settlement
+    const oakwoodSettlement = {
+      id: oakwoodConfig.id,
+      name: oakwoodConfig.name,
+      description: oakwoodConfig.description,
+      type: oakwoodConfig.type,
+      governance: oakwoodConfig.governance,
+      nodes: oakwoodConfig.nodes.map(node => node.id),
+      assignedCharacters: [
+        ...oakwoodConfig.heroCharacters.map(char => char.id),
+        ...oakwoodConfig.populationGroups.flatMap(group =>
+          Array.from({ length: group.size }, (_, i) => `${group.id}-bg-${i}`)
+        )
+      ],
+      needSatisfaction: oakwoodConfig.needSatisfaction,
+      development: oakwoodConfig.development,
+      economy: oakwoodConfig.economy
+    };
+
+    // Build Ironhold Dominion settlement
+    const ironholdSettlement = {
+      id: ironholdConfig.id,
+      name: ironholdConfig.name,
+      description: ironholdConfig.description,
+      type: ironholdConfig.type,
+      governance: ironholdConfig.governance,
+      nodes: ironholdConfig.nodes.map(node => node.id),
+      assignedCharacters: [
+        ...ironholdConfig.heroCharacters.map(char => char.id),
+        ...ironholdConfig.populationGroups.flatMap(group =>
+          Array.from({ length: group.size }, (_, i) => `${group.id}-bg-${i}`)
+        )
+      ],
+      needSatisfaction: ironholdConfig.needSatisfaction,
+      development: ironholdConfig.development,
+      economy: ironholdConfig.economy
+    };
+
+    // Create hero characters for Oakwood
+    const oakwoodHeroCharacters = oakwoodConfig.heroCharacters.map(char => ({
+      id: char.id,
+      name: char.name,
+      lodTier: 'hero',
+      characterType: { typeId: 'hero', category: 'npc' },
+      attributes: char.attributes,
+      consciousness: char.consciousness,
+      personality: char.personality,
+      assignments: {
+        nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+        interactions: new Set(),
+        settlements: new Set([oakwoodConfig.id])
+      },
+      currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
+      background: char.role || 'Hero character'
+    }));
+
+    // Create hero characters for Ironhold
+    const ironholdHeroCharacters = ironholdConfig.heroCharacters.map(char => ({
+      id: char.id,
+      name: char.name,
+      lodTier: 'hero',
+      characterType: { typeId: 'hero', category: 'npc' },
+      attributes: char.attributes,
+      consciousness: char.consciousness,
+      personality: char.personality,
+      assignments: {
+        nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+        interactions: new Set(),
+        settlements: new Set([ironholdConfig.id])
+      },
+      currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
+      background: char.role || 'Hero character'
+    }));
+
+    // Create group-level characters for Oakwood population groups
+    const oakwoodGroupCharacters = oakwoodConfig.populationGroups.map(group => ({
+      id: group.id,
+      name: group.name,
+      lodTier: 'group',
+      populationGroupId: group.id,
+      characterType: { typeId: 'group', category: 'npc' },
+      groupStatistics: group.statistics,
+      assignments: {
+        nodes: new Set([group.assignedNode]),
+        interactions: new Set(),
+        settlements: new Set([oakwoodConfig.id])
+      },
+      currentNodeId: group.assignedNode,
+      background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
+    }));
+
+    // Create group-level characters for Ironhold population groups
+    const ironholdGroupCharacters = ironholdConfig.populationGroups.map(group => ({
+      id: group.id,
+      name: group.name,
+      lodTier: 'group',
+      populationGroupId: group.id,
+      characterType: { typeId: 'group', category: 'npc' },
+      groupStatistics: group.statistics,
+      assignments: {
+        nodes: new Set([group.assignedNode]),
+        interactions: new Set(),
+        settlements: new Set([ironholdConfig.id])
+      },
+      currentNodeId: group.assignedNode,
+      background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
+    }));
+
+    // Create individual background characters for Oakwood
+    const oakwoodBackgroundCharacters = [];
+    oakwoodConfig.populationGroups.forEach(group => {
+      for (let i = 0; i < group.size; i++) {
+        oakwoodBackgroundCharacters.push({
+          id: `${group.id}-bg-${i}`,
+          name: `${group.name} ${i + 1}`,
+          lodTier: 'background',
+          populationGroupId: group.id,
+          characterType: { typeId: 'background', category: 'npc' },
+          demographicData: {
+            occupation: group.demographics.occupation,
+            ageGroup: group.demographics.ageGroup,
+            economicClass: group.demographics.economicClass
+          },
+          assignments: {
+            nodes: new Set([group.assignedNode]),
+            interactions: new Set(),
+            settlements: new Set([oakwoodConfig.id])
+          },
+          currentNodeId: group.assignedNode,
+          background: `${group.demographics.occupation} in ${group.name}`
+        });
+      }
+    });
+
+    // Create individual background characters for Ironhold
+    const ironholdBackgroundCharacters = [];
+    ironholdConfig.populationGroups.forEach(group => {
+      for (let i = 0; i < group.size; i++) {
+        ironholdBackgroundCharacters.push({
+          id: `${group.id}-bg-${i}`,
+          name: `${group.name} ${i + 1}`,
+          lodTier: 'background',
+          populationGroupId: group.id,
+          characterType: { typeId: 'background', category: 'npc' },
+          demographicData: {
+            occupation: group.demographics.occupation,
+            ageGroup: group.demographics.ageGroup,
+            economicClass: group.demographics.economicClass
+          },
+          assignments: {
+            nodes: new Set([group.assignedNode]),
+            interactions: new Set(),
+            settlements: new Set([ironholdConfig.id])
+          },
+          currentNodeId: group.assignedNode,
+          background: `${group.demographics.occupation} in ${group.name}`
+        });
+      }
+    });
+
+    // Combine all characters
+    const allCharacters = [
+      ...oakwoodHeroCharacters,
+      ...ironholdHeroCharacters,
+      ...oakwoodGroupCharacters,
+      ...ironholdGroupCharacters,
+      ...oakwoodBackgroundCharacters,
+      ...ironholdBackgroundCharacters
+    ];
+
+    // Combine all nodes
+    const allNodes = [
+      ...oakwoodConfig.nodes,
+      ...ironholdConfig.nodes
+    ];
+
+    // Create basic interactions
+    const interactions = [
+      {
+        id: 'valley_trade',
+        name: 'Valley Trade Negotiations',
+        description: 'Negotiate trade agreements between Oakwood and Ironhold',
+        category: 'economic',
+        assignedCharacterIds: ['council-chair-elara', 'lord-protector-garret'],
+        branches: [
+          {
+            text: 'Propose trade agreement',
+            effects: [{ type: 'trade', established: true }],
+            outcomes: ['Trade relations between the settlements improve']
+          }
+        ]
+      },
+      {
+        id: 'council_meeting',
+        name: 'Federation Council Meeting',
+        description: 'Attend a meeting of the Oakwood Federation Council',
+        category: 'political',
+        assignedCharacterIds: ['council-chair-elara', 'merchant-guild-leader', 'head-farmer'],
+        branches: [
+          {
+            text: 'Discuss agricultural policy',
+            effects: [{ type: 'policy', agriculture: 'reviewed' }],
+            outcomes: ['Council discusses improvements to farming techniques']
+          },
+          {
+            text: 'Review trade agreements',
+            effects: [{ type: 'trade', review: true }],
+            outcomes: ['Council reviews current trade relationships with Ironhold']
+          }
+        ]
+      },
+      {
+        id: 'forge_craftsmanship',
+        name: 'Master Smith Demonstration',
+        description: 'Watch the master smith demonstrate advanced forging techniques',
+        category: 'craft',
+        assignedCharacterIds: ['master-smith', 'merchant-guild-leader'],
+        branches: [
+          {
+            text: 'Learn about weapon forging',
+            effects: [{ type: 'knowledge', weapon_smithing: 'learned' }],
+            outcomes: ['You learn about the art of weapon forging from the master smith']
+          },
+          {
+            text: 'Discuss metal quality',
+            effects: [{ type: 'knowledge', metal_quality: 'learned' }],
+            outcomes: ['The smith explains the importance of metal quality in craftsmanship']
+          }
+        ]
+      },
+      {
+        id: 'mining_operations',
+        name: 'Mining Site Inspection',
+        description: 'Inspect the mining operations and speak with the mining foreman',
+        category: 'industrial',
+        assignedCharacterIds: ['mining-foreman', 'master-smith'],
+        branches: [
+          {
+            text: 'Check mining safety',
+            effects: [{ type: 'safety', assessment: 'performed' }],
+            outcomes: ['Foreman reports on current safety measures in the mines']
+          },
+          {
+            text: 'Discuss ore quality',
+            effects: [{ type: 'knowledge', ore_quality: 'learned' }],
+            outcomes: ['Foreman explains the quality of ore being extracted']
+          }
+        ]
+      },
+      {
+        id: 'market_bargaining',
+        name: 'Market District Bargaining',
+        description: 'Haggle with merchants in the bustling market district',
+        category: 'economic',
+        assignedCharacterIds: ['merchant-guild-leader', 'master-artisan'],
+        branches: [
+          {
+            text: 'Negotiate tool prices',
+            effects: [{ type: 'trade', tools: 'negotiated' }],
+            outcomes: ['You successfully negotiate better prices for farming tools']
+          },
+          {
+            text: 'Learn about market trends',
+            effects: [{ type: 'knowledge', market_trends: 'learned' }],
+            outcomes: ['Merchants share insights about current market trends']
+          }
+        ]
+      },
+      {
+        id: 'garrison_training',
+        name: 'Military Training Observation',
+        description: 'Observe military training and speak with the garrison captain',
+        category: 'military',
+        assignedCharacterIds: ['captain-garrison', 'lord-protector-garret'],
+        branches: [
+          {
+            text: 'Review defense strategies',
+            effects: [{ type: 'knowledge', defense_strategy: 'learned' }],
+            outcomes: ['Captain explains current defense strategies for the dominion']
+          },
+          {
+            text: 'Discuss soldier morale',
+            effects: [{ type: 'knowledge', soldier_morale: 'assessed' }],
+            outcomes: ['Captain shares insights about garrison morale and readiness']
+          }
+        ]
+      }
+    ];
+
+    const worldData = {
+      // World Foundation
+      name: 'Valley of Echoes',
+      description: 'Two interconnected settlements showcasing advanced LOD system and cross-settlement diplomacy with 200+ background NPCs',
+      rules: {
+        timeProgression: {
+          name: 'Accelerated',
+          description: 'Time moves quickly for demonstration',
+          turnsPerDay: 8,
+          realTimeMultiplier: 4
+        },
+        magicLevel: 'moderate',
+        technologyLevel: 'medieval',
+        socialComplexity: 'high'
+      },
+      initialConditions: {
+        startingYear: 1452,
+        season: 'spring',
+        economicState: 'prosperous',
+        politicalStability: 'tense'
+      },
+
+      // All nodes from both settlements
+      nodes: allNodes,
+
+      // All characters with proper LOD distribution
+      characters: allCharacters,
+
+      // Basic interactions
+      interactions: interactions,
+
+      // Settlements
+      settlements: [oakwoodSettlement, ironholdSettlement],
+
+      // Simulation readiness
+      isComplete: true,
+      isValid: true,
+      simulationReadiness: {
+        worldFoundationDefined: true,
+        locationsDefined: true,
+        capabilitiesDefined: true,
+        actorsDefined: true,
+        actorsAssigned: true,
+        readyForSimulation: true,
+        note: 'Valley of Echoes demo with full LOD system: 8 heroes, 8 groups, 200 background characters'
+      }
+    };
+
+    // Process assignedCharacterIds to update character assignments
+    worldData.interactions.forEach(interaction => {
+      if (interaction.assignedCharacterIds) {
+        interaction.assignedCharacterIds.forEach(charId => {
+          const character = worldData.characters.find(c => c.id === charId);
+          if (character) {
+            if (!character.assignments) {
+              character.assignments = { nodes: new Set(), interactions: new Set() };
+            }
+            character.assignments.interactions.add(interaction.id);
+
+            // Also set assignedInteractions array for compatibility
+            if (!character.assignedInteractions) {
+              character.assignedInteractions = [];
+            }
+            if (!character.assignedInteractions.includes(interaction.id)) {
+              character.assignedInteractions.push(interaction.id);
+            }
+          }
+        });
+      }
+    });
+
+    return worldData;
   }
 }
 
