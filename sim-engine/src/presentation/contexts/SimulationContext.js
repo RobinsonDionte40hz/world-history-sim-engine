@@ -356,7 +356,9 @@ export const SimulationProvider = ({ children }) => {
   
   // Character persistence function
   const saveCharacterState = useCallback(async (worldState) => {
-    if (!worldState) return;
+    if (!worldState) {
+      return { success: false, error: 'No world state provided' };
+    }
 
     try {
       console.log('💾 Saving character state after turn processing...');
@@ -368,9 +370,29 @@ export const SimulationProvider = ({ children }) => {
       console.log(`   Characters saved: ${worldState.characters?.length || 0}`);
       console.log(`   LOD Distribution: Hero=${worldState.characters?.filter(c => c.lodTier === 'hero').length || 0}, Group=${worldState.characters?.filter(c => c.lodTier === 'group').length || 0}, Background=${worldState.characters?.filter(c => c.lodTier === 'background').length || 0}`);
 
+      return {
+        success: true,
+        message: `Saved ${worldState.characters?.length || 0} characters`,
+        charactersSaved: worldState.characters?.length || 0
+      };
+
     } catch (error) {
       console.error('❌ Failed to save character state:', error);
-      // Don't throw error to avoid breaking turn processing
+
+      // Handle quota exceeded specifically
+      if ((error.message && error.message.includes('quota')) || error.name === 'QuotaExceededError') {
+        console.warn('⚠️  Storage quota exceeded - character persistence skipped but simulation continues');
+        return {
+          success: false,
+          error: 'Storage quota exceeded - data not saved but simulation continues',
+          quotaExceeded: true
+        };
+      }
+
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }, []);
 
@@ -646,11 +668,18 @@ export const SimulationProvider = ({ children }) => {
 
       // Persist character state after turn processing
       console.log('Persisting character state after turn processing...');
-      const persistenceResult = await saveCharacterState(worldStateToUse);
-      if (persistenceResult.success) {
-        console.log('Character state persisted successfully:', persistenceResult.message);
-      } else {
-        console.warn('Character state persistence failed:', persistenceResult.error);
+      try {
+        const persistenceResult = await saveCharacterState(worldStateToUse);
+        if (persistenceResult.success) {
+          console.log('Character state persisted successfully:', persistenceResult.message);
+        } else {
+          console.warn('Character state persistence failed:', persistenceResult.error);
+          // Continue with turn processing even if persistence fails
+        }
+      } catch (error) {
+        console.warn('Character state persistence failed with exception:', error.message);
+        // Continue with turn processing even if persistence fails
+        // This ensures the simulation doesn't break due to storage issues
       }
 
       // CRITICAL: Update all relevant state
