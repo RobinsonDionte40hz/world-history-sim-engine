@@ -17,6 +17,7 @@ import LODManager from '../../domain/services/LODManager.js';
 import { LODTier } from '../../domain/value-objects/LODTier.js';
 import StorageCleanupService from '../../application/services/StorageCleanupService.js';
 import DataStructureUtils from '../../shared/utils/DataStructureUtils.js';
+import LocalStorageWorldRepository from '../../infrastructure/Persistance/LocalStorageWorldRepository.js';
 
 const SimulationContext = createContext();
 
@@ -353,6 +354,26 @@ export const SimulationProvider = ({ children }) => {
     }
   }, [currentSimulationState, formatWorldStateForDashboard]);
   
+  // Character persistence function
+  const saveCharacterState = useCallback(async (worldState) => {
+    if (!worldState) return;
+
+    try {
+      console.log('💾 Saving character state after turn processing...');
+
+      // Save the updated world state including characters
+      await LocalStorageWorldRepository.saveWorld(worldState);
+
+      console.log('✅ Character state saved successfully');
+      console.log(`   Characters saved: ${worldState.characters?.length || 0}`);
+      console.log(`   LOD Distribution: Hero=${worldState.characters?.filter(c => c.lodTier === 'hero').length || 0}, Group=${worldState.characters?.filter(c => c.lodTier === 'group').length || 0}, Background=${worldState.characters?.filter(c => c.lodTier === 'background').length || 0}`);
+
+    } catch (error) {
+      console.error('❌ Failed to save character state:', error);
+      // Don't throw error to avoid breaking turn processing
+    }
+  }, []);
+
   // Validation function to ensure world data comes from WorldBuilder pipeline
   const validatePreparedWorld = useCallback((worldData) => {
     const errors = [];
@@ -363,24 +384,24 @@ export const SimulationProvider = ({ children }) => {
       errors.push('Missing simulation metadata - world was not processed through WorldBuilder pipeline');
     } else {
       const metadata = worldData.simulationMetadata;
-      
+
       // Must be prepared by WorldBuilder or DemoService
       if (metadata.source !== 'WorldBuilder' && metadata.source !== 'DemoService') {
         errors.push(`Invalid source: ${metadata.source}. Only WorldBuilder-prepared worlds and demo worlds are accepted.`);
       }
-      
+
       // Must have preparation timestamp
       if (!metadata.preparedAt) {
         errors.push('Missing preparation timestamp - world preparation is incomplete');
       }
-      
+
       // Check if preparation is recent (within last 24 hours for safety)
       if (metadata.preparedAt) {
         const preparedTime = new Date(metadata.preparedAt);
         const now = new Date();
         const timeDiff = now - preparedTime;
         const hoursDiff = timeDiff / (1000 * 60 * 60);
-        
+
         if (hoursDiff > 24) {
           warnings.push('World was prepared more than 24 hours ago - consider re-preparing for optimal simulation');
         }
@@ -413,11 +434,11 @@ export const SimulationProvider = ({ children }) => {
     // Validate data integrity
     if (worldData?.nodes && worldData?.characters) {
       let unassignedCharacters = 0;
-      
+
       worldData.characters.forEach((character, characterId) => {
         // Check if character has a valid currentNodeId assignment
         let hasValidAssignment = false;
-        
+
         if (character.currentNodeId) {
           // Verify the node exists
           if (worldData.nodes.has(character.currentNodeId)) {
@@ -432,12 +453,12 @@ export const SimulationProvider = ({ children }) => {
             }
           }
         }
-        
+
         if (!hasValidAssignment) {
           unassignedCharacters++;
         }
       });
-      
+
       if (unassignedCharacters > 0) {
         warnings.push(`${unassignedCharacters} characters are not assigned to any location`);
       }
@@ -623,6 +644,15 @@ export const SimulationProvider = ({ children }) => {
         throw new Error('LOD post-turn processing failed');
       }
 
+      // Persist character state after turn processing
+      console.log('Persisting character state after turn processing...');
+      const persistenceResult = await saveCharacterState(worldStateToUse);
+      if (persistenceResult.success) {
+        console.log('Character state persisted successfully:', persistenceResult.message);
+      } else {
+        console.warn('Character state persistence failed:', persistenceResult.error);
+      }
+
       // CRITICAL: Update all relevant state
       console.log('Setting currentSimulationState to:', worldStateToUse);
       setCurrentSimulationState(worldStateToUse);
@@ -643,7 +673,7 @@ export const SimulationProvider = ({ children }) => {
     } finally {
       setIsProcessingTurn(false);
     }
-  }, [currentSimulationState, isProcessingTurn, isInitialized, processLODTurn, formatWorldStateForDashboard]);
+  }, [currentSimulationState, isProcessingTurn, isInitialized, processLODTurn, formatWorldStateForDashboard, saveCharacterState]);
 
   // Reset simulation function
   const resetSimulation = useCallback(() => {

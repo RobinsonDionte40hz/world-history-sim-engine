@@ -598,7 +598,18 @@ class LODManager {
     for (const [settlementId, eventCount] of settlementActivity.entries()) {
       if (eventCount >= 5) { // High activity threshold
         // PERFORMANCE OPTIMIZATION: Use cached character data
-        const backgroundChars = (worldState.characters || [])
+        // FIX: Handle both Map and Array structures for characters
+        let charactersArray;
+        if (worldState.characters instanceof Map) {
+          charactersArray = Array.from(worldState.characters.values());
+        } else if (Array.isArray(worldState.characters)) {
+          charactersArray = worldState.characters;
+        } else {
+          console.warn('LODManager: worldState.characters is neither Map nor Array');
+          continue;
+        }
+
+        const backgroundChars = charactersArray
           .filter(c => {
             const cached = this._getCachedCharacter(c.id);
             return (cached?.lodTier || c.lodTier) === 'background' && c.currentNode === settlementId;
@@ -632,7 +643,18 @@ class LODManager {
     );
 
     // PERFORMANCE OPTIMIZATION: Use cached character data and batch processing
-    const heroCharacters = (worldState.characters || [])
+    // FIX: Handle both Map and Array structures for characters
+    let charactersArray;
+    if (worldState.characters instanceof Map) {
+      charactersArray = Array.from(worldState.characters.values());
+    } else if (Array.isArray(worldState.characters)) {
+      charactersArray = worldState.characters;
+    } else {
+      console.warn('LODManager: worldState.characters is neither Map nor Array');
+      return candidates;
+    }
+
+    const heroCharacters = charactersArray
       .filter(c => {
         const cached = this._getCachedCharacter(c.id);
         return (cached?.lodTier || c.lodTier) === 'hero';
