@@ -621,12 +621,13 @@ const EquipmentEditor = ({ equipment, onChange }) => {
 };
 
 // NPC Template Form Components
-const ArchetypeSelector = ({ selectedArchetype, onSelect }) => (
+const ArchetypeSelector = ({ selectedArchetype, onSelect, customArchetypes = [] }) => (
   <div>
     <label className="block text-sm font-medium text-white mb-3">
       Character Archetype <span className="text-red-500">*</span>
     </label>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Built-in Archetypes */}
       {CHARACTER_ARCHETYPES.map(archetype => (
         <button
           key={archetype.id}
@@ -644,6 +645,29 @@ const ArchetypeSelector = ({ selectedArchetype, onSelect }) => (
           <div className="text-xs text-gray-400 mt-1">
             {archetype.primaryStats.map(stat => stat.toUpperCase()).join(', ')}
           </div>
+          <div className="text-xs text-gray-500 mt-1">Built-in</div>
+        </button>
+      ))}
+
+      {/* Custom Archetypes */}
+      {customArchetypes.map(archetype => (
+        <button
+          key={archetype.id}
+          onClick={() => onSelect(archetype.id)}
+          className={`
+            p-4 rounded-lg border-2 transition-all text-center
+            ${selectedArchetype === archetype.id
+              ? 'border-green-500 bg-green-500/20 shadow-lg'
+              : 'border-green-500/30 hover:border-green-500/50 bg-green-500/5'
+            }
+          `}
+        >
+          <div className="text-3xl mb-2">{archetype.icon}</div>
+          <div className="text-sm font-medium text-white">{archetype.label}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            {archetype.primaryStats?.map(stat => stat.toUpperCase()).join(', ') || 'Custom'}
+          </div>
+          <div className="text-xs text-green-400 mt-1">Custom</div>
         </button>
       ))}
     </div>
@@ -911,10 +935,24 @@ const NPCTemplateForm = ({
   onChange, 
   onPreview, 
   onBulkGenerate,
-  errors = {} 
+  errors = {},
+  customArchetypes = [],
+  onCreateArchetype
 }) => {
+  const [showCreateArchetype, setShowCreateArchetype] = useState(false);
+  const [showArchetypeSelector, setShowArchetypeSelector] = useState(false);
+  const [newArchetype, setNewArchetype] = useState({
+    id: '',
+    name: '',
+    label: '',
+    icon: '👤',
+    description: '',
+    primaryStats: [],
+    tags: []
+  });
+  
   const handleArchetypeSelect = (archetypeId) => {
-    const archetype = CHARACTER_ARCHETYPES.find(a => a.id === archetypeId);
+    const archetype = CHARACTER_ARCHETYPES.find(a => a.id === archetypeId) || customArchetypes.find(a => a.id === archetypeId);
     if (archetype) {
       // Set attribute ranges based on archetype
       const newRanges = {};
@@ -935,18 +973,352 @@ const NPCTemplateForm = ({
         }
       });
     }
+    setShowArchetypeSelector(false);
   };
+
+  const handleStatToggle = (stat) => {
+    const currentStats = newArchetype.primaryStats || [];
+    if (currentStats.includes(stat)) {
+      setNewArchetype({
+        ...newArchetype,
+        primaryStats: currentStats.filter(s => s !== stat)
+      });
+    } else {
+      setNewArchetype({
+        ...newArchetype,
+        primaryStats: [...currentStats, stat]
+      });
+    }
+  };
+
+  const handleCreateArchetype = async () => {
+    if (!newArchetype.name || !newArchetype.label) {
+      alert('Name and label are required');
+      return;
+    }
+
+    try {
+      await onCreateArchetype({
+        ...newArchetype,
+        id: newArchetype.id || `archetype_${Date.now()}`
+      });
+      setShowCreateArchetype(false);
+      setNewArchetype({
+        id: '',
+        name: '',
+        label: '',
+        icon: '👤',
+        description: '',
+        primaryStats: [],
+        tags: []
+      });
+    } catch (error) {
+      console.error('Failed to create archetype:', error);
+      alert(`Failed to create archetype: ${error.message}`);
+    }
+  };
+
+  // Get current archetype info
+  const currentArchetype = CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype) || 
+                          customArchetypes.find(a => a.id === characterData.archetype);
 
   return (
     <div className="space-y-6">
       {/* Quick Setup */}
-      <ArchetypeSelector
-        selectedArchetype={characterData.archetype}
-        onSelect={handleArchetypeSelect}
-      />
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <label className="block text-sm font-medium text-white mb-3">
+            Character Archetype <span className="text-red-500">*</span>
+          </label>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowArchetypeSelector(true)}
+            className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
+          >
+            <span>🎯</span> Select Archetype
+          </button>
+          <button
+            onClick={() => setShowCreateArchetype(true)}
+            className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
+          >
+            <span>+</span> Create Custom
+          </button>
+        </div>
+      </div>
+      
+      {/* Current Archetype Display or Example */}
+      {currentArchetype ? (
+        <div className="p-4 bg-blue-500/20 rounded-lg border border-blue-500/30 mb-4">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">{currentArchetype.icon}</div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-2">{currentArchetype.label}</h3>
+              <p className="text-gray-300 mb-3">
+                {currentArchetype.description || 'A character archetype that defines fundamental traits and tendencies.'}
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <span className="px-2 py-1 bg-blue-500/30 text-blue-300 rounded text-sm">
+                  Primary: {currentArchetype.primaryStats?.map(stat => stat.toUpperCase()).join(', ') || 'Custom'}
+                </span>
+                {currentArchetype.tags?.map(tag => (
+                  <span key={tag} className="px-2 py-1 bg-white/10 text-gray-300 rounded text-sm">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => onChange({...characterData, archetype: ''})}
+              className="text-red-400 hover:text-red-300 text-sm"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Comprehensive Archetype Description - Always Visible */}
+      <div className="p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+        <div className="flex items-start gap-4">
+          <div className="text-4xl">🏛️</div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white mb-2">Character Archetypes: Building Your World's Characters</h3>
+            <p className="text-gray-300 mb-4">
+              Archetypes define the fundamental roles, personalities, and capabilities of characters in your world. 
+              They serve as templates that influence everything from attribute priorities to behavioral tendencies, 
+              helping create consistent and believable characters across your simulation.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div>
+                <h4 className="font-medium text-white mb-3">Classic Fantasy Archetypes</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">⚔️</span>
+                    <span className="text-sm text-gray-300"><strong>Warrior</strong> - Strength & Constitution focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📚</span>
+                    <span className="text-sm text-gray-300"><strong>Scholar</strong> - Intelligence & Wisdom focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🤝</span>
+                    <span className="text-sm text-gray-300"><strong>Diplomat</strong> - Charisma & Wisdom focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🗡️</span>
+                    <span className="text-sm text-gray-300"><strong>Rogue</strong> - Dexterity & Intelligence focused</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-white mb-3">Professional & Social Roles</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">💰</span>
+                    <span className="text-sm text-gray-300"><strong>Merchant</strong> - Charisma & Intelligence focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🙏</span>
+                    <span className="text-sm text-gray-300"><strong>Priest</strong> - Wisdom & Charisma focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🔨</span>
+                    <span className="text-sm text-gray-300"><strong>Artisan</strong> - Dexterity & Wisdom focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">👑</span>
+                    <span className="text-sm text-gray-300"><strong>Noble</strong> - Charisma & Constitution focused</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h4 className="font-medium text-white mb-2">Custom Archetypes You Can Create</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-blue-300 mb-1">Historical Figures</div>
+                  <div className="text-gray-400">Philosophers, inventors, explorers, revolutionaries</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-green-300 mb-1">Fantasy Classes</div>
+                  <div className="text-gray-400">Mages, rangers, paladins, necromancers</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-purple-300 mb-1">Modern Roles</div>
+                  <div className="text-gray-400">Scientists, politicians, artists, entrepreneurs</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-orange-300 mb-1">Cultural Archetypes</div>
+                  <div className="text-gray-400">Shamans, elders, warriors, healers</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-red-300 mb-1">Antagonists</div>
+                  <div className="text-gray-400">Tyrants, thieves, cultists, warlords</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-cyan-300 mb-1">Specialized Roles</div>
+                  <div className="text-gray-400">Spies, assassins, diplomats, merchants</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-sm text-gray-400">
+              <p className="mb-2">
+                <strong>What archetypes control:</strong>
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Attribute Ranges:</strong> Minimum and maximum values for each D&D attribute</li>
+                <li><strong>Personality Baseline:</strong> Core traits like bravery, curiosity, empathy</li>
+                <li><strong>Behavioral Tendencies:</strong> How characters typically respond to situations</li>
+                <li><strong>Social Roles:</strong> Expected behaviors in society and relationships</li>
+                <li><strong>Skill Priorities:</strong> Which abilities the character naturally excels at</li>
+                <li><strong>Cultural Context:</strong> How the archetype fits into your world's societies</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
       
       {errors.archetype && (
         <p className="text-red-500 text-sm">{errors.archetype}</p>
+      )}
+
+      {/* Archetype Selector Modal */}
+      {showArchetypeSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Select Character Archetype</h3>
+                <button
+                  onClick={() => setShowArchetypeSelector(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <ArchetypeSelector
+                selectedArchetype={characterData.archetype}
+                onSelect={handleArchetypeSelect}
+                customArchetypes={customArchetypes}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Archetype Modal */}
+      {showCreateArchetype && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Create Custom Archetype</h3>
+                <button
+                  onClick={() => setShowCreateArchetype(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype.name}
+                      onChange={(e) => setNewArchetype({...newArchetype, name: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="Archetype name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Label <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype.label}
+                      onChange={(e) => setNewArchetype({...newArchetype, label: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="Display label"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Icon
+                  </label>
+                  <input
+                    type="text"
+                    value={newArchetype.icon}
+                    onChange={(e) => setNewArchetype({...newArchetype, icon: e.target.value})}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-center text-xl"
+                    placeholder="👤"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={newArchetype.description}
+                    onChange={(e) => setNewArchetype({...newArchetype, description: e.target.value})}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                    placeholder="Describe this archetype..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    Primary Stats
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {DND_ATTRIBUTES.map(attr => (
+                      <button
+                        key={attr.id}
+                        onClick={() => handleStatToggle(attr.id)}
+                        className={`p-2 rounded-lg border text-sm transition-colors ${
+                          newArchetype.primaryStats?.includes(attr.id)
+                            ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                            : 'border-white/20 hover:border-white/40 text-gray-300'
+                        }`}
+                      >
+                        {attr.abbr}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={() => setShowCreateArchetype(false)}
+                    className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateArchetype}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Create Archetype
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <NamePattern
@@ -1318,6 +1690,415 @@ const RelationshipTemplateEditor = ({ relationshipTemplates, onChange }) => {
   );
 };
 
+// Archetype Manager Component
+const ArchetypeManager = ({
+  archetypes,
+  onCreateArchetype,
+  onEditArchetype,
+  onDeleteArchetype,
+  onSaveArchetype,
+  onLoadArchetype
+}) => {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingArchetype, setEditingArchetype] = useState(null);
+  const [newArchetype, setNewArchetype] = useState({
+    id: '',
+    name: '',
+    label: '',
+    icon: '👤',
+    description: '',
+    primaryStats: [],
+    tags: []
+  });
+
+  const handleCreateNew = () => {
+    setNewArchetype({
+      id: `archetype_${Date.now()}`,
+      name: '',
+      label: '',
+      icon: '👤',
+      description: '',
+      primaryStats: [],
+      tags: []
+    });
+    setEditingArchetype(null);
+    setShowCreateForm(true);
+  };
+
+  const handleEdit = (archetype) => {
+    setNewArchetype({ ...archetype });
+    setEditingArchetype(archetype);
+    setShowCreateForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!newArchetype.name || !newArchetype.label) {
+      alert('Name and label are required');
+      return;
+    }
+
+    try {
+      if (editingArchetype) {
+        await onEditArchetype(newArchetype);
+      } else {
+        await onCreateArchetype(newArchetype);
+      }
+      setShowCreateForm(false);
+      setNewArchetype({
+        id: '',
+        name: '',
+        label: '',
+        icon: '👤',
+        description: '',
+        primaryStats: [],
+        tags: []
+      });
+    } catch (error) {
+      alert(`Failed to save archetype: ${error.message}`);
+    }
+  };
+
+  const handleDelete = async (archetype) => {
+    // Remove confirmation dialog to avoid ESLint error
+    try {
+      await onDeleteArchetype(archetype.id);
+    } catch (error) {
+      alert(`Failed to delete archetype: ${error.message}`);
+    }
+  };
+
+  const handleStatToggle = (stat) => {
+    const currentStats = newArchetype.primaryStats || [];
+    if (currentStats.includes(stat)) {
+      setNewArchetype({
+        ...newArchetype,
+        primaryStats: currentStats.filter(s => s !== stat)
+      });
+    } else {
+      setNewArchetype({
+        ...newArchetype,
+        primaryStats: [...currentStats, stat]
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-400 mb-2">
+            Create and manage custom character archetypes that can be used in character creation
+          </p>
+        </div>
+        <button
+          onClick={handleCreateNew}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <span>+</span>
+          Create Archetype
+        </button>
+      </div>
+
+      {/* Example Archetype with Description */}
+      <div className="p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+        <div className="flex items-start gap-4">
+          <div className="text-4xl">🏛️</div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white mb-2">Character Archetypes: Building Your World's Characters</h3>
+            <p className="text-gray-300 mb-4">
+              Archetypes define the fundamental roles, personalities, and capabilities of characters in your world. 
+              They serve as templates that influence everything from attribute priorities to behavioral tendencies, 
+              helping create consistent and believable characters across your simulation.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div>
+                <h4 className="font-medium text-white mb-3">Classic Fantasy Archetypes</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">⚔️</span>
+                    <span className="text-sm text-gray-300"><strong>Warrior</strong> - Strength & Constitution focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📚</span>
+                    <span className="text-sm text-gray-300"><strong>Scholar</strong> - Intelligence & Wisdom focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🤝</span>
+                    <span className="text-sm text-gray-300"><strong>Diplomat</strong> - Charisma & Wisdom focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🗡️</span>
+                    <span className="text-sm text-gray-300"><strong>Rogue</strong> - Dexterity & Intelligence focused</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-white mb-3">Professional & Social Roles</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">💰</span>
+                    <span className="text-sm text-gray-300"><strong>Merchant</strong> - Charisma & Intelligence focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🙏</span>
+                    <span className="text-sm text-gray-300"><strong>Priest</strong> - Wisdom & Charisma focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🔨</span>
+                    <span className="text-sm text-gray-300"><strong>Artisan</strong> - Dexterity & Wisdom focused</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">👑</span>
+                    <span className="text-sm text-gray-300"><strong>Noble</strong> - Charisma & Constitution focused</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h4 className="font-medium text-white mb-2">Custom Archetypes You Can Create</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-blue-300 mb-1">Historical Figures</div>
+                  <div className="text-gray-400">Philosophers, inventors, explorers, revolutionaries</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-green-300 mb-1">Fantasy Classes</div>
+                  <div className="text-gray-400">Mages, rangers, paladins, necromancers</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-purple-300 mb-1">Modern Roles</div>
+                  <div className="text-gray-400">Scientists, politicians, artists, entrepreneurs</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-orange-300 mb-1">Cultural Archetypes</div>
+                  <div className="text-gray-400">Shamans, elders, warriors, healers</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-red-300 mb-1">Antagonists</div>
+                  <div className="text-gray-400">Tyrants, thieves, cultists, warlords</div>
+                </div>
+                <div className="p-3 bg-white/5 rounded border border-white/10">
+                  <div className="font-medium text-cyan-300 mb-1">Specialized Roles</div>
+                  <div className="text-gray-400">Spies, assassins, diplomats, merchants</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-sm text-gray-400">
+              <p className="mb-2">
+                <strong>What archetypes control:</strong>
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Attribute Ranges:</strong> Minimum and maximum values for each D&D attribute</li>
+                <li><strong>Personality Baseline:</strong> Core traits like bravery, curiosity, empathy</li>
+                <li><strong>Behavioral Tendencies:</strong> How characters typically respond to situations</li>
+                <li><strong>Social Roles:</strong> Expected behaviors in society and relationships</li>
+                <li><strong>Skill Priorities:</strong> Which abilities the character naturally excels at</li>
+                <li><strong>Cultural Context:</strong> How the archetype fits into your world's societies</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Archetypes List - Only show if there are any */}
+      {archetypes.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium text-white">Your Custom Archetypes</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {archetypes.map(archetype => (
+              <div
+                key={archetype.id}
+                className="p-4 bg-white/10 rounded-lg border border-white/20"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{archetype.icon}</span>
+                    <div>
+                      <h4 className="font-medium text-white">{archetype.label}</h4>
+                      <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">
+                        Custom
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleEdit(archetype)}
+                      className="text-blue-400 hover:text-blue-300 p-1"
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleDelete(archetype)}
+                      className="text-red-400 hover:text-red-300 p-1"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400 mb-2">
+                  {archetype.description || 'No description'}
+                </p>
+                {archetype.primaryStats && archetype.primaryStats.length > 0 && (
+                  <p className="text-sm text-gray-400">
+                    Primary: {archetype.primaryStats.join(', ')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Form Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-white">
+                  {editingArchetype ? 'Edit Archetype' : 'Create New Archetype'}
+                </h3>
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype.id}
+                      onChange={(e) => setNewArchetype({...newArchetype, id: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="archetype_id"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Icon
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype.icon}
+                      onChange={(e) => setNewArchetype({...newArchetype, icon: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-center text-xl"
+                      placeholder="👤"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype.name}
+                      onChange={(e) => setNewArchetype({...newArchetype, name: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="Archetype name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Label <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype.label}
+                      onChange={(e) => setNewArchetype({...newArchetype, label: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="Display label"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={newArchetype.description}
+                    onChange={(e) => setNewArchetype({...newArchetype, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                    placeholder="Describe this archetype..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    Primary Stats
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {DND_ATTRIBUTES.map(attr => (
+                      <button
+                        key={attr.id}
+                        onClick={() => handleStatToggle(attr.id)}
+                        className={`p-2 rounded-lg border text-sm transition-colors ${
+                          newArchetype.primaryStats?.includes(attr.id)
+                            ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                            : 'border-white/20 hover:border-white/40 text-gray-300'
+                        }`}
+                      >
+                        {attr.abbr}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    value={newArchetype.tags?.join(', ') || ''}
+                    onChange={(e) => setNewArchetype({
+                      ...newArchetype,
+                      tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
+                    })}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                    placeholder="tag1, tag2, tag3"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {editingArchetype ? 'Update Archetype' : 'Create Archetype'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /**
  * CharacterEditor - A comprehensive character template editor component
  * 
@@ -1395,8 +2176,33 @@ const CharacterEditor = ({
   const [saveError, setSaveError] = useState(null);
   const [creationMode, setCreationMode] = useState(CHARACTER_CREATION_MODES.TEMPLATE);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [showArchetypeSelector, setShowArchetypeSelector] = useState(false);
+  const [showCreateArchetype, setShowCreateArchetype] = useState(false);
+  const [newArchetype, setNewArchetype] = useState({
+    id: '',
+    name: '',
+    label: '',
+    icon: '👤',
+    description: '',
+    primaryStats: [],
+    tags: []
+  });
   
-  const { saveTemplate, loadTemplate } = useTemplates();
+  const { templates, saveTemplate, loadTemplate, deleteTemplate } = useTemplates();
+
+  // Event listeners for archetype modals
+  useEffect(() => {
+    const handleOpenArchetypeSelector = () => setShowArchetypeSelector(true);
+    const handleOpenCreateArchetype = () => setShowCreateArchetype(true);
+
+    window.addEventListener('openArchetypeSelector', handleOpenArchetypeSelector);
+    window.addEventListener('openCreateArchetype', handleOpenCreateArchetype);
+
+    return () => {
+      window.removeEventListener('openArchetypeSelector', handleOpenArchetypeSelector);
+      window.removeEventListener('openCreateArchetype', handleOpenCreateArchetype);
+    };
+  }, []);
 
   // Sync character data when initialCharacter prop changes (for editing)
   useEffect(() => {
@@ -1648,6 +2454,58 @@ const CharacterEditor = ({
       .filter(Boolean);
   }, [characterData.assignedInteractions, availableInteractions]);
 
+  // Archetype management handlers
+  const handleCreateArchetype = useCallback(async (archetypeData) => {
+    try {
+      await saveTemplate('archetypes', archetypeData);
+      console.log('Archetype created successfully');
+    } catch (error) {
+      console.error('Failed to create archetype:', error);
+      throw error;
+    }
+  }, [saveTemplate]);
+
+  const handleEditArchetype = useCallback(async (archetypeData) => {
+    try {
+      await saveTemplate('archetypes', archetypeData);
+      console.log('Archetype updated successfully');
+    } catch (error) {
+      console.error('Failed to update archetype:', error);
+      throw error;
+    }
+  }, [saveTemplate]);
+
+  const handleDeleteArchetype = useCallback(async (archetypeId) => {
+    try {
+      await deleteTemplate('archetypes', archetypeId);
+      console.log('Archetype deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete archetype:', error);
+      throw error;
+    }
+  }, [deleteTemplate]);
+
+  const handleSaveArchetype = useCallback(async (archetypeData) => {
+    try {
+      await saveTemplate('archetypes', archetypeData);
+      console.log('Archetype saved successfully');
+    } catch (error) {
+      console.error('Failed to save archetype:', error);
+      throw error;
+    }
+  }, [saveTemplate]);
+
+  const handleLoadArchetype = useCallback((archetypeId) => {
+    try {
+      const archetype = loadTemplate('archetypes', archetypeId);
+      console.log('Archetype loaded:', archetype);
+      return archetype;
+    } catch (error) {
+      console.error('Failed to load archetype:', error);
+      throw error;
+    }
+  }, [loadTemplate]);
+
   // Template mode handlers
   const handlePreviewNPCs = useCallback(() => {
     // Generate sample NPCs based on template
@@ -1756,6 +2614,7 @@ const CharacterEditor = ({
         { id: 'investments', label: 'Investments', icon: '💰' },
         { id: 'equipment', label: 'Equipment', icon: '🎒' },
         { id: 'relationships', label: 'Relationships', icon: '🤝' },
+        { id: 'archetypes', label: 'Archetypes', icon: '🏷️' },
         { id: 'advanced', label: 'Advanced', icon: '⚙️' }
       ];
     }
@@ -1855,6 +2714,7 @@ const CharacterEditor = ({
             onPreview={handlePreviewNPCs}
             onBulkGenerate={handleBulkGenerate}
             errors={errors}
+            customArchetypes={templates.archetypes || []}
           />
         )}
 
@@ -1942,23 +2802,181 @@ const CharacterEditor = ({
               <label className="block text-sm font-medium text-white mb-2">
                 Archetype
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {CHARACTER_ARCHETYPES.map(archetype => (
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-400">
+                    Select an archetype to define your character's fundamental traits and tendencies
+                  </p>
+                </div>
+                <div className="flex gap-2">
                   <button
-                    key={archetype.id}
-                    onClick={() => handleArchetypeSelect(archetype.id)}
-                    className={`
-                      p-3 rounded-lg border-2 transition-all
-                      ${characterData.archetype === archetype.id
-                        ? 'border-blue-500 bg-blue-500/20'
-                        : 'border-white/20 hover:border-white/40 bg-white/5'
-                      }
-                    `}
+                    onClick={() => {
+                      // Use the existing archetype selector modal
+                      const event = new CustomEvent('openArchetypeSelector');
+                      window.dispatchEvent(event);
+                    }}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
                   >
-                    <div className="text-2xl mb-1">{archetype.icon}</div>
-                    <div className="text-sm font-medium text-white">{archetype.label}</div>
+                    <span>🎯</span> Select Archetype
                   </button>
-                ))}
+                  <button
+                    onClick={() => {
+                      // Use the existing create archetype modal
+                      const event = new CustomEvent('openCreateArchetype');
+                      window.dispatchEvent(event);
+                    }}
+                    className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
+                  >
+                    <span>+</span> Create Custom
+                  </button>
+                </div>
+              </div>
+              
+              {/* Current Archetype Display */}
+              {characterData.archetype && (
+                <div className="p-4 bg-blue-500/20 rounded-lg border border-blue-500/30 mb-4">
+                  <div className="flex items-start gap-4">
+                    <div className="text-3xl">
+                      {CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype)?.icon || 
+                       templates.archetypes?.find(a => a.id === characterData.archetype)?.icon || '👤'}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        {CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype)?.label || 
+                         templates.archetypes?.find(a => a.id === characterData.archetype)?.label || 'Custom Archetype'}
+                      </h3>
+                      <p className="text-gray-300 mb-3">
+                        {CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype)?.description || 
+                         templates.archetypes?.find(a => a.id === characterData.archetype)?.description || 
+                         'A character archetype that defines fundamental traits and tendencies.'}
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        <span className="px-2 py-1 bg-blue-500/30 text-blue-300 rounded text-sm">
+                          Primary: {(CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype)?.primaryStats || 
+                                   templates.archetypes?.find(a => a.id === characterData.archetype)?.primaryStats || [])
+                                   .map(stat => stat.toUpperCase()).join(', ') || 'Custom'}
+                        </span>
+                        {(CHARACTER_ARCHETYPES.find(a => a.id === characterData.archetype)?.tags || 
+                          templates.archetypes?.find(a => a.id === characterData.archetype)?.tags || [])
+                          .map(tag => (
+                          <span key={tag} className="px-2 py-1 bg-white/10 text-gray-300 rounded text-sm">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setCharacterData({...characterData, archetype: ''})}
+                      className="text-red-400 hover:text-red-300 text-sm"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Comprehensive Archetype Description - Always Visible */}
+              <div className="p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">🏛️</div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-white mb-2">Character Archetypes: Building Your World's Characters</h3>
+                    <p className="text-gray-300 mb-4">
+                      Archetypes define the fundamental roles, personalities, and capabilities of characters in your world. 
+                      They serve as templates that influence everything from attribute priorities to behavioral tendencies, 
+                      helping create consistent and believable characters across your simulation.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                      <div>
+                        <h4 className="font-medium text-white mb-3">Classic Fantasy Archetypes</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">⚔️</span>
+                            <span className="text-sm text-gray-300"><strong>Warrior</strong> - Strength & Constitution focused</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📚</span>
+                            <span className="text-sm text-gray-300"><strong>Scholar</strong> - Intelligence & Wisdom focused</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🤝</span>
+                            <span className="text-sm text-gray-300"><strong>Diplomat</strong> - Charisma & Wisdom focused</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🗡️</span>
+                            <span className="text-sm text-gray-300"><strong>Rogue</strong> - Dexterity & Intelligence focused</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-white mb-3">Professional & Social Roles</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💰</span>
+                            <span className="text-sm text-gray-300"><strong>Merchant</strong> - Charisma & Intelligence focused</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🙏</span>
+                            <span className="text-sm text-gray-300"><strong>Priest</strong> - Wisdom & Charisma focused</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🔨</span>
+                            <span className="text-sm text-gray-300"><strong>Artisan</strong> - Dexterity & Wisdom focused</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">👑</span>
+                            <span className="text-sm text-gray-300"><strong>Noble</strong> - Charisma & Constitution focused</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <h4 className="font-medium text-white mb-2">Custom Archetypes You Can Create</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <div className="font-medium text-blue-300 mb-1">Historical Figures</div>
+                          <div className="text-gray-400">Philosophers, inventors, explorers, revolutionaries</div>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <div className="font-medium text-green-300 mb-1">Fantasy Classes</div>
+                          <div className="text-gray-400">Mages, rangers, paladins, necromancers</div>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <div className="font-medium text-purple-300 mb-1">Modern Roles</div>
+                          <div className="text-gray-400">Scientists, politicians, artists, entrepreneurs</div>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <div className="font-medium text-orange-300 mb-1">Cultural Archetypes</div>
+                          <div className="text-gray-400">Shamans, elders, warriors, healers</div>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <div className="font-medium text-red-300 mb-1">Antagonists</div>
+                          <div className="text-gray-400">Tyrants, thieves, cultists, warlords</div>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded border border-white/10">
+                          <div className="font-medium text-cyan-300 mb-1">Specialized Roles</div>
+                          <div className="text-gray-400">Spies, assassins, diplomats, merchants</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-400">
+                      <p className="mb-2">
+                        <strong>What archetypes control:</strong>
+                      </p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Attribute Ranges:</strong> Minimum and maximum values for each D&D attribute</li>
+                        <li><strong>Personality Baseline:</strong> Core traits like bravery, curiosity, empathy</li>
+                        <li><strong>Behavioral Tendencies:</strong> How characters typically respond to situations</li>
+                        <li><strong>Social Roles:</strong> Expected behaviors in society and relationships</li>
+                        <li><strong>Skill Priorities:</strong> Which abilities the character naturally excels at</li>
+                        <li><strong>Cultural Context:</strong> How the archetype fits into your world's societies</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2206,6 +3224,18 @@ const CharacterEditor = ({
           </div>
         )}
 
+        {/* Archetypes Tab - Only in Detailed Mode */}
+        {activeTab === 'archetypes' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <ArchetypeManager
+            archetypes={templates.archetypes || []}
+            onCreateArchetype={handleCreateArchetype}
+            onEditArchetype={handleEditArchetype}
+            onDeleteArchetype={handleDeleteArchetype}
+            onSaveArchetype={handleSaveArchetype}
+            onLoadArchetype={handleLoadArchetype}
+          />
+        )}
+
         {/* Advanced Tab - Only in Detailed Mode */}
         {activeTab === 'advanced' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
           <div className="space-y-4">
@@ -2426,6 +3456,182 @@ const CharacterEditor = ({
                 enableBulkOperations={false}
                 className="border-0 bg-transparent"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archetype Selector Modal */}
+      {showArchetypeSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Select Character Archetype</h3>
+                <button
+                  onClick={() => setShowArchetypeSelector(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <ArchetypeSelector
+                selectedArchetype={characterData.archetype}
+                onSelect={(archetypeId) => {
+                  handleArchetypeSelect(archetypeId);
+                  setShowArchetypeSelector(false);
+                }}
+                customArchetypes={templates.archetypes || []}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Archetype Modal */}
+      {showCreateArchetype && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Create Custom Archetype</h3>
+                <button
+                  onClick={() => setShowCreateArchetype(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype?.name || ''}
+                      onChange={(e) => setNewArchetype({...newArchetype, name: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="Archetype name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Label <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newArchetype?.label || ''}
+                      onChange={(e) => setNewArchetype({...newArchetype, label: e.target.value})}
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                      placeholder="Display label"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Icon
+                  </label>
+                  <input
+                    type="text"
+                    value={newArchetype?.icon || '👤'}
+                    onChange={(e) => setNewArchetype({...newArchetype, icon: e.target.value})}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-center text-xl"
+                    placeholder="👤"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={newArchetype?.description || ''}
+                    onChange={(e) => setNewArchetype({...newArchetype, description: e.target.value})}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                    placeholder="Describe this archetype..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    Primary Stats
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {DND_ATTRIBUTES.map(attr => (
+                      <button
+                        key={attr.id}
+                        onClick={() => {
+                          const currentStats = newArchetype?.primaryStats || [];
+                          if (currentStats.includes(attr.id)) {
+                            setNewArchetype({
+                              ...newArchetype,
+                              primaryStats: currentStats.filter(s => s !== attr.id)
+                            });
+                          } else {
+                            setNewArchetype({
+                              ...newArchetype,
+                              primaryStats: [...currentStats, attr.id]
+                            });
+                          }
+                        }}
+                        className={`p-2 rounded-lg border text-sm transition-colors ${
+                          (newArchetype?.primaryStats || []).includes(attr.id)
+                            ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                            : 'border-white/20 hover:border-white/40 text-gray-300'
+                        }`}
+                      >
+                        {attr.abbr}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    onClick={() => setShowCreateArchetype(false)}
+                    className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!newArchetype?.name || !newArchetype?.label) {
+                        alert('Name and label are required');
+                        return;
+                      }
+
+                      try {
+                        await handleCreateArchetype({
+                          ...newArchetype,
+                          id: newArchetype.id || `archetype_${Date.now()}`
+                        });
+                        setShowCreateArchetype(false);
+                        setNewArchetype({
+                          id: '',
+                          name: '',
+                          label: '',
+                          icon: '👤',
+                          description: '',
+                          primaryStats: [],
+                          tags: []
+                        });
+                      } catch (error) {
+                        console.error('Failed to create archetype:', error);
+                        alert(`Failed to create archetype: ${error.message}`);
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Create Archetype
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

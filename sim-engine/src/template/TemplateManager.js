@@ -16,7 +16,8 @@ class TemplateManager {
       worlds: new Map(),      // Added for world templates
       composite: new Map(),   // Added for composite templates (role sets, etc.)
       settlements: new Map(), // Added for settlement templates with need satisfaction profiles
-      goals: new Map()        // Added for goal templates
+      goals: new Map(),       // Added for goal templates
+      archetypes: new Map()   // Added for custom character archetypes
     };
   }
 

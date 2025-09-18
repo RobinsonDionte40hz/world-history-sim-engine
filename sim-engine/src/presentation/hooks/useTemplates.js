@@ -12,7 +12,8 @@ export const useTemplates = () => {
     nodes: [],
     interactions: [],
     worlds: [],
-    composite: []
+    composite: [],
+    archetypes: [] // Added for custom character archetypes
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -28,13 +29,15 @@ export const useTemplates = () => {
       const interactionTemplates = templateManager.getAllTemplates('interactions') || [];
       const worldTemplates = templateManager.getAllTemplates('worlds') || [];
       const compositeTemplates = templateManager.getAllTemplates('composite') || [];
+      const archetypeTemplates = templateManager.getAllTemplates('archetypes') || [];
 
       setTemplates({
         characters: characterTemplates,
         nodes: nodeTemplates,
         interactions: interactionTemplates,
         worlds: worldTemplates,
-        composite: compositeTemplates
+        composite: compositeTemplates,
+        archetypes: archetypeTemplates
       });
     } catch (err) {
       setError(err.message);
@@ -45,7 +48,8 @@ export const useTemplates = () => {
         nodes: [],
         interactions: [],
         worlds: [],
-        composite: []
+        composite: [],
+        archetypes: []
       });
     } finally {
       setLoading(false);
@@ -213,13 +217,18 @@ export const useTemplates = () => {
           }
           break;
 
-        case 'worlds':
-          if (!template.nodes || template.nodes.length === 0) {
-            warnings.push('World template should contain nodes');
+        case 'archetypes':
+          // Archetypes are similar to characters but focused on defining character classes/types
+          if (!template.primaryStats || template.primaryStats.length === 0) {
+            errors.push('Archetype template must define primary stats');
           }
-          if (!template.characters || template.characters.length === 0) {
-            warnings.push('World template should contain characters');
+          if (!template.icon) {
+            warnings.push('Archetype template should have an icon');
           }
+          break;
+
+        default:
+          // No specific validation for unknown template types
           break;
       }
 
