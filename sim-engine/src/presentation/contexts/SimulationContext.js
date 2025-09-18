@@ -310,6 +310,14 @@ export const SimulationProvider = ({ children }) => {
     }
   }, [preparedWorldData, validationToken, isInitialized, initializeLODSystem, formatWorldStateForDashboard]);
   
+  // Add effect to sync world state with simulation state
+  useEffect(() => {
+    if (currentSimulationState) {
+      setWorldState(formatWorldStateForDashboard(currentSimulationState));
+      console.log('SimulationContext: Synced worldState with currentSimulationState');
+    }
+  }, [currentSimulationState, formatWorldStateForDashboard]);
+  
   // Validation function to ensure world data comes from WorldBuilder pipeline
   const validatePreparedWorld = useCallback((worldData) => {
     const errors = [];
@@ -573,18 +581,21 @@ export const SimulationProvider = ({ children }) => {
         throw new Error('LOD post-turn processing failed');
       }
 
+      // CRITICAL: Update all relevant state
       setCurrentSimulationState(finalWorldState);
-      setWorldState(formatWorldStateForDashboard(finalWorldState)); // Update worldState with the new simulation state
+      setWorldState(formatWorldStateForDashboard(finalWorldState)); // Make sure this line exists
       setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
       setCurrentTurn(prev => prev + 1);
-
-      console.log('Turn processed successfully with LOD integration:', turnResult);
-      console.log('Turn summary:', turnResult.turnSummary);
-      console.log('World state events:', finalWorldState.events?.length || 0);
-
+      
+      // Debug logging to verify data flow
+      console.log('SimulationContext: Turn processed successfully');
+      console.log('SimulationContext: New world state:', finalWorldState);
+      console.log('SimulationContext: Events in new state:', finalWorldState?.events?.length || 0);
+      console.log('SimulationContext: Turn summary:', turnResult.turnSummary);
+      
       return turnResult;
     } catch (error) {
-      console.error('Error processing turn:', error);
+      console.error('SimulationContext: Error processing turn:', error);
       throw error;
     } finally {
       setIsProcessingTurn(false);
@@ -593,6 +604,8 @@ export const SimulationProvider = ({ children }) => {
 
   // Reset simulation function
   const resetSimulation = useCallback(() => {
+    console.log('SimulationContext: Resetting simulation');
+    
     setCurrentSimulationState(null);
     setIsInitialized(false);
     setInitializationError(null);
@@ -614,16 +627,20 @@ export const SimulationProvider = ({ children }) => {
     // Re-initialize if we have prepared world data
     if (preparedWorldData && validationToken) {
       try {
+        console.log('SimulationContext: Re-initializing with prepared world data');
         const initialState = simulationService.initialize(preparedWorldData);
+        
         setCurrentSimulationState(initialState);
-        setWorldState(formatWorldStateForDashboard(initialState)); // Use the simulation state, not the prepared data
+        setWorldState(formatWorldStateForDashboard(initialState)); // CRITICAL: Use the simulation state
         setIsInitialized(true);
-        console.log('Simulation reset and re-initialized');
+        
+        console.log('SimulationContext: Simulation reset and re-initialized');
+        console.log('SimulationContext: Initial state:', initialState);
         
         // Re-initialize LOD system
         initializeLODSystem(initialState);
       } catch (error) {
-        console.error('Failed to re-initialize simulation:', error);
+        console.error('SimulationContext: Failed to re-initialize simulation:', error);
         setInitializationError(error.message);
       }
     }
@@ -645,7 +662,8 @@ export const SimulationProvider = ({ children }) => {
     validatePreparedWorld,
     
     // Simulation state and methods
-    worldState,
+    worldState: currentSimulationState ? formatWorldStateForDashboard(currentSimulationState) : worldState, // ALWAYS use current simulation state first
+    currentSimulationState, // RAW simulation state
     isInitialized,
     initializationError,
     currentTurn,
@@ -680,7 +698,18 @@ export const SimulationProvider = ({ children }) => {
     resetLODSystem,
     
     // LOD Manager reference (for advanced operations)
-    lodManager
+    lodManager,
+    
+    // Legacy compatibility properties (kept for backward compatibility)
+    simulation: {
+      worldState: currentSimulationState ? formatWorldStateForDashboard(currentSimulationState) : worldState,
+      isRunning: isProcessingTurn,
+      isInitialized,
+      canStart: simulationReadinessStatus.isSimulationReady && !isInitialized
+    },
+    isRunning: isProcessingTurn,
+    startSimulation: () => console.warn('Use processTurn() instead of startSimulation()'),
+    stopSimulation: () => console.warn('Use resetSimulation() instead of stopSimulation()')
   };
 
   return (

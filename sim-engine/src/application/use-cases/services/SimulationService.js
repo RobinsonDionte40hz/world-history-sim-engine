@@ -347,6 +347,12 @@ class SimulationService {
     }
     // Remove the isRunning check - turn-based simulation doesn't need to be "running"
 
+    console.log('SimulationService.processTurn() - BEFORE:', {
+      currentWorldState: this.worldState,
+      eventsCount: this.worldState?.events?.length || 0,
+      charactersCount: this.worldState?.characters?.length || this.worldState?.npcs?.length || 0
+    });
+
     try {
       const previousTime = this.worldState.time;
       const previousState = this.deepCloneState(this.worldState);
@@ -410,6 +416,13 @@ class SimulationService {
       }
 
       console.log(`Turn ${updatedState.time} processed successfully`);
+      console.log('SimulationService.processTurn() - AFTER:', {
+        newWorldState: this.worldState,
+        newEventsCount: this.worldState?.events?.length || 0,
+        newCharactersCount: this.worldState?.characters?.length || this.worldState?.npcs?.length || 0,
+        turnSummary: turnSummary
+      });
+
       return {
         worldState: this.worldState,
         turnSummary: turnSummary,
