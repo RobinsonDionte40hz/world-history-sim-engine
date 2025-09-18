@@ -394,7 +394,7 @@ const SkillEditor = ({ skills, onChange }) => {
 };
 
 // Goals editor component
-const GoalEditor = ({ goals, onChange }) => {
+const GoalEditor = ({ goals = [], onChange }) => {
   const [newGoal, setNewGoal] = useState({
     description: '',
     priority: 'medium',
@@ -1213,19 +1213,19 @@ const NPCTemplateForm = ({
 
       {/* Create Archetype Modal */}
       {showCreateArchetype && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Create Custom Archetype</h3>
-                <button
-                  onClick={() => setShowCreateArchetype(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  ×
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-6 pt-12">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl h-[70vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-white/20 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-lg font-semibold text-white">Create Custom Archetype</h3>
+              <button
+                onClick={() => setShowCreateArchetype(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
 
+            <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1300,22 +1300,22 @@ const NPCTemplateForm = ({
                     ))}
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => setShowCreateArchetype(false)}
-                    className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateArchetype}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Create Archetype
-                  </button>
-                </div>
               </div>
+            </div>
+
+            <div className="p-4 border-t border-white/20 flex justify-end gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowCreateArchetype(false)}
+                className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateArchetype}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Create Archetype
+              </button>
             </div>
           </div>
         </div>
@@ -1347,6 +1347,20 @@ const NPCTemplateForm = ({
         personality={characterData.personality}
         onChange={(personality) => onChange({ ...characterData, personality })}
       />
+
+      {/* Goals Section */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-3">
+          Character Goals
+        </label>
+        <p className="text-sm text-gray-400 mb-4">
+          Define the goals and motivations that will drive this NPC's behavior during simulation
+        </p>
+        <GoalEditor
+          goals={characterData.goals}
+          onChange={(goals) => onChange({ ...characterData, goals })}
+        />
+      </div>
 
       <VariationSettings
         variation={characterData.templateSettings?.variation || {}}
@@ -1956,21 +1970,21 @@ const ArchetypeManager = ({
 
       {/* Create/Edit Form Modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-white">
-                  {editingArchetype ? 'Edit Archetype' : 'Create New Archetype'}
-                </h3>
-                <button
-                  onClick={() => setShowCreateForm(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  ×
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-6 pt-12">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl h-[70vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-white/20 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-xl font-semibold text-white">
+                {editingArchetype ? 'Edit Archetype' : 'Create New Archetype'}
+              </h3>
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
 
+            <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -2076,21 +2090,21 @@ const ArchetypeManager = ({
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  {editingArchetype ? 'Update Archetype' : 'Create Archetype'}
-                </button>
-              </div>
+            <div className="p-6 border-t border-white/20 flex justify-end gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                {editingArchetype ? 'Update Archetype' : 'Create Archetype'}
+              </button>
             </div>
           </div>
         </div>
@@ -3491,19 +3505,19 @@ const CharacterEditor = ({
 
       {/* Create Archetype Modal */}
       {showCreateArchetype && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Create Custom Archetype</h3>
-                <button
-                  onClick={() => setShowCreateArchetype(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  ×
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-6 pt-12">
+          <div className="bg-gray-900 rounded-lg border border-white/20 w-full max-w-4xl h-[70vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-white/20 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-lg font-semibold text-white">Create Custom Archetype</h3>
+              <button
+                onClick={() => setShowCreateArchetype(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
 
+            <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -3591,47 +3605,47 @@ const CharacterEditor = ({
                     ))}
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => setShowCreateArchetype(false)}
-                    className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!newArchetype?.name || !newArchetype?.label) {
-                        alert('Name and label are required');
-                        return;
-                      }
-
-                      try {
-                        await handleCreateArchetype({
-                          ...newArchetype,
-                          id: newArchetype.id || `archetype_${Date.now()}`
-                        });
-                        setShowCreateArchetype(false);
-                        setNewArchetype({
-                          id: '',
-                          name: '',
-                          label: '',
-                          icon: '👤',
-                          description: '',
-                          primaryStats: [],
-                          tags: []
-                        });
-                      } catch (error) {
-                        console.error('Failed to create archetype:', error);
-                        alert(`Failed to create archetype: ${error.message}`);
-                      }
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Create Archetype
-                  </button>
-                </div>
               </div>
+            </div>
+
+            <div className="p-4 border-t border-white/20 flex justify-end gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowCreateArchetype(false)}
+                className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newArchetype?.name || !newArchetype?.label) {
+                    alert('Name and label are required');
+                    return;
+                  }
+
+                  try {
+                    await handleCreateArchetype({
+                      ...newArchetype,
+                      id: newArchetype.id || `archetype_${Date.now()}`
+                    });
+                    setShowCreateArchetype(false);
+                    setNewArchetype({
+                      id: '',
+                      name: '',
+                      label: '',
+                      icon: '👤',
+                      description: '',
+                      primaryStats: [],
+                      tags: []
+                    });
+                  } catch (error) {
+                    console.error('Failed to create archetype:', error);
+                    alert(`Failed to create archetype: ${error.message}`);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Create Archetype
+              </button>
             </div>
           </div>
         </div>
