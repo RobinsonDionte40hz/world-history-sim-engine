@@ -1060,6 +1060,9 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
   // Get LOD data from simulation context
   const { changeCharacterLODTier, lodProcessingMetrics } = useSimulationContext();
 
+  // Add state for selected tab
+  const [selectedTab, setSelectedTab] = useState('all');
+
   // Get characters from world state
   const characters = worldState?.characters || worldState?.npcs || [];
   const characterArray = Array.from(characters.values ? characters.values() : characters);
@@ -1094,6 +1097,18 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
     }
   };
 
+  // Get filtered characters based on selected tab
+  const getFilteredCharacters = () => {
+    switch (selectedTab) {
+      case 'hero': return charactersByTier.hero;
+      case 'group': return charactersByTier.group;
+      case 'background': return charactersByTier.background;
+      default: return characterArray;
+    }
+  };
+
+  const filteredCharacters = getFilteredCharacters();
+
   return (
     <div className="space-y-6">
       {/* Characters Overview */}
@@ -1101,10 +1116,23 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Characters</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{characterArray.length}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {selectedTab === 'all' ? 'Total Characters' :
+                 selectedTab === 'hero' ? 'Hero NPCs' :
+                 selectedTab === 'group' ? 'Group NPCs' : 'Background NPCs'}
+              </p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                {selectedTab === 'all' ? characterArray.length :
+                 selectedTab === 'hero' ? charactersByTier.hero.length :
+                 selectedTab === 'group' ? charactersByTier.group.length :
+                 charactersByTier.background.length}
+              </p>
             </div>
-            <div className="text-3xl">👥</div>
+            <div className="text-3xl">
+              {selectedTab === 'all' ? '👥' :
+               selectedTab === 'hero' ? '⭐' :
+               selectedTab === 'group' ? '👥' : '👤'}
+            </div>
           </div>
         </div>
 
@@ -1137,86 +1165,90 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
         />
       </div>
 
-      {/* Character List by LOD Tier */}
-      <div className="space-y-6">
-        {/* Hero Characters */}
-        {charactersByTier.hero.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Hero Characters ({charactersByTier.hero.length})
-              </h3>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Full individual processing
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {charactersByTier.hero.map((character) => (
-                <CharacterCard
-                  key={character.id}
-                  character={character}
-                  onSelect={setSelectedCharacter}
-                  isSelected={selectedCharacter?.id === character.id}
-                  onTierChange={handleTierChange}
-                />
-              ))}
-            </div>
+      {/* Character Type Tabs */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Character Management
+          </h3>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {filteredCharacters.length} characters
           </div>
-        )}
+        </div>
 
-        {/* Group Characters */}
-        {charactersByTier.group.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Group Characters ({charactersByTier.group.length})
-              </h3>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Statistical group processing
-              </span>
-            </div>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+          <button
+            onClick={() => setSelectedTab('all')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedTab === 'all'
+                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            All ({characterArray.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab('hero')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedTab === 'hero'
+                ? 'bg-red-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Heroes ({charactersByTier.hero.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab('group')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedTab === 'group'
+                ? 'bg-yellow-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Groups ({charactersByTier.group.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab('background')}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedTab === 'background'
+                ? 'bg-gray-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Background ({charactersByTier.background.length})
+          </button>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {charactersByTier.group.map((character) => (
-                <CharacterCard
-                  key={character.id}
-                  character={character}
-                  onSelect={setSelectedCharacter}
-                  isSelected={selectedCharacter?.id === character.id}
-                  onTierChange={handleTierChange}
-                />
-              ))}
-            </div>
+        {/* Filtered Character List */}
+        {filteredCharacters.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCharacters.map((character) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                onSelect={setSelectedCharacter}
+                isSelected={selectedCharacter?.id === character.id}
+                onTierChange={handleTierChange}
+              />
+            ))}
           </div>
-        )}
-
-        {/* Background Characters */}
-        {charactersByTier.background.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-4 h-4 bg-gray-500 rounded-full"></div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Background Characters ({charactersByTier.background.length})
-              </h3>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Aggregate population tracking
-              </span>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">
+              {selectedTab === 'hero' ? '⭐' :
+               selectedTab === 'group' ? '👥' :
+               selectedTab === 'background' ? '👤' : '👥'}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {charactersByTier.background.map((character) => (
-                <CharacterCard
-                  key={character.id}
-                  character={character}
-                  onSelect={setSelectedCharacter}
-                  isSelected={selectedCharacter?.id === character.id}
-                  onTierChange={handleTierChange}
-                />
-              ))}
-            </div>
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              No {selectedTab === 'all' ? '' : selectedTab + ' '}characters found
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {selectedTab === 'hero' ? 'Hero NPCs have full individual processing and detailed behaviors' :
+               selectedTab === 'group' ? 'Group NPCs use statistical processing for efficiency' :
+               selectedTab === 'background' ? 'Background NPCs use aggregate tracking for performance' :
+               'Try selecting a different character type or create some characters first'}
+            </p>
           </div>
         )}
       </div>

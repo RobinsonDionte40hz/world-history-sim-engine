@@ -239,22 +239,22 @@ export const SimulationProvider = ({ children }) => {
 
     try {
       // Process pre-turn LOD operations
-      const preTurnResult = await lodManager.processPreTurnLOD(worldState);
+      await lodManager.processPreTurnLOD(worldState);
 
-      // Process post-turn LOD operations
-      const postTurnResult = await lodManager.processPostTurnLOD(preTurnResult, turnResult);
+      // Process post-turn LOD operations on the modified world state
+      await lodManager.processPostTurnLOD(worldState, turnResult);
 
-      // Update statistics
-      updateLODStats(postTurnResult);
+      // Update statistics using the modified world state
+      updateLODStats(worldState);
 
       // Record performance metrics
       const duration = Date.now() - startTime;
       updateLODPerformanceMetrics(duration);
 
       // Record tier transitions
-      recordLODTierTransitions(worldState, postTurnResult);
+      recordLODTierTransitions(worldState, worldState);
 
-      return postTurnResult;
+      return worldState;
 
     } catch (error) {
       console.error('LOD turn processing failed:', error);
