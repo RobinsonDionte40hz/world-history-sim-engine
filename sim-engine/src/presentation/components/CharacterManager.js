@@ -46,7 +46,8 @@ const CharacterManager = ({
     assignmentStatus: '',
     minLevel: '',
     maxLevel: '',
-    hasInteractions: ''
+    hasInteractions: '',
+    lodTier: '' // Add LOD tier filter
   });
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -54,6 +55,9 @@ const CharacterManager = ({
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // LOD tier tab state
+  const [activeLodTab, setActiveLodTab] = useState('all');
   
   // Modal states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -167,12 +171,11 @@ const CharacterManager = ({
       });
     }
 
-    // Apply interaction filter
-    if (filters.hasInteractions) {
+    // Apply LOD tier filter
+    if (filters.lodTier) {
       filtered = filtered.filter(character => {
-        const hasInteractions = character.assignedInteractions && 
-          character.assignedInteractions.length > 0;
-        return filters.hasInteractions === 'yes' ? hasInteractions : !hasInteractions;
+        const lodTier = character.lodTier || 'background';
+        return lodTier === filters.lodTier;
       });
     }
 
@@ -292,7 +295,8 @@ const CharacterManager = ({
       assignmentStatus: '',
       minLevel: '',
       maxLevel: '',
-      hasInteractions: ''
+      hasInteractions: '',
+      lodTier: ''
     });
   };
 
@@ -406,8 +410,63 @@ const CharacterManager = ({
         </div>
       </div>
 
-      {/* Search and Filter Bar */}
+      {/* Controls Section */}
       <div className="space-y-4">
+        {/* LOD Tier Tabs */}
+        <div className="flex space-x-1 mb-6 bg-white/10 p-1 rounded-lg">
+          <button
+            onClick={() => {
+              setActiveLodTab('all');
+              setFilters(prev => ({ ...prev, lodTier: '' }));
+            }}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeLodTab === 'all'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-gray-300 hover:text-white hover:bg-white/20'
+            }`}
+          >
+            All Characters ({characters.length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveLodTab('hero');
+              setFilters(prev => ({ ...prev, lodTier: 'hero' }));
+            }}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeLodTab === 'hero'
+                ? 'bg-red-500 text-white shadow-sm'
+                : 'text-gray-300 hover:text-white hover:bg-white/20'
+            }`}
+          >
+            Heroes ({characters.filter(c => c.lodTier === 'hero').length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveLodTab('group');
+              setFilters(prev => ({ ...prev, lodTier: 'group' }));
+            }}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeLodTab === 'group'
+                ? 'bg-yellow-500 text-white shadow-sm'
+                : 'text-gray-300 hover:text-white hover:bg-white/20'
+            }`}
+          >
+            Groups ({characters.filter(c => c.lodTier === 'group').length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveLodTab('background');
+              setFilters(prev => ({ ...prev, lodTier: 'background' }));
+            }}
+            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeLodTab === 'background'
+                ? 'bg-gray-500 text-white shadow-sm'
+                : 'text-gray-300 hover:text-white hover:bg-white/20'
+            }`}
+          >
+            Background ({characters.filter(c => c.lodTier === 'background').length})
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           {/* Search Input */}
           <div className="flex-1 relative">
@@ -539,17 +598,18 @@ const CharacterManager = ({
                 />
               </div>
 
-              {/* Has Interactions Filter */}
+              {/* LOD Tier Filter */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Has Interactions</label>
+                <label className="block text-sm font-medium text-white mb-2">LOD Tier</label>
                 <select
-                  value={filters.hasInteractions}
-                  onChange={(e) => handleFilterChange('hasInteractions', e.target.value)}
+                  value={filters.lodTier}
+                  onChange={(e) => handleFilterChange('lodTier', e.target.value)}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                 >
-                  <option value="" className="bg-gray-800">Any</option>
-                  <option value="yes" className="bg-gray-800">Yes</option>
-                  <option value="no" className="bg-gray-800">No</option>
+                  <option value="" className="bg-gray-800">All Tiers</option>
+                  <option value="hero" className="bg-gray-800">Hero NPCs</option>
+                  <option value="group" className="bg-gray-800">Group NPCs</option>
+                  <option value="background" className="bg-gray-800">Background NPCs</option>
                 </select>
               </div>
             </div>
@@ -813,9 +873,20 @@ const CharacterCard = ({
           <span className="text-2xl">{typeInfo.icon}</span>
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-white truncate">{character.name}</h3>
-            <p className="text-sm text-gray-400">
-              {typeInfo.label} • Level {character.level || 1}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-400">
+                {typeInfo.label} • Level {character.level || 1}
+              </p>
+              {character.lodTier && (
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  character.lodTier === 'hero' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                  character.lodTier === 'group' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                }`}>
+                  {character.lodTier}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

@@ -43,6 +43,9 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
   // Get LOD data from simulation context
   const { lodStats, lodProcessingMetrics, isLODInitialized } = useSimulationContext();
 
+  // Add state for LOD tier filtering
+  const [selectedLodTier, setSelectedLodTier] = useState('all');
+
   // Use the world state directly (it's now the current simulation state)
   const displayWorldState = worldState;
 
@@ -134,46 +137,127 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
         />
       </div>
 
-      {/* NPC Activity Panel - Show NPC decisions and actions */}
+      {/* NPC Activity Panel - Show NPC decisions and actions with LOD tabs */}
       <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-          NPC Activity & Decisions
-        </h3>
-        {npcs.length > 0 ? (
-          <div className="space-y-3">
-            {npcs.slice(0, 5).map((npc, index) => (
-              <div key={npc.id || index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {npc.name || `NPC ${index + 1}`}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {npc.lastInteractionType ?
-                        `Last Action: ${npc.lastInteractionType}` :
-                        'No recent activity'
-                      }
-                    </p>
-                    <div className="flex items-center space-x-4 mt-2 text-xs">
-                      <span>Energy: {npc.energy || 0}/100</span>
-                      <span>Mood: {npc.mood || 0}/100</span>
-                      <span>Health: {npc.health || 0}/100</span>
-                    </div>
-                  </div>
-                  {npc.lastInteractionType && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                      Active
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            NPC Activity & Decisions
+          </h3>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {npcs.length} total NPCs
           </div>
-        ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-            No NPCs found in simulation.
-          </p>
-        )}
+        </div>
+
+        {/* LOD Tier Tabs */}
+        <div className="flex space-x-1 mb-4 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+          <button
+            onClick={() => setSelectedLodTier('all')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedLodTier === 'all'
+                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            All ({npcs.length})
+          </button>
+          <button
+            onClick={() => setSelectedLodTier('hero')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedLodTier === 'hero'
+                ? 'bg-red-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Heroes ({lodStats?.hero || 0})
+          </button>
+          <button
+            onClick={() => setSelectedLodTier('group')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedLodTier === 'group'
+                ? 'bg-yellow-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Groups ({lodStats?.group || 0})
+          </button>
+          <button
+            onClick={() => setSelectedLodTier('background')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              selectedLodTier === 'background'
+                ? 'bg-gray-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            Background ({lodStats?.background || 0})
+          </button>
+        </div>
+
+        {/* Filtered NPC List */}
+        {(() => {
+          const filteredNpcs = selectedLodTier === 'all'
+            ? npcs
+            : npcs.filter(npc => npc.lodTier === selectedLodTier);
+
+          return filteredNpcs.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {filteredNpcs.map((npc, index) => (
+                <div key={npc.id || index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {npc.name || `NPC ${index + 1}`}
+                        </p>
+                        {npc.lodTier && (
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            npc.lodTier === 'hero' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            npc.lodTier === 'group' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {npc.lodTier}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {npc.lastInteractionType ?
+                          `Last Action: ${npc.lastInteractionType}` :
+                          'No recent activity'
+                        }
+                      </p>
+                      <div className="flex items-center space-x-4 mt-2 text-xs">
+                        <span>Energy: {npc.energy || 0}/100</span>
+                        <span>Mood: {npc.mood || 0}/100</span>
+                        <span>Health: {npc.health || 0}/100</span>
+                      </div>
+                    </div>
+                    {npc.lastInteractionType && (
+                      <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">
+                {selectedLodTier === 'hero' ? '⭐' :
+                 selectedLodTier === 'group' ? '👥' :
+                 selectedLodTier === 'background' ? '👤' : '👥'}
+              </div>
+              <p className="text-gray-500 dark:text-gray-400 mb-2">
+                No {selectedLodTier === 'all' ? '' : selectedLodTier + ' '}NPCs found
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                {selectedLodTier === 'hero' ? 'Hero NPCs have full individual processing' :
+                 selectedLodTier === 'group' ? 'Group NPCs use statistical processing' :
+                 selectedLodTier === 'background' ? 'Background NPCs use aggregate tracking' :
+                 'Try selecting a different LOD tier'}
+              </p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Recent Events Panel - Now shows real events */}
@@ -1123,7 +1207,7 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {charactersByTier.background.slice(0, 12).map((character) => (
+              {charactersByTier.background.map((character) => (
                 <CharacterCard
                   key={character.id}
                   character={character}
@@ -1133,14 +1217,6 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
                 />
               ))}
             </div>
-
-            {charactersByTier.background.length > 12 && (
-              <div className="text-center mt-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Showing 12 of {charactersByTier.background.length} background characters
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>
