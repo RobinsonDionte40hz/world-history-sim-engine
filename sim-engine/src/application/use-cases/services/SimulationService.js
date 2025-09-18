@@ -16,7 +16,7 @@ class SimulationService {
     // Turn-based simulation properties
     this.isTurnBasedMode = true;
     this.turnHistory = [];
-    this.maxTurnHistory = 100;
+    this.maxTurnHistory = 20; // Reduced from 100 to prevent localStorage quota issues
     this.currentTurnSummary = null;
     this.isInitialized = false; // Track initialization status
   }
@@ -806,42 +806,150 @@ class SimulationService {
     }
   }
 
-  // Analyze the current history
-  getHistoryAnalysis(criteria = {}) {
-    return analyzeHistory(criteria);
+  // Compress turn history to reduce storage size
+  compressTurnHistory(turnHistory) {
+    if (!Array.isArray(turnHistory)) return [];
+
+    return turnHistory.map(summary => ({
+      turn: summary.turn,
+      timestamp: summary.timestamp,
+      summary: summary.summary,
+      processingTime: summary.processingTime,
+      // Only keep essential change counts, remove detailed arrays
+      changes: {
+        charactersChanged: summary.changes?.charactersChanged || 0,
+        resourcesChanged: summary.changes?.resourcesChanged || 0,
+        settlementsChanged: summary.changes?.settlementsChanged || 0,
+        newEvents: summary.changes?.newEvents || 0
+      },
+      // Remove detailed characterActions and events arrays to save space
+      actionCount: summary.characterActions?.length || 0,
+      eventCount: summary.events?.length || 0
+    }));
   }
 
-  // Update saveState to properly serialize mappless world state
+  // Compress current turn summary
+  compressTurnSummary(turnSummary) {
+    if (!turnSummary) return null;
+
+    return {
+      turn: turnSummary.turn,
+      timestamp: turnSummary.timestamp,
+      summary: turnSummary.summary,
+      processingTime: turnSummary.processingTime,
+      changes: turnSummary.changes,
+      actionCount: turnSummary.characterActions?.length || 0,
+      eventCount: turnSummary.events?.length || 0
+    };
+  }
+
+  // Emergency save when localStorage quota is exceeded
+  emergencySave() {
+    try {
+      console.log('SimulationService: Attempting emergency save with minimal data...');
+
+      // Create minimal state with only essential data
+      const emergencyState = {
+        time: this.worldState.time || 0,
+        worldName: this.worldState.worldName || '',
+        worldDescription: this.worldState.worldDescription || '',
+        nodes: Array.isArray(this.worldState.nodes) ?
+          this.worldState.nodes.map(node => ({
+            id: node.id,
+            name: node.name,
+            type: node.type
+          })) : [],
+        characters: Array.isArray(this.worldState.characters) ?
+          this.worldState.characters.map(character => ({
+            id: character.id,
+            name: character.name,
+            currentNodeId: character.currentNodeId
+          })) : [],
+        interactions: [],
+        settlements: [],
+        resources: this.worldState.resources || {},
+        // Minimal turn data
+        turnHistory: [],
+        currentTurnSummary: null,
+        emergencyMode: true
+      };
+
+      const emergencyString = JSON.stringify(emergencyState);
+      const emergencySizeBytes = new Blob([emergencyString]).size;
+      const emergencySizeMB = (emergencySizeBytes / (1024 * 1024)).toFixed(2);
+
+      console.log(`SimulationService: Emergency state size: ${emergencySizeMB} MB`);
+
+      localStorage.setItem('worldState', emergencyString);
+      console.log('SimulationService: Emergency save successful - basic state preserved');
+      return true;
+    } catch (emergencyError) {
+      console.error('SimulationService: Emergency save also failed:', emergencyError);
+
+      // Last resort: try to save just the turn counter
+      try {
+        const minimalState = {
+          time: this.worldState?.time || 0,
+          emergencyMode: true,
+          message: 'Storage quota exceeded - only turn counter preserved'
+        };
+        localStorage.setItem('worldState', JSON.stringify(minimalState));
+        console.log('SimulationService: Minimal state saved (turn counter only)');
+        return true;
+      } catch (minimalError) {
+        console.error('SimulationService: Even minimal save failed:', minimalError);
+        return false;
+      }
+    }
+  }
+
+  // Update saveState to properly serialize mappless world state with compression and error handling
   saveState() {
     if (!this.worldState) {
       console.warn('SimulationService: No world state to save');
       return false;
     }
+
     try {
+      // Compress turn history to reduce storage size
+      const compressedTurnHistory = this.compressTurnHistory(this.turnHistory);
+
       const stateToSave = {
         time: this.worldState.time || 0,
         worldName: this.worldState.worldName || '',
         worldDescription: this.worldState.worldDescription || '',
         rules: this.worldState.rules || {},
         initialConditions: this.worldState.initialConditions || {},
-        nodes: Array.isArray(this.worldState.nodes) ? 
+        nodes: Array.isArray(this.worldState.nodes) ?
           this.worldState.nodes.map(node => node.toJSON ? node.toJSON() : node) : [],
-        characters: Array.isArray(this.worldState.characters) ? 
+        characters: Array.isArray(this.worldState.characters) ?
           this.worldState.characters.map(character => character.toJSON ? character.toJSON() : character) : [],
         interactions: this.worldState.interactions || [],
-        settlements: Array.isArray(this.worldState.settlements) ? 
+        settlements: Array.isArray(this.worldState.settlements) ?
           this.worldState.settlements.map(settlement => settlement.toJSON ? settlement.toJSON() : settlement) : [],
         resources: this.worldState.resources || {},
-        // Save turn-based simulation data
-        turnHistory: this.turnHistory || [],
-        currentTurnSummary: this.currentTurnSummary
+        // Save compressed turn-based simulation data
+        turnHistory: compressedTurnHistory,
+        currentTurnSummary: this.compressTurnSummary(this.currentTurnSummary)
       };
-      localStorage.setItem('worldState', JSON.stringify(stateToSave));
-      console.log('SimulationService: State saved to localStorage');
+
+      const stateString = JSON.stringify(stateToSave);
+      const stateSizeBytes = new Blob([stateString]).size;
+      const stateSizeMB = (stateSizeBytes / (1024 * 1024)).toFixed(2);
+
+      console.log(`SimulationService: Attempting to save state (${stateSizeMB} MB)`);
+
+      localStorage.setItem('worldState', stateString);
+      console.log('SimulationService: State saved to localStorage successfully');
       return true;
     } catch (error) {
-      console.error('SimulationService: Failed to save state:', error);
-      return false;
+      if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+        console.warn('SimulationService: localStorage quota exceeded, attempting emergency save...');
+        return this.emergencySave();
+      } else {
+        console.error('SimulationService: Failed to save state:', error);
+        return false;
+      }
     }
   }
 
