@@ -154,9 +154,13 @@ class SimulationService {
       
       // Collect all interactions from characters assigned to this node
       nodeCharacters.forEach(character => {
-        if (character.assignments?.interactions) {
+        // Handle both formats for compatibility
+        const interactionIds = character.assignedInteractions ||
+          (character.assignments?.interactions ? Array.from(character.assignments.interactions) : []);
+
+        if (interactionIds && interactionIds.length > 0) {
           const characterInteractions = interactionArray.filter(interaction =>
-            character.assignments.interactions.has(interaction.id)
+            interactionIds.includes(interaction.id)
           );
           node.contentInteractions.push(...characterInteractions);
         }

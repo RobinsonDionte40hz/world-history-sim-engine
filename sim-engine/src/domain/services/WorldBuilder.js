@@ -1386,6 +1386,9 @@ class WorldBuilder {
           investments: new Set()
         };
       }
+
+      // Ensure assignedInteractions array is set for compatibility
+      processedChar.assignedInteractions = Array.from(processedChar.assignments.interactions);
       
       return [char.id, processedChar];
     }));
@@ -1409,52 +1412,35 @@ class WorldBuilder {
         // Find all characters assigned to this node
         characterIdArray.forEach(characterId => {
           const character = simulationCharacters.get(characterId);
-          if (character && character.assignments?.interactions) {
-            // Handle different formats of assignments.interactions
-            let interactionIds = [];
+          if (character) {
+            // Handle both formats for compatibility
+            const interactionIds = character.assignedInteractions ||
+              (character.assignments?.interactions ? Array.from(character.assignments.interactions) : []);
 
-            try {
-              if (character.assignments.interactions instanceof Set) {
-                interactionIds = Array.from(character.assignments.interactions);
-              } else if (Array.isArray(character.assignments.interactions)) {
-                interactionIds = character.assignments.interactions;
-              } else if (typeof character.assignments.interactions === 'object') {
-                // Handle object format - extract string values
-                interactionIds = Object.values(character.assignments.interactions)
-                  .filter(id => typeof id === 'string' && id.trim().length > 0);
-              } else {
-                // Try to convert to array as fallback
-                interactionIds = [character.assignments.interactions].filter(id => typeof id === 'string');
-              }
-            } catch (error) {
-              console.warn(`Error processing interactions for character ${characterId}:`, error);
-              interactionIds = [];
-            }
-
-            // Get the actual interaction objects from the assigned interaction IDs
-            const characterInteractions = interactionIds
-              .map(interactionId => {
-                try {
-                  const interaction = simulationInteractions.get(interactionId);
-                  if (!interaction) {
-                    console.warn(`Interaction ${interactionId} not found for character ${characterId} at node ${nodeId}`);
+            if (interactionIds && interactionIds.length > 0) {
+              // Get the actual interaction objects from the assigned interaction IDs
+              const characterInteractions = interactionIds
+                .map(interactionId => {
+                  try {
+                    const interaction = simulationInteractions.get(interactionId);
+                    if (!interaction) {
+                      console.warn(`Interaction ${interactionId} not found for character ${characterId} at node ${nodeId}`);
+                    }
+                    return interaction;
+                  } catch (error) {
+                    console.warn(`Error retrieving interaction ${interactionId}:`, error);
+                    return null;
                   }
-                  return interaction;
-                } catch (error) {
-                  console.warn(`Error retrieving interaction ${interactionId}:`, error);
-                  return null;
-                }
-              })
-              .filter(Boolean); // Remove any null/undefined interactions
+                })
+                .filter(Boolean); // Remove any null/undefined interactions
 
-            // Add to node's content interactions (avoid duplicates)
-            characterInteractions.forEach(interaction => {
-              if (interaction && interaction.id && !node.contentInteractions.some(existing => existing && existing.id === interaction.id)) {
-                node.contentInteractions.push(interaction);
-              }
-            });
-          } else if (character && !character.assignments) {
-            console.warn(`Character ${characterId} has no assignments object`);
+              // Add to node's content interactions (avoid duplicates)
+              characterInteractions.forEach(interaction => {
+                if (interaction && interaction.id && !node.contentInteractions.some(existing => existing && existing.id === interaction.id)) {
+                  node.contentInteractions.push(interaction);
+                }
+              });
+            }
           }
         });
 
