@@ -1344,6 +1344,9 @@ class WorldBuilder {
     // Auto-assign interactions to characters if not already assigned
     this.autoAssignInteractionsToCharacters();
 
+    // Ensure nodePopulations data structure is consistent
+    this._normalizeNodePopulations();
+
     // Create simulation-optimized data structures
     const simulationNodes = new Map(this.worldConfig.nodes.map(node => [node.id, { ...node, characters: [], contentInteractions: [] }]));
     const simulationCharacters = new Map(this.worldConfig.characters.map(char => {
@@ -1392,29 +1395,70 @@ class WorldBuilder {
     for (const [nodeId, characterIds] of Object.entries(this.worldConfig.nodePopulations)) {
       const node = simulationNodes.get(nodeId);
       if (node) {
+        // Ensure characterIds is an array
+        const characterIdArray = Array.isArray(characterIds) ? characterIds : [];
+
         // Add character references
-        node.characters = characterIds.map(id => simulationCharacters.get(id)).filter(Boolean);
+        node.characters = characterIdArray
+          .map(id => simulationCharacters.get(id))
+          .filter(Boolean);
 
         // Populate contentInteractions from assigned characters
         node.contentInteractions = [];
 
         // Find all characters assigned to this node
-        characterIds.forEach(characterId => {
+        characterIdArray.forEach(characterId => {
           const character = simulationCharacters.get(characterId);
           if (character && character.assignments?.interactions) {
+            // Handle different formats of assignments.interactions
+            let interactionIds = [];
+
+            try {
+              if (character.assignments.interactions instanceof Set) {
+                interactionIds = Array.from(character.assignments.interactions);
+              } else if (Array.isArray(character.assignments.interactions)) {
+                interactionIds = character.assignments.interactions;
+              } else if (typeof character.assignments.interactions === 'object') {
+                // Handle object format - extract string values
+                interactionIds = Object.values(character.assignments.interactions)
+                  .filter(id => typeof id === 'string' && id.trim().length > 0);
+              } else {
+                // Try to convert to array as fallback
+                interactionIds = [character.assignments.interactions].filter(id => typeof id === 'string');
+              }
+            } catch (error) {
+              console.warn(`Error processing interactions for character ${characterId}:`, error);
+              interactionIds = [];
+            }
+
             // Get the actual interaction objects from the assigned interaction IDs
-            const characterInteractions = Array.from(character.assignments.interactions)
-              .map(interactionId => simulationInteractions.get(interactionId))
+            const characterInteractions = interactionIds
+              .map(interactionId => {
+                try {
+                  const interaction = simulationInteractions.get(interactionId);
+                  if (!interaction) {
+                    console.warn(`Interaction ${interactionId} not found for character ${characterId} at node ${nodeId}`);
+                  }
+                  return interaction;
+                } catch (error) {
+                  console.warn(`Error retrieving interaction ${interactionId}:`, error);
+                  return null;
+                }
+              })
               .filter(Boolean); // Remove any null/undefined interactions
 
             // Add to node's content interactions (avoid duplicates)
             characterInteractions.forEach(interaction => {
-              if (!node.contentInteractions.some(existing => existing.id === interaction.id)) {
+              if (interaction && interaction.id && !node.contentInteractions.some(existing => existing && existing.id === interaction.id)) {
                 node.contentInteractions.push(interaction);
               }
             });
+          } else if (character && !character.assignments) {
+            console.warn(`Character ${characterId} has no assignments object`);
           }
         });
+
+        console.log(`Node ${nodeId} populated with ${node.characters.length} characters and ${node.contentInteractions.length} content interactions`);
       }
     }
 
@@ -1703,32 +1747,37 @@ class WorldBuilder {
   }
 
   /**
-   * Checks if a character has special attributes that warrant hero-tier processing
-   * @param {Object} characterData - Character data
-   * @returns {boolean} True if character has special attributes
+   * Normalizes the nodePopulations data structure to ensure consistency
    * @private
    */
-  _hasSpecialAttributes(characterData) {
-    // Check for high attribute scores
-    const attributes = characterData.attributes || {};
-    const highAttributes = Object.values(attributes).filter(attr => attr >= 15);
-    if (highAttributes.length >= 2) {
-      return true;
+  _normalizeNodePopulations() {
+    // Ensure nodePopulations is an object
+    if (!this.worldConfig.nodePopulations || typeof this.worldConfig.nodePopulations !== 'object') {
+      this.worldConfig.nodePopulations = {};
     }
 
-    // Check for unique character types or special designations
-    const specialTypes = ['leader', 'quest_giver', 'antagonist', 'protagonist'];
-    if (specialTypes.includes(characterData.characterType?.typeId)) {
-      return true;
-    }
+    // Ensure all node IDs have entries (even if empty)
+    this.worldConfig.nodes.forEach(node => {
+      if (!this.worldConfig.nodePopulations[node.id]) {
+        this.worldConfig.nodePopulations[node.id] = [];
+      }
+    });
 
-    // Check for characters with complex consciousness
-    const consciousness = characterData.consciousness || {};
-    if (consciousness.frequency > 60 || consciousness.coherence > 0.7) {
-      return true;
-    }
+    // Ensure all values are arrays
+    Object.keys(this.worldConfig.nodePopulations).forEach(nodeId => {
+      const characterIds = this.worldConfig.nodePopulations[nodeId];
+      if (!Array.isArray(characterIds)) {
+        this.worldConfig.nodePopulations[nodeId] = [];
+      }
+    });
 
-    return false;
+    // Remove entries for nodes that no longer exist
+    const validNodeIds = new Set(this.worldConfig.nodes.map(node => node.id));
+    Object.keys(this.worldConfig.nodePopulations).forEach(nodeId => {
+      if (!validNodeIds.has(nodeId)) {
+        delete this.worldConfig.nodePopulations[nodeId];
+      }
+    });
   }
 }
 

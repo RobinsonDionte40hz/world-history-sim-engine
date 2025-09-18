@@ -223,7 +223,7 @@ const ironholdDominionConfig = {
       },
       assignments: {
         nodes: new Set(['ironhold-command-center']),
-        interactions: new Set([])
+        interactions: new Set(['valley_trade', 'garrison_training'])
       },
       relationships: ['master-smith', 'mining-foreman', 'captain-garrison']
     },
@@ -249,7 +249,7 @@ const ironholdDominionConfig = {
       },
       assignments: {
         nodes: new Set(['ironhold-forge-district']),
-        interactions: new Set([])
+        interactions: new Set(['forge_craftsmanship', 'mining_operations'])
       },
       relationships: ['lord-protector-garret', 'mining-foreman']
     },
@@ -275,7 +275,7 @@ const ironholdDominionConfig = {
       },
       assignments: {
         nodes: new Set(['ironhold-mining-complex']),
-        interactions: new Set([])
+        interactions: new Set(['mining_operations'])
       },
       relationships: ['lord-protector-garret', 'master-smith']
     },
@@ -301,7 +301,7 @@ const ironholdDominionConfig = {
       },
       assignments: {
         nodes: new Set(['ironhold-barracks']),
-        interactions: new Set([])
+        interactions: new Set(['garrison_training'])
       },
       relationships: ['lord-protector-garret']
     }

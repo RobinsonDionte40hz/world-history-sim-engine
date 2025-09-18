@@ -150,20 +150,20 @@ class DemoService {
     
     const interactionsMap = new Map();
     // TODO: Re-enable interaction creation when module system is resolved
-    // if (rawWorldData.interactions && Array.isArray(rawWorldData.interactions)) {
-    //   rawWorldData.interactions.forEach(interaction => {
-    //     // Convert plain interaction objects to ContentInteraction instances
-    //     const contentInteraction = new ContentInteraction({
-    //       ...interaction,
-    //       id: interaction.id || `int_${Date.now()}_${Math.random()}`,
-    //       name: interaction.name || 'Unnamed Interaction',
-    //       type: interaction.type || 'content'
-    //     });
-    //
-    //     // Store as serialized data for navigation compatibility
-    //     interactionsMap.set(contentInteraction.id, contentInteraction.toJSON());
-    //   });
-    // }
+    if (rawWorldData.interactions && Array.isArray(rawWorldData.interactions)) {
+      rawWorldData.interactions.forEach(interaction => {
+        // Convert plain interaction objects to ContentInteraction instances
+        const contentInteraction = {
+          ...interaction,
+          id: interaction.id || `int_${Date.now()}_${Math.random()}`,
+          name: interaction.name || 'Unnamed Interaction',
+          type: interaction.type || 'content'
+        };
+
+        // Store as serialized data for navigation compatibility
+        interactionsMap.set(contentInteraction.id, contentInteraction);
+      });
+    }
     
     const settlementsMap = new Map();
     if (rawWorldData.settlements && Array.isArray(rawWorldData.settlements)) {
@@ -1348,6 +1348,101 @@ class DemoService {
             text: 'Propose trade agreement',
             effects: [{ type: 'trade', established: true }],
             outcomes: ['Trade relations between the settlements improve']
+          }
+        ]
+      },
+      {
+        id: 'council_meeting',
+        name: 'Federation Council Meeting',
+        description: 'Attend a meeting of the Oakwood Federation Council',
+        category: 'political',
+        assignedCharacterIds: ['council-chair-elara', 'merchant-guild-leader', 'head-farmer'],
+        branches: [
+          {
+            text: 'Discuss agricultural policy',
+            effects: [{ type: 'policy', agriculture: 'reviewed' }],
+            outcomes: ['Council discusses improvements to farming techniques']
+          },
+          {
+            text: 'Review trade agreements',
+            effects: [{ type: 'trade', review: true }],
+            outcomes: ['Council reviews current trade relationships with Ironhold']
+          }
+        ]
+      },
+      {
+        id: 'forge_craftsmanship',
+        name: 'Master Smith Demonstration',
+        description: 'Watch the master smith demonstrate advanced forging techniques',
+        category: 'craft',
+        assignedCharacterIds: ['master-smith', 'merchant-guild-leader'],
+        branches: [
+          {
+            text: 'Learn about weapon forging',
+            effects: [{ type: 'knowledge', weapon_smithing: 'learned' }],
+            outcomes: ['You learn about the art of weapon forging from the master smith']
+          },
+          {
+            text: 'Discuss metal quality',
+            effects: [{ type: 'knowledge', metal_quality: 'learned' }],
+            outcomes: ['The smith explains the importance of metal quality in craftsmanship']
+          }
+        ]
+      },
+      {
+        id: 'mining_operations',
+        name: 'Mining Site Inspection',
+        description: 'Inspect the mining operations and speak with the mining foreman',
+        category: 'industrial',
+        assignedCharacterIds: ['mining-foreman', 'master-smith'],
+        branches: [
+          {
+            text: 'Check mining safety',
+            effects: [{ type: 'safety', assessment: 'performed' }],
+            outcomes: ['Foreman reports on current safety measures in the mines']
+          },
+          {
+            text: 'Discuss ore quality',
+            effects: [{ type: 'knowledge', ore_quality: 'learned' }],
+            outcomes: ['Foreman explains the quality of ore being extracted']
+          }
+        ]
+      },
+      {
+        id: 'market_bargaining',
+        name: 'Market District Bargaining',
+        description: 'Haggle with merchants in the bustling market district',
+        category: 'economic',
+        assignedCharacterIds: ['merchant-guild-leader', 'master-artisan'],
+        branches: [
+          {
+            text: 'Negotiate tool prices',
+            effects: [{ type: 'trade', tools: 'negotiated' }],
+            outcomes: ['You successfully negotiate better prices for farming tools']
+          },
+          {
+            text: 'Learn about market trends',
+            effects: [{ type: 'knowledge', market_trends: 'learned' }],
+            outcomes: ['Merchants share insights about current market trends']
+          }
+        ]
+      },
+      {
+        id: 'garrison_training',
+        name: 'Military Training Observation',
+        description: 'Observe military training and speak with the garrison captain',
+        category: 'military',
+        assignedCharacterIds: ['captain-garrison', 'lord-protector-garret'],
+        branches: [
+          {
+            text: 'Review defense strategies',
+            effects: [{ type: 'knowledge', defense_strategy: 'learned' }],
+            outcomes: ['Captain explains current defense strategies for the dominion']
+          },
+          {
+            text: 'Discuss soldier morale',
+            effects: [{ type: 'knowledge', soldier_morale: 'assessed' }],
+            outcomes: ['Captain shares insights about garrison morale and readiness']
           }
         ]
       }

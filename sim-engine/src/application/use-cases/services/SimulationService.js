@@ -119,6 +119,29 @@ class SimulationService {
     const interactionArray = Array.from(interactions.values());
     const settlementArray = settlements ? Array.from(settlements.values()) : [];
 
+    // Assign interactions to characters based on interaction.assignedCharacterIds
+    interactionArray.forEach(interaction => {
+      if (interaction.assignedCharacterIds && Array.isArray(interaction.assignedCharacterIds)) {
+        interaction.assignedCharacterIds.forEach(characterId => {
+          const character = characterArray.find(char => char.id === characterId);
+          if (character) {
+            // Initialize assignments.interactions if it doesn't exist
+            if (!character.assignments) {
+              character.assignments = { nodes: new Set(), interactions: new Set() };
+            }
+            if (!character.assignments.interactions) {
+              character.assignments.interactions = new Set();
+            }
+            // Add the interaction to the character's assignments
+            character.assignments.interactions.add(interaction.id);
+            console.log(`Assigned interaction ${interaction.name} to character ${character.name}`);
+          } else {
+            console.warn(`Interaction ${interaction.name} assigned to non-existent character ${characterId}`);
+          }
+        });
+      }
+    });
+
     // Assign interactions to nodes based on character assignments
     nodeArray.forEach(node => {
       node.contentInteractions = [];

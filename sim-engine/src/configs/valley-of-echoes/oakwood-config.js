@@ -223,7 +223,7 @@ const oakwoodFederationConfig = {
       },
       assignments: {
         nodes: new Set(['oakwood-administrative-center']),
-        interactions: new Set([])
+        interactions: new Set(['council_meeting', 'valley_trade'])
       },
       relationships: ['merchant-guild-leader', 'head-farmer']
     },
@@ -249,7 +249,7 @@ const oakwoodFederationConfig = {
       },
       assignments: {
         nodes: new Set(['oakwood-market-district']),
-        interactions: new Set([])
+        interactions: new Set(['market_bargaining', 'council_meeting'])
       },
       relationships: ['council-chair-elara', 'master-artisan']
     },
@@ -301,7 +301,7 @@ const oakwoodFederationConfig = {
       },
       assignments: {
         nodes: new Set(['oakwood-market-district']),
-        interactions: new Set([])
+        interactions: new Set(['market_bargaining'])
       },
       relationships: ['merchant-guild-leader', 'head-farmer']
     }
