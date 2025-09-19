@@ -45,12 +45,11 @@ class ConsciousnessState {
         let baseEmotion;
         
         // Practical emotion mapping with content as baseline
-        if (freq < 4) baseEmotion = { primary: 'exhausted', secondary: 'withdrawn', energy: 0.2 };
-        else if (freq < 6) baseEmotion = { primary: 'tired', secondary: 'cautious', energy: 0.4 };
+        if (freq < 5) baseEmotion = { primary: 'tired', secondary: 'cautious', energy: 0.4 };
         else if (freq < 8) baseEmotion = { primary: 'content', secondary: 'stable', energy: 0.6 }; // Normal baseline
         else if (freq < 10) baseEmotion = { primary: 'alert', secondary: 'engaged', energy: 0.8 };
         else if (freq < 12) baseEmotion = { primary: 'energized', secondary: 'motivated', energy: 0.9 };
-        else if (freq < 15) baseEmotion = { primary: 'excited', secondary: 'ambitious', energy: 1.0 };
+        else if (freq < 14) baseEmotion = { primary: 'excited', secondary: 'ambitious', energy: 1.0 };
         else baseEmotion = { primary: 'manic', secondary: 'reckless', energy: 1.2 }; // Dangerous high state
         
         // Apply temporary emotional modifiers
@@ -66,27 +65,28 @@ class ConsciousnessState {
 
     // Apply emotional events that temporarily shift the character's state
     applyEmotionalEvent(eventType, intensity, duration = 60) {
+        // Parameter validation
+        intensity = Math.max(0, Math.min(1.0, intensity)); // Clamp intensity to 0-1 range
+        duration = Math.max(1, duration); // Minimum 1 minute duration
+        
         const emotionalShift = this._calculateEmotionalShift(eventType, intensity);
         
         this.emotionalModifiers.set(eventType, {
             shift: emotionalShift,
             intensity: intensity,
+            type: eventType,
             startTime: Date.now(),
             duration: duration * 60000, // Convert to milliseconds
             decayRate: this.emotionalDecayRate
         });
-        
-        // Adjust frequency based on emotional event
-        this.currentFrequency += emotionalShift.frequencyDelta;
-        this.currentFrequency = Math.max(2, Math.min(18, this.currentFrequency));
         
         // Record emotional imprint with enhanced memory context
         const emotionalImprint = {
             eventType,
             intensity,
             timestamp: Date.now(),
-            frequencyBefore: this.currentFrequency - emotionalShift.frequencyDelta,
-            frequencyAfter: this.currentFrequency,
+            frequencyBefore: this.currentFrequency,
+            frequencyAfter: this.currentFrequency, // No change to frequency
             emotionalShift: emotionalShift
         };
         
@@ -301,14 +301,17 @@ class ConsciousnessState {
         return modifiedEmotion;
     }
 
-    // Calculate overall emotional intensity based on active modifiers
+    // Calculate overall emotional intensity based on coherence and active modifiers
     _calculateEmotionalIntensity() {
-        let totalIntensity = 0;
+        // Base intensity from coherence
+        let intensity = this.emotionalCoherence;
+        
+        // Add modifier intensities
         this.emotionalModifiers.forEach(modifier => {
-            totalIntensity += modifier.intensity;
+            intensity += modifier.intensity * 0.3; // Modifiers have less impact than base coherence
         });
         
-        return Math.min(1.0, totalIntensity); // Cap at 1.0
+        return Math.min(1.0, Math.max(0.0, intensity)); // Ensure 0-1 range
     }
 
     // Update and decay emotional modifiers over time
