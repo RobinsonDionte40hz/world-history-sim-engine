@@ -7,9 +7,10 @@
  */
 
 import EventSignificanceService from './EventSignificanceService.js';
+import MemoryManagementService from './MemoryManagementService.js';
 
 class SignificantMemoryService {
-  constructor() {
+  constructor(logger = null, errorHandler = null) {
     // Significance threshold for memory storage
     this.SIGNIFICANCE_THRESHOLD = 0.3;
     
@@ -18,6 +19,9 @@ class SignificantMemoryService {
     
     // Event significance service for calculating significance scores
     this.eventSignificanceService = new EventSignificanceService();
+
+    // Memory management service for automatic memory optimization
+    this.memoryManager = new MemoryManagementService(logger, errorHandler);
   }
 
   /**
@@ -33,18 +37,18 @@ class SignificantMemoryService {
     if (!character || typeof character !== 'object') {
       throw new Error('Character must be a valid object');
     }
-    
+
     if (!interaction || typeof interaction !== 'object') {
       throw new Error('Interaction must be a valid object');
     }
-    
+
     if (!outcome || typeof outcome !== 'string') {
       throw new Error('Outcome must be a valid string');
     }
 
     // Calculate significance of this interaction
     const significance = this.calculateInteractionSignificance(interaction, outcome, context);
-    
+
     // Check if significant enough to store
     if (significance < this.SIGNIFICANCE_THRESHOLD) {
       return false; // Not significant enough
@@ -52,20 +56,20 @@ class SignificantMemoryService {
 
     // Create memory object
     const memory = this.createMemoryObject(character, interaction, outcome, significance, context);
-    
+
     // Initialize memory array if needed
     if (!character.significantMemories) {
       character.significantMemories = [];
     }
-    
+
     // Add memory
     character.significantMemories.push(memory);
-    
-    // Enforce memory limit (keep most recent memories)
-    if (character.significantMemories.length > this.MAX_MEMORIES_PER_CHARACTER) {
-      character.significantMemories = character.significantMemories.slice(-this.MAX_MEMORIES_PER_CHARACTER);
-    }
-    
+
+    // Use memory manager to optimize memory usage
+    this.memoryManager.processCharacter(character, {
+      skipGarbageCollection: true // We'll handle garbage collection separately
+    });
+
     return true; // Memory was added
   }
 
@@ -446,39 +450,43 @@ class SignificantMemoryService {
     if (!character.significantMemories || character.significantMemories.length === 0) {
       return 0;
     }
-    
-    const {
-      maxAge = 365 * 24 * 60 * 60 * 1000, // 1 year in milliseconds
-      minSignificance = 0.2,
-      maxMemories = this.MAX_MEMORIES_PER_CHARACTER
-    } = options;
-    
-    const now = Date.now();
-    const initialCount = character.significantMemories.length;
-    
-    // Filter out old AND low-significance memories (both conditions must fail to remove)
-    character.significantMemories = character.significantMemories.filter(memory => {
-      const age = now - memory.timestamp;
-      const isNotTooOld = age <= maxAge;
-      const isSignificantEnough = memory.significance >= minSignificance;
-      return isNotTooOld && isSignificantEnough;
+
+    // Use memory manager for comprehensive pruning
+    const results = this.memoryManager.processCharacter(character, {
+      aggressiveCleanup: options.aggressive || false,
+      skipGarbageCollection: true
     });
-    
-    // Enforce memory limit (keep most significant and recent)
-    if (character.significantMemories.length > maxMemories) {
-      character.significantMemories.sort((a, b) => {
-        // Primary sort: significance
-        const significanceDiff = b.significance - a.significance;
-        if (Math.abs(significanceDiff) > 0.1) return significanceDiff;
-        
-        // Secondary sort: recency
-        return b.timestamp - a.timestamp;
-      });
-      
-      character.significantMemories = character.significantMemories.slice(0, maxMemories);
+
+    return results.memoriesPruned;
+  }
+
+  /**
+   * Perform comprehensive memory management on a character
+   * @param {Object} character - The character to manage memory for
+   * @param {Object} options - Memory management options
+   * @returns {Object} Memory management results
+   */
+  performMemoryManagement(character, options = {}) {
+    if (!character) {
+      throw new Error('Character must be provided for memory management');
     }
-    
-    return initialCount - character.significantMemories.length;
+
+    return this.memoryManager.processCharacter(character, options);
+  }
+
+  /**
+   * Perform memory management on multiple characters
+   * @param {Array<Object>} characters - Array of characters to manage
+   * @param {Object} options - Memory management options
+   * @returns {Object} Memory management results
+   */
+  performBatchMemoryManagement(characters, options = {}) {
+    if (!Array.isArray(characters)) {
+      throw new Error('Characters must be provided as an array');
+    }
+
+    const worldState = { npcs: characters };
+    return this.memoryManager.performMemoryManagement(worldState, options);
   }
 }
 

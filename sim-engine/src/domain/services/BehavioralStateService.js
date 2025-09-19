@@ -8,13 +8,19 @@
 
 import BaseDomainService from './BaseDomainService.js';
 import SignificantMemoryService from './SignificantMemoryService.js';
+import ConsciousnessErrorHandlingService from './ConsciousnessErrorHandlingService.js';
+import MemoryManagementService from './MemoryManagementService.js';
 
 class BehavioralStateService extends BaseDomainService {
-    constructor(memoryService, logger = null) {
+    constructor(memoryService, logger = null, errorHandler = null) {
         super(); // BaseDomainService doesn't accept parameters
         // Only create default memory service if memoryService is undefined (not explicitly null)
         this.memoryService = memoryService === undefined ? new SignificantMemoryService() : memoryService;
         this.logger = logger;
+        this.errorHandler = errorHandler || new ConsciousnessErrorHandlingService(logger);
+
+        // Memory management service for automatic memory optimization
+        this.memoryManager = new MemoryManagementService(logger, errorHandler);
 
         // Interaction type mappings for behavioral modifiers
         this.interactionTypeMappings = {
@@ -111,6 +117,27 @@ class BehavioralStateService extends BaseDomainService {
      */
     getBehavioralModifier(character, interactionType, context = {}) {
         try {
+            // Validate character and consciousness
+            if (!character) {
+                if (this.logger) {
+                    this.logger.warn('Character is required for behavioral modifier calculation');
+                }
+                return 1.0;
+            }
+
+            // Check for missing or corrupted behavioral state and attempt recovery
+            if (character.consciousness && !this.errorHandler.isValidBehavioralState(character.consciousness.behavioralState)) {
+                const recoveryResult = this.errorHandler.handleMissingBehavioralState(character, {
+                    interactionType,
+                    context,
+                    source: 'getBehavioralModifier'
+                });
+
+                if (!recoveryResult.success && this.logger) {
+                    this.logger.warn(`Failed to recover behavioral state for character ${character.id}`);
+                }
+            }
+
             // Get base modifier for interaction type
             const typeMapping = this.interactionTypeMappings[interactionType];
             if (!typeMapping) {
@@ -143,10 +170,19 @@ class BehavioralStateService extends BaseDomainService {
             return this.clampDecisionFactor(modifier);
 
         } catch (error) {
+            // Use error handling service for comprehensive error recovery
+            const errorResult = this.errorHandler.handleCalculationFailure(error, {
+                calculationType: 'behavioral_modifier',
+                character,
+                interactionType,
+                context
+            });
+
             if (this.logger) {
                 this.logger.error(`Error calculating behavioral modifier: ${error.message}`);
             }
-            return 1.0; // Return neutral modifier on error
+
+            return errorResult.fallbackValue || 1.0;
         }
     }
 
@@ -244,6 +280,11 @@ class BehavioralStateService extends BaseDomainService {
         }
 
         try {
+            // Perform automatic memory management before retrieving memories
+            this.memoryManager.processCharacter(character, {
+                skipGarbageCollection: true // We'll handle garbage collection separately
+            });
+
             // Get relevant memories for this interaction type
             const relevantMemories = this.memoryService.getRelevantMemories(
                 character,
@@ -264,7 +305,7 @@ class BehavioralStateService extends BaseDomainService {
                 const significance = memory.significance || 0.5;
                 const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
                 const weight = significance * recencyWeight;
-                
+
                 // Determine influence direction based on outcome
                 let influence = 0;
                 switch (memory.outcome) {
@@ -309,18 +350,27 @@ class BehavioralStateService extends BaseDomainService {
             }
 
             const averageInfluence = totalWeightedInfluence / totalWeight;
-            
+
             // Apply memory influence with diminishing returns
             // Memory influence is bounded between 0.8x and 1.3x (±30% max influence)
             const memoryModifier = 1 + (averageInfluence * 0.75); // Scale influence
-            
+
             return Math.max(0.8, Math.min(1.3, memoryModifier));
 
         } catch (error) {
+            // Use error handling service for memory calculation failures
+            const errorResult = this.errorHandler.handleCalculationFailure(error, {
+                calculationType: 'memory_influence',
+                character,
+                interactionType,
+                context
+            });
+
             if (this.logger) {
                 this.logger.warn(`Error calculating memory modifier: ${error.message}`);
             }
-            return 1.0; // Return neutral on error
+
+            return errorResult.fallbackValue || 1.0;
         }
     }
 
@@ -333,18 +383,18 @@ class BehavioralStateService extends BaseDomainService {
     calculateRecencyWeight(memoryTimestamp) {
         const now = Date.now();
         const age = now - memoryTimestamp;
-        
+
         // Memory influence decays over time
         // Recent memories (< 1 day): full weight (1.0)
         // Week old memories: 0.7 weight
         // Month old memories: 0.4 weight
         // Very old memories (> 6 months): 0.1 weight
-        
+
         const oneDay = 24 * 60 * 60 * 1000;
         const oneWeek = 7 * oneDay;
         const oneMonth = 30 * oneDay;
         const sixMonths = 6 * oneMonth;
-        
+
         if (age < oneDay) {
             return 1.0;
         } else if (age < oneWeek) {
@@ -706,7 +756,7 @@ class BehavioralStateService extends BaseDomainService {
             const significance = memory.significance || 0.5;
             const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
             const weight = significance * recencyWeight;
-            
+
             let influence = 0;
             switch (memory.outcome) {
                 case 'critical_success': influence = 0.4; break;
@@ -768,15 +818,15 @@ class BehavioralStateService extends BaseDomainService {
         const neutralMemories = memoryBreakdown.filter(m => m.influence === 0);
 
         let analysis = `Found ${memoryBreakdown.length} relevant memories. `;
-        
+
         if (positiveMemories.length > 0) {
             analysis += `${positiveMemories.length} positive experiences `;
         }
-        
+
         if (negativeMemories.length > 0) {
             analysis += `${negativeMemories.length} negative experiences `;
         }
-        
+
         if (neutralMemories.length > 0) {
             analysis += `${neutralMemories.length} neutral experiences `;
         }

@@ -9,13 +9,19 @@
 import BaseDomainService from './BaseDomainService.js';
 import EventSignificanceService from './EventSignificanceService.js';
 import ConsciousnessMigrationService from './ConsciousnessMigrationService.js';
+import ConsciousnessErrorHandlingService from './ConsciousnessErrorHandlingService.js';
+import MemoryManagementService from './MemoryManagementService.js';
 
 class ConsciousnessUpdateService extends BaseDomainService {
-    constructor(eventSignificanceService = null, logger = null) {
+    constructor(eventSignificanceService = null, logger = null, errorHandler = null) {
         super();
         this.eventSignificanceService = eventSignificanceService || new EventSignificanceService();
         this.consciousnessMigrationService = new ConsciousnessMigrationService(logger);
+        this.errorHandler = errorHandler || new ConsciousnessErrorHandlingService(logger);
         this.logger = logger;
+
+        // Memory management service for automatic memory optimization
+        this.memoryManager = new MemoryManagementService(logger, errorHandler);
 
         // Consciousness parameter bounds
         this.MIN_FREQUENCY = 3.0;
@@ -156,6 +162,11 @@ class ConsciousnessUpdateService extends BaseDomainService {
                 }
             }
 
+            // Perform automatic memory management before processing event
+            this.memoryManager.processCharacter(character, {
+                skipGarbageCollection: true // We'll handle garbage collection separately
+            });
+
             // Check if event is significant enough to trigger update
             const isSignificant = this.eventSignificanceService.isEventSignificant(event, context);
 
@@ -184,6 +195,14 @@ class ConsciousnessUpdateService extends BaseDomainService {
             };
 
         } catch (error) {
+            // Use comprehensive error handling service
+            const errorResult = this.errorHandler.handleCalculationFailure(error, {
+                calculationType: 'event_processing',
+                character,
+                event,
+                context
+            });
+
             if (this.logger) {
                 this.logger.error(`Error processing event for character ${character?.id}: ${error.message}`);
             }
@@ -191,7 +210,8 @@ class ConsciousnessUpdateService extends BaseDomainService {
             return {
                 success: false,
                 updated: false,
-                error: error.message
+                error: error.message,
+                fallbackApplied: errorResult.fallbackValue !== undefined
             };
         }
     }

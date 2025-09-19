@@ -1,6 +1,7 @@
 import BaseDomainService from './BaseDomainService.js';
-import EventSignificanceService from './EventSignificanceService.js';
 import ConsciousnessMigrationService from './ConsciousnessMigrationService.js';
+import ConsciousnessErrorHandlingService from './ConsciousnessErrorHandlingService.js';
+import MemoryManagementService from './MemoryManagementService.js';
 
 /**
  * ConsciousnessCheckpointService
@@ -16,7 +17,16 @@ import ConsciousnessMigrationService from './ConsciousnessMigrationService.js';
  * - Baseline drift for inactive characters
  */
 
-class ConsciousnessCheckpointService {
+class ConsciousnessCheckpointService extends BaseDomainService {
+  constructor(logger = null, errorHandler = null) {
+    super();
+    this.logger = logger;
+    this.errorHandler = errorHandler || new ConsciousnessErrorHandlingService(logger);
+
+    // Memory management service for automatic memory optimization
+    this.memoryManager = new MemoryManagementService(logger, errorHandler);
+  }
+
   /**
    * Create a comprehensive checkpoint of all consciousness states
    * @param {Object} worldState - The current world state containing NPCs
@@ -178,42 +188,32 @@ class ConsciousnessCheckpointService {
    * @param {Object} worldState - The world state to maintain
    * @returns {Object} Maintenance result summary
    */
-  static performMaintenance(worldState) {
+  performMaintenance(worldState) {
     if (!worldState || !worldState.npcs) {
       throw new Error('Invalid world state provided for maintenance');
     }
 
+    // Use memory manager for comprehensive memory management
+    const memoryResults = this.memoryManager.performMemoryManagement(worldState, {
+      aggressiveCleanup: false,
+      skipGarbageCollection: false
+    });
+
     const now = Date.now();
     const oneWeek = 7 * 24 * 60 * 60 * 1000;
-    
+
     const result = {
-      processedNPCs: 0,
-      prunedEvents: 0,
-      prunedMemories: 0,
+      processedNPCs: memoryResults.charactersProcessed,
+      prunedEvents: memoryResults.eventsPruned,
+      prunedMemories: memoryResults.memoriesPruned,
+      garbageCollected: memoryResults.garbageCollected,
       driftedNPCs: 0
     };
 
+    // Apply baseline drift for inactive NPCs
     worldState.npcs.forEach(npc => {
       if (!npc.consciousness) return;
 
-      result.processedNPCs++;
-
-      // Clean old events (keep last 20)
-      const originalEventCount = npc.consciousness.significantEvents?.length || 0;
-      if (npc.consciousness.significantEvents) {
-        npc.consciousness.significantEvents = 
-          npc.consciousness.significantEvents.slice(-20);
-        result.prunedEvents += originalEventCount - npc.consciousness.significantEvents.length;
-      }
-
-      // Clean old memories (keep last 50)
-      const originalMemoryCount = npc.significantMemories?.length || 0;
-      if (npc.significantMemories) {
-        npc.significantMemories = npc.significantMemories.slice(-50);
-        result.prunedMemories += originalMemoryCount - npc.significantMemories.length;
-      }
-
-      // Apply baseline drift for inactive NPCs
       const timeSinceUpdate = now - (npc.consciousness.lastUpdate || now);
       if (timeSinceUpdate > oneWeek) {
         this.applyBaselineDrift(npc, timeSinceUpdate, oneWeek);
