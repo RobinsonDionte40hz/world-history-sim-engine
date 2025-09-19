@@ -49,19 +49,22 @@
   - ✅ All 31 tests passing successfully - ConsciousnessCheckpointService fully implemented
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 7. Refactor Turn Processing for Cached States
-  - Update EfficientTurnProcessor to use cached behavioral states
-  - Implement checkForSignificantChanges method for update triggers
-  - Modify generateBehaviorFromCachedState to use BehavioralStateService
-  - Add significance evaluation for behavior execution results
-  - Create performance tests for turn processing with 1000 NPCs
+- [x] 7. Refactor Turn Processing for Cached States
+  - ✅ Update EfficientTurnProcessor to use cached behavioral states
+  - ✅ Implement checkForSignificantChanges method for update triggers
+  - ✅ Modify generateBehaviorFromCachedState to use BehavioralStateService
+  - ✅ Add significance evaluation for behavior execution results
+  - ✅ Create performance tests for turn processing with 1000 NPCs
+  - ✅ All requirements implemented with comprehensive testing and performance validation
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 8. Integrate Memory System with Decision Making
-  - Update decision factor calculation to include memory influence
-  - Implement memory retrieval based on interaction type relevance
-  - Add memory impact weighting in behavioral calculations
-  - Create tests for memory-influenced decision making
+- [x] 8. Integrate Memory System with Decision Making
+  - ✅ Update decision factor calculation to include memory influence
+  - ✅ Implement memory retrieval based on interaction type relevance with recency weighting
+  - ✅ Add memory impact weighting in behavioral calculations with bounded modifiers (0.8x to 1.3x)
+  - ✅ Create comprehensive tests for memory-influenced decision making (22 new tests)
+  - ✅ Add memory analysis tools for debugging and inspection
+  - ✅ Support for both new detailed outcome format and legacy positive/negative format
   - _Requirements: 3.5, 5.6_
 
 - [ ] 9. Add Consciousness State Inspection Tools

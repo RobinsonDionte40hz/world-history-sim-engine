@@ -7,11 +7,13 @@
  */
 
 import BaseDomainService from './BaseDomainService.js';
+import SignificantMemoryService from './SignificantMemoryService.js';
 
 class BehavioralStateService extends BaseDomainService {
-    constructor(memoryService = null, logger = null) {
+    constructor(memoryService, logger = null) {
         super(); // BaseDomainService doesn't accept parameters
-        this.memoryService = memoryService;
+        // Only create default memory service if memoryService is undefined (not explicitly null)
+        this.memoryService = memoryService === undefined ? new SignificantMemoryService() : memoryService;
         this.logger = logger;
 
         // Interaction type mappings for behavioral modifiers
@@ -233,7 +235,7 @@ class BehavioralStateService extends BaseDomainService {
      * @returns {number} Memory modifier
      */
     getMemoryModifier(character, interactionType, context = {}) {
-        if (!character || !character.memories) {
+        if (!character || !character.significantMemories) {
             return 1.0;
         }
 
@@ -246,6 +248,7 @@ class BehavioralStateService extends BaseDomainService {
             const relevantMemories = this.memoryService.getRelevantMemories(
                 character,
                 interactionType,
+                5, // maxMemories
                 context
             );
 
@@ -253,30 +256,105 @@ class BehavioralStateService extends BaseDomainService {
                 return 1.0; // No memories, neutral modifier
             }
 
-            // Calculate memory influence
-            let positiveInfluence = 0;
-            let negativeInfluence = 0;
+            // Calculate weighted memory influence based on significance and recency
+            let totalWeightedInfluence = 0;
+            let totalWeight = 0;
 
             relevantMemories.forEach(memory => {
                 const significance = memory.significance || 0.5;
-                if (memory.outcome === 'positive') {
-                    positiveInfluence += significance;
-                } else if (memory.outcome === 'negative') {
-                    negativeInfluence += significance;
+                const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
+                const weight = significance * recencyWeight;
+                
+                // Determine influence direction based on outcome
+                let influence = 0;
+                switch (memory.outcome) {
+                    case 'critical_success':
+                        influence = 0.4;
+                        break;
+                    case 'success':
+                        influence = 0.2;
+                        break;
+                    case 'partial_success':
+                        influence = 0.1;
+                        break;
+                    case 'neutral':
+                        influence = 0.0;
+                        break;
+                    case 'partial_failure':
+                        influence = -0.1;
+                        break;
+                    case 'failure':
+                        influence = -0.2;
+                        break;
+                    case 'critical_failure':
+                        influence = -0.4;
+                        break;
+                    default:
+                        // Legacy support for simple positive/negative outcomes
+                        if (memory.outcome === 'positive') {
+                            influence = 0.2;
+                        } else if (memory.outcome === 'negative') {
+                            influence = -0.2;
+                        }
+                        break;
                 }
+
+                totalWeightedInfluence += influence * weight;
+                totalWeight += weight;
             });
 
-            // Calculate net memory modifier
-            const netInfluence = positiveInfluence - negativeInfluence;
-            const memoryModifier = 1 + (netInfluence * 0.2); // ±20% influence
+            // Calculate final memory modifier
+            if (totalWeight === 0) {
+                return 1.0;
+            }
 
-            return memoryModifier;
+            const averageInfluence = totalWeightedInfluence / totalWeight;
+            
+            // Apply memory influence with diminishing returns
+            // Memory influence is bounded between 0.8x and 1.3x (±30% max influence)
+            const memoryModifier = 1 + (averageInfluence * 0.75); // Scale influence
+            
+            return Math.max(0.8, Math.min(1.3, memoryModifier));
 
         } catch (error) {
             if (this.logger) {
                 this.logger.warn(`Error calculating memory modifier: ${error.message}`);
             }
             return 1.0; // Return neutral on error
+        }
+    }
+
+    /**
+     * Calculate recency weight for memory influence
+     * More recent memories have higher influence
+     * @param {number} memoryTimestamp - Timestamp of the memory
+     * @returns {number} Recency weight (0.1 to 1.0)
+     */
+    calculateRecencyWeight(memoryTimestamp) {
+        const now = Date.now();
+        const age = now - memoryTimestamp;
+        
+        // Memory influence decays over time
+        // Recent memories (< 1 day): full weight (1.0)
+        // Week old memories: 0.7 weight
+        // Month old memories: 0.4 weight
+        // Very old memories (> 6 months): 0.1 weight
+        
+        const oneDay = 24 * 60 * 60 * 1000;
+        const oneWeek = 7 * oneDay;
+        const oneMonth = 30 * oneDay;
+        const sixMonths = 6 * oneMonth;
+        
+        if (age < oneDay) {
+            return 1.0;
+        } else if (age < oneWeek) {
+            return 0.9 - (age - oneDay) / (oneWeek - oneDay) * 0.2; // 0.9 to 0.7
+        } else if (age < oneMonth) {
+            return 0.7 - (age - oneWeek) / (oneMonth - oneWeek) * 0.3; // 0.7 to 0.4
+        } else if (age < sixMonths) {
+            return 0.4 - (age - oneMonth) / (sixMonths - oneMonth) * 0.3; // 0.4 to 0.1
+        } else {
+            return 0.1; // Minimum weight for very old memories
         }
     }
 
@@ -579,6 +657,141 @@ class BehavioralStateService extends BaseDomainService {
             max: this.MAX_DECISION_FACTOR,
             description: 'Decision factors are bounded to prevent extreme behavior'
         };
+    }
+
+    /**
+     * Get detailed memory analysis for decision making
+     * @param {Object} character - Character with memory data
+     * @param {string} interactionType - Type of interaction
+     * @param {Object} context - Context for memory retrieval
+     * @returns {Object} Detailed memory analysis
+     */
+    getMemoryAnalysis(character, interactionType, context = {}) {
+        if (!character || !this.memoryService) {
+            return {
+                hasMemories: false,
+                relevantMemories: [],
+                memoryModifier: 1.0,
+                analysis: 'No memories or memory service available'
+            };
+        }
+
+        if (!character.significantMemories) {
+            return {
+                hasMemories: false,
+                relevantMemories: [],
+                memoryModifier: 1.0,
+                analysis: 'Character has no memory storage'
+            };
+        }
+
+        const relevantMemories = this.memoryService.getRelevantMemories(
+            character,
+            interactionType,
+            5,
+            context
+        );
+
+        if (relevantMemories.length === 0) {
+            return {
+                hasMemories: true,
+                relevantMemories: [],
+                memoryModifier: 1.0,
+                analysis: 'No relevant memories found for this interaction type'
+            };
+        }
+
+        // Calculate detailed influence breakdown
+        const memoryBreakdown = relevantMemories.map(memory => {
+            const significance = memory.significance || 0.5;
+            const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
+            const weight = significance * recencyWeight;
+            
+            let influence = 0;
+            switch (memory.outcome) {
+                case 'critical_success': influence = 0.4; break;
+                case 'success': influence = 0.2; break;
+                case 'partial_success': influence = 0.1; break;
+                case 'neutral': influence = 0.0; break;
+                case 'partial_failure': influence = -0.1; break;
+                case 'failure': influence = -0.2; break;
+                case 'critical_failure': influence = -0.4; break;
+                default:
+                    if (memory.outcome === 'positive') influence = 0.2;
+                    else if (memory.outcome === 'negative') influence = -0.2;
+                    break;
+            }
+
+            return {
+                memoryId: memory.id,
+                interactionType: memory.interactionType,
+                outcome: memory.outcome,
+                significance,
+                recencyWeight,
+                weight,
+                influence,
+                weightedInfluence: influence * weight,
+                age: Date.now() - memory.timestamp,
+                description: memory.description || 'No description available'
+            };
+        });
+
+        const totalWeightedInfluence = memoryBreakdown.reduce((sum, m) => sum + m.weightedInfluence, 0);
+        const totalWeight = memoryBreakdown.reduce((sum, m) => sum + m.weight, 0);
+        const averageInfluence = totalWeight > 0 ? totalWeightedInfluence / totalWeight : 0;
+        const memoryModifier = Math.max(0.8, Math.min(1.3, 1 + (averageInfluence * 0.75)));
+
+        return {
+            hasMemories: true,
+            relevantMemories: memoryBreakdown,
+            memoryModifier,
+            totalWeightedInfluence,
+            totalWeight,
+            averageInfluence,
+            analysis: this.generateMemoryAnalysisText(memoryBreakdown, memoryModifier)
+        };
+    }
+
+    /**
+     * Generate human-readable analysis of memory influence
+     * @param {Array} memoryBreakdown - Detailed memory breakdown
+     * @param {number} memoryModifier - Final memory modifier
+     * @returns {string} Analysis text
+     */
+    generateMemoryAnalysisText(memoryBreakdown, memoryModifier) {
+        if (memoryBreakdown.length === 0) {
+            return 'No relevant memories to influence decision';
+        }
+
+        const positiveMemories = memoryBreakdown.filter(m => m.influence > 0);
+        const negativeMemories = memoryBreakdown.filter(m => m.influence < 0);
+        const neutralMemories = memoryBreakdown.filter(m => m.influence === 0);
+
+        let analysis = `Found ${memoryBreakdown.length} relevant memories. `;
+        
+        if (positiveMemories.length > 0) {
+            analysis += `${positiveMemories.length} positive experiences `;
+        }
+        
+        if (negativeMemories.length > 0) {
+            analysis += `${negativeMemories.length} negative experiences `;
+        }
+        
+        if (neutralMemories.length > 0) {
+            analysis += `${neutralMemories.length} neutral experiences `;
+        }
+
+        if (memoryModifier > 1.05) {
+            analysis += 'encourage this action';
+        } else if (memoryModifier < 0.95) {
+            analysis += 'discourage this action';
+        } else {
+            analysis += 'have minimal impact on decision';
+        }
+
+        analysis += ` (${Math.round((memoryModifier - 1) * 100)}% modifier)`;
+
+        return analysis;
     }
 }
 

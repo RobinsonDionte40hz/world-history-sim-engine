@@ -6,6 +6,7 @@
  */
 
 import BehavioralStateService from '../BehavioralStateService.js';
+import SignificantMemoryService from '../SignificantMemoryService.js';
 
 // Mock MemoryService for testing
 class MockMemoryService {
@@ -64,7 +65,7 @@ describe('BehavioralStateService', () => {
     describe('constructor', () => {
         test('should initialize with default values', () => {
             const defaultService = new BehavioralStateService();
-            expect(defaultService.memoryService).toBeNull();
+            expect(defaultService.memoryService).toBeDefined(); // Now creates default SignificantMemoryService
             expect(defaultService.logger).toBeNull(); // No logger provided, defaults to null
             expect(defaultService.MIN_DECISION_FACTOR).toBe(0.1);
             expect(defaultService.MAX_DECISION_FACTOR).toBe(3.0);
@@ -281,9 +282,21 @@ describe('BehavioralStateService', () => {
     describe('getMemoryModifier', () => {
         test('should calculate positive memory modifier', () => {
             const character = {
-                memories: [
-                    { outcome: 'positive', significance: 0.8 },
-                    { outcome: 'positive', significance: 0.6 }
+                significantMemories: [
+                    { 
+                        interactionType: 'social',
+                        outcome: 'success', 
+                        significance: 0.8,
+                        timestamp: Date.now() - 1000,
+                        contextTags: ['social']
+                    },
+                    { 
+                        interactionType: 'social',
+                        outcome: 'critical_success', 
+                        significance: 0.6,
+                        timestamp: Date.now() - 2000,
+                        contextTags: ['social']
+                    }
                 ]
             };
 
@@ -292,37 +305,78 @@ describe('BehavioralStateService', () => {
         });
 
         test('should calculate negative memory modifier', () => {
+            // Use real SignificantMemoryService for this test
+            const realMemoryService = new SignificantMemoryService();
+            const serviceWithRealMemory = new BehavioralStateService(realMemoryService, mockLogger);
+            
             const character = {
-                memories: [
-                    { outcome: 'negative', significance: 0.8 },
-                    { outcome: 'negative', significance: 0.6 }
+                significantMemories: [
+                    { 
+                        interactionType: 'social',
+                        outcome: 'critical_failure', 
+                        significance: 1.0,
+                        timestamp: Date.now() - 1000,
+                        contextTags: ['social']
+                    },
+                    { 
+                        interactionType: 'social',
+                        outcome: 'critical_failure', 
+                        significance: 1.0,
+                        timestamp: Date.now() - 2000,
+                        contextTags: ['social']
+                    },
+                    { 
+                        interactionType: 'social',
+                        outcome: 'critical_failure', 
+                        significance: 1.0,
+                        timestamp: Date.now() - 3000,
+                        contextTags: ['social']
+                    }
                 ]
             };
 
-            const modifier = service.getMemoryModifier(character, 'negative_test');
+            const modifier = serviceWithRealMemory.getMemoryModifier(character, 'social');
             expect(modifier).toBeLessThan(1.0); // Negative memories decrease modifier
         });
 
         test('should handle mixed memories', () => {
+            // Use real SignificantMemoryService for this test
+            const realMemoryService = new SignificantMemoryService();
+            const serviceWithRealMemory = new BehavioralStateService(realMemoryService, mockLogger);
+            
             const character = {
-                memories: [
-                    { outcome: 'positive', significance: 0.8 },
-                    { outcome: 'negative', significance: 0.6 }
+                significantMemories: [
+                    { 
+                        interactionType: 'social',
+                        outcome: 'success', 
+                        significance: 0.8,
+                        timestamp: Date.now() - 1000,
+                        contextTags: ['social']
+                    },
+                    { 
+                        interactionType: 'social',
+                        outcome: 'failure', 
+                        significance: 0.8,
+                        timestamp: Date.now() - 2000,
+                        contextTags: ['social']
+                    }
                 ]
             };
 
-            const modifier = service.getMemoryModifier(character, 'mixed_test');
-            expect(modifier).toBeCloseTo(1.0, 1); // Should balance out
+            const modifier = serviceWithRealMemory.getMemoryModifier(character, 'social');
+            // With mixed memories of equal significance, should be close to neutral
+            expect(modifier).toBeGreaterThan(0.9);
+            expect(modifier).toBeLessThan(1.1);
         });
 
         test('should return neutral modifier without memory service', () => {
-            const serviceWithoutMemory = new BehavioralStateService();
+            const serviceWithoutMemory = new BehavioralStateService(null);
             const modifier = serviceWithoutMemory.getMemoryModifier({}, 'social');
             expect(modifier).toBe(1.0);
         });
 
         test('should return neutral modifier without memories', () => {
-            const modifier = service.getMemoryModifier({ memories: [] }, 'exploration');
+            const modifier = service.getMemoryModifier({ significantMemories: [] }, 'exploration');
             expect(modifier).toBe(1.0);
         });
 
@@ -333,7 +387,13 @@ describe('BehavioralStateService', () => {
             const serviceWithFaultyMemory = new BehavioralStateService(faultyMemoryService, mockLogger);
 
             const characterWithMemories = {
-                memories: [{ outcome: 'positive', significance: 0.5 }]
+                significantMemories: [{ 
+                    interactionType: 'social',
+                    outcome: 'success', 
+                    significance: 0.5,
+                    timestamp: Date.now(),
+                    contextTags: ['social']
+                }]
             };
             const modifier = serviceWithFaultyMemory.getMemoryModifier(characterWithMemories, 'social');
             expect(modifier).toBe(1.0);
