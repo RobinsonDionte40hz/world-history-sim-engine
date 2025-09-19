@@ -38,25 +38,34 @@ world-history-sim-engine/
 ```
 domain/
 ├── entities/                   # Core business objects
-│   ├── Character.js            # NPC with consciousness and attributes
-│   ├── Node.js                 # Abstract location/context
-│   ├── Interaction.js          # Character actions
+│   ├── Character.js            # Enhanced NPC with LOD tiers, assignments, economic profiles
+│   ├── Node.js                 # Abstract location/context with environmental properties
+│   ├── Interaction.js          # Character actions with prerequisites and effects
 │   ├── Quest.js                # Goal-driven objectives
-│   └── Race.js                 # Character species/types
+│   ├── Settlement.js           # Settlement entities with need satisfaction
+│   ├── PopulationGroup.js      # Population group management for LOD
+│   └── HistoricalEvent.js      # Historical event records
 ├── services/                   # Domain services
-│   ├── ConsciousnessService.js # Consciousness calculations
+│   ├── MemoryService.js        # Enhanced memory with relationship tracking
 │   ├── EvolutionService.js     # Character/world evolution
-│   ├── HistoryGenerator.js     # Historical event creation
+│   ├── HistoryGenerator.js     # Historical event creation and analysis
 │   ├── InteractionResolver.js  # Action resolution
-│   ├── MemoryService.js        # Character memory
-│   └── WorldBuilder.js         # World construction service
+│   ├── WorldBuilder.js         # World construction and preparation service
+│   ├── LODManager.js           # Level-of-detail processing
+│   ├── AssignmentManager.js    # Character assignment management
+│   ├── ValidationService.js    # Pipeline validation
+│   └── TurnManager.js          # Turn-based processing coordination
 ├── value-objects/              # Immutable values
-│   ├── Attributes.js           # D&D-style attributes
-│   ├── Personality.js          # Character traits
-│   ├── Position.js             # Abstract positioning (not used in mapless)
-│   └── Prerequisites.js        # Requirement definitions
+│   ├── Attributes.js           # D&D-style attributes with modifiers
+│   ├── Personality.js          # Character traits with age modifiers
+│   ├── ConsciousnessSystem.js  # Quantum-inspired consciousness with emotional states
+│   ├── EconomicProfile.js      # Character economic data
+│   ├── Alignment.js            # Character alignment system
+│   ├── Influence.js            # Character influence tracking
+│   ├── Prestige.js             # Character prestige system
+│   └── LODTier.js              # Level-of-detail tier definitions
 └── events/                     # Domain events
-    └── HistoricalEvent.js      # Event records
+    └── SimulationEvents.js     # Simulation event definitions
 ```
 
 ### Application Layer (`src/application/`)
@@ -76,9 +85,12 @@ application/
 │   └── world-builder/          # World construction
 │       └── WorldBuilder.js
 ├── services/                   # Application services
-│   ├── SimulationService.js    # Turn-based simulation engine
-│   ├── TemplateService.js      # Template management
-│   └── ValidationService.js    # Requirement validation
+│   ├── SimulationService.js    # Enhanced turn-based simulation engine with comprehensive turn processing
+│   ├── TemplateService.js      # Template management with validation and customization
+│   ├── ValidationService.js    # Pipeline validation and consistency checking
+│   ├── CharacterService.js     # Character management and operations
+│   ├── WorldPersistenceService.js # World state persistence and recovery
+│   └── EditorStateManager.js   # Editor state management
 └── ports/                      # Interface definitions
     └── repositories/           # Repository interfaces
 ```
@@ -88,12 +100,15 @@ application/
 
 ```
 infrastructure/
-├── persistence/                # Data storage
-│   ├── LocalStorageRepository.js        # Generic localStorage
-│   ├── LocalStorageWorldRepository.js   # World state persistence
-│   └── TemplateRepository.js            # Template storage
+├── Persistance/                # Data storage (note: typo preserved for compatibility)
+│   ├── LocalStorageWorldRepository.js   # World state persistence with checkpoint support
+│   └── LocalStorageCharacterRepository.js # Character-specific persistence
+├── services/                   # Infrastructure services
+│   ├── UnifiedPersistenceService.js     # Centralized persistence management
+│   └── SaveFlowService.js      # Save flow coordination
 └── external/                   # External service integrations
-    └── (future: API clients, file I/O, etc.)
+    ├── NarrativeGenerator.js   # External narrative generation
+    └── QuantumSimulator.js     # Quantum consciousness simulation
 ```
 
 ### Presentation Layer (`src/presentation/`)
@@ -102,19 +117,27 @@ infrastructure/
 ```
 presentation/
 ├── components/                 # Reusable UI components
-│   ├── CharacterCreator.js    # Character building UI
-│   ├── ConditionalSimulationInterface.js # Adaptive main UI
-│   ├── InteractionEditor.js   # Interaction design UI
-│   ├── NodeEditor.js           # Node creation UI
-│   ├── SimulationDisplay.js   # Simulation view
-│   ├── TurnCounter.js          # Turn display
-│   └── WorldHistorySimInterface.js # History interface
+│   ├── ConditionalSimulationInterface.js # Adaptive main UI based on world state
+│   ├── CharacterEditor.js     # Enhanced character building UI with LOD support
+│   ├── InteractionEditor.js   # Interaction design UI with prerequisites
+│   ├── NodeEditor.js          # Node creation UI with environmental properties
+│   ├── TurnBasedInterface.js  # Turn-by-turn simulation controls
+│   ├── TurnCounter.js         # Turn display with history
+│   ├── LODSimulationControl.js # Level-of-detail simulation controls
+│   ├── SettlementOverview.js  # Settlement management UI
+│   ├── AssignmentPanel.js     # Character assignment management
+│   └── WorldHistorySimInterface.js # Enhanced history interface
 ├── contexts/                   # React contexts
-│   └── SimulationContext.js   # Global state management
+│   ├── SimulationContext.js   # Global state management with turn-based controls
+│   ├── LODContext.js          # Level-of-detail context
+│   ├── NavigationContext.js   # Navigation state management
+│   └── WorldContext.js        # World-specific context
 ├── hooks/                      # Custom React hooks
-│   ├── useSimulation.js        # Simulation control hook
-│   ├── useTemplates.js         # Template management hook
-│   └── useWorldBuilder.js      # World building hook
+│   ├── useSimulation.js        # Simulation control hook with turn processing
+│   ├── useTemplates.js         # Template management hook with validation
+│   ├── useWorldBuilder.js      # World building hook with pipeline validation
+│   ├── useAssignmentManager.js # Character assignment management
+│   └── useAutoSave.js          # Automatic save functionality
 ├── pages/                      # Application pages
 │   ├── MainPage.js            # Primary application page
 │   ├── HomePage.js            # Landing page

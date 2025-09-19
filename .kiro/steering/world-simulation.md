@@ -7,10 +7,11 @@ The World History Simulation Engine is a sophisticated turn-based, mapless simul
 ## Core Design Principles
 
 ### Turn-Based Simulation
-- **Manual Time Progression**: Users control when time advances
+- **Manual Time Progression**: Users control when time advances via `processTurn()`
 - **Turn Resolution**: Each turn processes all character actions and events
 - **Historical Recording**: Every turn creates permanent historical records
 - **No Real-Time Pressure**: Think strategically about each turn
+- **Turn Summaries**: Comprehensive analysis of each turn's changes and events
 
 ### Mapless Architecture
 - **Abstract Nodes**: Locations are conceptual contexts, not spatial coordinates
@@ -23,42 +24,51 @@ The World History Simulation Engine is a sophisticated turn-based, mapless simul
 - **No Prescribed Order**: Build characters, nodes, or interactions in any sequence
 - **Template Everything**: Save any component as a reusable template
 - **Validation Feedback**: Clear indicators of what's needed for simulation
+- **Pipeline Validation**: Comprehensive checks before simulation can begin
 
 ### Capability-Driven Characters
 - **Defined by Actions**: Characters are what they can DO
 - **Interaction Assignments**: Capabilities determined by assigned interactions
 - **Dynamic Growth**: Gain new capabilities through play
 - **Context-Sensitive**: Available actions depend on current node
+- **LOD Support**: Characters can be processed at different levels of detail
 
 ## System Architecture
 
 ### Domain Layer
 Core business entities and logic:
-- **Character**: Consciousness, attributes, personality, memory
-- **Node**: Abstract locations with properties and connections
-- **Interaction**: Actions characters can perform
-- **WorldBuilder**: Service for constructing worlds
-- **HistoryGenerator**: Creates historical records
+- **Character**: Enhanced with LOD tiers, assignments, and economic profiles
+- **Node**: Abstract locations with environmental properties and character assignments
+- **Interaction**: Actions with prerequisites and effects
+- **WorldBuilder**: Service for constructing and preparing worlds for simulation
+- **HistoryGenerator**: Creates historical records and event analysis
+- **ConsciousnessSystem**: Quantum-inspired consciousness with emotional states
+- **MemoryService**: Enhanced memory with relationship tracking and significance filtering
 
 ### Application Layer
 Use cases and services:
-- **SimulationService**: Turn-based simulation engine
-- **TemplateService**: Template management
-- **MemoryService**: Character memory systems
-- **EvolutionService**: Character and world development
+- **SimulationService**: Turn-based simulation engine with comprehensive turn processing
+- **TemplateService**: Template management with validation and customization
+- **MemoryService**: Character memory systems with emotional context
+- **EvolutionService**: Character and world development over time
+- **LODManager**: Level-of-detail processing for large-scale simulations
+- **ValidationService**: Pipeline validation and consistency checking
 
 ### Infrastructure Layer
 External interfaces and persistence:
-- **LocalStorageWorldRepository**: World state persistence
+- **LocalStorageWorldRepository**: World state persistence with checkpoint support
 - **LocalStorageRepository**: General data persistence
-- **TemplateRepository**: Template storage
+- **TemplateRepository**: Template storage with versioning
+- **UnifiedPersistenceService**: Centralized persistence management
 
 ### Presentation Layer
 React UI components and hooks:
-- **SimulationContext**: Global state management
-- **useWorldBuilder**: World construction hook
-- **useSimulation**: Simulation control hook
-- **ConditionalSimulationInterface**: Adaptive UI
+- **SimulationContext**: Global state management with turn-based controls
+- **useWorldBuilder**: World construction hook with validation feedback
+- **useSimulation**: Simulation control hook with turn processing
+- **ConditionalSimulationInterface**: Adaptive UI based on world state
+- **LODSimulationControl**: Level-of-detail simulation controls
+- **TurnBasedInterface**: Turn-by-turn simulation management
 
 ## Building Worlds
 
@@ -104,24 +114,41 @@ Before simulation can begin, ensure:
 {
   id: "char_id",
   name: "Elena the Merchant",
+  lodTier: "hero", // hero, important, background, group
   consciousness: {
-    frequency: 45,      // Hz, affects decision speed
-    coherence: 0.8      // 0-1, affects decision quality
+    baseFrequency: 7.5,        // 3-15 Hz range
+    currentFrequency: 8.2,     // Current state
+    emotionalCoherence: 0.8,   // 0.2-1.0 range
+    emotionalState: "content", // Current emotional state
+    emotionalModifiers: new Map() // Temporary emotional effects
   },
   attributes: {
-    strength: 10,
-    dexterity: 14,
-    constitution: 12,
-    intelligence: 16,
-    wisdom: 13,
-    charisma: 15
+    strength: { score: 10, modifier: 0 },
+    dexterity: { score: 14, modifier: 2 },
+    constitution: { score: 12, modifier: 1 },
+    intelligence: { score: 16, modifier: 3 },
+    wisdom: { score: 13, modifier: 1 },
+    charisma: { score: 15, modifier: 2 }
   },
   personality: {
     aggression: 0.2,
     curiosity: 0.8,
     empathy: 0.6
   },
-  assignedInteractions: ["trade", "negotiate", "gossip"]
+  assignments: {
+    nodes: new Set(["market_square"]),
+    interactions: new Set(["trade", "negotiate", "gossip"]),
+    settlements: new Set(["ironhold"]),
+    factions: new Set(["merchants_guild"])
+  },
+  economicProfile: {
+    wealth: 150,
+    investments: [],
+    riskTolerance: 0.6
+  },
+  relationships: new Map(), // Enhanced relationship tracking
+  decisionHistory: [], // Memory system integration
+  goals: [] // Active character goals
 }
 ```
 
@@ -185,27 +212,69 @@ const templates = templateManager.getTemplatesByType('node');
 
 ### Turn Processing
 Each turn executes the following phases:
-1. **Character Actions**: NPCs perform assigned interactions
-2. **Event Resolution**: Process outcomes and consequences
-3. **State Updates**: Apply effects to characters and nodes
-4. **History Recording**: Log events to historical record
-5. **Evolution**: Update consciousness, relationships, resources
+1. **Validation**: Check world state integrity before processing
+2. **Character Actions**: NPCs perform assigned interactions based on LOD tier
+3. **Event Resolution**: Process outcomes and consequences
+4. **State Updates**: Apply effects to characters, nodes, and settlements
+5. **History Recording**: Log events to historical record with significance scoring
+6. **Evolution**: Update consciousness, relationships, resources, and need satisfaction
+7. **Turn Summary**: Generate comprehensive summary of changes and events
 
-### Turn Control
+### Enhanced Turn Control
 ```javascript
-// Process single turn
+// Process single turn with comprehensive feedback
 const turnResult = simulationService.processTurn();
+// Returns: { worldState, turnSummary, success }
 
-// Get turn history
-const history = simulationService.getTurnHistory(startTurn, endTurn);
+// Get detailed turn history with filtering
+const history = simulationService.getTurnHistory(10); // Last 10 turns
 
-// Analyze historical patterns
+// Get latest turn summary
+const summary = simulationService.getLatestTurnSummary();
+
+// Analyze historical patterns with enhanced metrics
 const analysis = simulationService.analyzeHistory({
   entityType: 'character',
   timeRange: { start: 0, end: 100 },
-  metrics: ['relationships', 'achievements', 'consciousness']
+  metrics: ['relationships', 'achievements', 'consciousness', 'needSatisfaction']
 });
+
+// Check if simulation can start (pipeline validation)
+const canStart = simulationService.canStart();
+// Returns: { canStart: boolean, reason: string }
 ```
+
+### Consciousness System Refactor
+The consciousness system has been refactored for performance and behavioral depth:
+
+#### Event-Driven Updates
+- Consciousness parameters only update on significant events (threshold: 0.3)
+- Cached behavioral states reduce computational overhead by 90%
+- Significance-based memory storage prevents memory bloat
+
+#### Enhanced Behavioral States
+```javascript
+// Cached behavioral state (generated from consciousness parameters)
+behavioralState: {
+  energy: 'moderate',      // low, moderate, high
+  focus: 'balanced',       // scattered, balanced, focused  
+  mood: 'content',         // depressed, content, optimistic, excited
+  socialDrive: 0.6,        // 0-1 scale
+  riskTolerance: 0.5,      // 0-1 scale
+  ambition: 0.7            // 0-1 scale
+}
+
+// Single decision factor calculation (0.1x to 3.0x range)
+const decisionFactor = BehavioralStateService.calculateDecisionFactor(
+  character, interactionType, context
+);
+```
+
+#### Checkpoint System
+- Complete consciousness state persistence
+- Graceful recovery from corrupted states
+- Automatic maintenance and memory pruning
+- Baseline drift for inactive characters
 
 ## Integration with Existing Systems
 

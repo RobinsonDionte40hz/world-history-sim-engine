@@ -20,3 +20,4 @@ module.exports = {
   CONNECTION_TYPE_VALUES,
   isValidConnectionType
 };
+

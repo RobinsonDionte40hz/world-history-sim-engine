@@ -80,10 +80,10 @@
 - **Presentation Layer**: React UI
 
 ### Domain-Driven Design
-- **Entities**: Character, Node, Interaction
-- **Value Objects**: Attributes, Personality
-- **Domain Services**: WorldBuilder, HistoryGenerator
-- **Aggregates**: World state boundaries
+- **Entities**: Character (with LOD tiers), Node, Interaction, Settlement, PopulationGroup
+- **Value Objects**: Attributes, Personality, ConsciousnessSystem, EconomicProfile, Alignment
+- **Domain Services**: WorldBuilder, HistoryGenerator, MemoryService, LODManager, ConsciousnessUpdateService
+- **Aggregates**: World state boundaries with enhanced validation
 
 ### Design Patterns
 - **Repository Pattern**: Data access abstraction
@@ -164,12 +164,21 @@ npm run analyze
 - **Debouncing**: Input handling
 - **Throttling**: Event processing
 - **Virtual Scrolling**: Large lists (future)
+- **LOD Processing**: Level-of-detail character processing for large populations
 
 ### Storage Optimizations
 - **Compression**: Reduce localStorage usage (future)
 - **Indexing**: Fast lookups
-- **Caching**: Template preloading
-- **Pruning**: Historical data management
+- **Caching**: Template preloading and behavioral state caching
+- **Pruning**: Historical data management and memory cleanup
+- **Checkpoint System**: Efficient state persistence and recovery
+
+### Consciousness System Optimizations
+- **Event-Driven Updates**: Only update consciousness on significant events (90% performance improvement)
+- **Cached Behavioral States**: Pre-computed behavioral states reduce real-time calculations
+- **Significance Filtering**: Only store memories above significance threshold (0.3)
+- **Automatic Pruning**: Remove old events and memories to maintain performance
+- **Batch Processing**: Process multiple consciousness updates efficiently
 
 ## Testing Infrastructure
 

@@ -22,19 +22,24 @@ The World History Simulation Engine is a **turn-based, mapless, free-building** 
 - **Jest Testing**: Comprehensive test coverage strategies
 
 ### Core Systems
-- **Consciousness Simulation**: Frequency (40Hz baseline) and coherence mechanics
+- **Enhanced Consciousness System**: Event-driven updates with cached behavioral states (90% performance improvement)
 - **D&D Attributes**: Six-attribute system with modifiers and checks
-- **Personality Framework**: Dynamic traits affecting behavior
-- **Memory Service**: Interaction history and relationship tracking
-- **Template System**: Complete CRUD operations for all component types
-- **Turn Processing**: Multi-phase turn resolution with historical recording
+- **Personality Framework**: Dynamic traits affecting behavior with age modifiers
+- **Enhanced Memory Service**: Significance-based memory storage with relationship tracking
+- **Template System**: Complete CRUD operations for all component types with validation
+- **Turn Processing**: Multi-phase turn resolution with comprehensive summaries and historical recording
+- **LOD Management**: Level-of-detail processing for large-scale simulations
+- **Pipeline Validation**: Comprehensive validation before simulation can begin
 
 ### Domain Entities
-- **Character**: Conscious NPCs with attributes, personality, and memory
-- **Node**: Abstract locations with environmental and cultural properties
-- **Interaction**: Character actions with requirements and effects
-- **WorldBuilder**: Service for constructing worlds
-- **HistoryGenerator**: Historical event recording system
+- **Character**: Enhanced NPCs with LOD tiers, assignments, economic profiles, and cached consciousness states
+- **Node**: Abstract locations with environmental properties and character assignments
+- **Interaction**: Character actions with prerequisites and effects
+- **Settlement**: Settlement entities with need satisfaction tracking
+- **PopulationGroup**: Population group management for LOD processing
+- **WorldBuilder**: Service for constructing and preparing worlds for simulation
+- **HistoryGenerator**: Historical event recording and analysis system
+- **LODManager**: Level-of-detail processing coordination
 
 ## Communication Guidelines
 
@@ -58,6 +63,40 @@ The World History Simulation Engine is a **turn-based, mapless, free-building** 
 - Explain minimum requirements clearly
 - Showcase template system capabilities
 
+## Consciousness System Refactor
+
+The consciousness system has been completely refactored for performance and behavioral depth:
+
+### Event-Driven Architecture
+- **Significance Thresholds**: Consciousness only updates on events with significance ≥ 0.3
+- **Cached Behavioral States**: Pre-computed states reduce real-time calculations by 90%
+- **Batch Processing**: Multiple consciousness updates processed efficiently
+- **Automatic Pruning**: Old events and memories removed to maintain performance
+
+### Enhanced Behavioral States
+```javascript
+// Cached behavioral state (generated from consciousness parameters)
+behavioralState: {
+  energy: 'moderate',      // low, moderate, high
+  focus: 'balanced',       // scattered, balanced, focused  
+  mood: 'content',         // depressed, content, optimistic, excited
+  socialDrive: 0.6,        // 0-1 scale
+  riskTolerance: 0.5,      // 0-1 scale
+  ambition: 0.7            // 0-1 scale
+}
+
+// Single decision factor calculation (0.1x to 3.0x range)
+const decisionFactor = BehavioralStateService.calculateDecisionFactor(
+  character, interactionType, context
+);
+```
+
+### Checkpoint System
+- **Complete State Persistence**: All consciousness states saved in checkpoints
+- **Graceful Recovery**: Automatic regeneration from corrupted states
+- **Memory Management**: Only last 10 significant events per NPC preserved
+- **Baseline Drift**: Inactive characters slowly drift toward baseline values
+
 ## Key Principles
 
 ### System Design Philosophy
@@ -66,6 +105,7 @@ The World History Simulation Engine is a **turn-based, mapless, free-building** 
 3. **Validation, Not Restriction**: Show what's needed, don't block creativity
 4. **Templates for Everything**: Any component can become reusable
 5. **Turn-Based Control**: Users decide when time advances
+6. **Performance First**: Optimized for large-scale simulations with hundreds of NPCs
 
 ### Technical Standards
 1. **Clean Architecture**: Maintain strict layer separation

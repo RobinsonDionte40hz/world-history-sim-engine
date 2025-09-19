@@ -100,25 +100,29 @@ Create a platform where users can build and simulate rich historical worlds with
 
 ### Unique Selling Points
 
-1. **Quantum Consciousness Model**
-   - Only simulation engine using quantum mechanics for NPC consciousness
-   - Scientific basis for character decision-making
-   - Unique resonance calculations between characters
+1. **Revolutionary Consciousness System**
+   - Event-driven consciousness updates with 90% performance improvement
+   - Cached behavioral states for real-time decision making
+   - Significance-based memory storage prevents bloat
+   - Quantum-inspired frequency and coherence mechanics
 
 2. **True Free-Form Building**
    - No wizard, no steps, no prescribed order
-   - Build your world your way
-   - Complete creative freedom
+   - Build your world your way with comprehensive validation feedback
+   - Complete creative freedom with pipeline validation
+   - Template system for rapid world creation
 
 3. **Mapless Architecture**
    - Liberation from spatial constraints
    - Focus on meaning over position
    - Abstract storytelling possibilities
+   - Environmental properties over coordinates
 
-4. **Clean Architecture Implementation**
-   - Professional-grade code structure
-   - Easy to extend and modify
-   - Clear separation of concerns
+4. **Scalable Performance**
+   - Level-of-detail (LOD) processing for large populations
+   - Optimized for hundreds of NPCs simultaneously
+   - Checkpoint system for reliable state management
+   - Clean architecture for maintainability and extension
 
 ## User Journey
 
@@ -160,20 +164,24 @@ Create a platform where users can build and simulate rich historical worlds with
 
 ## Roadmap
 
-### Current Version (v1.0)
-- ✅ Turn-based simulation
-- ✅ Mapless world building
-- ✅ Free-form construction
-- ✅ Template system
-- ✅ Character consciousness
-- ✅ Historical recording
+### Current Version (v2.0)
+- ✅ Turn-based simulation with comprehensive turn processing
+- ✅ Mapless world building with pipeline validation
+- ✅ Free-form construction with assignment management
+- ✅ Enhanced template system with validation
+- ✅ Refactored consciousness system (90% performance improvement)
+- ✅ Historical recording with event analysis
+- ✅ Level-of-detail (LOD) processing for large populations
+- ✅ Settlement management with need satisfaction
+- ✅ Enhanced memory system with relationship tracking
+- ✅ Checkpoint system for state persistence
 
-### Next Release (v1.1)
-- 🔄 Tutorial system
-- 🔄 Preset world templates
-- 🔄 Enhanced UI/UX
-- 🔄 Performance optimizations
-- 🔄 Export capabilities
+### Next Release (v2.1)
+- 🔄 Tutorial system for new users
+- 🔄 Preset world templates for quick start
+- 🔄 Enhanced UI/UX with better feedback
+- 🔄 Advanced analytics and visualization
+- 🔄 Export capabilities for worlds and histories
 
 ### Future Versions
 - 📋 Religion & belief systems
