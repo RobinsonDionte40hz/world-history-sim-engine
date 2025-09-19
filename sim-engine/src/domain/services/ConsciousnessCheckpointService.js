@@ -1,3 +1,7 @@
+import BaseDomainService from './BaseDomainService.js';
+import EventSignificanceService from './EventSignificanceService.js';
+import ConsciousnessMigrationService from './ConsciousnessMigrationService.js';
+
 /**
  * ConsciousnessCheckpointService
  * 
@@ -134,13 +138,23 @@ class ConsciousnessCheckpointService {
       npc.consciousness = {};
     }
 
+    // Migrate consciousness state data if needed
+    const migrationService = new ConsciousnessMigrationService();
+    const migrationResult = migrationService.migrateConsciousnessData(state, { repairCorrupted: true });
+
+    if (migrationResult.migrated) {
+      console.log(`Migrated consciousness state for NPC ${npc.id} from ${migrationResult.fromVersion} to ${migrationResult.toVersion}`);
+    }
+
+    const migratedState = migrationResult.data;
+
     // Restore consciousness parameters with validation
-    npc.consciousness.baseFrequency = this.validateFrequency(state.baseFrequency);
-    npc.consciousness.baseCoherence = this.validateCoherence(state.baseCoherence);
+    npc.consciousness.baseFrequency = this.validateFrequency(migratedState.baseFrequency);
+    npc.consciousness.baseCoherence = this.validateCoherence(migratedState.baseCoherence);
     
     // Restore or regenerate behavioral state
-    if (state.behavioralState && this.isValidBehavioralState(state.behavioralState)) {
-      npc.consciousness.behavioralState = { ...state.behavioralState };
+    if (migratedState.behavioralState && this.isValidBehavioralState(migratedState.behavioralState)) {
+      npc.consciousness.behavioralState = { ...migratedState.behavioralState };
     } else {
       // Regenerate behavioral state from consciousness parameters
       npc.consciousness.behavioralState = this.generateBehavioralStateFromParameters(
@@ -150,13 +164,13 @@ class ConsciousnessCheckpointService {
     }
 
     // Restore event history and metadata
-    npc.consciousness.significantEvents = state.significantEvents || [];
-    npc.consciousness.lastUpdate = state.lastUpdate || Date.now();
-    npc.consciousness.updateTriggerThreshold = state.updateTriggerThreshold || 0.3;
+    npc.consciousness.significantEvents = migratedState.significantEvents || [];
+    npc.consciousness.lastUpdate = migratedState.lastUpdate || Date.now();
+    npc.consciousness.updateTriggerThreshold = migratedState.updateTriggerThreshold || 0.3;
 
     // Restore goals and memories
-    npc.goals = state.activeGoals || [];
-    npc.significantMemories = state.significantMemories || [];
+    npc.goals = migratedState.activeGoals || [];
+    npc.significantMemories = migratedState.significantMemories || [];
   }
 
   /**

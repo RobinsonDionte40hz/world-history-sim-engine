@@ -8,11 +8,13 @@
 
 import BaseDomainService from './BaseDomainService.js';
 import EventSignificanceService from './EventSignificanceService.js';
+import ConsciousnessMigrationService from './ConsciousnessMigrationService.js';
 
 class ConsciousnessUpdateService extends BaseDomainService {
     constructor(eventSignificanceService = null, logger = null) {
         super();
         this.eventSignificanceService = eventSignificanceService || new EventSignificanceService();
+        this.consciousnessMigrationService = new ConsciousnessMigrationService(logger);
         this.logger = logger;
 
         // Consciousness parameter bounds
@@ -139,6 +141,19 @@ class ConsciousnessUpdateService extends BaseDomainService {
                     frequency: 7.0, // Default alpha baseline
                     coherence: 0.5
                 };
+            }
+
+            // Migrate consciousness data to latest format if needed
+            const migrationResult = this.consciousnessMigrationService.migrateConsciousnessData(
+                character.consciousness,
+                { repairCorrupted: true }
+            );
+
+            if (migrationResult.migrated) {
+                character.consciousness = migrationResult.data;
+                if (this.logger) {
+                    this.logger.info(`Migrated consciousness data for character ${character.id} from ${migrationResult.fromVersion} to ${migrationResult.toVersion}`);
+                }
             }
 
             // Check if event is significant enough to trigger update
