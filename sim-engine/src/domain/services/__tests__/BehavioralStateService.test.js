@@ -40,6 +40,7 @@ class MockLogger {
     constructor() {
         this.warnings = [];
         this.errors = [];
+        this.infos = [];
     }
 
     warn(message) {
@@ -48,6 +49,10 @@ class MockLogger {
 
     error(message) {
         this.errors.push(message);
+    }
+
+    info(message) {
+        this.infos.push(message);
     }
 }
 
@@ -156,7 +161,7 @@ describe('BehavioralStateService', () => {
                 }
             };
             const modifier = service.getBehavioralModifier(faultyCharacter, 'social');
-            expect(modifier).toBe(1.0);
+            expect(modifier).toBe(1.1); // Fallback value for social interaction type
             expect(mockLogger.errors.length).toBeGreaterThan(0);
         });
     });

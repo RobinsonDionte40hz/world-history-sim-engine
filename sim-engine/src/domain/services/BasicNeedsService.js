@@ -43,6 +43,39 @@ class BasicNeedsService extends BaseDomainService {
     HEALER: { services: 3 }                  // Healers provide services
   };
 
+  // Economic profile constants for NPC tiers
+  static ECONOMIC_PROFILES = {
+    LEADER: {
+      productionCapacity: 0.1, // 10% of settlement production
+      consumptionMultiplier: 2.0, // Consumes 2x basic needs
+      wealthAccumulation: 0.3, // Accumulates wealth 30% faster
+      economicInfluence: 0.8, // High influence on settlement economy
+      investmentCapacity: 5.0 // Can make large investments
+    },
+    SPECIALIST: {
+      productionCapacity: 0.4, // 40% of settlement production
+      consumptionMultiplier: 1.3, // Consumes 1.3x basic needs
+      wealthAccumulation: 0.15, // Accumulates wealth 15% faster
+      economicInfluence: 0.4, // Moderate influence on settlement economy
+      investmentCapacity: 2.0 // Can make moderate investments
+    },
+    CITIZEN: {
+      productionCapacity: 0.5, // 50% of settlement production
+      consumptionMultiplier: 1.0, // Consumes basic needs
+      wealthAccumulation: 0.05, // Accumulates wealth 5% faster
+      economicInfluence: 0.1, // Low influence on settlement economy
+      investmentCapacity: 0.5 // Limited investment capacity
+    }
+  };
+
+  // Economic feedback loop multipliers
+  static ECONOMIC_FEEDBACK = {
+    PROSPERITY_BOOST: 1.2, // Prosperity increases consciousness by 20%
+    POVERTY_PENALTY: 0.8, // Poverty decreases consciousness by 20%
+    INVESTMENT_MULTIPLIER: 1.5, // Successful investments boost economic activity
+    CRISIS_MULTIPLIER: 0.7 // Economic crises reduce economic activity
+  };
+
   /**
    * Calculate satisfaction levels for all basic needs
    * @param {Object} settlement - Settlement to analyze
@@ -263,1123 +296,780 @@ class BasicNeedsService extends BaseDomainService {
     return Math.min(1.0, baseSatisfaction * investmentMultiplier);
   }
 
-  // Private helper methods for calculating specific resource availability
-
   /**
-   * Calculate food production from farms and other sources
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
-   * @private
+   * Calculate NPC economic profile and its impact on settlement economy
+   * @param {Object} character - Character to analyze
+   * @param {Object} settlement - Settlement context
+   * @param {string} npcTier - NPC tier (leader, specialist, citizen)
+   * @returns {Object} Economic profile analysis
    */
-  _calculateFoodProduction(settlement, investmentEffects = null) {
-    let production = 0;
-    
-    // Base food from resources
-    if (settlement.resources && settlement.resources.amounts && settlement.resources.amounts.food) {
-      production += settlement.resources.amounts.food;
-    }
+  calculateNpcEconomicProfile(character, settlement, npcTier = 'citizen') {
+    try {
+      const profile = BasicNeedsService.ECONOMIC_PROFILES[npcTier.toUpperCase()] || BasicNeedsService.ECONOMIC_PROFILES.CITIZEN;
+      const economicState = this._calculateEconomicState(settlement);
 
-    // Food from buildings
-    if (settlement.buildings) {
-      settlement.buildings.forEach(building => {
-        const efficiency = BasicNeedsService.BUILDING_EFFICIENCY[building.type.toUpperCase()];
-        if (efficiency && efficiency.food) {
-          production += efficiency.food * (building.level || 1);
-        }
-      });
-    }
+      // Calculate production contribution
+      const productionContribution = this._calculateProductionContribution(character, profile, settlement);
 
-    // Apply investment effects to food production
-    if (investmentEffects && investmentEffects.food) {
-      production *= investmentEffects.food;
-    }
+      // Calculate consumption needs
+      const consumptionNeeds = this._calculateConsumptionNeeds(character, profile, settlement);
 
-    return Math.max(0, production);
+      // Calculate wealth dynamics
+      const wealthDynamics = this._calculateWealthDynamics(character, profile, economicState);
+
+      // Calculate economic influence
+      const economicInfluence = this._calculateEconomicInfluence(character, profile, settlement);
+
+      // Calculate feedback loops
+      const feedbackLoops = this._calculateEconomicFeedbackLoops(character, profile, economicState, settlement);
+
+      return {
+        profile: profile,
+        productionContribution: productionContribution,
+        consumptionNeeds: consumptionNeeds,
+        wealthDynamics: wealthDynamics,
+        economicInfluence: economicInfluence,
+        feedbackLoops: feedbackLoops,
+        economicState: economicState,
+        tier: npcTier
+      };
+
+    } catch (error) {
+      console.error('NPC economic profile calculation failed:', error);
+      return this._getDefaultEconomicProfile();
+    }
   }
 
   /**
-   * Calculate food storage capacity
+   * Calculate economic state of the settlement
    * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * @returns {Object} Economic state analysis
    * @private
    */
-  _calculateFoodStorage(settlement, investmentEffects = null) {
-    let storage = 0;
-    if (settlement.resources && settlement.resources.storage && settlement.resources.storage.food) {
-      storage = settlement.resources.storage.food;
-    }
-    
-    // Apply investment effects
-    if (investmentEffects && investmentEffects.food) {
-      storage *= investmentEffects.food;
-    }
-    
-    return storage;
+  _calculateEconomicState(settlement) {
+    const economy = settlement.economy || {};
+
+    // Calculate production vs consumption ratio
+    const totalProduction = this._calculateSettlementProduction(settlement);
+    const totalConsumption = this._calculateSettlementConsumption(settlement);
+    const productionRatio = totalConsumption > 0 ? totalProduction / totalConsumption : 1.0;
+
+    // Calculate wealth distribution
+    const totalWealth = settlement.population?.total ? (economy.totalWealth || 0) : 0;
+    const averageWealth = settlement.population?.total ? totalWealth / settlement.population.total : 0;
+
+    // Calculate trade balance
+    const tradeBalance = this._calculateTradeBalance(settlement);
+
+    // Calculate economic health score (0-1)
+    const economicHealth = this._calculateEconomicHealth(productionRatio, averageWealth, tradeBalance);
+
+    return {
+      productionRatio: productionRatio,
+      totalProduction: totalProduction,
+      totalConsumption: totalConsumption,
+      averageWealth: averageWealth,
+      tradeBalance: tradeBalance,
+      economicHealth: economicHealth,
+      prosperityLevel: this._getProsperityLevel(economicHealth)
+    };
   }
 
   /**
-   * Calculate food access through trade
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate production contribution of an NPC
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} settlement - Settlement context
+   * @returns {Object} Production contribution analysis
    * @private
    */
-  _calculateFoodTradeAccess(settlement, investmentEffects = null) {
-    let tradeAccess = 0;
-    
-    if (settlement.economy && settlement.economy.trade) {
-      settlement.economy.trade.forEach(trade => {
-        if (trade.resources && trade.resources.food) {
-          tradeAccess += trade.resources.food * (trade.frequency || 1);
-        }
-      });
+  _calculateProductionContribution(character, profile, settlement) {
+    let baseProduction = 0;
+    const profession = character.profession || 'unemployed';
+
+    // Base production by profession
+    const professionProduction = {
+      'farmer': 8,
+      'craftsman': 6,
+      'merchant': 4,
+      'healer': 2,
+      'guard': 1,
+      'priest': 1,
+      'teacher': 1,
+      'unemployed': 0
+    };
+
+    baseProduction = professionProduction[profession] || 0;
+
+    // Apply skill modifiers
+    if (character.skills) {
+      const relevantSkills = ['crafting', 'farming', 'trading', 'healing'];
+      const skillBonus = relevantSkills.reduce((bonus, skill) => {
+        return bonus + (character.skills[skill] || 0) * 0.1;
+      }, 0);
+      baseProduction *= (1 + skillBonus);
     }
 
-    // Apply investment effects (trade route investments improve trade access)
-    if (investmentEffects && investmentEffects.trade) {
-      tradeAccess *= investmentEffects.trade;
-    }
+    // Apply profile production capacity
+    const adjustedProduction = baseProduction * profile.productionCapacity;
 
-    return tradeAccess;
+    // Calculate efficiency based on tools and infrastructure
+    const efficiency = this._calculateProductionEfficiency(character, settlement);
+
+    return {
+      baseProduction: baseProduction,
+      adjustedProduction: adjustedProduction,
+      finalProduction: adjustedProduction * efficiency,
+      efficiency: efficiency,
+      profession: profession,
+      skillContribution: character.skills ? Object.keys(character.skills).length * 0.05 : 0
+    };
   }
 
   /**
-   * Calculate water from natural sources
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate consumption needs of an NPC
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} settlement - Settlement context
+   * @returns {Object} Consumption needs analysis
    * @private
    */
-  _calculateWaterSources(settlement, investmentEffects = null) {
-    let waterSources = 0;
-    
-    // Base water from resources
-    if (settlement.resources && settlement.resources.amounts && settlement.resources.amounts.water) {
-      waterSources += settlement.resources.amounts.water;
-    }
+  _calculateConsumptionNeeds(character, profile, settlement) {
+    // Base consumption rates
+    const baseConsumption = {
+      food: 2.0,
+      water: 3.0,
+      goods: 1.0,
+      services: 0.5
+    };
 
-    // Water from territory features (rivers, lakes, etc.)
-    if (settlement.territory && settlement.territory.features) {
-      settlement.territory.features.forEach(feature => {
-        if (feature.type === 'river') {
-          waterSources += 20; // Rivers provide significant water
-        } else if (feature.type === 'lake') {
-          waterSources += 30; // Lakes provide more water
-        } else if (feature.type === 'spring') {
-          waterSources += 15; // Springs provide moderate water
-        }
-      });
-    }
+    // Apply profile consumption multiplier
+    const adjustedConsumption = {};
+    Object.keys(baseConsumption).forEach(resource => {
+      adjustedConsumption[resource] = baseConsumption[resource] * profile.consumptionMultiplier;
+    });
 
-    // Apply investment effects
-    if (investmentEffects && investmentEffects.water) {
-      waterSources *= investmentEffects.water;
-    }
+    // Apply lifestyle modifiers
+    const lifestyleModifier = this._calculateLifestyleModifier(character, settlement);
+    Object.keys(adjustedConsumption).forEach(resource => {
+      adjustedConsumption[resource] *= lifestyleModifier;
+    });
 
-    return waterSources;
+    // Calculate total consumption cost
+    const consumptionCost = this._calculateConsumptionCost(adjustedConsumption, settlement);
+
+    return {
+      baseConsumption: baseConsumption,
+      adjustedConsumption: adjustedConsumption,
+      lifestyleModifier: lifestyleModifier,
+      totalCost: consumptionCost,
+      affordability: this._calculateAffordability(character, consumptionCost)
+    };
   }
 
   /**
-   * Calculate water from infrastructure
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate wealth dynamics for an NPC
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} economicState - Economic state of settlement
+   * @returns {Object} Wealth dynamics analysis
    * @private
    */
-  _calculateWaterInfrastructure(settlement, investmentEffects = null) {
-    let infrastructure = 0;
-    
-    if (settlement.buildings) {
-      settlement.buildings.forEach(building => {
-        const efficiency = BasicNeedsService.BUILDING_EFFICIENCY[building.type.toUpperCase()];
-        if (efficiency && efficiency.water) {
-          infrastructure += efficiency.water * (building.level || 1);
-        }
-      });
-    }
+  _calculateWealthDynamics(character, profile, economicState) {
+    const currentWealth = character.wealth || 0;
+    const income = this._calculateIncome(character, profile, economicState);
+    const expenses = this._calculateExpenses(character, profile, economicState);
 
-    // Apply investment effects (infrastructure investments improve water infrastructure)
-    if (investmentEffects && investmentEffects.infrastructure) {
-      infrastructure *= investmentEffects.infrastructure;
-    }
+    // Calculate net wealth change
+    const netChange = income - expenses;
 
-    return infrastructure;
+    // Apply wealth accumulation modifier
+    const accumulationRate = profile.wealthAccumulation;
+    const adjustedChange = netChange * (1 + accumulationRate);
+
+    // Calculate wealth trend
+    const wealthTrend = this._calculateWealthTrend(currentWealth, adjustedChange, economicState);
+
+    return {
+      currentWealth: currentWealth,
+      income: income,
+      expenses: expenses,
+      netChange: netChange,
+      adjustedChange: adjustedChange,
+      accumulationRate: accumulationRate,
+      wealthTrend: wealthTrend,
+      projectedWealth: Math.max(0, currentWealth + adjustedChange)
+    };
   }
 
   /**
-   * Calculate water storage capacity
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate economic influence of an NPC
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} settlement - Settlement context
+   * @returns {Object} Economic influence analysis
    * @private
    */
-  _calculateWaterStorage(settlement, investmentEffects = null) {
-    let storage = 0;
-    if (settlement.resources && settlement.resources.storage && settlement.resources.storage.water) {
-      storage = settlement.resources.storage.water;
-    }
-    
-    // Apply investment effects
-    if (investmentEffects && investmentEffects.water) {
-      storage *= investmentEffects.water;
-    }
-    
-    return storage;
+  _calculateEconomicInfluence(character, profile, settlement) {
+    const baseInfluence = profile.economicInfluence;
+
+    // Leadership bonus
+    const leadershipBonus = character.role === 'leader' ? 0.3 : 0;
+
+    // Wealth influence
+    const wealth = character.wealth || 0;
+    const wealthInfluence = Math.min(0.2, wealth / 1000); // Cap at 20% for very wealthy
+
+    // Reputation influence
+    const reputationInfluence = character.reputation ? Math.min(0.1, character.reputation / 100) : 0;
+
+    // Network influence (relationships)
+    const networkInfluence = character.relationships ?
+      Math.min(0.15, Object.keys(character.relationships).length * 0.02) : 0;
+
+    const totalInfluence = baseInfluence + leadershipBonus + wealthInfluence +
+                          reputationInfluence + networkInfluence;
+
+    return {
+      baseInfluence: baseInfluence,
+      leadershipBonus: leadershipBonus,
+      wealthInfluence: wealthInfluence,
+      reputationInfluence: reputationInfluence,
+      networkInfluence: networkInfluence,
+      totalInfluence: Math.min(1.0, totalInfluence),
+      influenceFactors: {
+        canInfluenceTrade: totalInfluence > 0.3,
+        canInfluencePrices: totalInfluence > 0.5,
+        canInfluencePolicy: totalInfluence > 0.7,
+        economicDecisions: totalInfluence > 0.4
+      }
+    };
   }
 
   /**
-   * Calculate housing capacity from buildings
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate economic feedback loops affecting consciousness
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} economicState - Economic state
+   * @param {Object} settlement - Settlement context
+   * @returns {Object} Feedback loops analysis
    * @private
    */
-  _calculateHousingCapacity(settlement, investmentEffects = null) {
-    let capacity = 0;
-    
-    if (settlement.buildings) {
-      settlement.buildings.forEach(building => {
-        const efficiency = BasicNeedsService.BUILDING_EFFICIENCY[building.type.toUpperCase()];
-        if (efficiency && efficiency.shelter) {
-          capacity += efficiency.shelter * (building.level || 1);
-        }
-      });
+  _calculateEconomicFeedbackLoops(character, profile, economicState, settlement) {
+    const feedbackLoops = {
+      consciousnessModifiers: {},
+      behaviorModifiers: {},
+      settlementEffects: {},
+      cascadingImpacts: []
+    };
+
+    // Prosperity feedback loop
+    if (economicState.economicHealth > 0.7) {
+      feedbackLoops.consciousnessModifiers.prosperity = {
+        frequency: BasicNeedsService.ECONOMIC_FEEDBACK.PROSPERITY_BOOST,
+        coherence: 1.1,
+        mood: 15,
+        description: 'Economic prosperity boosts consciousness and mood'
+      };
     }
 
-    // Apply investment effects (shelter/infrastructure investments improve housing)
-    if (investmentEffects && investmentEffects.shelter) {
-      capacity *= investmentEffects.shelter;
+    // Poverty feedback loop
+    if (economicState.economicHealth < 0.3) {
+      feedbackLoops.consciousnessModifiers.poverty = {
+        frequency: BasicNeedsService.ECONOMIC_FEEDBACK.POVERTY_PENALTY,
+        coherence: 0.9,
+        mood: -20,
+        description: 'Economic hardship reduces consciousness and increases stress'
+      };
     }
 
-    return capacity;
-  }
+    // Investment success feedback
+    if (character.investmentHistory) {
+      const successfulInvestments = character.investmentHistory.filter(inv => inv.success).length;
+      const totalInvestments = character.investmentHistory.length;
 
-  /**
-   * Calculate housing quality modifier
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
-   * @private
-   */
-  _calculateHousingQuality(settlement, investmentEffects = null) {
-    // Base quality starts at 0.8
-    let quality = 0.8;
-    
-    if (settlement.buildings) {
-      const totalBuildings = settlement.buildings.length;
-      const housingBuildings = settlement.buildings.filter(b => 
-        BasicNeedsService.BUILDING_EFFICIENCY[b.type.toUpperCase()]?.shelter
-      );
-      
-      if (totalBuildings > 0) {
-        // More diverse buildings improve quality
-        const diversityBonus = Math.min(0.2, totalBuildings * 0.02);
-        quality += diversityBonus;
-        
-        // Higher level buildings improve quality
-        const avgLevel = settlement.buildings.reduce((sum, b) => sum + (b.level || 1), 0) / totalBuildings;
-        const levelBonus = Math.min(0.2, (avgLevel - 1) * 0.1);
-        quality += levelBonus;
-        
-        // Housing-specific buildings provide additional quality bonus
-        if (housingBuildings.length > 0) {
-          const housingBonus = Math.min(0.1, housingBuildings.length * 0.02);
-          quality += housingBonus;
+      if (totalInvestments > 0) {
+        const successRate = successfulInvestments / totalInvestments;
+        if (successRate > 0.7) {
+          feedbackLoops.behaviorModifiers.investment = {
+            confidence: 1.3,
+            riskTolerance: 1.2,
+            description: 'Successful investment history increases economic confidence'
+          };
         }
       }
     }
 
-    // Apply investment effects (infrastructure investments improve housing quality)
-    if (investmentEffects && investmentEffects.infrastructure) {
-      quality *= Math.min(1.5, investmentEffects.infrastructure); // Cap quality bonus
-    }
+    // Settlement-level feedback
+    feedbackLoops.settlementEffects = this._calculateSettlementFeedbackEffects(character, profile, economicState);
 
-    return BaseDomainService.clamp(quality, 0.5, 1.2);
+    // Cascading impacts
+    feedbackLoops.cascadingImpacts = this._calculateCascadingEconomicImpacts(character, profile, economicState, settlement);
+
+    return feedbackLoops;
   }
 
   /**
-   * Calculate goods production from workshops and crafters
+   * Get economic interaction types for different NPC tiers
+   * @param {string} npcTier - NPC tier (leader, specialist, citizen)
+   * @param {Object} character - Character context
+   * @param {Object} settlement - Settlement context
+   * @returns {Array} Array of economic interaction types
+   */
+  getEconomicInteractions(npcTier = 'citizen', character = {}, settlement = {}) {
+    const interactions = [];
+
+    switch (npcTier.toLowerCase()) {
+      case 'leader':
+        interactions.push(
+          {
+            id: 'manage_economy',
+            name: 'Manage Economy',
+            type: 'manage_economy',
+            description: 'Oversee settlement economic policies and investments',
+            requirements: { energy: 20, wealth: 100 },
+            effects: { economicInfluence: 0.8, energy: -15, reputation: 5 },
+            tier: 'leader',
+            economicImpact: 'strategic'
+          },
+          {
+            id: 'plan_trade',
+            name: 'Plan Trade Routes',
+            type: 'plan_trade',
+            description: 'Establish new trade relationships and routes',
+            requirements: { energy: 15, wealth: 50 },
+            effects: { tradeRoutes: 1, energy: -10, wealth: 20 },
+            tier: 'leader',
+            economicImpact: 'expansion'
+          }
+        );
+        break;
+
+      case 'specialist':
+        interactions.push(
+          {
+            id: 'operate_workshop',
+            name: 'Operate Workshop',
+            type: 'operate_workshop',
+            description: 'Run specialized production facility',
+            requirements: { energy: 18, wealth: 20 },
+            effects: { production: 15, energy: -12, wealth: 8, experience: 3 },
+            tier: 'specialist',
+            economicImpact: 'production'
+          },
+          {
+            id: 'negotiate_contracts',
+            name: 'Negotiate Contracts',
+            type: 'negotiate_contracts',
+            description: 'Negotiate business deals and contracts',
+            requirements: { energy: 12, charisma: 12 },
+            effects: { contracts: 1, energy: -8, wealth: 15, reputation: 2 },
+            tier: 'specialist',
+            economicImpact: 'trade'
+          }
+        );
+        break;
+
+      case 'citizen':
+      default:
+        interactions.push(
+          {
+            id: 'work_job',
+            name: 'Work Job',
+            type: 'work_job',
+            description: 'Perform daily work for income',
+            requirements: { energy: 15 },
+            effects: { wealth: 5, energy: -10, experience: 1 },
+            tier: 'citizen',
+            economicImpact: 'labor'
+          },
+          {
+            id: 'buy_goods',
+            name: 'Buy Goods',
+            type: 'buy_goods',
+            description: 'Purchase goods and supplies',
+            requirements: { wealth: 10 },
+            effects: { wealth: -8, satisfaction: 5, goods: 2 },
+            tier: 'citizen',
+            economicImpact: 'consumption'
+          }
+        );
+        break;
+    }
+
+    // Filter interactions based on character capabilities
+    return interactions.filter(interaction => {
+      // Check energy requirements
+      if (interaction.requirements.energy && character.energy < interaction.requirements.energy) {
+        return false;
+      }
+
+      // Check wealth requirements
+      if (interaction.requirements.wealth && (character.wealth || 0) < interaction.requirements.wealth) {
+        return false;
+      }
+
+      // Check attribute requirements
+      if (interaction.requirements.charisma && (character.attributes?.charisma || 0) < interaction.requirements.charisma) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  // Private helper methods for economic calculations
+
+  /**
+   * Calculate settlement production
    * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * @returns {number} Total production
    * @private
    */
-  _calculateGoodsProduction(settlement, investmentEffects = null) {
+  _calculateSettlementProduction(settlement) {
     let production = 0;
-    
+
+    // Production from buildings
     if (settlement.buildings) {
       settlement.buildings.forEach(building => {
         const efficiency = BasicNeedsService.BUILDING_EFFICIENCY[building.type.toUpperCase()];
-        if (efficiency && efficiency.goods) {
-          production += efficiency.goods * (building.level || 1);
+        if (efficiency) {
+          Object.values(efficiency).forEach(value => {
+            if (typeof value === 'number' && value > 0) {
+              production += value * (building.level || 1);
+            }
+          });
         }
       });
     }
 
-    // Apply investment effects (workshop investments improve goods production)
-    if (investmentEffects && investmentEffects.goods) {
-      production *= investmentEffects.goods;
+    // Production from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession) {
+          const professionProduction = {
+            'farmer': 8, 'craftsman': 6, 'merchant': 4,
+            'healer': 2, 'guard': 1, 'priest': 1, 'teacher': 1
+          };
+          production += professionProduction[character.profession] || 0;
+        }
+      });
     }
 
     return production;
   }
 
   /**
-   * Calculate goods access through trade
+   * Calculate settlement consumption
    * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * @returns {number} Total consumption
    * @private
    */
-  _calculateGoodsTradeAccess(settlement, investmentEffects = null) {
-    let tradeAccess = 0;
-    
-    if (settlement.economy && settlement.economy.trade) {
+  _calculateSettlementConsumption(settlement) {
+    const population = settlement.population?.total || 100;
+    const baseConsumption = population * (2.0 + 3.0 + 1.0 + 0.5); // food + water + goods + services
+
+    // Apply consumption modifiers based on settlement wealth
+    const wealthModifier = settlement.economy?.totalWealth ?
+      Math.min(1.5, Math.max(0.8, settlement.economy.totalWealth / (population * 50))) : 1.0;
+
+    return baseConsumption * wealthModifier;
+  }
+
+  /**
+   * Calculate trade balance
+   * @param {Object} settlement - Settlement to analyze
+   * @returns {number} Trade balance
+   * @private
+   */
+  _calculateTradeBalance(settlement) {
+    let exports = 0;
+    let imports = 0;
+
+    if (settlement.economy?.trade) {
       settlement.economy.trade.forEach(trade => {
-        // General trade relationships provide goods access
-        tradeAccess += trade.value * 0.1; // 10% of trade value becomes goods access
-      });
-    }
-
-    // Apply investment effects (trade route investments improve goods trade access)
-    if (investmentEffects && investmentEffects.trade) {
-      tradeAccess *= investmentEffects.trade;
-    }
-
-    return tradeAccess;
-  }
-
-  /**
-   * Calculate market efficiency for goods distribution
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
-   * @private
-   */
-  _calculateMarketEfficiency(settlement, investmentEffects = null) {
-    let efficiency = 0.7; // Base efficiency
-    
-    if (settlement.economy && settlement.economy.markets) {
-      // More markets improve efficiency
-      const marketBonus = Math.min(0.3, settlement.economy.markets.length * 0.1);
-      efficiency += marketBonus;
-    }
-
-    // Apply investment effects (trade route and infrastructure investments improve market efficiency)
-    if (investmentEffects) {
-      if (investmentEffects.trade) {
-        efficiency *= Math.min(1.3, investmentEffects.trade); // Trade routes improve market efficiency
-      }
-      if (investmentEffects.infrastructure) {
-        efficiency *= Math.min(1.2, investmentEffects.infrastructure); // Infrastructure improves markets
-      }
-    }
-
-    return BaseDomainService.clamp(efficiency, 0.5, 1.2);
-  }
-
-  /**
-   * Calculate healthcare service capacity
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
-   * @private
-   */
-  _calculateHealthcareCapacity(settlement, investmentEffects = null) {
-    let capacity = 0;
-    
-    if (settlement.buildings) {
-      settlement.buildings.forEach(building => {
-        if (building.type.toLowerCase() === 'healer' || building.type.toLowerCase() === 'hospital') {
-          const efficiency = BasicNeedsService.BUILDING_EFFICIENCY.HEALER;
-          capacity += efficiency.services * (building.level || 1);
+        if (trade.type === 'export') {
+          exports += trade.value || 0;
+        } else if (trade.type === 'import') {
+          imports += trade.value || 0;
         }
       });
     }
 
-    // Apply investment effects
-    if (investmentEffects && investmentEffects.services) {
-      capacity *= investmentEffects.services;
-    }
-
-    return capacity;
+    return exports - imports;
   }
 
   /**
-   * Calculate education service capacity
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate economic health score
+   * @param {number} productionRatio - Production vs consumption ratio
+   * @param {number} averageWealth - Average wealth per person
+   * @param {number} tradeBalance - Trade balance
+   * @returns {number} Economic health score (0-1)
    * @private
    */
-  _calculateEducationCapacity(settlement, investmentEffects = null) {
-    let capacity = 0;
-    
+  _calculateEconomicHealth(productionRatio, averageWealth, tradeBalance) {
+    // Normalize components to 0-1 scale
+    const productionScore = Math.min(1.0, productionRatio / 2.0); // Optimal ratio is 2.0
+    const wealthScore = Math.min(1.0, averageWealth / 100); // 100 is considered wealthy
+    const tradeScore = Math.min(1.0, Math.max(0, (tradeBalance + 1000) / 2000)); // -1000 to +1000 range
+
+    // Weighted average
+    return (productionScore * 0.4) + (wealthScore * 0.4) + (tradeScore * 0.2);
+  }
+
+  /**
+   * Get prosperity level description
+   * @param {number} economicHealth - Economic health score
+   * @returns {string} Prosperity level
+   * @private
+   */
+  _getProsperityLevel(economicHealth) {
+    if (economicHealth >= 0.8) return 'thriving';
+    if (economicHealth >= 0.6) return 'prosperous';
+    if (economicHealth >= 0.4) return 'stable';
+    if (economicHealth >= 0.2) return 'struggling';
+    return 'impoverished';
+  }
+
+  /**
+   * Calculate production efficiency
+   * @param {Object} character - Character to analyze
+   * @param {Object} settlement - Settlement context
+   * @returns {number} Production efficiency (0-1)
+   * @private
+   */
+  _calculateProductionEfficiency(character, settlement) {
+    let efficiency = 0.8; // Base efficiency
+
+    // Tool quality modifier
+    if (character.equipment?.tools) {
+      efficiency += 0.1;
+    }
+
+    // Infrastructure modifier
     if (settlement.buildings) {
-      settlement.buildings.forEach(building => {
-        if (building.type.toLowerCase() === 'school' || building.type.toLowerCase() === 'library') {
-          const efficiency = BasicNeedsService.BUILDING_EFFICIENCY.SCHOOL;
-          capacity += efficiency.services * (building.level || 1);
-        }
-      });
+      const relevantBuildings = settlement.buildings.filter(b =>
+        ['workshop', 'farm', 'market'].includes(b.type.toLowerCase())
+      );
+      efficiency += Math.min(0.1, relevantBuildings.length * 0.02);
     }
 
-    // Apply investment effects
-    if (investmentEffects && investmentEffects.services) {
-      capacity *= investmentEffects.services;
-    }
+    // Health modifier
+    const healthPercent = character.health / 100;
+    efficiency *= Math.max(0.5, healthPercent);
 
-    return capacity;
+    return Math.min(1.0, efficiency);
   }
 
   /**
-   * Calculate religious service capacity
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate lifestyle modifier
+   * @param {Object} character - Character to analyze
+   * @param {Object} settlement - Settlement context
+   * @returns {number} Lifestyle modifier
    * @private
    */
-  _calculateReligiousCapacity(settlement, investmentEffects = null) {
-    let capacity = 0;
-    
-    if (settlement.buildings) {
-      settlement.buildings.forEach(building => {
-        if (building.type.toLowerCase() === 'temple' || building.type.toLowerCase() === 'shrine') {
-          const efficiency = BasicNeedsService.BUILDING_EFFICIENCY.TEMPLE;
-          capacity += efficiency.services * (building.level || 1);
-        }
-      });
+  _calculateLifestyleModifier(character, settlement) {
+    let modifier = 1.0;
+
+    // Wealth-based modifier
+    const wealth = character.wealth || 0;
+    if (wealth > 200) modifier *= 1.3; // Wealthy lifestyle
+    else if (wealth > 50) modifier *= 1.1; // Comfortable lifestyle
+    else if (wealth < 10) modifier *= 0.9; // Poor lifestyle
+
+    // Role-based modifier
+    if (character.role === 'leader' || character.role === 'noble') {
+      modifier *= 1.2;
     }
 
-    // Apply investment effects
-    if (investmentEffects && investmentEffects.services) {
-      capacity *= investmentEffects.services;
-    }
-
-    return capacity;
+    return modifier;
   }
 
   /**
-   * Calculate administrative service capacity
-   * @param {Object} settlement - Settlement to analyze
-   * @param {Object} investmentEffects - Optional investment effects to apply
+   * Calculate consumption cost
+   * @param {Object} consumption - Consumption amounts
+   * @param {Object} settlement - Settlement context
+   * @returns {number} Total consumption cost
    * @private
    */
-  _calculateAdministrativeCapacity(settlement, investmentEffects = null) {
-    let capacity = 0;
-    
-    // Government structure provides administrative capacity
-    if (settlement.government && settlement.government.structure) {
-      settlement.government.structure.forEach(level => {
-        if (level.positions) {
-          capacity += level.positions.length * 2; // Each position provides 2 units of admin capacity
-        }
-      });
-    }
-
-    // Apply investment effects (infrastructure investments improve administrative efficiency)
-    if (investmentEffects && investmentEffects.infrastructure) {
-      capacity *= Math.min(1.3, investmentEffects.infrastructure);
-    }
-
-    return capacity;
-  }
-
-  // Validation and utility methods
-
-  /**
-   * Validate settlement data for need satisfaction calculations
-   * @private
-   */
-  _validateSettlement(settlement) {
-    if (!settlement) {
-      throw new Error('Settlement is required');
-    }
-    
-    // Validate basic settlement properties
-    if (!settlement.id || typeof settlement.id !== 'string') {
-      throw new Error('Settlement must have a valid id');
-    }
-    
-    if (!settlement.name || typeof settlement.name !== 'string') {
-      throw new Error('Settlement must have a valid name');
-    }
-    
-    // Validate population data - be flexible about structure
-    if (!settlement.population) {
-      // If no population object, try to infer from assignedCharacters
-      if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
-        settlement.population = { total: settlement.assignedCharacters.length };
-      } else {
-        // Default to reasonable population if no data available
-        settlement.population = { total: 100 };
-      }
-    } else if (typeof settlement.population !== 'object') {
-      // If population is not an object (e.g., it's a number), convert it to an object
-      const populationValue = typeof settlement.population === 'number' ? settlement.population : 100;
-      settlement.population = { total: populationValue };
-    } else if (typeof settlement.population.total !== 'number') {
-      // If population exists but total is not a number, try to calculate it
-      if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
-        settlement.population.total = settlement.assignedCharacters.length;
-      } else {
-        settlement.population.total = 100; // Default fallback
-      }
-    }
-    if (settlement.population.total < 0) {
-      throw new Error('Settlement population cannot be negative');
-    }
-    
-    // Validate resources structure (allow undefined but validate structure if present)
-    if (settlement.resources) {
-      this._validateSettlementResources(settlement.resources);
-    }
-    
-    // Validate buildings structure (allow undefined but validate structure if present)
-    if (settlement.buildings) {
-      this._validateSettlementBuildings(settlement.buildings);
-    }
-    
-    // Validate economy structure (allow undefined but validate structure if present)
-    if (settlement.economy) {
-      this._validateSettlementEconomy(settlement.economy);
-    }
-  }
-
-  /**
-   * Validate settlement resources structure
-   * @private
-   */
-  _validateSettlementResources(resources) {
-    if (typeof resources !== 'object') {
-      throw new Error('Settlement resources must be an object');
-    }
-    
-    // Validate amounts if present
-    if (resources.amounts && typeof resources.amounts !== 'object') {
-      throw new Error('Settlement resource amounts must be an object');
-    }
-    
-    // Validate production if present
-    if (resources.production && typeof resources.production !== 'object') {
-      throw new Error('Settlement resource production must be an object');
-    }
-    
-    // Validate storage if present
-    if (resources.storage && typeof resources.storage !== 'object') {
-      throw new Error('Settlement resource storage must be an object');
-    }
-  }
-
-  /**
-   * Validate settlement buildings structure
-   * @private
-   */
-  _validateSettlementBuildings(buildings) {
-    if (!Array.isArray(buildings)) {
-      throw new Error('Settlement buildings must be an array');
-    }
-    
-    buildings.forEach((building, index) => {
-      if (!building || typeof building !== 'object') {
-        throw new Error(`Building at index ${index} must be an object`);
-      }
-      
-      if (!building.type || typeof building.type !== 'string') {
-        throw new Error(`Building at index ${index} must have a valid type`);
-      }
-      
-      if (building.level !== undefined && (typeof building.level !== 'number' || building.level < 1)) {
-        throw new Error(`Building at index ${index} level must be a positive number`);
-      }
-    });
-  }
-
-  /**
-   * Validate settlement economy structure
-   * @private
-   */
-  _validateSettlementEconomy(economy) {
-    if (typeof economy !== 'object') {
-      throw new Error('Settlement economy must be an object');
-    }
-    
-    // Validate trade if present
-    if (economy.trade && !Array.isArray(economy.trade)) {
-      throw new Error('Settlement economy trade must be an array');
-    }
-    
-    // Validate markets if present
-    if (economy.markets && !Array.isArray(economy.markets)) {
-      throw new Error('Settlement economy markets must be an array');
-    }
-  }
-
-  /**
-   * Clamp all need values to valid range
-   * @private
-   */
-  _clampNeedValues(needs) {
-    return {
-      food: BaseDomainService.clamp(needs.food, 0.0, 1.0),
-      water: BaseDomainService.clamp(needs.water, 0.0, 1.0),
-      shelter: BaseDomainService.clamp(needs.shelter, 0.0, 1.0),
-      goods: BaseDomainService.clamp(needs.goods, 0.0, 1.0),
-      services: BaseDomainService.clamp(needs.services, 0.0, 1.0)
+  _calculateConsumptionCost(consumption, settlement) {
+    const prices = settlement.economy?.prices || {
+      food: 1, water: 0.5, goods: 2, services: 3
     };
-  }
 
-  /**
-   * Get resource amount safely with default fallback
-   * @param {Object} resources - Resources object
-   * @param {string} resourceType - Type of resource to get
-   * @param {number} defaultValue - Default value if resource not found
-   * @returns {number} Resource amount
-   * @private
-   */
-  _getResourceAmount(resources, resourceType, defaultValue = 0) {
-    if (!resources || !resources.amounts) {
-      return defaultValue;
-    }
-    return typeof resources.amounts[resourceType] === 'number' ? resources.amounts[resourceType] : defaultValue;
-  }
-
-  /**
-   * Get resource production safely with default fallback
-   * @param {Object} resources - Resources object
-   * @param {string} resourceType - Type of resource to get
-   * @param {number} defaultValue - Default value if resource not found
-   * @returns {number} Resource production
-   * @private
-   */
-  _getResourceProduction(resources, resourceType, defaultValue = 0) {
-    if (!resources || !resources.production) {
-      return defaultValue;
-    }
-    return typeof resources.production[resourceType] === 'number' ? resources.production[resourceType] : defaultValue;
-  }
-
-  /**
-   * Get resource storage safely with default fallback
-   * @param {Object} resources - Resources object
-   * @param {string} resourceType - Type of resource to get
-   * @param {number} defaultValue - Default value if resource not found
-   * @returns {number} Resource storage
-   * @private
-   */
-  _getResourceStorage(resources, resourceType, defaultValue = 0) {
-    if (!resources || !resources.storage) {
-      return defaultValue;
-    }
-    return typeof resources.storage[resourceType] === 'number' ? resources.storage[resourceType] : defaultValue;
-  }
-
-  /**
-   * Calculate building efficiency for a specific building type
-   * @param {Object} building - Building object
-   * @param {string} resourceType - Type of resource to calculate efficiency for
-   * @returns {number} Building efficiency for the resource type
-   * @private
-   */
-  _getBuildingEfficiency(building, resourceType) {
-    if (!building || !building.type) {
-      return 0;
-    }
-    
-    const efficiency = BasicNeedsService.BUILDING_EFFICIENCY[building.type.toUpperCase()];
-    if (!efficiency || typeof efficiency[resourceType] !== 'number') {
-      return 0;
-    }
-    
-    const level = building.level || 1;
-    return efficiency[resourceType] * level;
-  }
-
-  /**
-   * Calculate total building efficiency for all buildings of a type
-   * @param {Array} buildings - Array of building objects
-   * @param {string} buildingType - Type of building to calculate for
-   * @param {string} resourceType - Type of resource to calculate efficiency for
-   * @returns {number} Total efficiency for all buildings of this type
-   * @private
-   */
-  _getTotalBuildingEfficiency(buildings, buildingType, resourceType) {
-    if (!Array.isArray(buildings)) {
-      return 0;
-    }
-    
-    return buildings
-      .filter(building => building.type && building.type.toLowerCase() === buildingType.toLowerCase())
-      .reduce((total, building) => total + this._getBuildingEfficiency(building, resourceType), 0);
-  }
-
-  /**
-   * Calculate trade access for a specific resource
-   * @param {Object} economy - Economy object
-   * @param {string} resourceType - Type of resource to calculate trade access for
-   * @returns {number} Trade access amount
-   * @private
-   */
-  _getTradeAccess(economy, resourceType) {
-    if (!economy || !economy.trade || !Array.isArray(economy.trade)) {
-      return 0;
-    }
-    
-    return economy.trade.reduce((total, trade) => {
-      if (trade.resources && typeof trade.resources[resourceType] === 'number') {
-        const frequency = trade.frequency || 1;
-        return total + (trade.resources[resourceType] * frequency);
-      }
-      return total;
+    return Object.entries(consumption).reduce((total, [resource, amount]) => {
+      return total + (amount * (prices[resource] || 1));
     }, 0);
   }
 
   /**
-   * Generate consequences based on need satisfaction levels
-   * @param {Object} needs - Need satisfaction levels
-   * @param {Object} settlement - Settlement experiencing the needs
-   * @param {Object} investmentEffects - Optional investment effects
-   * @returns {Array} Array of consequence objects
+   * Calculate affordability
+   * @param {Object} character - Character to analyze
+   * @param {number} cost - Consumption cost
+   * @returns {number} Affordability ratio
    * @private
    */
-  _generateConsequences(needs, settlement, investmentEffects = null) {
-    const consequences = [];
-
-    // Food-related consequences
-    if (needs.food < 0.3) {
-      const severity = (0.3 - needs.food) / 0.3;
-      consequences.push(this._createFamineConsequence(settlement, severity, investmentEffects));
-    }
-
-    // Water-related consequences
-    if (needs.water < 0.4) {
-      const severity = (0.4 - needs.water) / 0.4;
-      consequences.push(this._createWaterCrisisConsequence(settlement, severity, investmentEffects));
-    }
-
-    // Shelter-related consequences
-    if (needs.shelter < 0.2) {
-      const severity = (0.2 - needs.shelter) / 0.2;
-      consequences.push(this._createHousingCrisisConsequence(settlement, severity, investmentEffects));
-    }
-
-    // Goods-related consequences
-    if (needs.goods < 0.3) {
-      const severity = (0.3 - needs.goods) / 0.3;
-      consequences.push(this._createGoodsShortageConsequence(settlement, severity, investmentEffects));
-    }
-
-    // Services-related consequences
-    if (needs.services < 0.2) {
-      const severity = (0.2 - needs.services) / 0.2;
-      consequences.push(this._createServicesShortageConsequence(settlement, severity, investmentEffects));
-    }
-
-    // Investment-specific consequences
-    if (investmentEffects) {
-      consequences.push(...this._generateInvestmentConsequences(settlement, investmentEffects, needs));
-    }
-
-    return consequences;
+  _calculateAffordability(character, cost) {
+    const wealth = character.wealth || 0;
+    return wealth / Math.max(cost, 1);
   }
 
   /**
-   * Create famine consequence
-   * @param {Object} settlement - Settlement experiencing famine
-   * @param {number} severity - Severity level (0.0-1.0)
-   * @param {Object} investmentEffects - Optional investment effects
+   * Calculate income
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} economicState - Economic state
+   * @returns {number} Income amount
    * @private
    */
-  _createFamineConsequence(settlement, severity, investmentEffects = null) {
-    const consequence = {
-      id: `famine_${settlement.id}_${Date.now()}`,
-      type: 'famine',
-      severity: severity,
-      description: `Food shortages plague ${settlement.name}`,
-      effects: {
-        population: {
-          growth: -0.2 * severity,
-          migration: 0.3 * severity,
-          mortality: 0.1 * severity
-        },
-        character: {
-          moodModifier: -30 * severity,
-          energyModifier: -20 * severity,
-          healthModifier: -15 * severity,
-          behaviorChanges: ['prioritize_food', 'hunt_more', 'trade_desperately'],
-          interactionModifiers: {
-            'hunt_animals': 1 + severity,
-            'trade_food': 1 + (2 * severity),
-            'social_gathering': 1 - (0.5 * severity)
-          }
-        },
-        settlement: {
-          stabilityChange: -0.4 * severity,
-          economicImpact: -0.3 * severity,
-          socialCohesion: -0.5 * severity
-        }
-      },
-      duration: Math.ceil(8 * severity),
-      triggers: ['successful_harvest', 'food_trade_agreement', 'population_reduction'],
-      resolved: false,
-      startDate: new Date()
+  _calculateIncome(character, profile, economicState) {
+    let income = 0;
+
+    // Base income from profession
+    const professionIncome = {
+      'farmer': 8, 'craftsman': 10, 'merchant': 15,
+      'healer': 12, 'guard': 6, 'priest': 5, 'teacher': 7
     };
+    income += professionIncome[character.profession] || 2;
 
-    // Modify consequence based on investment effects
-    if (investmentEffects && investmentEffects.food > 1.0) {
-      consequence.description += ` despite recent farm investments`;
-      consequence.effects.character.behaviorChanges.push('invest_more_farms');
-    }
+    // Economic state modifier
+    income *= economicState.economicHealth;
 
-    return consequence;
+    // Profile modifier
+    income *= (1 + profile.wealthAccumulation);
+
+    return income;
   }
 
   /**
-   * Create water crisis consequence
-   * @param {Object} settlement - Settlement experiencing water crisis
-   * @param {number} severity - Severity level (0.0-1.0)
-   * @param {Object} investmentEffects - Optional investment effects
+   * Calculate expenses
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} economicState - Economic state
+   * @returns {number} Expense amount
    * @private
    */
-  _createWaterCrisisConsequence(settlement, severity, investmentEffects = null) {
-    const consequence = {
-      id: `water_crisis_${settlement.id}_${Date.now()}`,
-      type: 'water_crisis',
-      severity: severity,
-      description: `Water scarcity threatens ${settlement.name}`,
-      effects: {
-        population: {
-          growth: -0.15 * severity,
-          migration: 0.25 * severity,
-          mortality: 0.08 * severity
-        },
-        character: {
-          moodModifier: -25 * severity,
-          energyModifier: -15 * severity,
-          healthModifier: -10 * severity,
-          behaviorChanges: ['seek_water_sources', 'ration_water', 'dig_wells'],
-          interactionModifiers: {
-            'dig_well': 1 + (2 * severity),
-            'trade_water': 1 + (3 * severity),
-            'farm_crops': 1 - (0.4 * severity)
-          }
-        },
-        settlement: {
-          stabilityChange: -0.3 * severity,
-          economicImpact: -0.25 * severity,
-          socialCohesion: -0.2 * severity,
-          buildingEfficiency: {
-            'farm': 1 - (0.4 * severity),
-            'brewery': 1 - (0.7 * severity)
-          }
-        }
-      },
-      duration: Math.ceil(6 * severity),
-      triggers: ['build_aqueduct', 'find_water_source', 'water_trade_deal'],
-      resolved: false,
-      startDate: new Date()
-    };
+  _calculateExpenses(character, profile, economicState) {
+    // Base expenses from consumption
+    const baseExpenses = 15; // Base living expenses
 
-    // Modify consequence based on investment effects
-    if (investmentEffects && investmentEffects.infrastructure > 1.0) {
-      consequence.description += ` despite infrastructure improvements`;
-      consequence.effects.character.behaviorChanges.push('invest_more_infrastructure');
-    }
+    // Profile consumption modifier
+    const profileExpenses = baseExpenses * profile.consumptionMultiplier;
 
-    return consequence;
+    // Economic state modifier (higher prices in poor economies)
+    const economicModifier = 2 - economicState.economicHealth; // 1.0 to 2.0 range
+
+    return profileExpenses * economicModifier;
   }
 
   /**
-   * Create housing crisis consequence
-   * @param {Object} settlement - Settlement experiencing housing crisis
-   * @param {number} severity - Severity level (0.0-1.0)
-   * @param {Object} investmentEffects - Optional investment effects
+   * Calculate wealth trend
+   * @param {number} currentWealth - Current wealth
+   * @param {number} change - Wealth change
+   * @param {Object} economicState - Economic state
+   * @returns {string} Wealth trend
    * @private
    */
-  _createHousingCrisisConsequence(settlement, severity, investmentEffects = null) {
-    const consequence = {
-      id: `housing_crisis_${settlement.id}_${Date.now()}`,
-      type: 'housing_crisis',
-      severity: severity,
-      description: `Overcrowding and poor housing conditions plague ${settlement.name}`,
-      effects: {
-        population: {
-          growth: -0.1 * severity,
-          migration: 0.2 * severity,
-          mortality: 0.05 * severity
-        },
-        character: {
-          moodModifier: -20 * severity,
-          energyModifier: -15 * severity,
-          healthModifier: -12 * severity,
-          behaviorChanges: ['build_shelter', 'seek_better_housing', 'live_outdoors'],
-          interactionModifiers: {
-            'build_house': 1 + (1.5 * severity),
-            'gather_materials': 1 + severity,
-            'social_gathering': 1 - (0.3 * severity)
-          }
-        },
-        settlement: {
-          stabilityChange: -0.25 * severity,
-          economicImpact: -0.15 * severity,
-          socialCohesion: -0.3 * severity
-        }
-      },
-      duration: Math.ceil(10 * severity),
-      triggers: ['build_housing', 'population_reduction', 'expand_settlement'],
-      resolved: false,
-      startDate: new Date()
-    };
+  _calculateWealthTrend(currentWealth, change, economicState) {
+    const changePercent = currentWealth > 0 ? (change / currentWealth) * 100 : 0;
 
-    // Modify consequence based on investment effects
-    if (investmentEffects && (investmentEffects.shelter > 1.0 || investmentEffects.infrastructure > 1.0)) {
-      consequence.description += ` despite housing investments`;
-      consequence.effects.character.behaviorChanges.push('invest_more_housing');
-    }
-
-    return consequence;
+    if (changePercent > 10) return 'increasing_rapidly';
+    if (changePercent > 2) return 'increasing';
+    if (changePercent > -2) return 'stable';
+    if (changePercent > -10) return 'decreasing';
+    return 'decreasing_rapidly';
   }
 
   /**
-   * Create goods shortage consequence
-   * @param {Object} settlement - Settlement experiencing goods shortage
-   * @param {number} severity - Severity level (0.0-1.0)
-   * @param {Object} investmentEffects - Optional investment effects
+   * Calculate settlement feedback effects
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} economicState - Economic state
+   * @returns {Object} Settlement effects
    * @private
    */
-  _createGoodsShortageConsequence(settlement, severity, investmentEffects = null) {
-    const consequence = {
-      id: `goods_shortage_${settlement.id}_${Date.now()}`,
-      type: 'goods_shortage',
-      severity: severity,
-      description: `Trade disruptions and craft shortages affect ${settlement.name}`,
-      effects: {
-        population: {
-          growth: -0.05 * severity,
-          migration: 0.1 * severity,
-          mortality: 0.02 * severity
-        },
-        character: {
-          moodModifier: -15 * severity,
-          energyModifier: -10 * severity,
-          healthModifier: -5 * severity,
-          behaviorChanges: ['prioritize_crafting', 'seek_trade_routes', 'hoard_goods'],
-          interactionModifiers: {
-            'craft_items': 1 + (1.5 * severity),
-            'trade_goods': 1 + (2 * severity),
-            'luxury_activities': 1 - (0.6 * severity)
-          }
-        },
-        settlement: {
-          stabilityChange: -0.2 * severity,
-          economicImpact: -0.4 * severity,
-          socialCohesion: -0.1 * severity,
-          buildingEfficiency: {
-            'market': 1 - (0.5 * severity),
-            'workshop': 1 + (0.2 * severity)
-          }
-        }
-      },
-      duration: Math.ceil(5 * severity),
-      triggers: ['establish_trade_routes', 'build_workshops', 'craft_mastery'],
-      resolved: false,
-      startDate: new Date()
-    };
+  _calculateSettlementFeedbackEffects(character, profile, economicState) {
+    const effects = {};
 
-    // Modify consequence based on investment effects
-    if (investmentEffects && (investmentEffects.goods > 1.0 || investmentEffects.trade > 1.0)) {
-      consequence.description += ` despite workshop and trade investments`;
-      consequence.effects.character.behaviorChanges.push('expand_trade_network');
+    // Economic influence effects
+    if (profile.economicInfluence > 0.5) {
+      effects.marketInfluence = {
+        priceStability: profile.economicInfluence * 0.2,
+        tradeEfficiency: profile.economicInfluence * 0.15,
+        description: 'High economic influence stabilizes markets'
+      };
     }
 
-    return consequence;
+    // Production contribution effects
+    if (profile.productionCapacity > 0.3) {
+      effects.productionBoost = {
+        settlementProduction: profile.productionCapacity * 0.1,
+        resourceEfficiency: profile.productionCapacity * 0.05,
+        description: 'Significant production contribution boosts settlement economy'
+      };
+    }
+
+    return effects;
   }
 
   /**
-   * Create services shortage consequence
-   * @param {Object} settlement - Settlement experiencing services shortage
-   * @param {number} severity - Severity level (0.0-1.0)
-   * @param {Object} investmentEffects - Optional investment effects
+   * Calculate cascading economic impacts
+   * @param {Object} character - Character to analyze
+   * @param {Object} profile - Economic profile
+   * @param {Object} economicState - Economic state
+   * @param {Object} settlement - Settlement context
+   * @returns {Array} Cascading impacts
    * @private
    */
-  _createServicesShortageConsequence(settlement, severity, investmentEffects = null) {
-    const consequence = {
-      id: `services_shortage_${settlement.id}_${Date.now()}`,
-      type: 'services_shortage',
-      severity: severity,
-      description: `Lack of education, healthcare, and spiritual guidance troubles ${settlement.name}`,
-      effects: {
-        population: {
-          growth: -0.08 * severity,
-          migration: 0.15 * severity,
-          mortality: 0.03 * severity
-        },
-        character: {
-          moodModifier: -18 * severity,
-          energyModifier: -12 * severity,
-          healthModifier: -8 * severity,
-          behaviorChanges: ['seek_education', 'pray_more', 'help_others'],
-          interactionModifiers: {
-            'study': 1 + (1.2 * severity),
-            'pray': 1 + (1.8 * severity),
-            'social_gathering': 1 - (0.4 * severity)
-          }
-        },
-        settlement: {
-          stabilityChange: -0.15 * severity,
-          economicImpact: -0.1 * severity,
-          socialCohesion: -0.4 * severity,
-          buildingEfficiency: {
-            'temple': 1 + (0.3 * severity),
-            'school': 1 + (0.2 * severity),
-            'healer': 1 + (0.4 * severity)
-          }
-        }
-      },
-      duration: Math.ceil(7 * severity),
-      triggers: ['build_temple', 'establish_school', 'train_healers'],
-      resolved: false,
-      startDate: new Date()
-    };
+  _calculateCascadingEconomicImpacts(character, profile, economicState, settlement) {
+    const impacts = [];
 
-    // Modify consequence based on investment effects
-    if (investmentEffects && investmentEffects.services > 1.0) {
-      consequence.description += ` despite service investments`;
-      consequence.effects.character.behaviorChanges.push('improve_service_quality');
-    }
-
-    return consequence;
-  }
-
-  /**
-   * Generate investment-specific consequences
-   * @param {Object} settlement - Settlement experiencing effects
-   * @param {Object} investmentEffects - Investment effects
-   * @param {Object} needs - Current need satisfaction levels
-   * @returns {Array} Array of investment consequence objects
-   * @private
-   */
-  _generateInvestmentConsequences(settlement, investmentEffects, needs) {
-    const consequences = [];
-
-    // Successful investment consequences (positive effects)
-    if (Object.values(investmentEffects).some(effect => effect > 1.15)) {
-      const averageEffect = Object.values(investmentEffects).reduce((sum, effect) => sum + effect, 0) / Object.keys(investmentEffects).length;
-      const successIntensity = Math.min(1.0, (averageEffect - 1.0) * 2); // Scale from 1.0 to effect value
-
-      consequences.push({
-        id: `investment_boom_${settlement.id}_${Date.now()}`,
-        type: 'investment_boom',
-        severity: successIntensity,
-        description: `Economic prosperity blooms in ${settlement.name} due to successful investments`,
+    // Poverty cascade
+    if (economicState.economicHealth < 0.3 && profile.economicInfluence < 0.3) {
+      impacts.push({
+        type: 'poverty_cascade',
+        description: 'Low economic influence in poor settlement creates poverty cycle',
         effects: {
-          population: {
-            growth: 0.1 * successIntensity,
-            migration: -0.15 * successIntensity, // People moving TO the settlement
-            mortality: -0.05 * successIntensity // Reduced mortality
-          },
-          character: {
-            moodModifier: 25 * successIntensity,
-            energyModifier: 15 * successIntensity,
-            healthModifier: 10 * successIntensity,
-            behaviorChanges: ['celebrate_success', 'invest_more', 'expand_business'],
-            interactionModifiers: {
-              'make_investment': 1 + successIntensity,
-              'trade_goods': 1 + (0.5 * successIntensity),
-              'social_gathering': 1 + (0.3 * successIntensity)
-            }
-          },
-          settlement: {
-            stabilityChange: 0.3 * successIntensity,
-            economicImpact: 0.4 * successIntensity,
-            socialCohesion: 0.2 * successIntensity
-          }
+          consciousness: -0.2,
+          behavior: 'desperate_economic_actions',
+          settlement: 'increased_instability'
         },
-        duration: Math.ceil(5 * successIntensity),
-        triggers: ['economic_downturn', 'investment_failure', 'external_crisis'],
-        resolved: false,
-        startDate: new Date(),
-        investmentTypes: Object.keys(investmentEffects)
+        severity: (0.3 - economicState.economicHealth) * profile.economicInfluence
       });
     }
 
-    // Failed investment consequences (when investments don't help enough)
-    const overallSatisfaction = (needs.food + needs.water + needs.shelter + needs.goods + needs.services) / 5;
-    if (overallSatisfaction < 0.4 && Object.keys(investmentEffects).length > 0) {
-      const failureIntensity = Math.min(1.0, (0.4 - overallSatisfaction) * 2.5);
-
-      consequences.push({
-        id: `investment_failure_${settlement.id}_${Date.now()}`,
-        type: 'investment_failure',
-        severity: failureIntensity,
-        description: `Investments in ${settlement.name} fail to prevent economic hardship`,
+    // Prosperity cascade
+    if (economicState.economicHealth > 0.7 && profile.economicInfluence > 0.6) {
+      impacts.push({
+        type: 'prosperity_cascade',
+        description: 'High economic influence in prosperous settlement creates wealth cycle',
         effects: {
-          population: {
-            growth: -0.08 * failureIntensity,
-            migration: 0.2 * failureIntensity,
-            mortality: 0.04 * failureIntensity
-          },
-          character: {
-            moodModifier: -20 * failureIntensity,
-            energyModifier: -15 * failureIntensity,
-            healthModifier: -8 * failureIntensity,
-            behaviorChanges: ['question_investments', 'seek_alternatives', 'blame_leaders'],
-            interactionModifiers: {
-              'make_investment': 1 - (0.4 * failureIntensity),
-              'complain': 1 + (2 * failureIntensity),
-              'seek_help': 1 + (1.5 * failureIntensity)
-            }
-          },
-          settlement: {
-            stabilityChange: -0.25 * failureIntensity,
-            economicImpact: -0.3 * failureIntensity,
-            socialCohesion: -0.2 * failureIntensity
-          }
+          consciousness: 0.15,
+          behavior: 'confident_investments',
+          settlement: 'economic_growth'
         },
-        duration: Math.ceil(6 * failureIntensity),
-        triggers: ['new_investment_opportunity', 'external_aid', 'resource_discovery'],
-        resolved: false,
-        startDate: new Date(),
-        failedInvestmentTypes: Object.keys(investmentEffects)
+        severity: economicState.economicHealth * profile.economicInfluence
       });
     }
 
-    return consequences;
+    return impacts;
   }
 
   /**
-   * Get investment multiplier for a specific need type
-   * @param {Object} investmentEffects - Investment effects object
-   * @param {string} needType - Type of need (food, water, shelter, goods, services)
-   * @returns {number} Multiplier to apply (default 1.0)
+   * Get default economic profile for error cases
+   * @returns {Object} Default economic profile
    * @private
    */
-  _getInvestmentMultiplier(investmentEffects, needType) {
-    if (!investmentEffects || typeof investmentEffects !== 'object') {
-      return 1.0;
-    }
-    
-    const multiplier = investmentEffects[needType];
-    if (typeof multiplier === 'number' && multiplier > 0) {
-      return multiplier;
-    }
-    
-    return 1.0;
-  }
-
-  /**
-   * Get default satisfaction result for error cases
-   * @private
-   */
-  _getDefaultSatisfactionResult() {
+  _getDefaultEconomicProfile() {
     return {
-      needs: {
-        food: 0.5,
-        water: 0.5,
-        shelter: 0.5,
-        goods: 0.5,
-        services: 0.5
-      },
-      overall: 0.5,
-      consequences: [],
-      cascadingEffects: {
-        multiplier: 1.0,
-        affectedNeeds: [],
-        hasEffects: false,
-        originalValues: {
-          goods: 0.5,
-          services: 0.5
-        }
-      },
-      investmentEffects: {}
+      profile: BasicNeedsService.ECONOMIC_PROFILES.CITIZEN,
+      productionContribution: { finalProduction: 0 },
+      consumptionNeeds: { totalCost: 10 },
+      wealthDynamics: { netChange: 0 },
+      economicInfluence: { totalInfluence: 0.1 },
+      feedbackLoops: { consciousnessModifiers: {} },
+      economicState: { economicHealth: 0.5, prosperityLevel: 'stable' },
+      tier: 'citizen'
     };
   }
 }

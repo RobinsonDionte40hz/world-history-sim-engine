@@ -489,7 +489,10 @@ describe('EfficientTurnProcessor', () => {
                 throw new Error('Service failure');
             });
 
-            const characters = [TestDataGenerator.createTestCharacter()];
+            const characters = [{
+                ...TestDataGenerator.createTestCharacter(),
+                npcTier: 'leader' // Ensure leader processing path is used
+            }];
             const worldState = TestDataGenerator.createTestWorldState();
             const turnContext = TestDataGenerator.createTestTurnContext();
 
@@ -510,7 +513,10 @@ describe('EfficientTurnProcessor', () => {
                 throw new Error('Invalid character data');
             });
 
-            const characters = [TestDataGenerator.createTestCharacter()];
+            const characters = [{
+                ...TestDataGenerator.createTestCharacter(),
+                npcTier: 'leader' // Ensure leader processing path is used
+            }];
             const worldState = TestDataGenerator.createTestWorldState();
             const turnContext = TestDataGenerator.createTestTurnContext();
 
@@ -536,6 +542,7 @@ describe('EfficientTurnProcessor', () => {
 
             const significantCharacter = {
                 ...character,
+                npcTier: 'leader', // Explicitly set as leader to ensure full processing
                 goals: [{ id: 'test_goal', status: 'completed' }]
             };
 
@@ -551,11 +558,12 @@ describe('EfficientTurnProcessor', () => {
             const turnContext = TestDataGenerator.createTestTurnContext();
 
             // Set up significant event that triggers memory update
-            mockEventSignificanceService.setSignificance('traumatic_encounter', 'failure', 0.9);
+            mockEventSignificanceService.setSignificance('health_crisis', 'negative', 0.9);
 
             // Create a character with a significant event (health crisis)
             const significantCharacter = {
                 ...character,
+                npcTier: 'leader', // Explicitly set as leader to ensure full processing
                 health: 15 // Critical health that triggers health_crisis event
             };
 

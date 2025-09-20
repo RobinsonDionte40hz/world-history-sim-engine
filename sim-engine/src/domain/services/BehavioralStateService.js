@@ -115,9 +115,148 @@ class BehavioralStateService extends BaseDomainService {
             }
         };
 
+        // Stat-to-interaction mappings for decision enhancement
+        this.statInteractionMappings = {
+            'combat': {
+                primaryStat: 'strength',
+                secondaryStat: 'constitution',
+                description: 'Physical combat and confrontation'
+            },
+            'physical_labor': {
+                primaryStat: 'strength',
+                secondaryStat: 'constitution',
+                description: 'Manual labor and physical tasks'
+            },
+            'intimidation': {
+                primaryStat: 'strength',
+                secondaryStat: 'charisma',
+                description: 'Physical intimidation and threats'
+            },
+            'stealth': {
+                primaryStat: 'dexterity',
+                secondaryStat: 'wisdom',
+                description: 'Sneaking and avoiding detection'
+            },
+            'theft': {
+                primaryStat: 'dexterity',
+                secondaryStat: 'intelligence',
+                description: 'Picking pockets and theft'
+            },
+            'acrobatics': {
+                primaryStat: 'dexterity',
+                secondaryStat: 'strength',
+                description: 'Climbing and acrobatic maneuvers'
+            },
+            'ranged_combat': {
+                primaryStat: 'dexterity',
+                secondaryStat: 'wisdom',
+                description: 'Archery and ranged weapons'
+            },
+            'research': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'wisdom',
+                description: 'Academic research and investigation'
+            },
+            'planning': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'wisdom',
+                description: 'Strategic planning and tactics'
+            },
+            'magic': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'wisdom',
+                description: 'Spellcasting and magical abilities'
+            },
+            'problem_solving': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'charisma',
+                description: 'Complex problem resolution'
+            },
+            'perception': {
+                primaryStat: 'wisdom',
+                secondaryStat: 'intelligence',
+                description: 'Noticing details and sensing danger'
+            },
+            'survival': {
+                primaryStat: 'wisdom',
+                secondaryStat: 'constitution',
+                description: 'Foraging and wilderness survival'
+            },
+            'insight': {
+                primaryStat: 'wisdom',
+                secondaryStat: 'charisma',
+                description: 'Reading people and situations'
+            },
+            'healing': {
+                primaryStat: 'wisdom',
+                secondaryStat: 'intelligence',
+                description: 'Medical treatment and care'
+            },
+            'persuasion': {
+                primaryStat: 'charisma',
+                secondaryStat: 'intelligence',
+                description: 'Convincing others through words'
+            },
+            'leadership': {
+                primaryStat: 'charisma',
+                secondaryStat: 'wisdom',
+                description: 'Commanding and inspiring others'
+            },
+            'performance': {
+                primaryStat: 'charisma',
+                secondaryStat: 'dexterity',
+                description: 'Entertainment and artistic expression'
+            },
+            'trade': {
+                primaryStat: 'charisma',
+                secondaryStat: 'intelligence',
+                description: 'Negotiation and commerce'
+            },
+            'endurance': {
+                primaryStat: 'constitution',
+                secondaryStat: 'strength',
+                description: 'Sustaining effort over time'
+            },
+            'resistance': {
+                primaryStat: 'constitution',
+                secondaryStat: 'wisdom',
+                description: 'Resisting harmful effects'
+            },
+            'recovery': {
+                primaryStat: 'constitution',
+                secondaryStat: 'wisdom',
+                description: 'Healing and recuperation'
+            },
+            // Universal interactions that benefit from average stat influence
+            'social': {
+                primaryStat: 'average',
+                secondaryStat: 'charisma',
+                description: 'General social interaction'
+            },
+            'economic': {
+                primaryStat: 'average',
+                secondaryStat: 'intelligence',
+                description: 'General economic activities'
+            },
+            'exploration': {
+                primaryStat: 'average',
+                secondaryStat: 'wisdom',
+                description: 'General exploration activities'
+            },
+            'rest': {
+                primaryStat: 'average',
+                secondaryStat: 'constitution',
+                description: 'Resting and recovery'
+            }
+        };
+
         // Decision factor bounds
         this.MIN_DECISION_FACTOR = 0.1;
         this.MAX_DECISION_FACTOR = 3.0;
+
+        // Stat modifier bounds
+        this.STAT_MODIFIER_MIN = 0.7;
+        this.STAT_MODIFIER_MAX = 1.5;
     }
 
     /**
@@ -699,15 +838,22 @@ class BehavioralStateService extends BaseDomainService {
         const memoryModifier = this.getMemoryModifier(character, interactionType, context);
         const contextModifier = this.getContextModifier(character, interactionType, context);
         const physicalModifier = this.getPhysicalStateModifier(character);
+        const statModifier = this.getStatModifier(character, interactionType);
+
+        // Calculate final factor with all modifiers including stats
+        const finalFactor = behavioralModifier * personalityModifier * consciousnessModifier *
+                           memoryModifier * contextModifier * physicalModifier * statModifier;
 
         return {
-            finalFactor: behavioralModifier,
+            finalFactor: this.clampDecisionFactor(finalFactor),
             breakdown: {
                 personality: personalityModifier,
                 consciousness: consciousnessModifier,
                 memory: memoryModifier,
                 context: contextModifier,
-                physical: physicalModifier
+                physical: physicalModifier,
+                stats: statModifier,
+                behavioral: behavioralModifier
             },
             interactionType,
             timestamp: Date.now()
@@ -953,7 +1099,8 @@ class BehavioralStateService extends BaseDomainService {
                 consciousnessModifier: 1.0,
                 memoryModifier: 1.0,
                 contextModifier: 1.0,
-                physicalModifier: 1.0
+                physicalModifier: 1.0,
+                statModifier: 1.0
             };
         }
 
@@ -963,6 +1110,7 @@ class BehavioralStateService extends BaseDomainService {
         const memoryModifier = this.getMemoryModifier(character, 'unknown', {});
         const contextModifier = this.getContextModifier(character, 'unknown', {});
         const physicalModifier = this.getPhysicalStateModifier(character);
+        const statModifier = this.getStatModifier(character, 'unknown');
 
         return {
             behavioralModifier,
@@ -970,8 +1118,102 @@ class BehavioralStateService extends BaseDomainService {
             consciousnessModifier,
             memoryModifier,
             contextModifier,
-            physicalModifier
+            physicalModifier,
+            statModifier
         };
+    }
+
+    /**
+     * Get stat modifier for a specific interaction type
+     * @param {Object} character - Character with attributes
+     * @param {string} interactionType - Type of interaction
+     * @returns {number} Stat modifier (0.7x to 1.5x range)
+     */
+    getStatModifier(character, interactionType) {
+        try {
+            if (!character || !character.attributes) {
+                return 1.0; // Neutral modifier if no character or attributes
+            }
+
+            const mapping = this.statInteractionMappings[interactionType];
+            if (!mapping) {
+                return 1.0; // Neutral modifier for unknown interaction types
+            }
+
+            let primaryModifier = 1.0;
+            let secondaryModifier = 1.0;
+
+            // Calculate primary stat modifier
+            if (mapping.primaryStat === 'average') {
+                // Use average of all stats for universal interactions
+                const stats = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+                const statValues = stats.map(stat => character.attributes[stat] || 10);
+                const averageStat = statValues.reduce((sum, val) => sum + val, 0) / statValues.length;
+                primaryModifier = this.calculateStatModifier(averageStat);
+            } else {
+                const primaryStatValue = character.attributes[mapping.primaryStat] || 10;
+                primaryModifier = this.calculateStatModifier(primaryStatValue);
+            }
+
+            // Calculate secondary stat modifier
+            const secondaryStatValue = character.attributes[mapping.secondaryStat] || 10;
+            secondaryModifier = this.calculateStatModifier(secondaryStatValue);
+
+            // Combine primary and secondary modifiers (weighted average)
+            const combinedModifier = (primaryModifier * 0.7) + (secondaryModifier * 0.3);
+
+            // Ensure bounds are respected
+            return Math.max(this.STAT_MODIFIER_MIN, Math.min(this.STAT_MODIFIER_MAX, combinedModifier));
+
+        } catch (error) {
+            if (this.logger) {
+                this.logger.warn(`Error calculating stat modifier: ${error.message}`);
+            }
+            return 1.0; // Return neutral modifier on error
+        }
+    }
+
+    /**
+     * Get all stat modifiers for a character across different interaction types
+     * @param {Object} character - Character with attributes
+     * @returns {Object} Object mapping interaction types to stat modifiers
+     */
+    getAllStatModifiers(character) {
+        const modifiers = {};
+
+        Object.keys(this.statInteractionMappings).forEach(interactionType => {
+            modifiers[interactionType] = this.getStatModifier(character, interactionType);
+        });
+
+        return modifiers;
+    }
+
+    /**
+     * Get stat modifier bounds for validation
+     * @returns {Object} Bounds information
+     */
+    getStatModifierBounds() {
+        return {
+            min: this.STAT_MODIFIER_MIN,
+            max: this.STAT_MODIFIER_MAX,
+            description: 'Stat modifiers are bounded to prevent extreme stat-based behavior'
+        };
+    }
+
+    /**
+     * Calculate modifier from stat value using D&D-style progression
+     * @param {number} statValue - Stat value (typically 1-20)
+     * @returns {number} Modifier value
+     */
+    calculateStatModifier(statValue) {
+        // D&D-style modifier calculation: (stat - 10) / 2, but scaled for our range
+        const baseModifier = (statValue - 10) / 2;
+
+        // Scale to our desired range (0.7x to 1.5x)
+        // Base modifier of -5 to +5 maps to 0.7x to 1.5x
+        const scaledModifier = 1.0 + (baseModifier * 0.08); // 0.08 = (1.5-0.7)/(5-(-5)) / 2
+
+        return Math.max(this.STAT_MODIFIER_MIN, Math.min(this.STAT_MODIFIER_MAX, scaledModifier));
     }
 }
 
