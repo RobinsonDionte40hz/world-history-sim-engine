@@ -691,7 +691,7 @@ export default class InteractionExecutor extends BaseDomainService {
       timestamp: Date.now(),
       change: 0, // Will be calculated by MemoryService
       reason: `${interaction.name || 'Unknown interaction'}: ${outcome}`,
-      interactionType: interaction.type || 'unknown',
+      interactionType: interaction.type || 'system',
       outcome,
       targetCharacterId: toCharacter.id,
       targetCharacterName: toCharacter.name

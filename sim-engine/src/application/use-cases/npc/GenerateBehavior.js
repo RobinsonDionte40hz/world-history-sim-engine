@@ -102,14 +102,14 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   
   // Factor 7: NEED-BASED MODIFIERS (From settlement need satisfaction)
   if (character.needBasedInteractionModifiers) {
-    const interactionType = interaction.type || interaction.category || 'unknown';
+    const interactionType = getInteractionType(interaction);
     const modifier = character.needBasedInteractionModifiers[interactionType] || 1.0;
     weight *= modifier;
   }
 
   // Factor 8: NEED-BASED PRIORITIES (From settlement need satisfaction)
   if (character.needBasedBehaviorChanges) {
-    const interactionType = interaction.type || interaction.category || 'unknown';
+    const interactionType = getInteractionType(interaction);
     
     // Check if interaction matches need-based behavior changes
     if (character.needBasedBehaviorChanges.includes('seek_food') && 
@@ -147,11 +147,13 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   
   // Factor 11: Consciousness state influence
   if (character.consciousness) {
+    const interactionType = getInteractionType(interaction);
     const consciousnessModifier = calculateConsciousnessInfluence(
       character.consciousness,
       interaction,
       character,
-      worldState
+      worldState,
+      interactionType
     );
     weight *= consciousnessModifier;
   }
@@ -162,6 +164,32 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   // Ensure non-negative
   return Math.max(0.01, weight);
 };
+
+/**
+ * Helper function to get proper interaction type mapping
+ */
+function getInteractionType(interaction) {
+  // Priority order for determining interaction type
+  if (interaction.type) return interaction.type;
+  if (interaction.category) return interaction.category;
+  
+  // Map system interactions to proper types
+  const systemInteractionTypes = {
+    'Rest': 'rest',
+    'Wait': 'system',
+    'Look Around': 'perception',
+    'Listen Carefully': 'perception',
+    'Examine': 'perception',
+    'Move': 'movement'
+  };
+  
+  if (interaction.name && systemInteractionTypes[interaction.name]) {
+    return systemInteractionTypes[interaction.name];
+  }
+  
+  // Default fallback
+  return 'system';
+}
 
 /**
  * Helper function to calculate attribute bonus
@@ -189,12 +217,12 @@ function calculateAttributeBonus(attributes, requirements) {
 /**
  * Helper function to calculate consciousness influence using BehavioralStateService
  */
-function calculateConsciousnessInfluence(consciousness, interaction, character, worldState) {
+function calculateConsciousnessInfluence(consciousness, interaction, character, worldState, interactionType) {
   if (!consciousness) return 1.0;
 
   try {
-    // Get behavioral modifier from the service
-    const modifier = behavioralStateService.getBehavioralModifier(character, interaction.type || interaction.category || 'unknown');
+    // Get behavioral modifier from the service using proper interaction type
+    const modifier = behavioralStateService.getBehavioralModifier(character, interactionType);
 
     // Apply memory influence
     const memoryInfluence = memoryService.getMemoryInfluence(character, interaction);
@@ -230,7 +258,7 @@ function calculateInteractionWeights(character, interactions, context) {
     const weight = calculateInteractionWeight(character, interaction, context);
     
     // Use interaction name or ID as key
-    const key = interaction.name || interaction.id || interaction.type || 'unknown';
+    const key = interaction.name || interaction.id || interaction.type || 'system';
     weights[key] = weight;
   });
   
@@ -413,7 +441,7 @@ function gatherAvailableInteractions(character, worldState) {
 
   console.log(
     `${character.name} has ${availableInteractions.length} total interactions available:`,
-    availableInteractions.map(i => i.name || i.type || 'unknown')
+    availableInteractions.map(i => i.name || i.type || 'system')
   );
   
   // Log breakdown by type for debugging
@@ -476,7 +504,7 @@ const generateBehavior = (character, worldState) => {
   
   // Find the actual interaction object for the selected name
   const selectedInteraction = availableInteractions.find(i => 
-    (i.name || i.id || i.type || 'unknown') === selected
+    (i.name || i.id || i.type || 'system') === selected
   );
   
   if (!selectedInteraction) return null;
@@ -487,12 +515,12 @@ const generateBehavior = (character, worldState) => {
     availableInteractions: Object.entries(interactionWeights).slice(0, 10).map(([name, weight]) => ({ 
       name, 
       weight,
-      type: availableInteractions.find(i => (i.name || i.id || i.type || 'unknown') === name)?.type || 'unknown'
+      type: availableInteractions.find(i => (i.name || i.id || i.type || 'system') === name)?.type || 'system'
     })),
     selectedInteraction: {
       name: selected,
       weight: interactionWeights[selected] || 0,
-      type: selectedInteraction.type || 'unknown'
+      type: selectedInteraction.type || 'system'
     },
     reasoning: reasoning,
     topAlternatives: getTopAlternatives(interactionWeights, selected, 3)

@@ -112,6 +112,88 @@ class BehavioralStateService extends BaseDomainService {
                     focus: 1.1,
                     energy: 1.0
                 }
+            },
+            'perception': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.3,
+                    'awareness': 1.2,
+                    'caution': 1.1
+                },
+                consciousnessFactors: {
+                    focus: 1.2,
+                    coherence: 1.1
+                }
+            },
+            'PerceptionInteraction': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.3,
+                    'awareness': 1.2
+                },
+                consciousnessFactors: {
+                    focus: 1.2,
+                    coherence: 1.1
+                }
+            },
+            'Rest': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'lazy': 1.3,
+                    'disciplined': 0.8,
+                    'exhaustion': 1.2
+                },
+                consciousnessFactors: {
+                    energy: 0.8,
+                    coherence: 1.0
+                }
+            },
+            'Wait': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'patient': 1.2,
+                    'impatient': 0.7,
+                    'disciplined': 1.1
+                },
+                consciousnessFactors: {
+                    focus: 1.1,
+                    energy: 1.0
+                }
+            },
+            'Examine': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.4,
+                    'caution': 0.8,
+                    'analytical': 1.3
+                },
+                consciousnessFactors: {
+                    focus: 1.3,
+                    coherence: 1.2
+                }
+            },
+            'Perception': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.3,
+                    'awareness': 1.2,
+                    'caution': 1.1
+                },
+                consciousnessFactors: {
+                    focus: 1.2,
+                    coherence: 1.1
+                }
+            },
+            'unknown': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.0,
+                    'caution': 1.0
+                },
+                consciousnessFactors: {
+                    focus: 1.0,
+                    coherence: 1.0
+                }
             }
         };
 

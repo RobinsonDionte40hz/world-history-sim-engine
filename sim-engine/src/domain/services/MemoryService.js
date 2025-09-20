@@ -117,7 +117,7 @@ class MemoryService {
       timestamp: Date.now(),
       change: bondChange,
       reason: context.reason || `Interaction outcome: ${interactionOutcome}`,
-      interactionType: context.interactionType || 'unknown',
+      interactionType: context.interactionType || 'system',
       context: context.context || 'general',
       outcome: interactionOutcome,
       encounterId: context.encounterId,

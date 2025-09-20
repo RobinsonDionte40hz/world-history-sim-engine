@@ -20,12 +20,16 @@ class PrestigeService {
     this._validateAchievement(achievement);
     this._validateSocialContext(socialContext);
     
+    // CITIZEN TIER INTEGRATION: Get citizen tier multiplier
+    const citizenTierMultiplier = this._getCitizenTierPrestigeMultiplier(character.citizenTier);
+    
     // Calculate prestige changes based on the achievement and social context
     const prestigeChanges = this._calculateAchievementChanges(
       prestige,
       achievement,
       socialContext,
-      character
+      character,
+      citizenTierMultiplier
     );
     
     // Apply all calculated changes
@@ -46,7 +50,9 @@ class PrestigeService {
           ['allies', socialContext.alliesPresent || 0],
           ['rivals', socialContext.rivalsPresent || 0],
           ['neutrals', socialContext.neutralsPresent || 0]
-        ])
+        ]),
+        citizenTier: character.citizenTier,
+        citizenTierMultiplier: citizenTierMultiplier
       };
       
       updatedPrestige = updatedPrestige.withChange(
@@ -275,44 +281,44 @@ class PrestigeService {
    * Private helper methods
    */
   
-  _calculateAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     
     // Different types of achievements affect different prestige tracks
     switch (achievement.type) {
       case 'military_victory':
-        changes.push(...this._calculateMilitaryAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculateMilitaryAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
         break;
       case 'political_success':
-        changes.push(...this._calculatePoliticalAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculatePoliticalAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
         break;
       case 'economic_achievement':
-        changes.push(...this._calculateEconomicAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculateEconomicAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
         break;
       case 'cultural_contribution':
-        changes.push(...this._calculateCulturalAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculateCulturalAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
         break;
       case 'social_deed':
-        changes.push(...this._calculateSocialAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculateSocialAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
         break;
       case 'heroic_act':
-        changes.push(...this._calculateHeroicAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculateHeroicAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
         break;
       default:
-        changes.push(...this._calculateGenericAchievementChanges(prestige, achievement, socialContext, character));
+        changes.push(...this._calculateGenericAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier));
     }
     
     return changes;
   }
   
-  _calculateMilitaryAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateMilitaryAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     const magnitude = achievement.magnitude || 1;
     const witnessCount = socialContext.witnesses || 0;
     const witnessMultiplier = 1 + Math.min(witnessCount / 100, 2); // Max 3x multiplier
     
     if (prestige.hasTrack('military')) {
-      const baseChange = 15 * magnitude * witnessMultiplier;
+      const baseChange = 15 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'military',
         amount: this._clamp(baseChange, 0, 50),
@@ -321,7 +327,7 @@ class PrestigeService {
     }
     
     if (prestige.hasTrack('honor') && achievement.subtype === 'heroic_battle') {
-      const honorChange = 12 * magnitude * witnessMultiplier;
+      const honorChange = 12 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'honor',
         amount: this._clamp(honorChange, 0, 40),
@@ -331,7 +337,7 @@ class PrestigeService {
     
     // Military achievements can boost political prestige for leaders
     if (prestige.hasTrack('political') && (character.role === 'leader' || character.militaryRank > 5)) {
-      const politicalChange = 8 * magnitude * witnessMultiplier;
+      const politicalChange = 8 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'political',
         amount: this._clamp(politicalChange, 0, 25),
@@ -342,7 +348,7 @@ class PrestigeService {
     return changes;
   }
   
-  _calculatePoliticalAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculatePoliticalAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     const magnitude = achievement.magnitude || 1;
     const witnessCount = socialContext.witnesses || 0;
@@ -352,7 +358,7 @@ class PrestigeService {
     const witnessMultiplier = 1 + Math.min((witnessCount + nobleWitnesses * 3) / 50, 2.5);
     
     if (prestige.hasTrack('political')) {
-      const baseChange = 18 * magnitude * witnessMultiplier;
+      const baseChange = 18 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'political',
         amount: this._clamp(baseChange, 0, 60),
@@ -361,7 +367,7 @@ class PrestigeService {
     }
     
     if (prestige.hasTrack('social') && achievement.subtype === 'diplomatic_success') {
-      const socialChange = 10 * magnitude * witnessMultiplier;
+      const socialChange = 10 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'social',
         amount: this._clamp(socialChange, 0, 35),
@@ -372,14 +378,14 @@ class PrestigeService {
     return changes;
   }
   
-  _calculateEconomicAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateEconomicAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     const magnitude = achievement.magnitude || 1;
     const witnessCount = socialContext.witnesses || 0;
     const witnessMultiplier = 1 + Math.min(witnessCount / 75, 1.8);
     
     if (prestige.hasTrack('wealth')) {
-      const baseChange = 12 * magnitude * witnessMultiplier;
+      const baseChange = 12 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'wealth',
         amount: this._clamp(baseChange, 0, 45),
@@ -388,7 +394,7 @@ class PrestigeService {
     }
     
     if (prestige.hasTrack('social') && achievement.subtype === 'charitable_donation') {
-      const socialChange = 8 * magnitude * witnessMultiplier;
+      const socialChange = 8 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'social',
         amount: this._clamp(socialChange, 0, 30),
@@ -399,7 +405,7 @@ class PrestigeService {
     return changes;
   }
   
-  _calculateCulturalAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateCulturalAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     const magnitude = achievement.magnitude || 1;
     const witnessCount = socialContext.witnesses || 0;
@@ -407,7 +413,7 @@ class PrestigeService {
     const witnessMultiplier = 1 + Math.min(witnessCount / 60, 2) * culturalRelevance;
     
     if (prestige.hasTrack('cultural')) {
-      const baseChange = 14 * magnitude * witnessMultiplier;
+      const baseChange = 14 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'cultural',
         amount: this._clamp(baseChange, 0, 50),
@@ -416,7 +422,7 @@ class PrestigeService {
     }
     
     if (prestige.hasTrack('social')) {
-      const socialChange = 6 * magnitude * witnessMultiplier;
+      const socialChange = 6 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'social',
         amount: this._clamp(socialChange, 0, 25),
@@ -427,14 +433,14 @@ class PrestigeService {
     return changes;
   }
   
-  _calculateSocialAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateSocialAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     const magnitude = achievement.magnitude || 1;
     const witnessCount = socialContext.witnesses || 0;
     const witnessMultiplier = 1 + Math.min(witnessCount / 40, 2.2); // Social acts benefit more from witnesses
     
     if (prestige.hasTrack('social')) {
-      const baseChange = 16 * magnitude * witnessMultiplier;
+      const baseChange = 16 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'social',
         amount: this._clamp(baseChange, 0, 55),
@@ -443,7 +449,7 @@ class PrestigeService {
     }
     
     if (prestige.hasTrack('honor') && achievement.subtype === 'selfless_act') {
-      const honorChange = 10 * magnitude * witnessMultiplier;
+      const honorChange = 10 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'honor',
         amount: this._clamp(honorChange, 0, 35),
@@ -454,7 +460,7 @@ class PrestigeService {
     return changes;
   }
   
-  _calculateHeroicAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateHeroicAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     const magnitude = achievement.magnitude || 1;
     const witnessCount = socialContext.witnesses || 0;
@@ -462,7 +468,7 @@ class PrestigeService {
     
     // Heroic acts boost multiple tracks
     if (prestige.hasTrack('honor')) {
-      const honorChange = 20 * magnitude * witnessMultiplier;
+      const honorChange = 20 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'honor',
         amount: this._clamp(honorChange, 0, 70),
@@ -471,7 +477,7 @@ class PrestigeService {
     }
     
     if (prestige.hasTrack('social')) {
-      const socialChange = 15 * magnitude * witnessMultiplier;
+      const socialChange = 15 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'social',
         amount: this._clamp(socialChange, 0, 50),
@@ -481,7 +487,7 @@ class PrestigeService {
     
     // Context-specific boosts
     if (achievement.context === 'battle' && prestige.hasTrack('military')) {
-      const militaryChange = 12 * magnitude * witnessMultiplier;
+      const militaryChange = 12 * magnitude * witnessMultiplier * citizenTierMultiplier;
       changes.push({
         trackId: 'military',
         amount: this._clamp(militaryChange, 0, 40),
@@ -492,7 +498,7 @@ class PrestigeService {
     return changes;
   }
   
-  _calculateGenericAchievementChanges(prestige, achievement, socialContext, character) {
+  _calculateGenericAchievementChanges(prestige, achievement, socialContext, character, citizenTierMultiplier = 1.0) {
     const changes = [];
     
     // Generic achievements have minimal impact
@@ -501,7 +507,7 @@ class PrestigeService {
         if (prestige.hasTrack(trackId) && Math.abs(impact) > 0) {
           const witnessCount = socialContext.witnesses || 0;
           const witnessMultiplier = 1 + Math.min(witnessCount / 100, 1);
-          const finalImpact = impact * witnessMultiplier;
+          const finalImpact = impact * witnessMultiplier * citizenTierMultiplier;
           
           changes.push({
             trackId,
@@ -857,6 +863,25 @@ class PrestigeService {
     
     if (!interaction.description || typeof interaction.description !== 'string') {
       throw new Error('Interaction must have a description');
+    }
+  }
+
+  /**
+   * CITIZEN TIER INTEGRATION: Get prestige multiplier based on citizen tier
+   * @private
+   */
+  _getCitizenTierPrestigeMultiplier(citizenTier) {
+    if (!citizenTier) return 1.0; // Default multiplier
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 1.5; // Leaders get 50% more prestige from achievements
+      case 'SPECIALIST':
+        return 1.25; // Specialists get 25% more prestige from achievements
+      case 'CITIZEN':
+        return 1.0; // Citizens get standard prestige from achievements
+      default:
+        return 1.0; // Unknown tiers get standard prestige
     }
   }
 }

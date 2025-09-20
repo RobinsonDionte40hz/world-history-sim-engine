@@ -9,6 +9,55 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import TemplateManager from '../../template/TemplateManager';
 import StorageCleanupService from '../../application/services/StorageCleanupService.js';
 
+// Helper functions for data compression and selective storage
+const compressWorldData = (worldsData) => {
+    try {
+        // Simple compression: remove redundant data and shorten keys
+        const compressed = JSON.stringify(worldsData, (key, value) => {
+            // Skip large arrays that aren't essential for world restoration
+            if (key === 'significantEvents' && Array.isArray(value) && value.length > 10) {
+                return value.slice(-10); // Keep only last 10 events
+            }
+            if (key === 'significantMemories' && Array.isArray(value) && value.length > 20) {
+                return value.slice(-20); // Keep only last 20 memories
+            }
+            return value;
+        });
+        return compressed;
+    } catch (error) {
+        console.warn('Data compression failed:', error);
+        return null;
+    }
+};
+
+const createSelectiveWorldData = (worldsData) => {
+    // Create a lighter version with only essential data
+    const selective = {};
+
+    for (const [worldId, world] of Object.entries(worldsData)) {
+        selective[worldId] = {
+            id: world.id,
+            name: world.name,
+            description: world.description,
+            created: world.created,
+            lastModified: world.lastModified,
+            worldConfig: {
+                ...world.worldConfig,
+                // Remove large data arrays
+                characters: world.worldConfig.characters?.slice(0, 10) || [], // Keep only first 10 characters
+                nodes: world.worldConfig.nodes || [],
+                interactions: world.worldConfig.interactions?.slice(0, 5) || [], // Keep only first 5 interactions
+                // Keep essential metadata
+                isComplete: world.worldConfig.isComplete,
+                isValid: world.worldConfig.isValid,
+                stepValidation: world.worldConfig.stepValidation
+            }
+        };
+    }
+
+    return selective;
+};
+
 const WorldContext = createContext();
 
 export const WorldProvider = ({ children }) => {
@@ -78,12 +127,52 @@ export const WorldProvider = ({ children }) => {
                     });
 
                     // Batch localStorage operations
-                    localStorage.setItem('worlds', JSON.stringify(worldsData));
-                    if (currentWorldId) {
-                        localStorage.setItem('currentWorldId', currentWorldId);
-                    }
+                    try {
+                        localStorage.setItem('worlds', JSON.stringify(worldsData));
+                        if (currentWorldId) {
+                            localStorage.setItem('currentWorldId', currentWorldId);
+                        }
 
-                    console.log('Worlds persisted to localStorage');
+                        console.log('Worlds persisted to localStorage');
+                    } catch (storageError) {
+                        if (storageError.name === 'QuotaExceededError') {
+                            console.warn('localStorage quota exceeded, attempting compression...');
+
+                            // Try compressed storage
+                            const compressed = compressWorldData(worldsData);
+                            if (compressed) {
+                                try {
+                                    localStorage.setItem('worlds', compressed);
+                                    if (currentWorldId) {
+                                        localStorage.setItem('currentWorldId', currentWorldId);
+                                    }
+                                    console.log('Worlds persisted with compression');
+                                } catch (compressedError) {
+                                    console.warn('Compressed storage also failed, using selective storage...');
+
+                                    // Fall back to selective storage (keep only essential data)
+                                    const selectiveData = createSelectiveWorldData(worldsData);
+                                    try {
+                                        localStorage.setItem('worlds', JSON.stringify(selectiveData));
+                                        if (currentWorldId) {
+                                            localStorage.setItem('currentWorldId', currentWorldId);
+                                        }
+                                        console.log('Worlds persisted with selective storage (limited data)');
+
+                                        // Notify user about data limitations
+                                        setError(`World saved with limited data due to storage constraints. Some historical data may be missing.`);
+                                    } catch (selectiveError) {
+                                        console.error('All storage methods failed:', selectiveError);
+                                        setError(`Unable to save world: Storage quota exceeded. Try reducing world size or clearing browser data.`);
+                                    }
+                                }
+                            } else {
+                                setError(`Unable to save world: Storage quota exceeded and compression failed.`);
+                            }
+                        } else {
+                            throw storageError; // Re-throw non-quota errors
+                        }
+                    }
                 } catch (err) {
                     console.error('Error saving worlds:', err);
                     setError(`Failed to save worlds: ${err.message}`);

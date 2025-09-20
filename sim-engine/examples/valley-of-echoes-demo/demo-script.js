@@ -70,12 +70,30 @@ class ValleyOfEchoesDemo {
    * Build a single settlement
    */
   async buildSettlement(config) {
+    // Calculate total population from population groups
+    const totalPopulation = config.populationGroups?.reduce((sum, group) => 
+      sum + (group.size || group.count || 0), 0
+    ) || 100;
+
     const settlement = {
       id: config.id,
       name: config.name,
       description: config.description,
       type: config.type,
       governance: config.governance,
+      // Ensure proper population structure
+      population: {
+        total: totalPopulation,
+        groups: config.populationGroups || [],
+        breakdown: {
+          farmers: config.populationGroups?.find(g => g.demographics?.occupation === 'farmer')?.size || 0,
+          artisans: config.populationGroups?.find(g => g.demographics?.occupation === 'artisan')?.size || 0,
+          merchants: config.populationGroups?.find(g => g.demographics?.occupation === 'merchant')?.size || 0,
+          soldiers: 0,
+          administrators: config.populationGroups?.find(g => g.demographics?.occupation === 'administrator')?.size || 0
+        },
+        lastUpdated: 0
+      },
       nodes: config.nodes,
       assignedCharacters: [
         ...config.heroCharacters.map(char => char.id),

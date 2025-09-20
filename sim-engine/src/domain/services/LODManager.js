@@ -55,20 +55,23 @@ class LODManager {
 
     let result;
 
+    // CITIZEN TIER INTEGRATION: Get citizen tier multiplier for processing priority
+    const citizenTierMultiplier = this._getCitizenTierMultiplier(character.citizenTier);
+
     // PERFORMANCE OPTIMIZATION: Use tier-specific processing methods directly
     switch (character.lodTier) {
       case 'hero':
-        result = this._processHeroCharacter(character, world, turnContext);
+        result = this._processHeroCharacter(character, world, turnContext, citizenTierMultiplier);
         break;
       case 'group':
-        result = this._processGroupCharacter(character, world, turnContext);
+        result = this._processGroupCharacter(character, world, turnContext, citizenTierMultiplier);
         break;
       case 'background':
-        result = this._processBackgroundCharacter(character, world, turnContext);
+        result = this._processBackgroundCharacter(character, world, turnContext, citizenTierMultiplier);
         break;
       default:
         // Handle invalid tier gracefully - default to background processing
-        result = this._processBackgroundCharacter(character, world, turnContext);
+        result = this._processBackgroundCharacter(character, world, turnContext, citizenTierMultiplier);
         result.error = `Unknown LOD tier: ${character.lodTier}, defaulted to background`;
         break;
     }
@@ -80,6 +83,10 @@ class LODManager {
     this.processingMetrics.totalProcessed++;
     this.processingMetrics.tierBreakdown[character.lodTier] = (this.processingMetrics.tierBreakdown[character.lodTier] || 0) + 1;
     this._updateAverageProcessingTime(processingTime);
+
+    // CITIZEN TIER INTEGRATION: Include citizen tier info in result
+    result.citizenTier = character.citizenTier;
+    result.citizenTierMultiplier = citizenTierMultiplier;
 
     // PERFORMANCE OPTIMIZATION: Return result with processing time
     result.processingTime = processingTime;
@@ -323,19 +330,22 @@ class LODManager {
   /**
    * Process a hero-tier character with full simulation
    */
-  _processHeroCharacter(character, world, turnContext) {
+  _processHeroCharacter(character, world, turnContext, citizenTierMultiplier = 1.0) {
     // MEMORY OPTIMIZATION: Use object pooling
     const updatedCharacter = { ...character };
 
     // PERFORMANCE OPTIMIZATION: Cache character data
     this._cacheCharacter(character);
 
+    // CITIZEN TIER INTEGRATION: Apply citizen tier multiplier to consciousness evolution
+    const consciousnessMultiplier = citizenTierMultiplier;
+
     // Evolve consciousness
     if (updatedCharacter.consciousness) {
       updatedCharacter.consciousness = {
         ...updatedCharacter.consciousness,
-        frequency: Math.min(1.0, updatedCharacter.consciousness.frequency + 0.01),
-        coherence: Math.min(1.0, updatedCharacter.consciousness.coherence + 0.005)
+        frequency: Math.min(1.0, updatedCharacter.consciousness.frequency + 0.01 * consciousnessMultiplier),
+        coherence: Math.min(1.0, updatedCharacter.consciousness.coherence + 0.005 * consciousnessMultiplier)
       };
     }
 
@@ -343,7 +353,9 @@ class LODManager {
     const events = [this._getEventFromPool('consciousness_shift', {
       characterId: character.id,
       frequency: updatedCharacter.consciousness?.frequency,
-      coherence: updatedCharacter.consciousness?.coherence
+      coherence: updatedCharacter.consciousness?.coherence,
+      citizenTier: character.citizenTier,
+      citizenTierMultiplier: citizenTierMultiplier
     })];
 
     // MEMORY OPTIMIZATION: Use pooled result object
@@ -353,10 +365,10 @@ class LODManager {
     result.lodTier = 'hero';
 
     
-    // PRESTIGE INTEGRATION: Process prestige for hero characters
+    // PRESTIGE INTEGRATION: Process prestige for hero characters with citizen tier influence
     if (character.prestige) {
       try {
-        result.prestigeUpdate = this.processPrestigeForHero(character, world, turnContext);
+        result.prestigeUpdate = this.processPrestigeForHero(character, world, turnContext, citizenTierMultiplier);
       } catch (error) {
         result.warnings = result.warnings || [];
         result.warnings.push(`Prestige processing failed: ${error.message}`);
@@ -369,19 +381,22 @@ class LODManager {
   /**
    * Process a group-tier character statistically
    */
-  _processGroupCharacter(character, world, turnContext) {
+  _processGroupCharacter(character, world, turnContext, citizenTierMultiplier = 1.0) {
     // MEMORY OPTIMIZATION: Use object pooling
     const updatedCharacter = { ...character };
 
     // PERFORMANCE OPTIMIZATION: Cache character data
     this._cacheCharacter(character);
 
+    // CITIZEN TIER INTEGRATION: Apply citizen tier multiplier to group statistics
+    const statsMultiplier = citizenTierMultiplier;
+
     // Update group statistics
     if (updatedCharacter.groupStatistics) {
       updatedCharacter.groupStatistics = {
         ...updatedCharacter.groupStatistics,
-        morale: Math.max(0, Math.min(1, updatedCharacter.groupStatistics.morale + (Math.random() - 0.5) * 0.1)),
-        productivity: Math.max(0, Math.min(1, updatedCharacter.groupStatistics.productivity + (Math.random() - 0.5) * 0.05))
+        morale: Math.max(0, Math.min(1, updatedCharacter.groupStatistics.morale + (Math.random() - 0.5) * 0.1 * statsMultiplier)),
+        productivity: Math.max(0, Math.min(1, updatedCharacter.groupStatistics.productivity + (Math.random() - 0.5) * 0.05 * statsMultiplier))
       };
     }
 
@@ -390,7 +405,9 @@ class LODManager {
     const events = [this._getEventFromPool('group_morale_change', {
       groupId: character.populationGroupId,
       settlementId,
-      morale: updatedCharacter.groupStatistics?.morale
+      morale: updatedCharacter.groupStatistics?.morale,
+      citizenTier: character.citizenTier,
+      citizenTierMultiplier: citizenTierMultiplier
     })];
 
     // MEMORY OPTIMIZATION: Use pooled result object
@@ -406,15 +423,21 @@ class LODManager {
   /**
    * Process a background-tier character minimally
    */
-  _processBackgroundCharacter(character, world, turnContext) {
+  _processBackgroundCharacter(character, world, turnContext, citizenTierMultiplier = 1.0) {
     // PERFORMANCE OPTIMIZATION: Cache character data
     this._cacheCharacter(character);
+
+    // CITIZEN TIER INTEGRATION: Apply citizen tier multiplier to demographic updates
+    const demographicMultiplier = citizenTierMultiplier;
 
     // Minimal processing - just demographic tracking
     const demographicUpdates = character.demographicData ? {
       settlementId: character.assignments?.settlements?.values().next().value,
       occupation: character.demographicData.occupation,
-      count: character.demographicData.count
+      count: character.demographicData.count,
+      citizenTier: character.citizenTier,
+      citizenTierMultiplier: citizenTierMultiplier,
+      influence: (character.demographicData.influence || 0) * demographicMultiplier
     } : undefined;
 
     // MEMORY OPTIMIZATION: Use pooled result object
@@ -614,12 +637,16 @@ class LODManager {
             const cached = this._getCachedCharacter(c.id);
             return (cached?.lodTier || c.lodTier) === 'background' && c.currentNode === settlementId;
           })
+          // CITIZEN TIER INTEGRATION: Sort by citizen tier priority (LEADER > SPECIALIST > CITIZEN)
+          .sort((a, b) => this._getCitizenTierPriority(b.citizenTier) - this._getCitizenTierPriority(a.citizenTier))
           .slice(0, 2); // Promote max 2 per settlement
 
         for (const character of backgroundChars) {
           candidates.push({
             character,
-            reason: 'high_settlement_activity'
+            reason: 'high_settlement_activity',
+            citizenTier: character.citizenTier,
+            priority: this._getCitizenTierPriority(character.citizenTier)
           });
         }
       }
@@ -681,7 +708,16 @@ class LODManager {
    * @private
    */
   _getCachedCharacter(characterId) {
-    return this._characterCache.get(characterId) || null;
+    const cached = this._characterCache.get(characterId);
+    if (cached) {
+      return {
+        lodTier: cached.lodTier,
+        citizenTier: cached.citizenTier, // CITIZEN TIER INTEGRATION: Include citizen tier in cached data
+        lastActivity: cached.lastActivity,
+        currentNode: cached.currentNode
+      };
+    }
+    return null;
   }
 
   /**
@@ -691,6 +727,7 @@ class LODManager {
   _updateCharacterCache(character) {
     this._characterCache.set(character.id, {
       lodTier: character.lodTier,
+      citizenTier: character.citizenTier, // CITIZEN TIER INTEGRATION: Preserve citizen tier in cache
       lastActivity: Date.now(),
       currentNode: character.currentNode
     });
@@ -809,22 +846,43 @@ class LODManager {
   }
 
   /**
+   * CITIZEN TIER INTEGRATION: Get priority value for citizen tier (higher = more important)
+   * @private
+   */
+  _getCitizenTierPriority(citizenTier) {
+    if (!citizenTier) return 0; // Default priority
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 3; // Highest priority for promotion
+      case 'SPECIALIST':
+        return 2; // Medium priority for promotion
+      case 'CITIZEN':
+        return 1; // Standard priority for promotion
+      default:
+        return 0; // Unknown tiers get lowest priority
+    }
+  }
+
+  /**
    * Process prestige updates for hero characters
    * Integrates with PrestigeService for achievement-based prestige changes
    */
-  processPrestigeForHero(character, world, turnContext) {
+  processPrestigeForHero(character, world, turnContext, citizenTierMultiplier = 1.0) {
     const startTime = performance.now();
     
     try {
       // Create achievement context from turn processing
       const achievement = {
         type: 'turn_completion',
-        significance: this._calculateTurnSignificance(character, turnContext),
+        significance: this._calculateTurnSignificance(character, turnContext) * citizenTierMultiplier,
         timestamp: Date.now(),
         context: {
           settlement: character.settlementId,
           turn: turnContext.turn,
-          actions: turnContext.characterActions?.[character.id] || []
+          actions: turnContext.characterActions?.[character.id] || [],
+          citizenTier: character.citizenTier,
+          citizenTierMultiplier: citizenTierMultiplier
         }
       };
       
@@ -833,7 +891,7 @@ class LODManager {
         settlement: world.settlements?.find(s => s.id === character.settlementId),
         publicVisibility: this._calculatePublicVisibility(character, achievement),
         socialStanding: character.socialStanding || 'neutral',
-        witnessCount: this._estimateWitnessCount(character, world)
+        witnessCount: Math.floor(this._estimateWitnessCount(character, world) * citizenTierMultiplier)
       };
       
       // Process prestige update
@@ -852,7 +910,8 @@ class LODManager {
         newPrestige: updatedPrestige,
         processingTime: endTime - startTime,
         achievement,
-        socialContext
+        socialContext,
+        citizenTierMultiplier: citizenTierMultiplier
       };
       
     } catch (error) {

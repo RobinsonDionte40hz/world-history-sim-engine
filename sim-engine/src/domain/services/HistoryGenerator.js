@@ -89,9 +89,48 @@ class HistoryGenerator {
       try {
         const events = JSON.parse(localStorage.getItem('historicalEvents') || '[]');
         events.push(event);
-        localStorage.setItem('historicalEvents', JSON.stringify(events));
+
+        // Compress events if we're approaching storage limits
+        let eventsToStore = events;
+        if (events.length > 100) {
+          // Keep only the most recent 50 events and 25 most significant events
+          const recentEvents = events.slice(-50);
+          const significantEvents = events
+            .filter(e => (e.significance || 0) > 0.5)
+            .sort((a, b) => (b.significance || 0) - (a.significance || 0))
+            .slice(0, 25);
+
+          // Combine and deduplicate
+          const combined = [...recentEvents];
+          significantEvents.forEach(sigEvent => {
+            if (!combined.find(e => e.id === sigEvent.id)) {
+              combined.push(sigEvent);
+            }
+          });
+
+          eventsToStore = combined.slice(-75); // Keep up to 75 total
+        }
+
+        localStorage.setItem('historicalEvents', JSON.stringify(eventsToStore));
       } catch (error) {
-        console.warn('Failed to save event to localStorage:', error);
+        if (error.name === 'QuotaExceededError') {
+          console.warn('localStorage quota exceeded for historical events. Clearing old events and keeping recent ones.');
+          try {
+            // Emergency cleanup: keep only the last 25 events
+            const recentEvents = this.events.slice(-25);
+            localStorage.setItem('historicalEvents', JSON.stringify(recentEvents));
+          } catch (secondaryError) {
+            console.warn('Failed to save events to localStorage even after cleanup:', secondaryError);
+            // Clear localStorage as last resort
+            try {
+              localStorage.removeItem('historicalEvents');
+            } catch (finalError) {
+              console.warn('Failed to clear historical events from localStorage:', finalError);
+            }
+          }
+        } else {
+          console.warn('Failed to save event to localStorage:', error);
+        }
       }
     }
   }

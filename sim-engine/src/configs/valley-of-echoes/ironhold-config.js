@@ -45,7 +45,51 @@ const ironholdDominionConfig = {
       capacity: {
         maxCharacters: 30,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'military_briefing',
+          name: 'Military Briefing',
+          description: 'Attend strategic military briefings and planning sessions',
+          type: 'military',
+          category: 'strategy',
+          requirements: { citizenTier: 'LEADER' },
+          effects: { strategicKnowledge: 0.1, militaryStanding: 0.05 },
+          branches: [
+            {
+              text: 'Discuss defense strategies',
+              effects: { knowledge: 'defense_tactics' },
+              outcomes: ['Learn about fortress defense strategies and tactics']
+            },
+            {
+              text: 'Review troop readiness',
+              effects: { knowledge: 'military_readiness' },
+              outcomes: ['Assess the preparedness and training of military forces']
+            }
+          ]
+        },
+        {
+          id: 'honor_guard_ceremony',
+          name: 'Honor Guard Ceremony',
+          description: 'Participate in ceremonial military traditions',
+          type: 'cultural',
+          category: 'tradition',
+          requirements: { constitution: 14 },
+          effects: { honor: 0.1, discipline: 0.05 },
+          branches: [
+            {
+              text: 'Stand in formation',
+              effects: { militaryDiscipline: 0.1 },
+              outcomes: ['Practice military precision and ceremonial procedures']
+            },
+            {
+              text: 'Learn warrior traditions',
+              effects: { knowledge: 'warrior_code' },
+              outcomes: ['Study the traditional code of honor and military ethics']
+            }
+          ]
+        }
+      ]
     },
     {
       id: 'ironhold-forge-district',
@@ -67,7 +111,72 @@ const ironholdDominionConfig = {
       capacity: {
         maxCharacters: 45,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'smithing_work',
+          name: 'Smithing Work',
+          description: 'Work at the forge creating weapons and tools',
+          type: 'labor',
+          category: 'craft',
+          requirements: { strength: 13, constitution: 13 },
+          effects: { wealth: 12, smithingSkill: 0.1, experience: 2 },
+          branches: [
+            {
+              text: 'Forge weapons',
+              effects: { weaponCrafting: 0.15, reputation: 3 },
+              outcomes: ['Create high-quality weapons for the garrison']
+            },
+            {
+              text: 'Craft tools',
+              effects: { toolCrafting: 0.15, utility: 0.1 },
+              outcomes: ['Produce essential tools for mining and construction']
+            }
+          ]
+        },
+        {
+          id: 'apprentice_training',
+          name: 'Apprentice Training',
+          description: 'Learn smithing skills from master craftsmen',
+          type: 'educational',
+          category: 'craft',
+          requirements: { dexterity: 12 },
+          effects: { smithingKnowledge: 0.2 },
+          branches: [
+            {
+              text: 'Study metal properties',
+              effects: { knowledge: 'metallurgy' },
+              outcomes: ['Learn about different metals and their properties']
+            },
+            {
+              text: 'Practice hammer techniques',
+              effects: { forgingSkill: 0.15 },
+              outcomes: ['Develop proper hammering and shaping techniques']
+            }
+          ]
+        },
+        {
+          id: 'forge_blessing',
+          name: 'Forge Blessing Ceremony',
+          description: 'Participate in traditional forge blessing rituals',
+          type: 'cultural',
+          category: 'tradition',
+          requirements: {},
+          effects: { spiritualWellbeing: 0.1, craftInspiration: 0.05 },
+          branches: [
+            {
+              text: 'Offer prayers to forge spirits',
+              effects: { spiritualConnection: 0.1 },
+              outcomes: ['Connect with traditional smithing spiritual beliefs']
+            },
+            {
+              text: 'Share craft stories',
+              effects: { inspiration: 0.1 },
+              outcomes: ['Hear legendary stories of master smiths and their creations']
+            }
+          ]
+        }
+      ]
     },
     {
       id: 'ironhold-mining-complex',
@@ -89,7 +198,72 @@ const ironholdDominionConfig = {
       capacity: {
         maxCharacters: 50,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'mining_work',
+          name: 'Mining Work',
+          description: 'Work in the mines extracting ore and minerals',
+          type: 'labor',
+          category: 'mining',
+          requirements: { strength: 14, constitution: 15 },
+          effects: { wealth: 10, miningSkill: 0.1, experience: 1 },
+          branches: [
+            {
+              text: 'Extract iron ore',
+              effects: { oreYield: 1.2, physicalEndurance: 0.05 },
+              outcomes: ['Mine iron ore for the forges and weapon production']
+            },
+            {
+              text: 'Search for precious minerals',
+              effects: { discoveryChance: 0.1, wealth: 5 },
+              outcomes: ['Look for valuable minerals and gem deposits']
+            }
+          ]
+        },
+        {
+          id: 'safety_briefing',
+          name: 'Safety Briefing',
+          description: 'Learn and practice mine safety procedures',
+          type: 'educational',
+          category: 'safety',
+          requirements: {},
+          effects: { safetyKnowledge: 0.15 },
+          branches: [
+            {
+              text: 'Study cave-in prevention',
+              effects: { knowledge: 'structural_integrity' },
+              outcomes: ['Learn techniques to prevent mine collapses']
+            },
+            {
+              text: 'Practice emergency procedures',
+              effects: { emergencyPreparedness: 0.1 },
+              outcomes: ['Drill emergency evacuation and rescue procedures']
+            }
+          ]
+        },
+        {
+          id: 'miner_gathering',
+          name: 'Miner Gathering',
+          description: 'Join fellow miners for discussions and celebrations',
+          type: 'social',
+          category: 'community',
+          requirements: {},
+          effects: { camaraderie: 0.1, miningStories: 0.05 },
+          branches: [
+            {
+              text: 'Share mining experiences',
+              effects: { knowledge: 'mining_techniques' },
+              outcomes: ['Exchange tips and stories about mining challenges']
+            },
+            {
+              text: 'Celebrate discoveries',
+              effects: { morale: 0.15 },
+              outcomes: ['Celebrate recent mineral finds and mining successes']
+            }
+          ]
+        }
+      ]
     },
     {
       id: 'ironhold-barracks',
@@ -111,7 +285,72 @@ const ironholdDominionConfig = {
       capacity: {
         maxCharacters: 40,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'combat_training',
+          name: 'Combat Training',
+          description: 'Participate in military combat training exercises',
+          type: 'military',
+          category: 'training',
+          requirements: { strength: 12, dexterity: 12 },
+          effects: { combatSkill: 0.15, physicalFitness: 0.1 },
+          branches: [
+            {
+              text: 'Practice sword techniques',
+              effects: { weaponProficiency: 0.2 },
+              outcomes: ['Improve sword fighting skills and defensive techniques']
+            },
+            {
+              text: 'Train in formation combat',
+              effects: { unitCoordination: 0.15 },
+              outcomes: ['Learn to fight effectively as part of a military unit']
+            }
+          ]
+        },
+        {
+          id: 'morning_drill',
+          name: 'Morning Drill',
+          description: 'Participate in daily military discipline and fitness training',
+          type: 'military',
+          category: 'discipline',
+          requirements: { constitution: 13 },
+          effects: { discipline: 0.1, physicalFitness: 0.05 },
+          branches: [
+            {
+              text: 'Marching drills',
+              effects: { endurance: 0.1 },
+              outcomes: ['Build stamina through disciplined marching exercises']
+            },
+            {
+              text: 'Discipline exercises',
+              effects: { mentalResilience: 0.1 },
+              outcomes: ['Strengthen mental discipline and unit cohesion']
+            }
+          ]
+        },
+        {
+          id: 'unit_bonding',
+          name: 'Unit Bonding',
+          description: 'Strengthen relationships within military units',
+          type: 'social',
+          category: 'camaraderie',
+          requirements: {},
+          effects: { unitMorale: 0.1, loyalty: 0.05 },
+          branches: [
+            {
+              text: 'Share battle stories',
+              effects: { inspiration: 0.1 },
+              outcomes: ['Learn from experienced soldiers\' combat experiences']
+            },
+            {
+              text: 'Practice team exercises',
+              effects: { teamwork: 0.15 },
+              outcomes: ['Build trust and coordination through group activities']
+            }
+          ]
+        }
+      ]
     }
   ],
 

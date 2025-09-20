@@ -82,7 +82,7 @@ class CharacterBehaviorModifierService extends BaseDomainService {
     }
 
     const needs = settlement.needSatisfaction.current;
-    const interactionType = interaction.type || interaction.category || 'unknown';
+    const interactionType = interaction.type || interaction.category || 'system';
 
     // Apply need-based modifiers
     if (needs.food < 0.3 && (interactionType.includes('farm') || interactionType.includes('hunt'))) {

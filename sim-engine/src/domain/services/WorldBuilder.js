@@ -1388,7 +1388,39 @@ class WorldBuilder {
     }));
     const simulationInteractions = new Map(this.worldConfig.interactions.map(i => [i.id, { ...i }]));
 
-    // Populate nodes with character references and content interactions
+    // Process settlements with proper population structures
+    const simulationSettlements = new Map();
+    if (this.worldConfig.settlements) {
+      this.worldConfig.settlements.forEach(settlement => {
+        // Ensure settlement has proper population structure
+        if (!settlement.population || typeof settlement.population !== 'object') {
+          // Calculate from available data
+          let totalPop = 100; // default
+          if (settlement.populationGroups) {
+            totalPop = settlement.populationGroups.reduce((sum, g) => sum + (g.count || g.size || 0), 0) || 100;
+          } else if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
+            totalPop = settlement.assignedCharacters.length;
+          }
+
+          settlement.population = {
+            total: totalPop,
+            groups: settlement.populationGroups || [],
+            lastUpdated: 0
+          };
+
+          console.log(`WorldBuilder: Initialized population structure for settlement ${settlement.name}: ${totalPop} total`);
+        } else if (typeof settlement.population === 'number') {
+          // Convert simple number to object structure
+          settlement.population = {
+            total: settlement.population,
+            groups: settlement.populationGroups || [],
+            lastUpdated: 0
+          };
+        }
+
+        simulationSettlements.set(settlement.id, { ...settlement });
+      });
+    }
     for (const [nodeId, characterIds] of Object.entries(this.worldConfig.nodePopulations)) {
       const node = simulationNodes.get(nodeId);
       if (node) {

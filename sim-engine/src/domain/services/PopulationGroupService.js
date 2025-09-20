@@ -50,10 +50,10 @@ class PopulationGroupService extends BaseDomainService {
         },
         dominantPersonality: config.dominantPersonality || {},
         groupCohesion: config.groupCohesion || 0.5,
-        averageWealth: config.averageWealth || 0,
-        occupation: config.occupation || 'general',
-        productivity: config.productivity || 1.0,
-        skillLevel: config.skillLevel || 1,
+        averageWealth: config.averageWealth || this._calculateBaseWealthForCitizenTier(config.citizenTier),
+        occupation: config.occupation || this._getDefaultOccupationForCitizenTier(config.citizenTier),
+        productivity: config.productivity || this._calculateBaseProductivityForCitizenTier(config.citizenTier),
+        skillLevel: config.skillLevel || this._calculateBaseSkillLevelForCitizenTier(config.citizenTier),
         activityPatterns: config.activityPatterns || {},
         socialTendencies: config.socialTendencies || {},
         politicalLeanings: config.politicalLeanings || { law: 0, good: 0 },
@@ -65,7 +65,8 @@ class PopulationGroupService extends BaseDomainService {
         lastRepresentativeUpdate: config.lastRepresentativeUpdate || null,
         demographicTrends: config.demographicTrends || {},
         behaviorHistory: config.behaviorHistory || [],
-        lastStatisticalUpdate: config.lastStatisticalUpdate || Date.now()
+        lastStatisticalUpdate: config.lastStatisticalUpdate || Date.now(),
+        citizenTier: config.citizenTier || 'CITIZEN' // CITIZEN TIER INTEGRATION
       });
 
       // Store the group
@@ -120,10 +121,12 @@ class PopulationGroupService extends BaseDomainService {
         updatedFields.push('averageAge');
       }
 
-      // Calculate average wealth
+      // Calculate average wealth with citizen tier consideration
       const averageWealth = members.reduce((sum, m) => sum + (m.wealth || 0), 0) / members.length;
-      if (averageWealth !== group.averageWealth) {
-        group.averageWealth = averageWealth;
+      const citizenTierWealthMultiplier = this._getCitizenTierWealthMultiplier(group.citizenTier);
+      const adjustedAverageWealth = averageWealth * citizenTierWealthMultiplier;
+      if (adjustedAverageWealth !== group.averageWealth) {
+        group.averageWealth = adjustedAverageWealth;
         updatedFields.push('averageWealth');
       }
 
@@ -138,6 +141,20 @@ class PopulationGroupService extends BaseDomainService {
       if (members.length !== group.size) {
         group.size = members.length;
         updatedFields.push('size');
+      }
+
+      // CITIZEN TIER INTEGRATION: Update productivity based on citizen tier
+      const citizenTierProductivity = this._calculateBaseProductivityForCitizenTier(group.citizenTier);
+      if (citizenTierProductivity !== group.productivity) {
+        group.productivity = citizenTierProductivity;
+        updatedFields.push('productivity');
+      }
+
+      // CITIZEN TIER INTEGRATION: Update skill level based on citizen tier
+      const citizenTierSkillLevel = this._calculateBaseSkillLevelForCitizenTier(group.citizenTier);
+      if (citizenTierSkillLevel !== group.skillLevel) {
+        group.skillLevel = citizenTierSkillLevel;
+        updatedFields.push('skillLevel');
       }
 
       group.lastStatisticalUpdate = Date.now();
@@ -694,6 +711,82 @@ class PopulationGroupService extends BaseDomainService {
   _calculateRiskTolerance(group, context) {
     // Risk tolerance based on group characteristics
     return (group.politicalLeanings.good + 1) / 2; // Convert -1..1 to 0..1
+  }
+
+  /**
+   * CITIZEN TIER INTEGRATION: Calculate base wealth for citizen tier
+   * @private
+   */
+  _calculateBaseWealthForCitizenTier(citizenTier) {
+    if (!citizenTier) return 50; // Default wealth
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 200; // Leaders have higher wealth
+      case 'SPECIALIST':
+        return 120; // Specialists have moderate wealth
+      case 'CITIZEN':
+        return 50; // Citizens have standard wealth
+      default:
+        return 50; // Unknown tiers get standard wealth
+    }
+  }
+
+  /**
+   * CITIZEN TIER INTEGRATION: Get default occupation for citizen tier
+   * @private
+   */
+  _getDefaultOccupationForCitizenTier(citizenTier) {
+    if (!citizenTier) return 'general';
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 'leadership';
+      case 'SPECIALIST':
+        return 'specialized';
+      case 'CITIZEN':
+        return 'general';
+      default:
+        return 'general';
+    }
+  }
+
+  /**
+   * CITIZEN TIER INTEGRATION: Calculate base productivity for citizen tier
+   * @private
+   */
+  _calculateBaseProductivityForCitizenTier(citizenTier) {
+    if (!citizenTier) return 1.0; // Default productivity
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 1.3; // Leaders are more productive
+      case 'SPECIALIST':
+        return 1.2; // Specialists are productive
+      case 'CITIZEN':
+        return 1.0; // Citizens have standard productivity
+      default:
+        return 1.0; // Unknown tiers get standard productivity
+    }
+  }
+
+  /**
+   * CITIZEN TIER INTEGRATION: Get wealth multiplier for citizen tier
+   * @private
+   */
+  _getCitizenTierWealthMultiplier(citizenTier) {
+    if (!citizenTier) return 1.0; // Default multiplier
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 1.5; // Leaders have 50% more wealth
+      case 'SPECIALIST':
+        return 1.2; // Specialists have 20% more wealth
+      case 'CITIZEN':
+        return 1.0; // Citizens have standard wealth
+      default:
+        return 1.0; // Unknown tiers get standard wealth
+    }
   }
 }
 

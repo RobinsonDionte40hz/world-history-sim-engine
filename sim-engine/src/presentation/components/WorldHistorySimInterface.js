@@ -135,6 +135,27 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
           trend={lodStats?.background > 0 ? "Aggregate" : "None"}
           color="gray"
         />
+        <StatCard
+          icon={<span className="text-2xl">👑</span>}
+          label="Leader Citizens"
+          value={characters.filter(c => c.citizenTier === 'LEADER').length}
+          trend={characters.filter(c => c.citizenTier === 'LEADER').length > 0 ? "1.5x Multiplier" : "None"}
+          color="purple"
+        />
+        <StatCard
+          icon={<span className="text-2xl">⚡</span>}
+          label="Specialist Citizens"
+          value={characters.filter(c => c.citizenTier === 'SPECIALIST').length}
+          trend={characters.filter(c => c.citizenTier === 'SPECIALIST').length > 0 ? "1.25x Multiplier" : "None"}
+          color="blue"
+        />
+        <StatCard
+          icon={<span className="text-2xl">👥</span>}
+          label="Citizen NPCs"
+          value={characters.filter(c => c.citizenTier === 'CITIZEN').length}
+          trend={characters.filter(c => c.citizenTier === 'CITIZEN').length > 0 ? "Base Processing" : "None"}
+          color="green"
+        />
       </div>
 
       {/* NPC Activity Panel - Show NPC decisions and actions with LOD tabs */}
@@ -208,6 +229,17 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {npc.name || `NPC ${index + 1}`}
                         </p>
+                        {/* Citizen Tier Badge */}
+                        {npc.citizenTier && (
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            npc.citizenTier === 'LEADER' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                            npc.citizenTier === 'SPECIALIST' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          }`}>
+                            {npc.citizenTier}
+                          </span>
+                        )}
+                        {/* LOD Tier Badge */}
                         {npc.lodTier && (
                           <span className={`px-2 py-0.5 text-xs rounded-full ${
                             npc.lodTier === 'hero' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
@@ -228,6 +260,12 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
                         <span>Energy: {npc.energy || 0}/100</span>
                         <span>Mood: {npc.mood || 0}/100</span>
                         <span>Health: {npc.health || 0}/100</span>
+                        {npc.wealth !== undefined && (
+                          <span>Wealth: {npc.wealth}</span>
+                        )}
+                        {npc.influence !== undefined && (
+                          <span>Influence: {npc.influence}</span>
+                        )}
                       </div>
                     </div>
                     {npc.lastInteractionType && (

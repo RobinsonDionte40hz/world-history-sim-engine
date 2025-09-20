@@ -169,6 +169,38 @@ class SimulationService {
       }
     });
 
+    // Initialize settlement population structures
+    settlementArray.forEach(settlement => {
+      // Ensure population structure exists
+      if (!settlement.population || typeof settlement.population !== 'object') {
+        // Calculate from population groups if available
+        let totalPop = 100; // default
+        
+        if (settlement.populationGroups && Array.isArray(settlement.populationGroups)) {
+          totalPop = settlement.populationGroups.reduce((sum, group) => 
+            sum + (group.count || group.size || 0), 0
+          );
+        } else if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
+          totalPop = settlement.assignedCharacters.length;
+        }
+        
+        settlement.population = {
+          total: totalPop,
+          groups: settlement.populationGroups || [],
+          lastUpdated: 0
+        };
+        
+        console.log(`Initialized population structure for settlement ${settlement.name}: ${totalPop} total`);
+      } else if (typeof settlement.population === 'number') {
+        // Convert simple number to object structure
+        settlement.population = {
+          total: settlement.population,
+          groups: settlement.populationGroups || [],
+          lastUpdated: 0
+        };
+      }
+    });
+
     // Build simulation state
     const worldState = {
       time: 0,
@@ -354,6 +386,9 @@ class SimulationService {
     });
 
     try {
+      // Validate data structures before processing
+      this.validateWorldStateBeforeProcessing();
+
       const previousTime = this.worldState.time;
       const previousState = this.deepCloneState(this.worldState);
       
@@ -392,6 +427,13 @@ class SimulationService {
         // Ensure characters field is updated from npcs if needed
         characters: updatedState.npcs || updatedState.characters || this.worldState.characters
       };
+
+      // Increment time for turn-based progression
+      if (typeof this.worldState.time === 'number') {
+        this.worldState.time += 1;
+      } else {
+        this.worldState.time = 1; // Start from turn 1 if time wasn't set
+      }
 
       // Validate that the turn operation succeeded
       if (!this.worldState) {
@@ -445,7 +487,11 @@ class SimulationService {
       
     } catch (turnError) {
       console.error('Error during turn processing:', turnError);
-      throw turnError;
+      return {
+        success: false,
+        error: turnError.message,
+        worldState: this.worldState // Include current state even on error
+      };
     }
   }
 
@@ -1067,6 +1113,74 @@ class SimulationService {
     }
 
     console.log('World state integrity validated successfully');
+  }
+
+  // Validate data structures before turn processing to catch issues early
+  validateWorldStateBeforeProcessing() {
+    console.log('Validating and fixing world state data structures before turn processing...');
+
+    if (!this.worldState) {
+      throw new Error('World state is null or undefined');
+    }
+
+    // Auto-fix settlements with missing population
+    let fixedCount = 0;
+    if (this.worldState.settlements && Array.isArray(this.worldState.settlements)) {
+      this.worldState.settlements.forEach(settlement => {
+        if (!settlement.population || settlement.population.total === undefined) {
+          console.warn(`Auto-fixing population for settlement ${settlement.name || settlement.id}`);
+
+          // Calculate from available data
+          let total = 100; // default
+          if (settlement.populationGroups) {
+            total = settlement.populationGroups.reduce((sum, g) => sum + (g.count || g.size || 0), 0) || 100;
+          } else if (settlement.assignedCharacters && Array.isArray(settlement.assignedCharacters)) {
+            total = settlement.assignedCharacters.length;
+          }
+
+          settlement.population = {
+            total: total,
+            groups: settlement.populationGroups || [],
+            lastUpdated: this.worldState.time || 0
+          };
+          fixedCount++;
+        } else if (typeof settlement.population === 'number') {
+          // Convert simple number to object structure
+          settlement.population = {
+            total: settlement.population,
+            groups: settlement.populationGroups || [],
+            lastUpdated: this.worldState.time || 0
+          };
+          fixedCount++;
+        }
+      });
+    }
+
+    if (fixedCount > 0) {
+      console.log(`Auto-fixed population structure for ${fixedCount} settlements`);
+    }
+
+    // Validate characters have currentNodeId (keep existing logic)
+    if (this.worldState.characters && Array.isArray(this.worldState.characters)) {
+      const invalidCharacters = this.worldState.characters.filter(character => {
+        if (!character.currentNodeId) {
+          console.warn(`Character ${character.name || character.id} missing currentNodeId`);
+          return true;
+        }
+        return false;
+      });
+
+      if (invalidCharacters.length > 0) {
+        console.error('Characters missing currentNodeId:', invalidCharacters.map(c => ({
+          id: c.id,
+          name: c.name,
+          currentNodeId: c.currentNodeId
+        })));
+        throw new Error(`${invalidCharacters.length} characters are missing currentNodeId. All characters must be assigned to a node.`);
+      }
+    }
+
+    console.log('World state data structure validation and auto-fix completed successfully');
   }
 }
 

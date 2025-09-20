@@ -7,6 +7,34 @@
 // TODO: Refactor to use InteractionFactory once module system is consistent
 // const ContentInteraction = require('../../domain/entities/interactions/ContentInteraction.js');
 
+// Import BasicNeedsService for citizen tier assignments
+// const BasicNeedsService = require('../../domain/services/BasicNeedsService.js');
+
+// Static reference to economic profiles to avoid module import issues
+const ECONOMIC_PROFILES = {
+  LEADER: {
+    productionCapacity: 0.1, // 10% of settlement production
+    consumptionMultiplier: 2.0, // Consumes 2x basic needs
+    wealthAccumulation: 0.3, // Accumulates wealth 30% faster
+    economicInfluence: 0.8, // High influence on settlement economy
+    investmentCapacity: 5.0 // Can make large investments
+  },
+  SPECIALIST: {
+    productionCapacity: 0.4, // 40% of settlement production
+    consumptionMultiplier: 1.3, // Consumes 1.3x basic needs
+    wealthAccumulation: 0.15, // Accumulates wealth 15% faster
+    economicInfluence: 0.4, // Moderate influence on settlement economy
+    investmentCapacity: 2.0 // Can make moderate investments
+  },
+  CITIZEN: {
+    productionCapacity: 0.5, // 50% of settlement production
+    consumptionMultiplier: 1.0, // Consumes basic needs
+    wealthAccumulation: 0.05, // Accumulates wealth 5% faster
+    economicInfluence: 0.1, // Low influence on settlement economy
+    investmentCapacity: 0.5 // Limited investment capacity
+  }
+};
+
 /**
  * DemoService - Provides pre-built demo worlds for quick exploration
  * 
@@ -1198,80 +1226,102 @@ class DemoService {
     };
 
     // Create hero characters for Oakwood
-    const oakwoodHeroCharacters = oakwoodConfig.heroCharacters.map(char => ({
-      id: char.id,
-      name: char.name,
-      lodTier: 'hero',
-      characterType: { typeId: 'hero', category: 'npc' },
-      attributes: char.attributes,
-      consciousness: char.consciousness,
-      personality: char.personality,
-      assignments: {
-        nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
-        interactions: new Set(),
-        settlements: new Set([oakwoodConfig.id])
-      },
-      currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
-      background: char.role || 'Hero character'
-    }));
+    const oakwoodHeroCharacters = oakwoodConfig.heroCharacters.map(char => {
+      const character = {
+        id: char.id,
+        name: char.name,
+        lodTier: 'hero',
+        characterType: { typeId: 'hero', category: 'npc' },
+        attributes: char.attributes,
+        consciousness: char.consciousness,
+        personality: char.personality,
+        assignments: {
+          nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+          interactions: new Set(),
+          settlements: new Set([oakwoodConfig.id])
+        },
+        currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
+        background: char.role || 'Hero character'
+      };
+
+      // Assign citizen tier
+      return this._assignCitizenTier(character, 'hero');
+    });
 
     // Create hero characters for Ironhold
-    const ironholdHeroCharacters = ironholdConfig.heroCharacters.map(char => ({
-      id: char.id,
-      name: char.name,
-      lodTier: 'hero',
-      characterType: { typeId: 'hero', category: 'npc' },
-      attributes: char.attributes,
-      consciousness: char.consciousness,
-      personality: char.personality,
-      assignments: {
-        nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
-        interactions: new Set(),
-        settlements: new Set([ironholdConfig.id])
-      },
-      currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
-      background: char.role || 'Hero character'
-    }));
+    const ironholdHeroCharacters = ironholdConfig.heroCharacters.map(char => {
+      const character = {
+        id: char.id,
+        name: char.name,
+        lodTier: 'hero',
+        characterType: { typeId: 'hero', category: 'npc' },
+        attributes: char.attributes,
+        consciousness: char.consciousness,
+        personality: char.personality,
+        assignments: {
+          nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+          interactions: new Set(),
+          settlements: new Set([ironholdConfig.id])
+        },
+        currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
+        background: char.role || 'Hero character'
+      };
+
+      // Assign citizen tier
+      return this._assignCitizenTier(character, 'hero');
+    });
 
     // Create group-level characters for Oakwood population groups
-    const oakwoodGroupCharacters = oakwoodConfig.populationGroups.map(group => ({
-      id: group.id,
-      name: group.name,
-      lodTier: 'group',
-      populationGroupId: group.id,
-      characterType: { typeId: 'group', category: 'npc' },
-      groupStatistics: group.statistics,
-      assignments: {
-        nodes: new Set([group.assignedNode]),
-        interactions: new Set(),
-        settlements: new Set([oakwoodConfig.id])
-      },
-      currentNodeId: group.assignedNode,
-      background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
-    }));
+    const oakwoodGroupCharacters = oakwoodConfig.populationGroups.map(group => {
+      const character = {
+        id: group.id,
+        name: group.name,
+        lodTier: 'group',
+        populationGroupId: group.id,
+        characterType: { typeId: 'group', category: 'npc' },
+        demographics: group.demographics,
+        groupStatistics: group.statistics,
+        assignments: {
+          nodes: new Set([group.assignedNode]),
+          interactions: new Set(),
+          settlements: new Set([oakwoodConfig.id])
+        },
+        currentNodeId: group.assignedNode,
+        background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
+      };
+
+      // Assign citizen tier
+      return this._assignCitizenTier(character, 'group');
+    });
 
     // Create group-level characters for Ironhold population groups
-    const ironholdGroupCharacters = ironholdConfig.populationGroups.map(group => ({
-      id: group.id,
-      name: group.name,
-      lodTier: 'group',
-      populationGroupId: group.id,
-      characterType: { typeId: 'group', category: 'npc' },
-      groupStatistics: group.statistics,
-      assignments: {
-        nodes: new Set([group.assignedNode]),
-        interactions: new Set(),
-        settlements: new Set([ironholdConfig.id])
-      },
-      currentNodeId: group.assignedNode,
-      background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
-    }));
+    const ironholdGroupCharacters = ironholdConfig.populationGroups.map(group => {
+      const character = {
+        id: group.id,
+        name: group.name,
+        lodTier: 'group',
+        populationGroupId: group.id,
+        characterType: { typeId: 'group', category: 'npc' },
+        demographics: group.demographics,
+        groupStatistics: group.statistics,
+        assignments: {
+          nodes: new Set([group.assignedNode]),
+          interactions: new Set(),
+          settlements: new Set([ironholdConfig.id])
+        },
+        currentNodeId: group.assignedNode,
+        background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
+      };
+
+      // Assign citizen tier
+      return this._assignCitizenTier(character, 'group');
+    });
 
     // Create individual background characters for Oakwood
     const oakwoodBackgroundCharacters = [];
     oakwoodConfig.populationGroups.forEach(group => {
       for (let i = 0; i < group.size; i++) {
-        oakwoodBackgroundCharacters.push({
+        const character = {
           id: `${group.id}-bg-${i}`,
           name: `${group.name} ${i + 1}`,
           lodTier: 'background',
@@ -1289,7 +1339,10 @@ class DemoService {
           },
           currentNodeId: group.assignedNode,
           background: `${group.demographics.occupation} in ${group.name}`
-        });
+        };
+
+        // Assign citizen tier
+        oakwoodBackgroundCharacters.push(this._assignCitizenTier(character, 'background'));
       }
     });
 
@@ -1297,7 +1350,7 @@ class DemoService {
     const ironholdBackgroundCharacters = [];
     ironholdConfig.populationGroups.forEach(group => {
       for (let i = 0; i < group.size; i++) {
-        ironholdBackgroundCharacters.push({
+        const character = {
           id: `${group.id}-bg-${i}`,
           name: `${group.name} ${i + 1}`,
           lodTier: 'background',
@@ -1315,11 +1368,14 @@ class DemoService {
           },
           currentNodeId: group.assignedNode,
           background: `${group.demographics.occupation} in ${group.name}`
-        });
+        };
+
+        // Assign citizen tier
+        ironholdBackgroundCharacters.push(this._assignCitizenTier(character, 'background'));
       }
     });
 
-    // Combine all characters
+    // Combine all Characters
     const allCharacters = [
       ...oakwoodHeroCharacters,
       ...ironholdHeroCharacters,
@@ -1401,6 +1457,96 @@ class DemoService {
       }
     };
   }
+
+  /**
+   * Assign citizen tier to a character based on their properties
+   * @private
+   * @param {Object} character - Character object to assign tier to
+   * @param {string} lodTier - LOD tier (hero, group, background)
+   * @returns {Object} Character with citizen tier assigned
+   */
+  static _assignCitizenTier(character, lodTier) {
+    let citizenTier = 'CITIZEN'; // Default tier
+
+    if (lodTier === 'hero') {
+      // Hero characters get tier based on their role
+      const role = character.role || character.background || '';
+      const roleLower = role.toLowerCase();
+
+      if (roleLower.includes('council') || roleLower.includes('chair') ||
+          roleLower.includes('leader') || roleLower.includes('governor') ||
+          roleLower.includes('administrator') || roleLower.includes('lord')) {
+        citizenTier = 'LEADER';
+      } else if (roleLower.includes('merchant') || roleLower.includes('guild') ||
+                 roleLower.includes('master') || roleLower.includes('specialist') ||
+                 roleLower.includes('captain') || roleLower.includes('chief')) {
+        citizenTier = 'SPECIALIST';
+      } else {
+        citizenTier = 'CITIZEN';
+      }
+    } else if (lodTier === 'group') {
+      // Group characters get tier based on demographics
+      const demographics = character.demographics || character.groupStatistics || {};
+      const economicClass = demographics.economicClass || 'working';
+      const occupation = demographics.occupation || '';
+
+      if (economicClass === 'upper' || economicClass === 'upper_middle' ||
+          occupation.includes('administrator') || occupation.includes('leader')) {
+        citizenTier = 'LEADER';
+      } else if (economicClass === 'middle' || economicClass === 'upper_middle' ||
+                 ['merchant', 'artisan', 'specialist', 'guild'].some(term => occupation.includes(term))) {
+        citizenTier = 'SPECIALIST';
+      } else {
+        citizenTier = 'CITIZEN';
+      }
+    } else if (lodTier === 'background') {
+      // Background characters get tier based on demographic data
+      const demographicData = character.demographicData || {};
+      const economicClass = demographicData.economicClass || 'working';
+      const occupation = demographicData.occupation || '';
+
+      if (economicClass === 'upper' || economicClass === 'upper_middle' ||
+          occupation.includes('administrator') || occupation.includes('leader')) {
+        citizenTier = 'LEADER';
+      } else if (economicClass === 'middle' || economicClass === 'upper_middle' ||
+                 ['merchant', 'artisan', 'specialist', 'guild'].some(term => occupation.includes(term))) {
+        citizenTier = 'SPECIALIST';
+      } else {
+        citizenTier = 'CITIZEN';
+      }
+    }
+
+    // Apply the tier profile from BasicNeedsService
+    const tierProfile = ECONOMIC_PROFILES[citizenTier];
+
+    return {
+      ...character,
+      citizenTier: citizenTier,
+      economicProfile: tierProfile,
+      // Add economic properties based on tier
+      wealth: character.wealth || this._calculateInitialWealth(citizenTier, lodTier),
+      economicInfluence: tierProfile.economicInfluence,
+      productionCapacity: tierProfile.productionCapacity,
+      consumptionMultiplier: tierProfile.consumptionMultiplier
+    };
+  }
+
+  /**
+   * Calculate initial wealth based on citizen tier and LOD level
+   * @private
+   * @param {string} citizenTier - Citizen tier (LEADER, SPECIALIST, CITIZEN)
+   * @param {string} lodTier - LOD tier (hero, group, background)
+   * @returns {number} Initial wealth amount
+   */
+  static _calculateInitialWealth(citizenTier, lodTier) {
+    const baseWealth = {
+      LEADER: { hero: 500, group: 300, background: 200 },
+      SPECIALIST: { hero: 300, group: 150, background: 100 },
+      CITIZEN: { hero: 150, group: 75, background: 50 }
+    };
+
+    return baseWealth[citizenTier]?.[lodTier] || 50;
+  }
 }
 
-export default DemoService;
+module.exports = DemoService;

@@ -41,7 +41,13 @@ const LODStatusIndicator = ({
         hero: characters.filter(c => c.lodTier === 'hero').length,
         group: characters.filter(c => c.lodTier === 'group').length,
         background: characters.filter(c => c.lodTier === 'background').length,
-        total: characters.length
+        total: characters.length,
+        // Citizen tier breakdown
+        citizenTier: {
+          LEADER: characters.filter(c => c.citizenTier === 'LEADER').length,
+          SPECIALIST: characters.filter(c => c.citizenTier === 'SPECIALIST').length,
+          CITIZEN: characters.filter(c => c.citizenTier === 'CITIZEN').length
+        }
       };
 
       setLodStats(stats);
@@ -164,6 +170,66 @@ const LODStatusIndicator = ({
                     style={{
                       width: `${lodStats.total > 0 ? (lodStats.background / lodStats.total) * 100 : 0}%`,
                       backgroundColor: getTierColor('background')
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Citizen Tier Breakdown */}
+          <div className="lod-breakdown">
+            <h4>Citizen Tier Distribution</h4>
+            <div className="lod-tiers">
+              <div className="lod-tier" style={{ borderColor: '#8b5cf6' }}>
+                <div className="lod-tier-header">
+                  <span className="lod-tier-icon">👑</span>
+                  <span className="lod-tier-name">Leaders</span>
+                  <span className="lod-tier-count">{lodStats.citizenTier.LEADER}</span>
+                </div>
+                <div className="lod-tier-desc">1.5x processing multiplier</div>
+                <div className="lod-tier-bar">
+                  <div
+                    className="lod-tier-fill"
+                    style={{
+                      width: `${lodStats.total > 0 ? (lodStats.citizenTier.LEADER / lodStats.total) * 100 : 0}%`,
+                      backgroundColor: '#8b5cf6'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="lod-tier" style={{ borderColor: '#3b82f6' }}>
+                <div className="lod-tier-header">
+                  <span className="lod-tier-icon">⚡</span>
+                  <span className="lod-tier-name">Specialists</span>
+                  <span className="lod-tier-count">{lodStats.citizenTier.SPECIALIST}</span>
+                </div>
+                <div className="lod-tier-desc">1.25x processing multiplier</div>
+                <div className="lod-tier-bar">
+                  <div
+                    className="lod-tier-fill"
+                    style={{
+                      width: `${lodStats.total > 0 ? (lodStats.citizenTier.SPECIALIST / lodStats.total) * 100 : 0}%`,
+                      backgroundColor: '#3b82f6'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="lod-tier" style={{ borderColor: '#10b981' }}>
+                <div className="lod-tier-header">
+                  <span className="lod-tier-icon">👥</span>
+                  <span className="lod-tier-name">Citizens</span>
+                  <span className="lod-tier-count">{lodStats.citizenTier.CITIZEN}</span>
+                </div>
+                <div className="lod-tier-desc">1.0x base processing</div>
+                <div className="lod-tier-bar">
+                  <div
+                    className="lod-tier-fill"
+                    style={{
+                      width: `${lodStats.total > 0 ? (lodStats.citizenTier.CITIZEN / lodStats.total) * 100 : 0}%`,
+                      backgroundColor: '#10b981'
                     }}
                   />
                 </div>

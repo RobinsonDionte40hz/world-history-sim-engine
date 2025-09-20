@@ -45,7 +45,51 @@ const oakwoodFederationConfig = {
       capacity: {
         maxCharacters: 25,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'council_meeting',
+          name: 'Attend Council Meeting',
+          description: 'Participate in federation governance discussions',
+          type: 'social',
+          category: 'governance',
+          requirements: { citizenTier: 'LEADER' },
+          effects: { reputation: 5, influence: 0.1 },
+          branches: [
+            {
+              text: 'Discuss trade policies',
+              effects: { knowledge: 'trade_policy' },
+              outcomes: ['Learn about current trade agreements with neighboring settlements']
+            },
+            {
+              text: 'Address community concerns',
+              effects: { knowledge: 'community_issues' },
+              outcomes: ['Hear about local problems and proposed solutions']
+            }
+          ]
+        },
+        {
+          id: 'diplomatic_negotiations',
+          name: 'Diplomatic Negotiations',
+          description: 'Engage in diplomatic discussions with other settlements',
+          type: 'social',
+          category: 'diplomacy',
+          requirements: { charisma: 14, citizenTier: 'LEADER' },
+          effects: { diplomaticRelations: 0.1 },
+          branches: [
+            {
+              text: 'Negotiate trade agreement',
+              effects: { tradeAgreement: true },
+              outcomes: ['Successfully establish new trade routes']
+            },
+            {
+              text: 'Discuss mutual defense',
+              effects: { allianceStrength: 0.2 },
+              outcomes: ['Strengthen defensive alliances with neighboring settlements']
+            }
+          ]
+        }
+      ]
     },
     {
       id: 'oakwood-market-district',
@@ -67,7 +111,72 @@ const oakwoodFederationConfig = {
       capacity: {
         maxCharacters: 40,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'guild_meeting',
+          name: 'Attend Guild Meeting',
+          description: 'Participate in merchant or artisan guild discussions',
+          type: 'social',
+          category: 'economic',
+          requirements: { citizenTier: 'SPECIALIST' },
+          effects: { guildStanding: 0.1, knowledge: 'market_trends' },
+          branches: [
+            {
+              text: 'Discuss pricing strategies',
+              effects: { knowledge: 'pricing_strategy' },
+              outcomes: ['Learn about market pricing and negotiation tactics']
+            },
+            {
+              text: 'Share business opportunities',
+              effects: { businessContacts: 1 },
+              outcomes: ['Gain new business contacts and opportunities']
+            }
+          ]
+        },
+        {
+          id: 'craftsman_training',
+          name: 'Apprentice Training',
+          description: 'Learn or teach artisanal skills',
+          type: 'educational',
+          category: 'craft',
+          requirements: { dexterity: 12 },
+          effects: { skillImprovement: 0.1 },
+          branches: [
+            {
+              text: 'Learn woodworking techniques',
+              effects: { skill: 'woodworking', experience: 2 },
+              outcomes: ['Improve woodworking skills through hands-on training']
+            },
+            {
+              text: 'Study metalworking',
+              effects: { skill: 'metalworking', experience: 2 },
+              outcomes: ['Learn basic metalworking techniques and safety']
+            }
+          ]
+        },
+        {
+          id: 'market_bargaining',
+          name: 'Market Bargaining',
+          description: 'Negotiate prices and trade goods',
+          type: 'economic',
+          category: 'trade',
+          requirements: { charisma: 12 },
+          effects: { wealth: 10 },
+          branches: [
+            {
+              text: 'Buy goods at discount',
+              effects: { wealth: -5, goods: 2 },
+              outcomes: ['Successfully negotiate better prices for goods']
+            },
+            {
+              text: 'Sell crafted items',
+              effects: { wealth: 15, reputation: 2 },
+              outcomes: ['Sell handmade goods and build merchant reputation']
+            }
+          ]
+        }
+      ]
     },
     {
       id: 'oakwood-farming-valley',
@@ -89,7 +198,72 @@ const oakwoodFederationConfig = {
       capacity: {
         maxCharacters: 60,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'farm_work',
+          name: 'Work the Fields',
+          description: 'Participate in farming activities',
+          type: 'labor',
+          category: 'agricultural',
+          requirements: { constitution: 12 },
+          effects: { wealth: 8, experience: 1, food: 2 },
+          branches: [
+            {
+              text: 'Plant spring crops',
+              effects: { farmingSkill: 0.1, futureHarvest: 1.2 },
+              outcomes: ['Help plant seasonal crops for better harvest yields']
+            },
+            {
+              text: 'Tend to livestock',
+              effects: { animalHusbandry: 0.1, food: 1 },
+              outcomes: ['Care for farm animals and improve livestock health']
+            }
+          ]
+        },
+        {
+          id: 'farmer_gathering',
+          name: 'Community Gathering',
+          description: 'Join farmers for communal discussions and celebrations',
+          type: 'social',
+          category: 'community',
+          requirements: {},
+          effects: { morale: 0.1, communityBonds: 0.05 },
+          branches: [
+            {
+              text: 'Discuss farming techniques',
+              effects: { knowledge: 'agricultural_methods' },
+              outcomes: ['Learn new farming techniques from experienced farmers']
+            },
+            {
+              text: 'Share harvest stories',
+              effects: { inspiration: 0.1 },
+              outcomes: ['Hear inspiring stories of successful harvests and challenges overcome']
+            }
+          ]
+        },
+        {
+          id: 'harvest_celebration',
+          name: 'Harvest Celebration',
+          description: 'Participate in seasonal harvest festivals',
+          type: 'cultural',
+          category: 'tradition',
+          requirements: { season: 'fall' },
+          effects: { morale: 0.2, culturalUnderstanding: 0.1 },
+          branches: [
+            {
+              text: 'Join the feast',
+              effects: { food: 3, socialBonds: 0.1 },
+              outcomes: ['Enjoy communal feast and strengthen community ties']
+            },
+            {
+              text: 'Perform traditional dances',
+              effects: { culturalSkill: 0.1, reputation: 3 },
+              outcomes: ['Learn and perform traditional harvest dances']
+            }
+          ]
+        }
+      ]
     },
     {
       id: 'oakwood-residential-quarter',
@@ -111,7 +285,72 @@ const oakwoodFederationConfig = {
       capacity: {
         maxCharacters: 35,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'family_meal',
+          name: 'Family Meal',
+          description: 'Share meals with family and neighbors',
+          type: 'social',
+          category: 'family',
+          requirements: {},
+          effects: { morale: 0.15, familyBonds: 0.1 },
+          branches: [
+            {
+              text: 'Discuss family matters',
+              effects: { emotionalSupport: 0.1 },
+              outcomes: ['Strengthen family relationships through open conversation']
+            },
+            {
+              text: 'Share local news',
+              effects: { communityKnowledge: 0.1 },
+              outcomes: ['Learn about recent events and community happenings']
+            }
+          ]
+        },
+        {
+          id: 'neighbor_help',
+          name: 'Help Neighbor',
+          description: 'Assist neighbors with daily tasks and challenges',
+          type: 'social',
+          category: 'community',
+          requirements: {},
+          effects: { reputation: 2, communityStanding: 0.05 },
+          branches: [
+            {
+              text: 'Help with repairs',
+              effects: { constructionSkill: 0.1, neighborGratitude: 0.2 },
+              outcomes: ['Assist with home repairs and earn neighbor appreciation']
+            },
+            {
+              text: 'Share resources',
+              effects: { generosity: 0.1, communityBonds: 0.1 },
+              outcomes: ['Share food or tools with those in need']
+            }
+          ]
+        },
+        {
+          id: 'community_storytelling',
+          name: 'Storytelling Circle',
+          description: 'Gather to share stories and oral traditions',
+          type: 'cultural',
+          category: 'tradition',
+          requirements: { wisdom: 10 },
+          effects: { culturalKnowledge: 0.1, inspiration: 0.1 },
+          branches: [
+            {
+              text: 'Share personal stories',
+              effects: { storytellingSkill: 0.1 },
+              outcomes: ['Practice storytelling and share life experiences']
+            },
+            {
+              text: 'Learn local legends',
+              effects: { knowledge: 'local_legends' },
+              outcomes: ['Learn traditional stories and cultural history']
+            }
+          ]
+        }
+      ]
     }
   ],
 

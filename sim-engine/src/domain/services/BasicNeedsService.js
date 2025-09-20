@@ -1072,6 +1072,654 @@ class BasicNeedsService extends BaseDomainService {
       tier: 'citizen'
     };
   }
+
+  /**
+   * Validate settlement object
+   * @param {Object} settlement - Settlement to validate
+   * @private
+   */
+  _validateSettlement(settlement) {
+    if (!settlement) {
+      throw new Error('Settlement is required');
+    }
+    if (!settlement.id) {
+      throw new Error('Settlement must have a valid id');
+    }
+    if (!settlement.name) {
+      throw new Error('Settlement must have a valid name');
+    }
+
+    // Handle both population structures
+    let totalPopulation = 0;
+
+    if (settlement.population) {
+      if (typeof settlement.population === 'number') {
+        totalPopulation = settlement.population;
+      } else if (settlement.population.total !== undefined) {
+        totalPopulation = settlement.population.total;
+      } else if (settlement.populationGroups?.length > 0) {
+        // Calculate from population groups
+        totalPopulation = settlement.populationGroups.reduce((sum, group) =>
+          sum + (group.count || 0), 0
+        );
+      }
+    }
+
+    // Set normalized population structure
+    if (!settlement.population || typeof settlement.population !== 'object') {
+      settlement.population = { total: totalPopulation };
+    } else if (settlement.population.total === undefined) {
+      settlement.population.total = totalPopulation;
+    }
+
+    if (settlement.population.total === 0 || !Number.isFinite(settlement.population.total)) {
+      console.warn(`Settlement ${settlement.id} has invalid population, using default`);
+      settlement.population.total = 100; // Default population
+    }
+
+    // Ensure the population is valid for calculations
+    if (!settlement.population || typeof settlement.population.total !== 'number') {
+      throw new Error('Settlement must have a valid population with total count');
+    }
+  }
+
+  /**
+   * Calculate food production for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Food production amount
+   * @private
+   */
+  _calculateFoodProduction(settlement, investmentEffects = null) {
+    let production = 0;
+
+    // Production from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'farm' || building.type === 'granary') {
+          production += (building.level || 1) * 10;
+        }
+      });
+    }
+
+    // Production from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession === 'farmer') {
+          production += 8;
+        }
+      });
+    }
+
+    // Base production from settlement size
+    const population = settlement.population?.total || 100;
+    production += Math.floor(population / 20); // 1 food per 20 people
+
+    return production;
+  }
+
+  /**
+   * Calculate food storage capacity for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Food storage capacity
+   * @private
+   */
+  _calculateFoodStorage(settlement, investmentEffects = null) {
+    let storage = 0;
+
+    // Storage from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'granary' || building.type === 'warehouse') {
+          storage += (building.level || 1) * 50;
+        }
+      });
+    }
+
+    // Base storage
+    const population = settlement.population?.total || 100;
+    storage += Math.floor(population / 10); // 1 storage per 10 people
+
+    return storage;
+  }
+
+  /**
+   * Calculate food trade access for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Food trade access amount
+   * @private
+   */
+  _calculateFoodTradeAccess(settlement, investmentEffects = null) {
+    let tradeAccess = 0;
+
+    // Trade access from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'market' || building.type === 'trade_post') {
+          tradeAccess += (building.level || 1) * 5;
+        }
+      });
+    }
+
+    // Trade access from economy
+    if (settlement.economy?.trade) {
+      settlement.economy.trade.forEach(trade => {
+        if (trade.type === 'import' && trade.resource === 'food') {
+          tradeAccess += trade.amount || 0;
+        }
+      });
+    }
+
+    return tradeAccess;
+  }
+
+  /**
+   * Calculate water sources for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Water sources amount
+   * @private
+   */
+  _calculateWaterSources(settlement, investmentEffects = null) {
+    let sources = 0;
+
+    // Natural water sources based on environment
+    if (settlement.environment) {
+      if (settlement.environment.hasRiver) sources += 20;
+      if (settlement.environment.hasLake) sources += 15;
+      if (settlement.environment.hasWell) sources += 5;
+    }
+
+    // Water from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'well' || building.type === 'aqueduct') {
+          sources += (building.level || 1) * 10;
+        }
+      });
+    }
+
+    return sources;
+  }
+
+  /**
+   * Calculate water infrastructure for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Water infrastructure capacity
+   * @private
+   */
+  _calculateWaterInfrastructure(settlement, investmentEffects = null) {
+    let infrastructure = 0;
+
+    // Infrastructure from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'aqueduct' || building.type === 'cistern') {
+          infrastructure += (building.level || 1) * 15;
+        }
+      });
+    }
+
+    return infrastructure;
+  }
+
+  /**
+   * Calculate water storage for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Water storage capacity
+   * @private
+   */
+  _calculateWaterStorage(settlement, investmentEffects = null) {
+    let storage = 0;
+
+    // Storage from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'cistern' || building.type === 'reservoir') {
+          storage += (building.level || 1) * 25;
+        }
+      });
+    }
+
+    return storage;
+  }
+
+  /**
+   * Calculate housing capacity for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Housing capacity
+   * @private
+   */
+  _calculateHousingCapacity(settlement, investmentEffects = null) {
+    let capacity = 0;
+
+    // Housing from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'house' || building.type === 'apartment') {
+          capacity += (building.level || 1) * 4; // 4 people per house
+        }
+      });
+    }
+
+    // Base housing capacity
+    const population = settlement.population?.total || 100;
+    capacity += Math.floor(population / 5); // Basic housing for population
+
+    return capacity;
+  }
+
+  /**
+   * Calculate housing quality for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Housing quality (0-1)
+   * @private
+   */
+  _calculateHousingQuality(settlement, investmentEffects = null) {
+    let quality = 0.5; // Base quality
+
+    // Quality from buildings
+    if (settlement.buildings) {
+      const housingBuildings = settlement.buildings.filter(b =>
+        b.type === 'house' || b.type === 'apartment'
+      );
+
+      if (housingBuildings.length > 0) {
+        const avgLevel = housingBuildings.reduce((sum, b) => sum + (b.level || 1), 0) / housingBuildings.length;
+        quality = Math.min(1.0, 0.5 + (avgLevel - 1) * 0.1);
+      }
+    }
+
+    return quality;
+  }
+
+  /**
+   * Calculate goods production for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Goods production amount
+   * @private
+   */
+  _calculateGoodsProduction(settlement, investmentEffects = null) {
+    let production = 0;
+
+    // Production from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'workshop' || building.type === 'forge') {
+          production += (building.level || 1) * 8;
+        }
+      });
+    }
+
+    // Production from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession === 'craftsman' || character.profession === 'merchant') {
+          production += 6;
+        }
+      });
+    }
+
+    return production;
+  }
+
+  /**
+   * Calculate goods trade access for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Goods trade access amount
+   * @private
+   */
+  _calculateGoodsTradeAccess(settlement, investmentEffects = null) {
+    let tradeAccess = 0;
+
+    // Trade access from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'market' || building.type === 'trade_post') {
+          tradeAccess += (building.level || 1) * 8;
+        }
+      });
+    }
+
+    // Trade access from economy
+    if (settlement.economy?.trade) {
+      settlement.economy.trade.forEach(trade => {
+        if (trade.type === 'import' && trade.resource === 'goods') {
+          tradeAccess += trade.amount || 0;
+        }
+      });
+    }
+
+    return tradeAccess;
+  }
+
+  /**
+   * Calculate market efficiency for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Market efficiency (0-1)
+   * @private
+   */
+  _calculateMarketEfficiency(settlement, investmentEffects = null) {
+    let efficiency = 0.7; // Base efficiency
+
+    // Efficiency from buildings
+    if (settlement.buildings) {
+      const marketBuildings = settlement.buildings.filter(b =>
+        b.type === 'market' || b.type === 'trade_post'
+      );
+
+      if (marketBuildings.length > 0) {
+        const avgLevel = marketBuildings.reduce((sum, b) => sum + (b.level || 1), 0) / marketBuildings.length;
+        efficiency = Math.min(1.0, 0.7 + (avgLevel - 1) * 0.1);
+      }
+    }
+
+    return efficiency;
+  }
+
+  /**
+   * Calculate healthcare capacity for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Healthcare capacity
+   * @private
+   */
+  _calculateHealthcareCapacity(settlement, investmentEffects = null) {
+    let capacity = 0;
+
+    // Healthcare from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'hospital' || building.type === 'clinic') {
+          capacity += (building.level || 1) * 20;
+        }
+      });
+    }
+
+    // Healthcare from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession === 'healer') {
+          capacity += 10;
+        }
+      });
+    }
+
+    return capacity;
+  }
+
+  /**
+   * Calculate education capacity for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Education capacity
+   * @private
+   */
+  _calculateEducationCapacity(settlement, investmentEffects = null) {
+    let capacity = 0;
+
+    // Education from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'school' || building.type === 'library') {
+          capacity += (building.level || 1) * 15;
+        }
+      });
+    }
+
+    // Education from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession === 'teacher') {
+          capacity += 8;
+        }
+      });
+    }
+
+    return capacity;
+  }
+
+  /**
+   * Calculate religious capacity for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Religious capacity
+   * @private
+   */
+  _calculateReligiousCapacity(settlement, investmentEffects = null) {
+    let capacity = 0;
+
+    // Religious from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'temple' || building.type === 'church') {
+          capacity += (building.level || 1) * 12;
+        }
+      });
+    }
+
+    // Religious from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession === 'priest') {
+          capacity += 6;
+        }
+      });
+    }
+
+    return capacity;
+  }
+
+  /**
+   * Calculate administrative capacity for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {number} Administrative capacity
+   * @private
+   */
+  _calculateAdministrativeCapacity(settlement, investmentEffects = null) {
+    let capacity = 0;
+
+    // Administrative from buildings
+    if (settlement.buildings) {
+      settlement.buildings.forEach(building => {
+        if (building.type === 'town_hall' || building.type === 'courthouse') {
+          capacity += (building.level || 1) * 25;
+        }
+      });
+    }
+
+    // Administrative from assigned characters
+    if (settlement.assignedCharacters) {
+      settlement.assignedCharacters.forEach(character => {
+        if (character.profession === 'administrator' || character.role === 'leader') {
+          capacity += 15;
+        }
+      });
+    }
+
+    return capacity;
+  }
+
+  /**
+   * Get investment multiplier for a specific need
+   * @param {Object} investmentEffects - Investment effects
+   * @param {string} needType - Type of need (food, water, shelter, goods, services)
+   * @returns {number} Investment multiplier
+   * @private
+   */
+  _getInvestmentMultiplier(investmentEffects, needType) {
+    if (!investmentEffects) return 1.0;
+
+    const effect = investmentEffects[needType];
+    if (!effect) return 1.0;
+
+    return 1.0 + (effect.multiplier || 0);
+  }
+
+  /**
+   * Generate consequences based on need satisfaction levels
+   * @param {Object} needs - Individual need satisfaction levels
+   * @param {Object} settlement - Settlement context
+   * @param {Object} investmentEffects - Optional investment effects
+   * @returns {Array} Array of consequences
+   * @private
+   */
+  _generateConsequences(needs, settlement, investmentEffects = null) {
+    const consequences = [];
+
+    // Food consequences
+    if (needs.food < 0.5) {
+      consequences.push({
+        type: 'food_shortage',
+        severity: Math.max(0.1, 1.0 - needs.food),
+        description: 'Food shortage affecting settlement productivity',
+        effects: {
+          productivity: -(1.0 - needs.food) * 0.3,
+          health: -(1.0 - needs.food) * 0.2,
+          mood: -(1.0 - needs.food) * 0.4
+        },
+        duration: Math.ceil((1.0 - needs.food) * 10), // Days
+        timestamp: Date.now()
+      });
+    }
+
+    // Water consequences
+    if (needs.water < 0.6) {
+      consequences.push({
+        type: 'water_shortage',
+        severity: Math.max(0.1, 1.0 - needs.water),
+        description: 'Water shortage causing health and productivity issues',
+        effects: {
+          health: -(1.0 - needs.water) * 0.4,
+          productivity: -(1.0 - needs.water) * 0.2,
+          agriculture: -(1.0 - needs.water) * 0.5
+        },
+        duration: Math.ceil((1.0 - needs.water) * 8),
+        timestamp: Date.now()
+      });
+    }
+
+    // Shelter consequences
+    if (needs.shelter < 0.4) {
+      consequences.push({
+        type: 'housing_crisis',
+        severity: Math.max(0.1, 1.0 - needs.shelter),
+        description: 'Housing shortage leading to overcrowding and health issues',
+        effects: {
+          health: -(1.0 - needs.shelter) * 0.3,
+          mood: -(1.0 - needs.shelter) * 0.3,
+          productivity: -(1.0 - needs.shelter) * 0.2
+        },
+        duration: Math.ceil((1.0 - needs.shelter) * 15),
+        timestamp: Date.now()
+      });
+    }
+
+    // Goods consequences
+    if (needs.goods < 0.3) {
+      consequences.push({
+        type: 'goods_shortage',
+        severity: Math.max(0.1, 1.0 - needs.goods),
+        description: 'Goods shortage affecting daily life and economy',
+        effects: {
+          economy: -(1.0 - needs.goods) * 0.4,
+          mood: -(1.0 - needs.goods) * 0.2,
+          productivity: -(1.0 - needs.goods) * 0.1
+        },
+        duration: Math.ceil((1.0 - needs.goods) * 12),
+        timestamp: Date.now()
+      });
+    }
+
+    // Services consequences
+    if (needs.services < 0.4) {
+      consequences.push({
+        type: 'services_shortage',
+        severity: Math.max(0.1, 1.0 - needs.services),
+        description: 'Services shortage impacting health and education',
+        effects: {
+          health: -(1.0 - needs.services) * 0.2,
+          education: -(1.0 - needs.services) * 0.5,
+          mood: -(1.0 - needs.services) * 0.2
+        },
+        duration: Math.ceil((1.0 - needs.services) * 10),
+        timestamp: Date.now()
+      });
+    }
+
+    // Positive consequences for well-satisfied needs
+    if (needs.food > 0.9) {
+      consequences.push({
+        type: 'food_surplus',
+        severity: Math.min(0.5, needs.food - 0.9),
+        description: 'Food surplus boosting settlement morale and trade',
+        effects: {
+          mood: (needs.food - 0.9) * 0.3,
+          trade: (needs.food - 0.9) * 0.2,
+          population_growth: (needs.food - 0.9) * 0.1
+        },
+        duration: Math.ceil((needs.food - 0.9) * 20),
+        timestamp: Date.now()
+      });
+    }
+
+    return consequences;
+  }
+
+  /**
+   * Get default satisfaction result for error cases
+   * @returns {Object} Default satisfaction result
+   * @private
+   */
+  _getDefaultSatisfactionResult() {
+    return {
+      needs: {
+        food: 0.5,
+        water: 0.5,
+        shelter: 0.5,
+        goods: 0.5,
+        services: 0.5
+      },
+      overall: 0.5,
+      consequences: [],
+      cascadingEffects: {
+        multiplier: 1.0,
+        affectedNeeds: [],
+        hasEffects: false,
+        originalValues: {
+          goods: 0.5,
+          services: 0.5
+        }
+      },
+      investmentEffects: {}
+    };
+  }
+
+  /**
+   * Clamp need values to valid range
+   * @param {Object} needs - Need satisfaction levels
+   * @returns {Object} Clamped need values
+   * @private
+   */
+  _clampNeedValues(needs) {
+    return {
+      food: BaseDomainService.clamp(needs.food, 0.0, 1.0),
+      water: BaseDomainService.clamp(needs.water, 0.0, 1.0),
+      shelter: BaseDomainService.clamp(needs.shelter, 0.0, 1.0),
+      goods: BaseDomainService.clamp(needs.goods, 0.0, 1.0),
+      services: BaseDomainService.clamp(needs.services, 0.0, 1.0)
+    };
+  }
 }
 
 export default BasicNeedsService;

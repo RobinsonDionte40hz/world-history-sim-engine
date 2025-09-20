@@ -356,7 +356,12 @@ export const SimulationProvider = ({ children }) => {
   
   // Character persistence function
   const saveCharacterState = useCallback(async (worldState) => {
-    if (!worldState) return;
+    if (!worldState) {
+      return {
+        success: false,
+        error: 'No world state provided'
+      };
+    }
 
     try {
       console.log('💾 Saving character state after turn processing...');
@@ -368,9 +373,17 @@ export const SimulationProvider = ({ children }) => {
       console.log(`   Characters saved: ${worldState.characters?.length || 0}`);
       console.log(`   LOD Distribution: Hero=${worldState.characters?.filter(c => c.lodTier === 'hero').length || 0}, Group=${worldState.characters?.filter(c => c.lodTier === 'group').length || 0}, Background=${worldState.characters?.filter(c => c.lodTier === 'background').length || 0}`);
 
+      return {
+        success: true,
+        message: `Saved ${worldState.characters?.length || 0} characters successfully`
+      };
+
     } catch (error) {
       console.error('❌ Failed to save character state:', error);
-      // Don't throw error to avoid breaking turn processing
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }, []);
 
@@ -608,68 +621,128 @@ export const SimulationProvider = ({ children }) => {
     }
 
     setIsProcessingTurn(true);
+    const errors = [];
+    let turnResult = null;
+    let worldStateToUse = currentSimulationState;
+
     try {
-      // Process LOD pre-turn operations (currently just logging, full integration would use ProcessTurnWithLOD use case)
-      console.log('Processing LOD pre-turn operations...');
-      const preLODState = await processLODTurn(currentSimulationState);
-      console.log('Pre-turn LOD processing complete, state valid:', !!preLODState);
-
-      // SimulationService.processTurn() uses its internal worldState, but we can pass LOD-processed state
-      // Note: In a full implementation, ProcessTurnWithLOD use case would handle this integration
-      console.log('Processing simulation turn...');
-      const turnResult = await simulationService.processTurn();
-      console.log('Simulation turn processed - FULL RESULT:', turnResult);
-      console.log('Turn result worldState:', turnResult?.worldState);
-      console.log('Turn result worldState.time:', turnResult?.worldState?.time);
-      console.log('Turn result worldState.events:', turnResult?.worldState?.events);
-
-      // Validate turn result
-      if (!turnResult || !turnResult.worldState) {
-        console.error('Invalid turn result:', turnResult);
-        throw new Error('Simulation turn failed - no worldState returned');
+      // Step 1: Process LOD pre-turn operations
+      try {
+        console.log('Processing LOD pre-turn operations...');
+        const preLODState = await processLODTurn(currentSimulationState);
+        console.log('Pre-turn LOD processing complete, state valid:', !!preLODState);
+        if (preLODState) {
+          worldStateToUse = preLODState;
+        }
+      } catch (lodError) {
+        errors.push({ phase: 'pre_lod', error: lodError.message });
+        console.warn('LOD pre-turn processing failed, continuing with original state:', lodError.message);
       }
 
-      // Process LOD post-turn operations on the simulation result
-      console.log('Processing LOD post-turn operations...');
-      const finalWorldState = await processLODTurn(turnResult.worldState, turnResult);
-      console.log('Post-turn LOD processing complete, finalWorldState:', finalWorldState);
-      
-      // Use LOD-processed state if available, otherwise use the original world state
-      const worldStateToUse = finalWorldState && finalWorldState.worldState ? finalWorldState.worldState : turnResult.worldState;
-      console.log('Using world state:', worldStateToUse);
+      // Step 2: Process simulation turn
+      try {
+        console.log('Processing simulation turn...');
+        turnResult = await simulationService.processTurn();
+        console.log('Simulation turn processed - FULL RESULT:', turnResult);
+        console.log('Turn result worldState:', turnResult?.worldState);
+        console.log('Turn result worldState.time:', turnResult?.worldState?.time);
+        console.log('Turn result worldState.events:', turnResult?.worldState?.events);
 
-      // Validate final world state
-      if (!finalWorldState) {
-        console.error('LOD post-turn processing failed - no worldState returned');
-        throw new Error('LOD post-turn processing failed');
+        // Handle both success and partial failure cases
+        if (!turnResult) {
+          throw new Error('No result returned from processTurn');
+        }
+
+        // Even on failure, if we have a worldState, use it
+        if (turnResult.worldState) {
+          // Continue processing with the worldState we have
+          console.log('Turn result includes worldState, continuing despite errors');
+          worldStateToUse = turnResult.worldState;
+        } else if (!turnResult.success) {
+          // Only throw if we have no worldState at all
+          console.error('Turn failed with no worldState:', turnResult.error);
+          throw new Error(turnResult.error || 'Turn processing failed');
+        }
+      } catch (simulationError) {
+        errors.push({ phase: 'simulation', error: simulationError.message });
+        console.error('Simulation turn processing failed:', simulationError.message);
+
+        // Continue with current state if simulation fails
+        if (!turnResult) {
+          turnResult = {
+            worldState: currentSimulationState,
+            turnSummary: { summary: 'Turn processing failed', events: [] },
+            success: false
+          };
+        }
       }
 
-      // Persist character state after turn processing
-      console.log('Persisting character state after turn processing...');
-      const persistenceResult = await saveCharacterState(worldStateToUse);
-      if (persistenceResult.success) {
-        console.log('Character state persisted successfully:', persistenceResult.message);
-      } else {
-        console.warn('Character state persistence failed:', persistenceResult.error);
+      // Step 3: Process LOD post-turn operations
+      try {
+        console.log('Processing LOD post-turn operations...');
+        const finalWorldState = await processLODTurn(worldStateToUse, turnResult);
+        console.log('Post-turn LOD processing complete, finalWorldState:', finalWorldState);
+
+        if (finalWorldState && finalWorldState.worldState) {
+          worldStateToUse = finalWorldState.worldState;
+        }
+      } catch (postLodError) {
+        errors.push({ phase: 'post_lod', error: postLodError.message });
+        console.warn('LOD post-turn processing failed, continuing with simulation result:', postLodError.message);
       }
 
-      // CRITICAL: Update all relevant state
+      // Step 4: Persist character state
+      try {
+        console.log('Persisting character state after turn processing...');
+        const persistenceResult = await saveCharacterState(worldStateToUse);
+        if (!persistenceResult || persistenceResult.success === undefined) {
+          console.warn('Character state persistence returned invalid result, assuming success');
+        } else if (persistenceResult.success) {
+          console.log('Character state persisted successfully:', persistenceResult.message);
+        } else {
+          console.warn('Character state persistence failed:', persistenceResult.error);
+          errors.push({ phase: 'persistence', error: persistenceResult.error });
+        }
+      } catch (persistenceError) {
+        errors.push({ phase: 'persistence', error: persistenceError.message });
+        console.error('Character state persistence failed:', persistenceError.message);
+      }
+
+      // Step 5: Update state regardless of partial failures
       console.log('Setting currentSimulationState to:', worldStateToUse);
       setCurrentSimulationState(worldStateToUse);
-      setWorldState(formatWorldStateForDashboard(worldStateToUse)); // Use the corrected world state
-      setTurnHistory(prev => [...prev, turnResult.turnSummary || turnResult]);
+      setWorldState(formatWorldStateForDashboard(worldStateToUse));
+      setTurnHistory(prev => [...prev, turnResult?.turnSummary || turnResult || { summary: 'Turn processed with errors' }]);
       setCurrentTurn(prev => prev + 1);
-      
+
       // Debug logging to verify data flow
       console.log('SimulationContext: Turn processed successfully');
-      console.log('SimulationContext: New world state:', finalWorldState);
-      console.log('SimulationContext: Events in new state:', finalWorldState?.events?.length || 0);
-      console.log('SimulationContext: Turn summary:', turnResult.turnSummary);
-      
-      return turnResult;
+      console.log('SimulationContext: New world state:', worldStateToUse);
+      console.log('SimulationContext: Events in new state:', worldStateToUse?.events?.length || 0);
+      console.log('SimulationContext: Turn summary:', turnResult?.turnSummary);
+
+      // Return result with error information
+      const hasErrors = errors.length > 0;
+      return {
+        ...turnResult,
+        success: !hasErrors,
+        partialSuccess: hasErrors && turnResult?.worldState,
+        errors: errors,
+        worldState: worldStateToUse
+      };
+
     } catch (error) {
-      console.error('SimulationContext: Error processing turn:', error);
-      throw error;
+      console.error('SimulationContext: Critical error processing turn:', error);
+      errors.push({ phase: 'critical', error: error.message });
+
+      // Even on critical failure, try to maintain state
+      return {
+        success: false,
+        error: error.message,
+        errors: errors,
+        worldState: currentSimulationState, // Return current state to prevent loss
+        turnSummary: { summary: 'Critical turn processing failure' }
+      };
     } finally {
       setIsProcessingTurn(false);
     }
