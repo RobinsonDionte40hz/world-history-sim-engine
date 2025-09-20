@@ -367,4 +367,4 @@ class ConsciousnessCheckpointService extends BaseDomainService {
   }
 }
 
-module.exports = ConsciousnessCheckpointService;
+export default ConsciousnessCheckpointService;

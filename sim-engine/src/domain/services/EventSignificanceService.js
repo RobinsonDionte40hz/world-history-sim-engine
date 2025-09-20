@@ -334,4 +334,4 @@ class EventSignificanceService {
   }
 }
 
-module.exports = EventSignificanceService;
+export default EventSignificanceService;
