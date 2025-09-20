@@ -852,6 +852,7 @@ const NodeEditor = ({
     { id: 'features', label: 'Features', icon: '⭐' },
     { id: 'resources', label: 'Resources', icon: '💎' },
     { id: 'modifiers', label: 'Modifiers', icon: '⚙️' },
+    { id: 'settlement', label: 'Settlement', icon: '🏘️' },
     { id: 'connections', label: 'Connections', icon: '🔗' },
     { id: 'bulk', label: 'Bulk Operations', icon: '📦' },
     { id: 'advanced', label: 'Advanced', icon: '🔧' }
@@ -1336,6 +1337,121 @@ const NodeEditor = ({
               modifiers={nodeData.modifiers}
               onChange={(modifiers) => setNodeData({ ...nodeData, modifiers })}
             />
+          </div>
+        )}
+
+        {/* Settlement Tab */}
+        {activeTab === 'settlement' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium text-white mb-2">Settlement Integration</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Configure how this node integrates with settlements in the multi-node settlement system
+              </p>
+            </div>
+
+            {/* Settlement Assignment */}
+            <div className="p-4 bg-white/10 rounded-lg border border-white/20">
+              <h4 className="font-medium text-white mb-3">Settlement Assignment</h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Settlement ID
+                  </label>
+                  <input
+                    type="text"
+                    value={nodeData.settlementId || ''}
+                    onChange={(e) => setNodeData({ ...nodeData, settlementId: e.target.value || null })}
+                    placeholder="Enter settlement ID..."
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Leave empty if this node is not part of a settlement
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Settlement Role
+                  </label>
+                  <select
+                    value={nodeData.settlementRole || ''}
+                    onChange={(e) => setNodeData({ ...nodeData, settlementRole: e.target.value || null })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  >
+                    <option value="">No Role Assigned</option>
+                    <option value="core">Core (Settlement Center)</option>
+                    <option value="district">District (Main Area)</option>
+                    <option value="outpost">Outpost (Remote Area)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Settlement Effects Display */}
+            {nodeData.settlementEffects && Object.keys(nodeData.settlementEffects).length > 0 && (
+              <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                <h4 className="font-medium text-white mb-3">Settlement Effects</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(nodeData.settlementEffects).map(([effect, value]) => (
+                    <div key={effect} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-300 capitalize">
+                        {effect.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        typeof value === 'number' && value > 0 ? 'text-green-400' :
+                        typeof value === 'number' && value < 0 ? 'text-red-400' :
+                        'text-blue-400'
+                      }`}>
+                        {typeof value === 'number' ? 
+                          (value > 0 ? `+${value}` : value) : 
+                          String(value)
+                        }
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-3">
+                  These effects are applied by the settlement this node belongs to
+                </p>
+              </div>
+            )}
+
+            {/* Settlement Info */}
+            {nodeData.settlementId && (
+              <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <h4 className="font-medium text-white mb-2">Settlement Information</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Settlement ID:</span>
+                    <span className="text-white font-mono">{nodeData.settlementId}</span>
+                  </div>
+                  {nodeData.settlementRole && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Role:</span>
+                      <span className="text-white capitalize">{nodeData.settlementRole}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Integration Status:</span>
+                    <span className="text-green-400">Active</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Settlement Management Tips */}
+            <div className="p-4 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+              <h4 className="font-medium text-white mb-2">Settlement Management Tips</h4>
+              <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
+                <li><strong>Core nodes</strong> are the heart of a settlement and provide the most bonuses</li>
+                <li><strong>District nodes</strong> are main areas that contribute to settlement growth</li>
+                <li><strong>Outpost nodes</strong> are remote areas that extend settlement influence</li>
+                <li>Settlement effects automatically apply bonuses to all assigned nodes</li>
+                <li>Development level determines maximum number of nodes a settlement can have</li>
+              </ul>
+            </div>
           </div>
         )}
 

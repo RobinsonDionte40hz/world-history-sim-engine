@@ -177,21 +177,27 @@ class DemoService {
     }
     
     const interactionsMap = new Map();
-    // TODO: Re-enable interaction creation when module system is resolved
-    // if (rawWorldData.interactions && Array.isArray(rawWorldData.interactions)) {
-    //   rawWorldData.interactions.forEach(interaction => {
-    //     // Convert plain interaction objects to ContentInteraction instances
-    //     const contentInteraction = new ContentInteraction({
-    //       ...interaction,
-    //       id: interaction.id || `int_${Date.now()}_${Math.random()}`,
-    //       name: interaction.name || 'Unnamed Interaction',
-    //       type: interaction.type || 'content'
-    //     });
-    //
-    //     // Store as serialized data for navigation compatibility
-    //     interactionsMap.set(contentInteraction.id, contentInteraction.toJSON());
-    //   });
-    // }
+    // Enable interaction creation with simplified approach
+    if (rawWorldData.interactions && Array.isArray(rawWorldData.interactions)) {
+      rawWorldData.interactions.forEach(interaction => {
+        // Store interactions directly as plain objects for now
+        // This avoids the ContentInteraction class dependency
+        const processedInteraction = {
+          id: interaction.id || `int_${Date.now()}_${Math.random()}`,
+          name: interaction.name || 'Unnamed Interaction',
+          type: interaction.type || 'content',
+          description: interaction.description || '',
+          category: interaction.category || 'general',
+          requirements: interaction.requirements || {},
+          branches: interaction.branches || [],
+          effects: interaction.effects || [],
+          context: interaction.context || {},
+          assignedCharacterIds: interaction.assignedCharacterIds || []
+        };
+
+        interactionsMap.set(processedInteraction.id, processedInteraction);
+      });
+    }
     
     const settlementsMap = new Map();
     if (rawWorldData.settlements && Array.isArray(rawWorldData.settlements)) {
@@ -1375,14 +1381,146 @@ class DemoService {
       }
     });
 
+    // Simple interaction assignment function
+    const assignInteractionsToCharacter = (character, availableInteractions) => {
+      if (!character.assignments) {
+        character.assignments = {
+          nodes: new Set(),
+          interactions: new Set(),
+          settlements: new Set(),
+          quests: new Set(),
+          factions: new Set(),
+          investments: new Set()
+        };
+      }
+
+      if (!character.assignments.interactions) {
+        character.assignments.interactions = new Set();
+      }
+
+      // Determine how many interactions to assign (1-3 based on character level/type)
+      const maxAssignments = Math.min(3, Math.max(1, character.lodTier === 'hero' ? 3 :
+                                                   character.lodTier === 'group' ? 2 : 1));
+
+      // Randomly select interactions to assign
+      const shuffled = [...availableInteractions].sort(() => 0.5 - Math.random());
+      const selectedInteractions = shuffled.slice(0, maxAssignments);
+
+      // Assign interactions to character
+      selectedInteractions.forEach(interaction => {
+        character.assignments.interactions.add(interaction.id);
+      });
+
+      return character;
+    };
+
+    // Create system interactions for all characters
+    const systemInteractions = [
+      {
+        id: 'wait_interaction',
+        name: 'Wait',
+        type: 'wait',
+        requirements: { energy: 0 },
+        branches: [{
+          id: 'wait_success',
+          name: 'Wait Successfully',
+          conditions: [],
+          effects: [{ type: 'energy', value: 10 }]
+        }],
+        effects: [],
+        context: { duration: 1 },
+        assignedCharacterIds: [] // Will be populated by assignment logic
+      },
+      {
+        id: 'rest_interaction',
+        name: 'Rest',
+        type: 'rest',
+        requirements: { energy: 20 },
+        branches: [{
+          id: 'rest_success',
+          name: 'Rest Successfully',
+          conditions: [],
+          effects: [{ type: 'energy', value: 50 }]
+        }],
+        effects: [],
+        context: { duration: 2 },
+        assignedCharacterIds: []
+      },
+      {
+        id: 'examine_interaction',
+        name: 'Examine',
+        type: 'examine',
+        requirements: { energy: 5 },
+        branches: [{
+          id: 'examine_success',
+          name: 'Examine Successfully',
+          conditions: [],
+          effects: [{ type: 'knowledge', value: 10 }]
+        }],
+        effects: [],
+        context: { targetType: 'environment' },
+        assignedCharacterIds: []
+      },
+      {
+        id: 'movement_interaction',
+        name: 'Move',
+        type: 'movement',
+        requirements: { energy: 15 },
+        branches: [{
+          id: 'movement_success',
+          name: 'Move Successfully',
+          conditions: [],
+          effects: [{ type: 'position', value: 'changed' }]
+        }],
+        effects: [],
+        context: { distance: 1 },
+        assignedCharacterIds: []
+      },
+      {
+        id: 'perception_interaction',
+        name: 'Perceive',
+        type: 'perception',
+        requirements: { energy: 10 },
+        branches: [{
+          id: 'perception_success',
+          name: 'Perceive Successfully',
+          conditions: [],
+          effects: [{ type: 'awareness', value: 15 }]
+        }],
+        effects: [],
+        context: { range: 10 },
+        assignedCharacterIds: []
+      }
+    ];
+
+    // Assign interactions to all character arrays
+    const oakwoodHeroCharactersWithInteractions = oakwoodHeroCharacters.map(char =>
+      assignInteractionsToCharacter(char, systemInteractions)
+    );
+    const ironholdHeroCharactersWithInteractions = ironholdHeroCharacters.map(char =>
+      assignInteractionsToCharacter(char, systemInteractions)
+    );
+    const oakwoodGroupCharactersWithInteractions = oakwoodGroupCharacters.map(char =>
+      assignInteractionsToCharacter(char, systemInteractions)
+    );
+    const ironholdGroupCharactersWithInteractions = ironholdGroupCharacters.map(char =>
+      assignInteractionsToCharacter(char, systemInteractions)
+    );
+    const oakwoodBackgroundCharactersWithInteractions = oakwoodBackgroundCharacters.map(char =>
+      assignInteractionsToCharacter(char, systemInteractions)
+    );
+    const ironholdBackgroundCharactersWithInteractions = ironholdBackgroundCharacters.map(char =>
+      assignInteractionsToCharacter(char, systemInteractions)
+    );
+
     // Combine all Characters
     const allCharacters = [
-      ...oakwoodHeroCharacters,
-      ...ironholdHeroCharacters,
-      ...oakwoodGroupCharacters,
-      ...ironholdGroupCharacters,
-      ...oakwoodBackgroundCharacters,
-      ...ironholdBackgroundCharacters
+      ...oakwoodHeroCharactersWithInteractions,
+      ...ironholdHeroCharactersWithInteractions,
+      ...oakwoodGroupCharactersWithInteractions,
+      ...ironholdGroupCharactersWithInteractions,
+      ...oakwoodBackgroundCharactersWithInteractions,
+      ...ironholdBackgroundCharactersWithInteractions
     ];
 
     // Combine all nodes
@@ -1391,8 +1529,9 @@ class DemoService {
       ...ironholdConfig.nodes
     ];
 
-    // Create basic interactions
+    // Combine system interactions with valley-specific interactions
     const interactions = [
+      ...systemInteractions,
       {
         id: 'valley_trade',
         name: 'Valley Trade Negotiations',

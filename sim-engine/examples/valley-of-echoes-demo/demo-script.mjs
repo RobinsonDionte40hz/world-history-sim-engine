@@ -14,6 +14,96 @@ import HistoryGenerator from '../../src/domain/services/HistoryGenerator.js';
 import WorldBuilder from '../../src/domain/services/WorldBuilder.js';
 
 /**
+ * Creates system interactions for the demo
+ * @returns {Array} Array of system interaction objects
+ */
+function createSystemInteractions() {
+  const systemInteractions = [];
+
+  // Wait interaction
+  systemInteractions.push({
+    id: 'wait_interaction',
+    name: 'Wait',
+    type: 'wait',
+    requirements: { energy: 0 },
+    branches: [{
+      id: 'wait_success',
+      name: 'Wait Successfully',
+      conditions: [],
+      effects: [{ type: 'energy', value: 10 }]
+    }],
+    effects: [],
+    context: { duration: 1 }
+  });
+
+  // Rest interaction
+  systemInteractions.push({
+    id: 'rest_interaction',
+    name: 'Rest',
+    type: 'rest',
+    requirements: { energy: 20 },
+    branches: [{
+      id: 'rest_success',
+      name: 'Rest Successfully',
+      conditions: [],
+      effects: [{ type: 'energy', value: 50 }]
+    }],
+    effects: [],
+    context: { duration: 2 }
+  });
+
+  // Examine interaction
+  systemInteractions.push({
+    id: 'examine_interaction',
+    name: 'Examine',
+    type: 'examine',
+    requirements: { energy: 5 },
+    branches: [{
+      id: 'examine_success',
+      name: 'Examine Successfully',
+      conditions: [],
+      effects: [{ type: 'knowledge', value: 10 }]
+    }],
+    effects: [],
+    context: { targetType: 'environment' }
+  });
+
+  // Movement interaction
+  systemInteractions.push({
+    id: 'movement_interaction',
+    name: 'Move',
+    type: 'movement',
+    requirements: { energy: 15 },
+    branches: [{
+      id: 'movement_success',
+      name: 'Move Successfully',
+      conditions: [],
+      effects: [{ type: 'position', value: 'changed' }]
+    }],
+    effects: [],
+    context: { distance: 1 }
+  });
+
+  // Perception interaction
+  systemInteractions.push({
+    id: 'perception_interaction',
+    name: 'Perceive',
+    type: 'perception',
+    requirements: { energy: 10 },
+    branches: [{
+      id: 'perception_success',
+      name: 'Perceive Successfully',
+      conditions: [],
+      effects: [{ type: 'awareness', value: 15 }]
+    }],
+    effects: [],
+    context: { range: 10 }
+  });
+
+  return systemInteractions;
+}
+
+/**
  * Valley of Echoes Demo Orchestrator
  */
 class ValleyOfEchoesDemo {
@@ -105,7 +195,7 @@ class ValleyOfEchoesDemo {
           }
         }))
       ],
-      interactions: [],
+      interactions: createSystemInteractions(), // Add system interactions
       needSatisfaction: config.needSatisfaction,
       development: config.development,
       economy: config.economy
@@ -115,16 +205,82 @@ class ValleyOfEchoesDemo {
   }
 
   /**
+   * Assign interactions to characters based on their level and type
+   * @param {Array} characters - Array of character objects
+   * @param {Array} interactions - Array of available interactions
+   * @returns {Array} Characters with assigned interactions
+   */
+  assignInteractionsToCharacters(characters, interactions) {
+    console.log('🎯 Assigning interactions to characters...');
+
+    if (!interactions || interactions.length === 0) {
+      console.warn('⚠️ No interactions available to assign');
+      return characters;
+    }
+
+    return characters.map(character => {
+      // Skip if character already has interaction assignments
+      if (character.assignments?.interactions?.size > 0) {
+        console.log(`Character ${character.name} already has ${character.assignments.interactions.size} interaction assignments`);
+        return character;
+      }
+
+      // Initialize assignments.interactions if it doesn't exist
+      if (!character.assignments) {
+        character.assignments = {
+          nodes: new Set(),
+          interactions: new Set(),
+          quests: new Set(),
+          settlements: new Set(),
+          factions: new Set(),
+          investments: new Set()
+        };
+      }
+
+      // Ensure assignments.interactions is a Set
+      if (!character.assignments.interactions) {
+        character.assignments.interactions = new Set();
+      } else if (Array.isArray(character.assignments.interactions)) {
+        character.assignments.interactions = new Set(character.assignments.interactions);
+      }
+
+      // Determine how many interactions to assign (1-3 based on character level/type)
+      const maxAssignments = Math.min(3, Math.max(1, Math.floor(character.level / 2) || 1));
+      const numToAssign = Math.min(maxAssignments, interactions.length);
+
+      // Randomly select interactions to assign
+      const shuffled = [...interactions].sort(() => 0.5 - Math.random());
+      const selectedInteractions = shuffled.slice(0, numToAssign);
+
+      // Assign interactions to character
+      selectedInteractions.forEach(interaction => {
+        character.assignments.interactions.add(interaction.id);
+      });
+
+      console.log(`Assigned ${selectedInteractions.length} interactions to character ${character.name}:`,
+        selectedInteractions.map(i => i.name).join(', '));
+
+      return character;
+    });
+  }
+
+  /**
    * Merge two settlement worlds into one
    */
   async mergeSettlements(settlementA, settlementB) {
+    const mergedInteractions = [...(settlementA.interactions || []), ...(settlementB.interactions || [])];
+    const mergedCharacters = [...settlementA.characters, ...settlementB.characters];
+
+    // Assign interactions to characters
+    const charactersWithInteractions = this.assignInteractionsToCharacters(mergedCharacters, mergedInteractions);
+
     return {
       turn: 0,
       events: [],
       settlements: [settlementA.settlement, settlementB.settlement],
-      characters: [...settlementA.characters, ...settlementB.characters],
+      characters: charactersWithInteractions,
       nodes: [...settlementA.nodes, ...settlementB.nodes],
-      interactions: [...(settlementA.interactions || []), ...(settlementB.interactions || [])],
+      interactions: mergedInteractions,
       relationships: {
         ...oakwoodFederationConfig.relationships,
         ...ironholdDominionConfig.relationships

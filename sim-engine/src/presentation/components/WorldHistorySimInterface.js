@@ -261,10 +261,10 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
                         <span>Mood: {npc.mood || 0}/100</span>
                         <span>Health: {npc.health || 0}/100</span>
                         {npc.wealth !== undefined && (
-                          <span>Wealth: {npc.wealth}</span>
+                          <span>Wealth: {typeof npc.wealth === 'object' ? JSON.stringify(npc.wealth) : npc.wealth}</span>
                         )}
                         {npc.influence !== undefined && (
-                          <span>Influence: {npc.influence}</span>
+                          <span>Influence: {typeof npc.influence === 'object' ? JSON.stringify(npc.influence) : npc.influence}</span>
                         )}
                       </div>
                     </div>

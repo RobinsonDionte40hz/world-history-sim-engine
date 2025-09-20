@@ -7,14 +7,21 @@
 import WorldValidator from './WorldValidator.js';
 import Character from '../entities/Character.js';
 import Node from '../entities/Node.js';
+import Settlement from '../entities/Settlement_new.js';
 import NodeMigrationService from './NodeMigrationService.js';
 import LODManager from './LODManager.js';
+import SettlementNodeManager from './SettlementNodeManager.js';
+import SettlementDevelopmentService from './SettlementDevelopmentService.js';
 import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 class WorldBuilder {
   constructor(templateManager = null) {
     this.templateManager = templateManager;
     this.lodManager = new LODManager();
+
+    // Initialize settlement services
+    this.settlementNodeManager = new SettlementNodeManager();
+    this.settlementDevelopmentService = new SettlementDevelopmentService();
 
     // Mappless world configuration
     this.worldConfig = {
@@ -36,6 +43,9 @@ class WorldBuilder {
       // Phase 5: Actor Assignments
       nodePopulations: {},
 
+      // Phase 6: Settlements
+      settlements: [],
+
       // Simulation readiness state
       isComplete: false,
       isValid: false,
@@ -45,6 +55,7 @@ class WorldBuilder {
         capabilitiesDefined: false,
         actorsDefined: false,
         actorsAssigned: false,
+        settlementsDefined: false,
         readyForSimulation: false
       }
     };
@@ -1203,8 +1214,10 @@ class WorldBuilder {
         return readiness.capabilitiesDefined;
       case 'actorsAssigned':
         return readiness.actorsDefined;
-      case 'readyForSimulation':
+      case 'settlementsDefined':
         return readiness.actorsAssigned;
+      case 'readyForSimulation':
+        return readiness.settlementsDefined;
       default:
         return false;
     }
@@ -1329,7 +1342,274 @@ class WorldBuilder {
     return this;
   }
 
-  // Simulation Handoff
+  // Phase 6: Settlement creation and management methods
+
+  /**
+   * Adds a settlement to the world
+   * @param {Object} settlementConfig - Settlement configuration
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  addSettlement(settlementConfig) {
+    if (!this._canProceedToPhase('settlementsDefined')) {
+      throw new Error('Cannot add settlements until locations are defined.');
+    }
+
+    if (!settlementConfig || typeof settlementConfig !== 'object') {
+      throw new Error('Settlement configuration must be an object');
+    }
+
+    // Create Settlement instance for validation
+    let settlement;
+    try {
+      const enhancedConfig = {
+        ...settlementConfig,
+        id: settlementConfig.id || this._generateId('settlement')
+      };
+      settlement = new Settlement(enhancedConfig);
+    } catch (error) {
+      throw new ValidationError('settlementConfig', settlementConfig, `Settlement creation failed: ${error.message}`);
+    }
+
+    // Store as JSON for serialization compatibility
+    this.worldConfig.settlements.push(settlement.toJSON());
+    this._validatePreparationPhase('settlementsDefined');
+    return this;
+  }
+
+  /**
+   * Assigns a node to a settlement
+   * @param {string} nodeId - Node ID to assign
+   * @param {string} settlementId - Settlement ID to assign to
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  assignNodeToSettlement(nodeId, settlementId) {
+    if (!this._canProceedToPhase('settlementsDefined')) {
+      throw new Error('Cannot assign nodes to settlements until settlements are defined.');
+    }
+
+    // Validate node exists
+    const node = this.worldConfig.nodes.find(n => n.id === nodeId);
+    if (!node) {
+      throw new Error(`Node '${nodeId}' does not exist`);
+    }
+
+    // Validate settlement exists
+    const settlement = this.worldConfig.settlements.find(s => s.id === settlementId);
+    if (!settlement) {
+      throw new Error(`Settlement '${settlementId}' does not exist`);
+    }
+
+    // Use SettlementNodeManager to handle the assignment
+    const assignmentResult = this.settlementNodeManager.assignNodeToSettlement(
+      settlementId,
+      nodeId,
+      this.worldConfig.settlements,
+      this.worldConfig.nodes
+    );
+
+    if (!assignmentResult.success) {
+      throw new Error(`Node assignment failed: ${assignmentResult.error}`);
+    }
+
+    // Update the stored settlement and node data
+    const settlementIndex = this.worldConfig.settlements.findIndex(s => s.id === settlementId);
+    const nodeIndex = this.worldConfig.nodes.findIndex(n => n.id === nodeId);
+
+    if (settlementIndex !== -1) {
+      this.worldConfig.settlements[settlementIndex] = assignmentResult.settlement.toJSON();
+    }
+    if (nodeIndex !== -1) {
+      this.worldConfig.nodes[nodeIndex] = assignmentResult.node.toJSON();
+    }
+
+    this._validatePreparationPhase('settlementsDefined');
+    return this;
+  }
+
+  /**
+   * Removes a node from a settlement
+   * @param {string} nodeId - Node ID to remove
+   * @param {string} settlementId - Settlement ID to remove from
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  removeNodeFromSettlement(nodeId, settlementId) {
+    // Validate settlement exists
+    const settlement = this.worldConfig.settlements.find(s => s.id === settlementId);
+    if (!settlement) {
+      throw new Error(`Settlement '${settlementId}' does not exist`);
+    }
+
+    // Use SettlementNodeManager to handle the removal
+    const removalResult = this.settlementNodeManager.removeNodeFromSettlement(
+      settlementId,
+      nodeId,
+      this.worldConfig.settlements,
+      this.worldConfig.nodes
+    );
+
+    if (!removalResult.success) {
+      throw new Error(`Node removal failed: ${removalResult.error}`);
+    }
+
+    // Update the stored settlement and node data
+    const settlementIndex = this.worldConfig.settlements.findIndex(s => s.id === settlementId);
+    const nodeIndex = this.worldConfig.nodes.findIndex(n => n.id === nodeId);
+
+    if (settlementIndex !== -1) {
+      this.worldConfig.settlements[settlementIndex] = removalResult.settlement.toJSON();
+    }
+    if (nodeIndex !== -1) {
+      this.worldConfig.nodes[nodeIndex] = removalResult.node.toJSON();
+    }
+
+    this._validatePreparationPhase('settlementsDefined');
+    return this;
+  }
+
+  /**
+   * Gets a settlement by ID
+   * @param {string} settlementId - ID of settlement to retrieve
+   * @returns {Object|null} Settlement data or null if not found
+   */
+  getSettlement(settlementId) {
+    if (!settlementId || typeof settlementId !== 'string') {
+      return null;
+    }
+
+    return this.worldConfig.settlements.find(s => s.id === settlementId) || null;
+  }
+
+  /**
+   * Gets all settlements
+   * @returns {Array} Array of all settlement data
+   */
+  getAllSettlements() {
+    return [...this.worldConfig.settlements];
+  }
+
+  /**
+   * Updates an existing settlement
+   * @param {string} settlementId - ID of settlement to update
+   * @param {Object} updates - Updates to apply
+   * @returns {WorldBuilder} This instance for chaining
+   */
+  updateSettlement(settlementId, updates) {
+    if (!settlementId || typeof settlementId !== 'string') {
+      throw new ValidationError('settlementId', settlementId, 'Settlement ID must be a non-empty string');
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      throw new ValidationError('updates', updates, 'Updates must be an object');
+    }
+
+    const settlementIndex = this.worldConfig.settlements.findIndex(s => s.id === settlementId);
+    if (settlementIndex === -1) {
+      throw new ValidationError('settlementId', settlementId, 'Settlement not found');
+    }
+
+    const existingSettlement = this.worldConfig.settlements[settlementIndex];
+
+    try {
+      // Create updated settlement with validation
+      const updatedConfig = { ...existingSettlement, ...updates };
+      const settlement = Settlement.fromJSON(updatedConfig);
+
+      // Update the settlement in storage
+      this.worldConfig.settlements[settlementIndex] = settlement.toJSON();
+
+      this._validatePreparationPhase('settlementsDefined');
+      return this;
+    } catch (error) {
+      throw new ValidationError('settlementUpdate', updates, `Settlement update failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Gets settlements that contain a specific node
+   * @param {string} nodeId - Node ID to check
+   * @returns {Array} Array of settlements containing the node
+   */
+  getSettlementsForNode(nodeId) {
+    return this.worldConfig.settlements.filter(settlement =>
+      settlement.assignedNodes && settlement.assignedNodes.includes(nodeId)
+    );
+  }
+
+  /**
+   * Gets nodes assigned to a specific settlement
+   * @param {string} settlementId - Settlement ID to check
+   * @returns {Array} Array of nodes assigned to the settlement
+   */
+  getNodesForSettlement(settlementId) {
+    const settlement = this.getSettlement(settlementId);
+    if (!settlement || !settlement.assignedNodes) {
+      return [];
+    }
+
+    return settlement.assignedNodes.map(nodeId =>
+      this.worldConfig.nodes.find(n => n.id === nodeId)
+    ).filter(Boolean);
+  }
+
+  /**
+   * Analyzes settlement expansion possibilities for a node
+   * @param {string} nodeId - Node ID to analyze
+   * @returns {Object} Analysis of expansion possibilities
+   */
+  analyzeSettlementExpansion(nodeId) {
+    return this.settlementNodeManager.analyzeExpansionPossibilities(
+      nodeId,
+      this.worldConfig.settlements,
+      this.worldConfig.nodes
+    );
+  }
+
+  /**
+   * Gets settlement statistics
+   * @returns {Object} Statistics about settlements in the world
+   */
+  getSettlementStatistics() {
+    const settlements = this.worldConfig.settlements;
+
+    if (settlements.length === 0) {
+      return {
+        total: 0,
+        byType: {},
+        byDevelopmentLevel: {},
+        averageNodeCount: 0,
+        totalNodesAssigned: 0
+      };
+    }
+
+    const stats = {
+      total: settlements.length,
+      byType: {},
+      byDevelopmentLevel: {},
+      averageNodeCount: 0,
+      totalNodesAssigned: 0
+    };
+
+    let totalNodeCount = 0;
+
+    settlements.forEach(settlement => {
+      // Type distribution
+      const type = settlement.type || 'village';
+      stats.byType[type] = (stats.byType[type] || 0) + 1;
+
+      // Development level distribution
+      const level = settlement.developmentLevel || 1;
+      stats.byDevelopmentLevel[level] = (stats.byDevelopmentLevel[level] || 0) + 1;
+
+      // Node count
+      const nodeCount = settlement.assignedNodes ? settlement.assignedNodes.length : 0;
+      totalNodeCount += nodeCount;
+      stats.totalNodesAssigned += nodeCount;
+    });
+
+    stats.averageNodeCount = totalNodeCount / settlements.length;
+
+    return stats;
+  }
 
   /**
    * Prepares the world for simulation and returns simulation-optimized data structures.
@@ -1460,6 +1740,7 @@ class WorldBuilder {
       nodes: simulationNodes,
       characters: simulationCharacters,
       interactions: simulationInteractions,
+      settlements: simulationSettlements,
       lodManager: this.lodManager, // Include LOD manager for simulation
       lodDistribution: this.getLODTierDistribution(), // Include LOD distribution stats
       simulationMetadata: {
@@ -1559,6 +1840,7 @@ class WorldBuilder {
       interactions: [],
       characters: [],
       nodePopulations: {},
+      settlements: [],
       isComplete: false,
       isValid: false,
       simulationReadiness: {
@@ -1567,6 +1849,7 @@ class WorldBuilder {
         capabilitiesDefined: false,
         actorsDefined: false,
         actorsAssigned: false,
+        settlementsDefined: false,
         readyForSimulation: false
       }
     };
@@ -1601,8 +1884,11 @@ class WorldBuilder {
       case 'actorsAssigned':
         isValid = readiness.actorsDefined && this.worldConfig.nodes.every(node => this.worldConfig.nodePopulations[node.id] && this.worldConfig.nodePopulations[node.id].length > 0);
         break;
+      case 'settlementsDefined':
+        isValid = readiness.actorsAssigned && this.worldConfig.settlements.length > 0;
+        break;
       case 'readyForSimulation':
-        isValid = readiness.actorsAssigned;
+        isValid = readiness.settlementsDefined;
         break;
       default:
         isValid = false;

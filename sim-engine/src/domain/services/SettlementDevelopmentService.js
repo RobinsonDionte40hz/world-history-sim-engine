@@ -301,6 +301,17 @@ class SettlementDevelopmentService extends BaseDomainService {
       // Update development level if needed
       const developmentLevelChanged = this._updateDevelopmentLevel(settlement, developmentTree);
 
+      // Update node capacity if development level changed
+      let capacityChanged = false;
+      let newCapacity = settlement.nodeCapacity;
+      if (developmentLevelChanged) {
+        newCapacity = this.calculateNodeCapacity(settlement.developmentLevel);
+        if (newCapacity !== settlement.nodeCapacity) {
+          settlement.nodeCapacity = newCapacity;
+          capacityChanged = true;
+        }
+      }
+
       // Update timestamp
       developmentTree.lastUpdated = new Date();
 
@@ -310,7 +321,10 @@ class SettlementDevelopmentService extends BaseDomainService {
         resourcesConsumed,
         infrastructureChanges,
         developmentLevelChanged,
-        newLevel: settlement.developmentLevel
+        newLevel: settlement.developmentLevel,
+        capacityChanged,
+        newCapacity: settlement.nodeCapacity,
+        availableSlots: settlement.getAvailableNodeSlots ? settlement.getAvailableNodeSlots() : 0
       };
     } catch (error) {
       return {
@@ -393,7 +407,10 @@ class SettlementDevelopmentService extends BaseDomainService {
           availableUpgrades: developmentTree.availableUpgrades,
           overallProgress: Math.round(overallProgress),
           nextRecommended,
-          upgradeHistory: developmentTree.upgradeHistory
+          upgradeHistory: developmentTree.upgradeHistory,
+          nodeCapacity: this.calculateNodeCapacity(developmentTree.currentLevel),
+          nextLevelCapacity: this.calculateNodeCapacity(developmentTree.currentLevel + 1),
+          upgradesToNextLevel: Math.max(0, (developmentTree.currentLevel * 2) - developmentTree.completedUpgrades.length)
         }
       };
     } catch (error) {
@@ -626,29 +643,51 @@ class SettlementDevelopmentService extends BaseDomainService {
   }
 
   /**
-   * Validate initialization configuration
-   * @private
+   * Calculate node capacity based on development level
+   * @param {number} developmentLevel - Current development level
+   * @returns {number} Maximum number of nodes
    */
-  _validateInitializationConfig(config) {
-    if (!config) {
-      throw new Error('Configuration is required');
+  calculateNodeCapacity(developmentLevel) {
+    // Capacity scaling based on development level
+    if (developmentLevel <= 1) return 1;      // Core only
+    if (developmentLevel <= 2) return 2;      // Core + 1 district
+    if (developmentLevel <= 3) return 4;      // Core + 3 districts
+    if (developmentLevel <= 4) return 7;      // Core + 6 districts
+    if (developmentLevel <= 5) return 11;     // Core + 10 districts
+
+    // Level 6+: 11 + (level-5) * 5 nodes
+    return 11 + (developmentLevel - 5) * 5;
+  }
+
+  /**
+   * Get development level requirements for node capacity
+   * @param {number} desiredCapacity - Desired number of nodes
+   * @returns {Object} Requirements for reaching desired capacity
+   */
+  getCapacityRequirements(desiredCapacity) {
+    let requiredLevel = 1;
+    let currentCapacity = 1;
+
+    while (currentCapacity < desiredCapacity && requiredLevel < 20) {
+      requiredLevel++;
+      currentCapacity = this.calculateNodeCapacity(requiredLevel);
     }
 
-    if (!config.settlementType) {
-      throw new Error('settlementType is required in configuration');
+    if (currentCapacity < desiredCapacity) {
+      return {
+        achievable: false,
+        maxCapacity: currentCapacity,
+        message: `Maximum capacity is ${currentCapacity} nodes at development level ${requiredLevel}`
+      };
     }
 
-    if (!this.upgradeDefinitions.has(config.settlementType)) {
-      throw new Error(`Unknown settlement type: ${config.settlementType}`);
-    }
-
-    if (config.prerequisites) {
-      for (const [upgradeId, prereqs] of Object.entries(config.prerequisites)) {
-        if (prereqs === null || typeof prereqs !== 'object') {
-          throw new Error(`Invalid prerequisites for upgrade ${upgradeId}`);
-        }
-      }
-    }
+    return {
+      achievable: true,
+      requiredLevel,
+      currentCapacity: this.calculateNodeCapacity(requiredLevel - 1),
+      newCapacity: currentCapacity,
+      additionalCapacity: currentCapacity - this.calculateNodeCapacity(requiredLevel - 1)
+    };
   }
 }
 

@@ -55,6 +55,11 @@ class Node {
     // Population count
     this.population = config.population || 0;
     
+    // Settlement integration properties
+    this.settlementId = config.settlementId || null; // ID of settlement this node belongs to
+    this.settlementRole = config.settlementRole || null; // Role within settlement ('core', 'district', 'outpost')
+    this.settlementEffects = config.settlementEffects || {}; // Settlement bonuses applied to this node
+
     // Enhanced connection data using NodeConnection objects
     this.connections = Array.isArray(config.connections) ? 
       config.connections.map(conn => conn instanceof NodeConnection ? conn : new NodeConnection(conn)) : 
@@ -333,12 +338,152 @@ class Node {
   }
 
   /**
-   * Gets connection to a specific node
-   * @param {string} nodeId - Target node ID
-   * @returns {NodeConnection|null} Connection object or null if not found
+   * Assigns this node to a settlement
+   * @param {string} settlementId - ID of the settlement
+   * @param {string} role - Role within the settlement ('core', 'district', 'outpost')
+   * @param {Object} settlementEffects - Effects applied by the settlement
    */
-  getConnectionTo(nodeId) {
-    return this.connections.find(conn => conn.targetNodeId === nodeId) || null;
+  assignToSettlement(settlementId, role = 'district', settlementEffects = {}) {
+    this.settlementId = settlementId;
+    this.settlementRole = role;
+    this.settlementEffects = { ...settlementEffects };
+  }
+
+  /**
+   * Removes this node from its current settlement
+   */
+  removeFromSettlement() {
+    this.settlementId = null;
+    this.settlementRole = null;
+    this.settlementEffects = {};
+  }
+
+  /**
+   * Checks if this node belongs to a settlement
+   * @returns {boolean} True if node belongs to a settlement
+   */
+  isInSettlement() {
+    return this.settlementId !== null;
+  }
+
+  /**
+   * Gets the settlement effects applied to this node
+   * @returns {Object} Settlement effects
+   */
+  getSettlementEffects() {
+    return { ...this.settlementEffects };
+  }
+
+  /**
+   * Updates settlement effects for this node
+   * @param {Object} effects - New settlement effects
+   */
+  updateSettlementEffects(effects) {
+    this.settlementEffects = { ...effects };
+  }
+
+  /**
+   * Calculates effective environmental modifiers including settlement bonuses
+   * @param {string} interactionType - Type of interaction (e.g., 'combat', 'social', 'stealth')
+   * @returns {Object} Effective environmental modifiers
+   */
+  getEffectiveEnvironmentalModifiers(interactionType) {
+    const baseModifiers = this.getEnvironmentalModifiers(interactionType);
+    const effectiveModifiers = { ...baseModifiers };
+
+    // Apply settlement effects if node belongs to a settlement
+    if (this.isInSettlement() && this.settlementEffects) {
+      // Defense bonuses affect combat interactions
+      if (interactionType === 'combat' && this.settlementEffects.defenseBonus) {
+        effectiveModifiers.defense = (effectiveModifiers.defense || 0) + this.settlementEffects.defenseBonus;
+        effectiveModifiers.combat_effectiveness = (effectiveModifiers.combat_effectiveness || 0) + this.settlementEffects.defenseBonus;
+      }
+
+      // Economy bonuses affect social/trade interactions
+      if (['social', 'trade'].includes(interactionType) && this.settlementEffects.economyBonus) {
+        effectiveModifiers.persuasion = (effectiveModifiers.persuasion || 0) + this.settlementEffects.economyBonus;
+        effectiveModifiers.trade = (effectiveModifiers.trade || 0) + this.settlementEffects.economyBonus;
+      }
+
+      // Cultural influence affects social interactions
+      if (interactionType === 'social' && this.settlementEffects.culturalInfluence) {
+        effectiveModifiers.cultural_appeal = (effectiveModifiers.cultural_appeal || 0) + this.settlementEffects.culturalInfluence;
+        effectiveModifiers.diplomacy = (effectiveModifiers.diplomacy || 0) + this.settlementEffects.culturalInfluence;
+      }
+
+      // Resource production bonuses affect resource gathering
+      if (interactionType === 'resource_gathering' && this.settlementEffects.resourceProductionBonus) {
+        effectiveModifiers.resource_yield = (effectiveModifiers.resource_yield || 0) + this.settlementEffects.resourceProductionBonus;
+        effectiveModifiers.gathering_efficiency = (effectiveModifiers.gathering_efficiency || 0) + this.settlementEffects.resourceProductionBonus;
+      }
+    }
+
+    return effectiveModifiers;
+  }
+
+  /**
+   * Gets effective population capacity including settlement bonuses
+   * @returns {number} Effective population capacity
+   */
+  getEffectivePopulationCapacity() {
+    let capacity = this.getPopulationCapacity();
+
+    // Apply settlement population capacity bonus
+    if (this.isInSettlement() && this.settlementEffects.populationCapacityBonus) {
+      capacity += this.settlementEffects.populationCapacityBonus;
+    }
+
+    return Math.floor(capacity);
+  }
+
+  /**
+   * Gets effective resource production including settlement bonuses
+   * @param {string} resourceType - Type of resource
+   * @returns {number} Effective resource production rate
+   */
+  getEffectiveResourceProduction(resourceType) {
+    // Base production (simplified - would be more complex in real implementation)
+    let baseProduction = 0;
+
+    // Environmental factors affecting resource production
+    if (resourceType === 'food') {
+      baseProduction = this.environment.waterAvailability * this.environment.shelterQuality * 10;
+    } else if (resourceType === 'materials') {
+      baseProduction = this.environment.terrain === 'forest' ? 15 : 5;
+    } else if (resourceType === 'water') {
+      baseProduction = this.environment.waterAvailability * 20;
+    }
+
+    // Apply settlement resource production bonus
+    if (this.isInSettlement() && this.settlementEffects.resourceProductionBonus) {
+      baseProduction *= (1 + this.settlementEffects.resourceProductionBonus);
+    }
+
+    return Math.floor(baseProduction);
+  }
+
+  /**
+   * Gets node statistics including settlement information
+   * @returns {Object} Node statistics
+   */
+  getStatistics() {
+    return {
+      id: this.id,
+      name: this.name,
+      type: this.type,
+      population: this.population,
+      populationCapacity: this.getPopulationCapacity(),
+      effectivePopulationCapacity: this.getEffectivePopulationCapacity(),
+      settlementId: this.settlementId,
+      settlementRole: this.settlementRole,
+      settlementEffects: this.getSettlementEffects(),
+      connections: this.connections.length,
+      environment: {
+        climate: this.environment.climate,
+        terrain: this.environment.terrain,
+        danger: this.getEnvironmentalDanger()
+      }
+    };
   }
 
   /**
@@ -409,7 +554,11 @@ class Node {
       population: this.population,
       connections: this.connections.map(conn => conn.toJSON ? conn.toJSON() : conn),
       // Maintain backward compatibility
-      connectedNodes: this.getConnectedNodeIds()
+      connectedNodes: this.getConnectedNodeIds(),
+      // Settlement integration properties
+      settlementId: this.settlementId,
+      settlementRole: this.settlementRole,
+      settlementEffects: this.settlementEffects
     };
 
     // Include customData if it exists
