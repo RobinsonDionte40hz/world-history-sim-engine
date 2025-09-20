@@ -336,14 +336,9 @@ class SettlementService extends BaseDomainService {
           resolved: false
         };
       } else {
-        // Add new consequence
+        // Add new consequence with all properties
         activeConsequences.push({
-          id: consequence.id,
-          type: consequence.type,
-          severity: consequence.severity,
-          startDate: consequence.startDate,
-          duration: consequence.duration,
-          triggers: consequence.triggers,
+          ...consequence,
           resolved: false
         });
       }

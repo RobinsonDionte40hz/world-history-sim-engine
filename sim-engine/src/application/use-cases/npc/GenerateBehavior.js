@@ -13,12 +13,20 @@ import BehavioralStateService from '../../../domain/services/BehavioralStateServ
 import SignificantMemoryService from '../../../domain/services/SignificantMemoryService.js';
 import ConsciousnessErrorHandlingService from '../../../domain/services/ConsciousnessErrorHandlingService.js';
 
+// Import new routine interaction services
+import RoutineInteractionManager from '../../../domain/services/RoutineInteractionManager.js';
+import DailyScheduleService from '../../../domain/services/DailyScheduleService.js';
+
 const DEBUG_MODE = true;  // Enable for enhanced decision logging
 
 // Initialize consciousness services at module level
 const errorHandler = new ConsciousnessErrorHandlingService();
 const behavioralStateService = new BehavioralStateService(null, console, errorHandler);
 const memoryService = new SignificantMemoryService(console, errorHandler);
+
+// Initialize routine interaction services
+const routineInteractionManager = new RoutineInteractionManager();
+const dailyScheduleService = new DailyScheduleService();
 
 // SIMPLIFIED WEIGHT CALCULATION
 const calculateInteractionWeight = (character, interaction, worldState) => {
@@ -158,7 +166,29 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
     weight *= consciousnessModifier;
   }
 
-  // Factor 12: RANDOM VARIATION (Small, for variety)
+  // Factor 13: SCHEDULE-BASED PRIORITIES (New - prioritize routine interactions during appropriate times)
+  try {
+    const timeOfDay = dailyScheduleService.getTimeOfDay(worldState.time || Date.now());
+    const scheduleCompliance = dailyScheduleService.getScheduleCompliance(character, timeOfDay, worldState);
+    
+    // Boost weight for routine interactions that align with current schedule
+    if (interaction.isRoutineInteraction || interaction.category === 'routine') {
+      if (scheduleCompliance.isOnSchedule) {
+        weight *= 4.0; // STRONGER boost for on-schedule routine activities (was 3.0)
+      } else if (scheduleCompliance.needsTransition) {
+        weight *= 2.5; // Moderate boost for needed transitions (was 2.0)
+      }
+    }
+    
+    // Reduce weight for activities that conflict with schedule
+    if (scheduleCompliance.scheduleConflict) {
+      weight *= 0.2; // STRONGER penalty for schedule conflicts (was 0.3)
+    }
+  } catch (error) {
+    console.warn('Error calculating schedule-based priorities:', error.message);
+  }
+
+  // Factor 14: RANDOM VARIATION (Small, for variety)
   weight += Math.random() * 0.5;
   
   // Ensure non-negative
@@ -414,9 +444,42 @@ function gatherAvailableInteractions(character, worldState) {
     interactions.push(...availableInteractionsData.contentInteractions);
   }
 
-  // Filter available interactions based on character state
+  // INTEGRATION: Add routine interactions based on time and character assignments
+  try {
+    const timeOfDay = dailyScheduleService.getTimeOfDay(worldState.time || Date.now());
+    const availableActivities = dailyScheduleService.getAvailableActivities(character, timeOfDay, worldState);
+    
+    // Generate routine interactions for available activities
+    const routineInteractions = routineInteractionManager.generateRoutineInteractions(
+      character,
+      {
+        ...worldState,
+        nodes: Array.isArray(worldState.nodes) 
+          ? new Map(worldState.nodes.map(node => [node.id, node]))
+          : worldState.nodes
+      },
+      timeOfDay,
+      availableActivities
+    );
+    
+    if (routineInteractions && routineInteractions.length > 0) {
+      interactions.push(...routineInteractions);
+      console.log(`Added ${routineInteractions.length} routine interactions for ${character.name}`);
+    }
+  } catch (error) {
+    console.warn(`Error generating routine interactions for ${character.name}:`, error.message);
+  }
+
+  // Filter available interactions based on prerequisites
   const availableInteractions = interactions.filter(interaction => {
     try {
+      // Check routine interaction prerequisites
+      if (interaction.category === 'routine' && interaction.availableWhen) {
+        if (!_checkRoutinePrerequisites(character, worldState, interaction)) {
+          return false;
+        }
+      }
+
       // System interactions use InteractionManager's validation
       if (interaction.isSystemInteraction) {
         return interactionManager.canExecuteInteraction ? 
@@ -651,6 +714,131 @@ function executeInteraction(character, selectedInteraction, worldState) {
     branchId: branch?.id,
     resolution,
   };
+}
+
+/**
+ * Check routine interaction prerequisites
+ * @private
+ * @param {Object} character - Character object
+ * @param {Object} worldState - World state
+ * @param {Object} interaction - Interaction to check
+ * @returns {boolean} True if prerequisites are met
+ */
+function _checkRoutinePrerequisites(character, worldState, interaction) {
+  const availableWhen = interaction.availableWhen;
+  if (!availableWhen) return true;
+
+  try {
+    // Check time of day
+    if (availableWhen.timeOfDay) {
+      const timeOfDay = dailyScheduleService.getTimeOfDay(worldState.time || Date.now());
+      if (!availableWhen.timeOfDay.includes(timeOfDay)) {
+        return false;
+      }
+    }
+
+    // Check location requirements
+    if (availableWhen.atLocation && character.currentNodeId !== availableWhen.atLocation) {
+      return false;
+    }
+
+    if (availableWhen.atOrigin && character.currentNodeId !== availableWhen.atOrigin) {
+      return false;
+    }
+
+    if (availableWhen.destinationExists) {
+      const nodesMap = Array.isArray(worldState.nodes) 
+        ? new Map(worldState.nodes.map(node => [node.id, node]))
+        : worldState.nodes;
+      const destinationNode = nodesMap.get(availableWhen.destinationExists);
+      if (!destinationNode) {
+        return false;
+      }
+    }
+
+    // Check commercial node requirement
+    if (availableWhen.atCommercialNode) {
+      const nodesMap = Array.isArray(worldState.nodes) 
+        ? new Map(worldState.nodes.map(node => [node.id, node]))
+        : worldState.nodes;
+      const currentNode = nodesMap.get(character.currentNodeId);
+      if (!currentNode) return false;
+      
+      const isCommercial = currentNode.type === 'market' || currentNode.type === 'commercial' ||
+        currentNode.name.toLowerCase().includes('market') ||
+        currentNode.name.toLowerCase().includes('shop') ||
+        currentNode.name.toLowerCase().includes('merchant');
+      
+      if (!isCommercial) {
+        return false;
+      }
+    }
+
+    // Check energy requirements
+    if (availableWhen.energyRequired && character.energy < availableWhen.energyRequired) {
+      return false;
+    }
+
+    // Check wealth requirements
+    if (availableWhen.wealthRequired && (character.wealth || 0) < availableWhen.wealthRequired) {
+      return false;
+    }
+
+    // Check social requirements
+    if (availableWhen.othersPresent) {
+      const charactersAtLocation = worldState.characters?.filter(c => 
+        c.currentNodeId === character.currentNodeId && c.id !== character.id
+      ) || [];
+      
+      if (charactersAtLocation.length === 0) {
+        return false;
+      }
+    }
+
+    // Check assignment requirements
+    if (interaction.type === 'work' && !character.assignments?.workNodeId) {
+      return false;
+    }
+
+    if (interaction.type === 'commute' && 
+        (!character.assignments?.homeNodeId || !character.assignments?.workNodeId)) {
+      return false;
+    }
+
+    // Check interaction-specific requirements
+    if (interaction.requirements) {
+      // Energy requirement
+      if (interaction.requirements.energy && character.energy < interaction.requirements.energy) {
+        return false;
+      }
+
+      // Wealth requirement
+      if (interaction.requirements.wealth && (character.wealth || 0) < interaction.requirements.wealth) {
+        return false;
+      }
+
+      // Attribute requirements
+      if (interaction.requirements.charisma && 
+          (!character.attributes?.charisma || character.attributes.charisma < interaction.requirements.charisma)) {
+        return false;
+      }
+
+      if (interaction.requirements.intelligence && 
+          (!character.attributes?.intelligence || character.attributes.intelligence < interaction.requirements.intelligence)) {
+        return false;
+      }
+
+      if (interaction.requirements.constitution && 
+          (!character.attributes?.constitution || character.attributes.constitution < interaction.requirements.constitution)) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.warn(`Error checking routine prerequisites for ${interaction.name}:`, error.message);
+    return false;
+  }
 }
 
 export default generateBehavior;

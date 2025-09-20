@@ -426,10 +426,16 @@ const runTick = async (worldState) => {
           settlement
         );
 
+        console.log(`Generated ${newConsequences.length} consequences for ${settlement.name}:`, 
+          newConsequences.map(c => c ? c.type : 'undefined'));
+
+        // Filter out any undefined consequences
+        const validConsequences = newConsequences.filter(c => c && c.id);
+
         // Add new consequences to the settlement
         let updatedSettlement = consequenceLifecycleManager.addConsequencesToSettlement(
           settlement,
-          newConsequences
+          validConsequences
         );
 
         // Process consequence lifecycle (aging, resolution, cleanup)
@@ -457,7 +463,7 @@ const runTick = async (worldState) => {
             updatedSettlement,
             previousSatisfaction,
             currentSatisfaction,
-            newConsequences
+            validConsequences
           );
 
           // Add historical events to world state
@@ -468,8 +474,8 @@ const runTick = async (worldState) => {
         }
 
         // Update settlement with new need satisfaction data
-        const consequenceIds = newConsequences.map(c => c.id);
-        const eventIds = newConsequences.map(c => `consequence_${c.id}_${worldState.time}`);
+        const consequenceIds = validConsequences.map(c => c.id);
+        const eventIds = validConsequences.map(c => `consequence_${c.id}_${worldState.time}`);
         
         worldState.settlements[index] = settlementService.updateNeedSatisfaction(
           updatedSettlement,

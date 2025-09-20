@@ -372,6 +372,8 @@ const oakwoodFederationConfig = {
         loyalty: 0.9
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-farming-valley',
         nodes: new Set(['oakwood-farming-valley']),
         interactions: new Set([])
       }
@@ -392,6 +394,8 @@ const oakwoodFederationConfig = {
         loyalty: 0.85
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-market-district',
         nodes: new Set(['oakwood-market-district']),
         interactions: new Set([])
       }
@@ -412,6 +416,8 @@ const oakwoodFederationConfig = {
         loyalty: 0.8
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-market-district',
         nodes: new Set(['oakwood-market-district']),
         interactions: new Set([])
       }
@@ -432,6 +438,8 @@ const oakwoodFederationConfig = {
         loyalty: 0.95
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-administrative-center',
         nodes: new Set(['oakwood-administrative-center']),
         interactions: new Set([])
       }
@@ -461,6 +469,8 @@ const oakwoodFederationConfig = {
         coherence: 0.85
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-administrative-center',
         nodes: new Set(['oakwood-administrative-center']),
         interactions: new Set([])
       },
@@ -487,6 +497,8 @@ const oakwoodFederationConfig = {
         coherence: 0.8
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-market-district',
         nodes: new Set(['oakwood-market-district']),
         interactions: new Set([])
       },
@@ -513,6 +525,8 @@ const oakwoodFederationConfig = {
         coherence: 0.9
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-farming-valley',
         nodes: new Set(['oakwood-farming-valley']),
         interactions: new Set([])
       },
@@ -539,6 +553,8 @@ const oakwoodFederationConfig = {
         coherence: 0.8
       },
       assignments: {
+        homeNodeId: 'oakwood-residential-quarter',
+        workNodeId: 'oakwood-market-district',
         nodes: new Set(['oakwood-market-district']),
         interactions: new Set([])
       },
