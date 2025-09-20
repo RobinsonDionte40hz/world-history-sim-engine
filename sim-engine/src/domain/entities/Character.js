@@ -118,14 +118,32 @@ class Character {
 
     // Apply racial modifiers to base attributes
     this.baseAttributes = config.baseAttributes || this._getDefaultAttributes();
-    const racialModifiedAttributes = this.racialTraits.applyAttributeModifiers(this._convertAttributesToSimple(this.baseAttributes));
+    let racialModifiedAttributes;
+    
+    // Safely apply racial modifiers
+    try {
+      racialModifiedAttributes = this.racialTraits && typeof this.racialTraits.applyAttributeModifiers === 'function'
+        ? this.racialTraits.applyAttributeModifiers(this._convertAttributesToSimple(this.baseAttributes))
+        : this._convertAttributesToSimple(this.baseAttributes);
+    } catch (error) {
+      console.warn('Failed to apply racial attribute modifiers, using base attributes:', error);
+      racialModifiedAttributes = this._convertAttributesToSimple(this.baseAttributes);
+    }
+    
     this.attributes = config.attributes instanceof Attributes
       ? config.attributes
       : new Attributes(this._convertSimpleToAttributes(racialModifiedAttributes));
 
     // Apply racial modifiers to base skills
     this.baseSkills = config.baseSkills || this._getDefaultSkills();
-    this.skills = this.racialTraits.applySkillModifiers(this.baseSkills);
+    try {
+      this.skills = this.racialTraits && typeof this.racialTraits.applySkillModifiers === 'function'
+        ? this.racialTraits.applySkillModifiers(this.baseSkills)
+        : this.baseSkills;
+    } catch (error) {
+      console.warn('Failed to apply racial skill modifiers, using base skills:', error);
+      this.skills = this.baseSkills;
+    }
 
     // Other character properties
     this.inventory = config.inventory || [];
@@ -1107,35 +1125,35 @@ class Character {
       lodTier: this.lodTier,
 
       // Character type and assignments
-      characterType: this.characterType.toJSON(),
+      characterType: this.characterType ? this.characterType.toJSON() : null,
       assignments: {
-        nodes: Array.from(this.assignments.nodes),
-        interactions: Array.from(this.assignments.interactions),
-        quests: Array.from(this.assignments.quests),
-        settlements: Array.from(this.assignments.settlements),
-        factions: Array.from(this.assignments.factions),
-        investments: Array.from(this.assignments.investments)
+        nodes: Array.from(this.assignments?.nodes || []),
+        interactions: Array.from(this.assignments?.interactions || []),
+        quests: Array.from(this.assignments?.quests || []),
+        settlements: Array.from(this.assignments?.settlements || []),
+        factions: Array.from(this.assignments?.factions || []),
+        investments: Array.from(this.assignments?.investments || [])
       },
 
       // Value objects
-      alignment: this.alignment.toJSON(),
-      influence: this.influence.toJSON(),
-      prestige: this.prestige.toJSON(),
-      personality: this.personality.toJSON(),
-      racialTraits: this.racialTraits.toJSON(),
-      economicProfile: this.economicProfile.toJSON(),
+      alignment: this.alignment ? this.alignment.toJSON() : null,
+      influence: this.influence ? this.influence.toJSON() : null,
+      prestige: this.prestige ? this.prestige.toJSON() : null,
+      personality: this.personality ? this.personality.toJSON() : null,
+      racialTraits: this.racialTraits ? this.racialTraits.toJSON() : null,
+      economicProfile: this.economicProfile ? this.economicProfile.toJSON() : null,
 
       // Attributes and skills
       baseAttributes: { ...this.baseAttributes },
-      attributes: this.attributes.toJSON(),
+      attributes: this.attributes ? this.attributes.toJSON() : null,
       baseSkills: { ...this.baseSkills },
       skills: { ...this.skills },
 
       // Other properties
-      inventory: [...this.inventory],
-      quests: [...this.quests],
-      relationships: Array.from(this.relationships.entries()),
-      memories: [...this.memories],
+      inventory: [...(this.inventory || [])],
+      quests: [...(this.quests || [])],
+      relationships: Array.from(this.relationships?.entries() || []),
+      memories: [...(this.memories || [])],
       location: this.location,
 
       // Add these properties to serialization

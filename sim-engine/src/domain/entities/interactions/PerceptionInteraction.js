@@ -111,6 +111,12 @@ class PerceptionInteraction extends SystemInteraction {
    * @returns {number} Effectiveness from 0.0 to 1.0
    */
   getPerceptionEffectiveness(character, environment) {
+    // Check if character has properly initialized attributes
+    if (!character.attributes || typeof character.attributes.getTotalModifier !== 'function') {
+      console.warn('Character attributes not properly initialized, using default values:', character.name);
+      return 0.5; // Default moderate effectiveness
+    }
+
     const intelligence = character.attributes.getTotalModifier('intelligence');
     const wisdom = character.attributes.getTotalModifier('wisdom');
     const perception = character.attributes.getTotalModifier('perception');

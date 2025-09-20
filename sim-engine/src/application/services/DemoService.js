@@ -13,6 +13,11 @@
 // Import the new DirectInteractionAssignment utility for better demo interaction management
 // Note: This is used within the _generateValleyOfEchoes method for role-based assignment
 
+// Valley of Echoes demo dependencies - moved to top level for HMR compatibility
+const oakwoodConfig = require('../../data/demos/valley-of-echoes/oakwood-federation-config.js');
+const ironholdConfig = require('../../data/demos/valley-of-echoes/ironhold-dominion-config.js');
+const DirectInteractionAssignment = require('./DirectInteractionAssignment.js');
+
 // Static reference to economic profiles to avoid module import issues
 const ECONOMIC_PROFILES = {
   LEADER: {
@@ -1194,9 +1199,7 @@ class DemoService {
    * @private
    */
   static _generateValleyOfEchoes() {
-    // Import the proper Valley of Echoes demo components
-    const oakwoodConfig = require('../../data/demos/valley-of-echoes/oakwood-federation-config.js');
-    const ironholdConfig = require('../../data/demos/valley-of-echoes/ironhold-dominion-config.js');
+    // Valley of Echoes demo components are now imported at the top level for HMR compatibility
 
     // Build Oakwood Federation settlement
     const oakwoodSettlement = {
@@ -1392,171 +1395,6 @@ class DemoService {
       }
     });
 
-    // Simple interaction assignment function
-    const assignInteractionsToCharacter = (character, systemInteractions, configInteractions) => {
-      if (!character.assignments) {
-        character.assignments = {
-          nodes: new Set(),
-          interactions: new Set(),
-          settlements: new Set(),
-          quests: new Set(),
-          factions: new Set(),
-          investments: new Set()
-        };
-      }
-
-      if (!character.assignments.interactions) {
-        character.assignments.interactions = new Set();
-      }
-
-      // Get interactions available in character's assigned nodes
-      const nodeInteractions = configInteractions.filter(interaction => 
-        interaction.associatedNodeId && character.assignments.nodes.has(interaction.associatedNodeId)
-      );
-
-      // Combine system interactions with node-specific interactions
-      const allAvailableInteractions = [...systemInteractions, ...nodeInteractions];
-
-      // Filter interactions based on character's LOD tier
-      const tierAppropriateInteractions = allAvailableInteractions.filter(interaction => {
-        if (!interaction.tierRequirement) {
-          // System interactions - available to all
-          return interaction.type !== 'content';
-        }
-
-        // Content interactions - check tier requirements
-        switch (character.lodTier) {
-          case 'background':
-            return interaction.tierRequirement === 'background';
-          case 'group':
-            return ['background', 'group'].includes(interaction.tierRequirement);
-          case 'hero':
-            return true; // Heroes can access all interactions
-          default:
-            return false;
-        }
-      });
-
-      // Determine how many interactions to assign based on tier
-      let maxAssignments;
-      switch (character.lodTier) {
-        case 'background':
-          maxAssignments = 2; // Background NPCs get system + 1 content interaction
-          break;
-        case 'group':
-          maxAssignments = 3; // Group NPCs get system + 2 content interactions
-          break;
-        case 'hero':
-          maxAssignments = 4; // Hero NPCs get system + 3 content interactions
-          break;
-        default:
-          maxAssignments = 2;
-      }
-
-      // Prioritize node-specific interactions, then add system interactions
-      const nodeSpecificInteractions = tierAppropriateInteractions.filter(i => i.associatedNodeId);
-      const systemOnlyInteractions = tierAppropriateInteractions.filter(i => !i.associatedNodeId);
-
-      // Select node interactions first, then system interactions
-      const selectedInteractions = [];
-      
-      // Add node-specific interactions (up to half of max assignments)
-      const maxNodeInteractions = Math.ceil(maxAssignments / 2);
-      const shuffledNode = [...nodeSpecificInteractions].sort(() => 0.5 - Math.random());
-      selectedInteractions.push(...shuffledNode.slice(0, maxNodeInteractions));
-
-      // Fill remaining slots with system interactions
-      const remainingSlots = maxAssignments - selectedInteractions.length;
-      const shuffledSystem = [...systemOnlyInteractions].sort(() => 0.5 - Math.random());
-      selectedInteractions.push(...shuffledSystem.slice(0, remainingSlots));
-
-      // Assign interactions to character
-      selectedInteractions.forEach(interaction => {
-        character.assignments.interactions.add(interaction.id);
-      });
-
-      return character;
-    };
-
-    // Create system interactions for all characters
-    const systemInteractions = [
-      {
-        id: 'wait_interaction',
-        name: 'Wait',
-        type: 'wait',
-        requirements: { energy: 0 },
-        branches: [{
-          id: 'wait_success',
-          name: 'Wait Successfully',
-          conditions: [],
-          effects: [{ type: 'energy', value: 10 }]
-        }],
-        effects: [],
-        context: { duration: 1 },
-        assignedCharacterIds: [] // Will be populated by assignment logic
-      },
-      {
-        id: 'rest_interaction',
-        name: 'Rest',
-        type: 'rest',
-        requirements: { energy: 20 },
-        branches: [{
-          id: 'rest_success',
-          name: 'Rest Successfully',
-          conditions: [],
-          effects: [{ type: 'energy', value: 50 }]
-        }],
-        effects: [],
-        context: { duration: 2 },
-        assignedCharacterIds: []
-      },
-      {
-        id: 'examine_interaction',
-        name: 'Examine',
-        type: 'examine',
-        requirements: { energy: 5 },
-        branches: [{
-          id: 'examine_success',
-          name: 'Examine Successfully',
-          conditions: [],
-          effects: [{ type: 'knowledge', value: 10 }]
-        }],
-        effects: [],
-        context: { targetType: 'environment' },
-        assignedCharacterIds: []
-      },
-      {
-        id: 'movement_interaction',
-        name: 'Move',
-        type: 'movement',
-        requirements: { energy: 15 },
-        branches: [{
-          id: 'movement_success',
-          name: 'Move Successfully',
-          conditions: [],
-          effects: [{ type: 'position', value: 'changed' }]
-        }],
-        effects: [],
-        context: { distance: 1 },
-        assignedCharacterIds: []
-      },
-      {
-        id: 'perception_interaction',
-        name: 'Perceive',
-        type: 'perception',
-        requirements: { energy: 10 },
-        branches: [{
-          id: 'perception_success',
-          name: 'Perceive Successfully',
-          conditions: [],
-          effects: [{ type: 'awareness', value: 15 }]
-        }],
-        effects: [],
-        context: { range: 10 },
-        assignedCharacterIds: []
-      }
-    ];
-
     // Extract content interactions from config files FIRST
     const configInteractions = [];
     [...oakwoodConfig.nodes, ...ironholdConfig.nodes].forEach(node => {
@@ -1584,7 +1422,7 @@ class DemoService {
     });
 
     // Initialize the new direct assignment system for better demo control
-    const directAssigner = new (require('./DirectInteractionAssignment.js'))();
+    const directAssigner = new DirectInteractionAssignment();
     directAssigner.initializeRoleBasedPools();
 
     // Assign interactions using the new role-based system (much simpler and more semantic)

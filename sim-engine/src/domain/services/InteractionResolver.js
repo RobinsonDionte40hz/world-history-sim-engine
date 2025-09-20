@@ -6,7 +6,29 @@ import Character from '../entities/Character.js';
 class InteractionResolver {
   // Resolve an interaction for a character, returning outcome and applying effects
   resolve(character, interaction, branchId, worldState = {}) {
-    if (!(interaction instanceof InteractionBase) || !(character instanceof Character)) {
+    // Debug logging to understand what we're receiving
+    console.log('InteractionResolver.resolve called with:', {
+      characterType: character?.constructor?.name,
+      characterName: character?.name,
+      interactionType: interaction?.constructor?.name,
+      interactionName: interaction?.name,
+      isInteractionBase: interaction instanceof InteractionBase,
+      isCharacter: character instanceof Character
+    });
+
+    // More lenient validation - accept objects that look like interactions and characters
+    const isValidInteraction = interaction instanceof InteractionBase || 
+                              (interaction && typeof interaction === 'object' && interaction.name);
+    const isValidCharacter = character instanceof Character ||
+                            (character && typeof character === 'object' && character.name);
+
+    if (!isValidInteraction || !isValidCharacter) {
+      console.error('Invalid interaction or character:', {
+        interaction: interaction?.name || 'unknown',
+        character: character?.name || 'unknown',
+        interactionValid: isValidInteraction,
+        characterValid: isValidCharacter
+      });
       throw new Error('Invalid interaction or character');
     }
 

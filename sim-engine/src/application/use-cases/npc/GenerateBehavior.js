@@ -662,7 +662,7 @@ function executeInteraction(character, selectedInteraction, worldState) {
 
     // Step 2: Resolve the interaction
     if (branch) {
-      resolution = interactionResolver.resolve(selectedInteraction, character, branch.id, worldState);
+      resolution = interactionResolver.resolve(character, selectedInteraction, branch.id, worldState);
     } else {
       // Create a basic resolution for interactions without branches
       resolution = {
