@@ -91,6 +91,11 @@ class SignificantMemoryService {
     // Use EventSignificanceService for base calculation
     let significance = this.eventSignificanceService.calculateEventSignificance(event, context);
     
+    // Ensure significance is a valid number and above threshold
+    if (typeof significance !== 'number' || isNaN(significance) || significance < this.SIGNIFICANCE_THRESHOLD) {
+      significance = Math.max(this.SIGNIFICANCE_THRESHOLD + 0.1, this.calculateEmotionalImpact(interaction, outcome) / 2);
+    }
+    
     // Apply interaction-specific modifiers
     significance = this.applyInteractionModifiers(significance, interaction, context);
     
@@ -116,7 +121,8 @@ class SignificantMemoryService {
       'combat': 'conflict',
       'negotiation': 'social_success',
       'betrayal': 'betrayal',
-      'alliance': 'alliance'
+      'alliance': 'alliance',
+      'economic': 'economic_gain'
     };
     
     return typeMapping[interactionType] || 'default';

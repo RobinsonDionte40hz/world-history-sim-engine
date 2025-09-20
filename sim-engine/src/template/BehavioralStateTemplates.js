@@ -449,6 +449,108 @@ class BehavioralStateTemplates {
   }
 
   /**
+   * Create a template variant with modified consciousness parameters
+   * @param {string} baseArchetype - Base archetype to modify
+   * @param {Object} modifications - Consciousness modifications to apply
+   * @param {string} variantName - Name for the variant
+   * @returns {Object} Modified template
+   */
+  createTemplateVariant(baseArchetype, modifications, variantName) {
+    const baseTemplate = this.getTemplate(baseArchetype);
+    if (!baseTemplate) {
+      throw new Error(`Unknown base archetype: ${baseArchetype}`);
+    }
+
+    const variantTemplate = {
+      ...baseTemplate,
+      id: `${baseArchetype}_${variantName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+      name: `${baseTemplate.name} (${variantName})`,
+      description: `${baseTemplate.description} - ${variantName} variant`,
+      consciousness: {
+        ...baseTemplate.consciousness,
+        ...modifications.consciousness,
+        behavioralState: {
+          ...baseTemplate.consciousness.behavioralState,
+          ...modifications.consciousness?.behavioralState
+        },
+        updateRules: {
+          ...baseTemplate.consciousness.updateRules,
+          ...modifications.consciousness?.updateRules
+        }
+      },
+      metadata: {
+        ...baseTemplate.metadata,
+        baseArchetype,
+        variantName,
+        createdAt: new Date().toISOString()
+      }
+    };
+
+    // Validate the variant
+    const validation = this.validateConfig(variantTemplate);
+    if (!validation.isValid) {
+      throw new Error(`Invalid template variant: ${validation.errors.join(', ')}`);
+    }
+
+    // Store the variant
+    this.templates.set(variantTemplate.id, variantTemplate);
+    return variantTemplate;
+  }
+
+  /**
+   * Get template variants for a base archetype
+   * @param {string} baseArchetype - Base archetype name
+   * @returns {Array} Array of variant templates
+   */
+  getTemplateVariants(baseArchetype) {
+    const variants = [];
+    this.templates.forEach(template => {
+      if (template.metadata?.baseArchetype === baseArchetype) {
+        variants.push(template);
+      }
+    });
+    return variants;
+  }
+
+  /**
+   * Create consciousness configuration for template instantiation
+   * @param {string} archetype - Archetype name
+   * @param {Object} customizations - Custom consciousness parameters
+   * @returns {Object} Complete consciousness configuration
+   */
+  createConsciousnessConfig(archetype, customizations = {}) {
+    const template = this.getTemplate(archetype);
+    if (!template) {
+      throw new Error(`Unknown archetype: ${archetype}`);
+    }
+
+    const config = {
+      frequency: customizations.frequency || template.consciousness.frequency,
+      coherence: customizations.coherence || template.consciousness.coherence,
+      behavioralState: {
+        energy: customizations.behavioralState?.energy || template.consciousness.behavioralState.energy,
+        focus: customizations.behavioralState?.focus || template.consciousness.behavioralState.focus,
+        socialDrive: customizations.behavioralState?.socialDrive || template.consciousness.behavioralState.socialDrive,
+        riskTolerance: customizations.behavioralState?.riskTolerance || template.consciousness.behavioralState.riskTolerance,
+        ambition: customizations.behavioralState?.ambition || template.consciousness.behavioralState.ambition
+      },
+      updateRules: {
+        significanceThreshold: customizations.updateRules?.significanceThreshold || template.consciousness.updateRules.significanceThreshold,
+        adaptationRate: customizations.updateRules?.adaptationRate || template.consciousness.updateRules.adaptationRate,
+        stabilityFactor: customizations.updateRules?.stabilityFactor || template.consciousness.updateRules.stabilityFactor
+      }
+    };
+
+    // Validate the configuration
+    const validation = this.validateConfig({ consciousness: config });
+    if (!validation.isValid) {
+      throw new Error(`Invalid consciousness configuration: ${validation.errors.join(', ')}`);
+    }
+
+    return config;
+  }
+
+  /**
    * Get archetype recommendations based on character attributes
    * @param {Object} character - Character with attributes and personality
    * @returns {Array} Array of recommended archetypes with match scores

@@ -115,7 +115,7 @@ class ConsciousnessCheckpointService extends BaseDomainService {
     // Process each character state in the checkpoint
     checkpoint.characterStates.forEach((state, npcId) => {
       try {
-        const npc = worldState.npcs.find(n => n.id === npcId);
+        const npc = worldState.npcs.get(npcId);
         
         if (!npc) {
           result.errors.push(`NPC ${npcId} not found in world state`);

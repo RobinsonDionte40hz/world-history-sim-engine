@@ -182,6 +182,9 @@ class ConsciousnessUpdateService extends BaseDomainService {
             // Update consciousness based on event
             const updateResult = this.updateConsciousnessFromEvent(character, event, context);
 
+            // Add significant event to consciousness history
+            this.addSignificantEvent(character, event, context, updateResult.significance);
+
             if (this.logger) {
                 this.logger.info(`Consciousness updated for character ${character.id}: ${JSON.stringify(updateResult.changes)}`);
             }
@@ -532,6 +535,104 @@ class ConsciousnessUpdateService extends BaseDomainService {
             },
             driftFactor
         };
+    }
+
+    /**
+     * Add a significant event to the character's consciousness history
+     * @param {Object} character - Character to add event to
+     * @param {Object} event - Event that was processed
+     * @param {Object} context - Additional context
+     * @param {number} significance - Calculated significance of the event
+     */
+    addSignificantEvent(character, event, context, significance) {
+        if (!character.consciousness) {
+            return;
+        }
+
+        // Initialize significantEvents array if it doesn't exist
+        if (!character.consciousness.significantEvents) {
+            character.consciousness.significantEvents = [];
+        }
+
+        // Create event record
+        const eventRecord = {
+            id: this.generateEventId(),
+            type: event.type,
+            outcome: event.outcome,
+            significance: significance,
+            timestamp: Date.now(),
+            emotionalImpact: context.emotionalImpact || event.emotionalImpact || 0,
+            changes: {
+                frequency: event.frequency || 0,
+                coherence: event.coherence || 0
+            },
+            description: this.generateEventDescription(event, context)
+        };
+
+        // Add event to history
+        character.consciousness.significantEvents.push(eventRecord);
+
+        // Limit the number of stored events to prevent memory bloat
+        const maxEvents = 20; // Configurable limit
+        if (character.consciousness.significantEvents.length > maxEvents) {
+            // Keep most significant events
+            character.consciousness.significantEvents.sort((a, b) => b.significance - a.significance);
+            character.consciousness.significantEvents = character.consciousness.significantEvents.slice(0, maxEvents);
+        }
+    }
+
+    /**
+     * Generate unique event ID
+     * @returns {string} Unique event identifier
+     */
+    generateEventId() {
+        return `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    /**
+     * Generate human-readable event description
+     * @param {Object} event - The event
+     * @param {Object} context - Additional context
+     * @returns {string} Event description
+     */
+    generateEventDescription(event, context) {
+        const typeDescriptions = {
+            'social_success': 'successful social interaction',
+            'social_failure': 'unsuccessful social interaction',
+            'conflict': 'conflict situation',
+            'betrayal': 'experience of betrayal',
+            'goal_completion': 'goal achievement',
+            'goal_failure': 'goal failure',
+            'economic_gain': 'economic success',
+            'economic_loss': 'economic setback',
+            'birth': 'birth of child',
+            'death': 'loss of life',
+            'marriage': 'marriage',
+            'discovery': 'important discovery',
+            'skill_improvement': 'skill development'
+        };
+
+        const outcomeDescriptions = {
+            'critical_success': 'with outstanding success',
+            'success': 'successfully',
+            'partial_success': 'with mixed results',
+            'neutral': 'neutrally',
+            'partial_failure': 'with some difficulties',
+            'failure': 'unsuccessfully',
+            'critical_failure': 'with catastrophic failure'
+        };
+
+        const typeDesc = typeDescriptions[event.type] || 'significant event';
+        const outcomeDesc = outcomeDescriptions[event.outcome] || '';
+
+        let description = `${typeDesc} ${outcomeDesc}`;
+
+        // Add context details
+        if (context.participants && context.participants.length > 0) {
+            description += ` involving ${context.participants.length} other${context.participants.length > 1 ? 's' : ''}`;
+        }
+
+        return description.trim();
     }
 }
 

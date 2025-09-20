@@ -372,12 +372,6 @@ describe('CharacterTemplateService', () => {
 });
 
 describe('Character.fromTemplate Integration', () => {
-    let templateService;
-
-    beforeEach(() => {
-        templateService = new CharacterTemplateService();
-    });
-
     test('should create character from predefined template name', () => {
         const character = Character.fromTemplate('warrior', {
             name: 'Sir Galen',

@@ -153,6 +153,11 @@ describe('Memory Management Integration', () => {
             // Perform memory management
             const memoryResult = memoryManager.processCharacter(testCharacter);
 
+            // Verify memory management completed successfully
+            expect(memoryResult).toBeDefined();
+            expect(memoryResult.eventsPruned).toBeGreaterThanOrEqual(0);
+            expect(memoryResult.memoriesPruned).toBeGreaterThanOrEqual(0);
+
             // Verify memory management didn't break behavioral calculations
             const modifierAfterCleanup = behavioralService.getBehavioralModifier(testCharacter, 'social');
             expect(typeof modifierAfterCleanup).toBe('number');

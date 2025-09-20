@@ -665,6 +665,11 @@ class BehavioralStateService extends BaseDomainService {
      * @returns {number} Clamped decision factor
      */
     clampDecisionFactor(factor) {
+        // Ensure factor is a valid number
+        if (typeof factor !== 'number' || isNaN(factor) || !isFinite(factor)) {
+            return 1.0; // Neutral modifier
+        }
+        
         return Math.max(this.MIN_DECISION_FACTOR, Math.min(this.MAX_DECISION_FACTOR, factor));
     }
 
