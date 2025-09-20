@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Utilities Test</title>
+</head>
+<body>
+    <h1>Debug Utilities Test</h1>
+    <p>Open browser console to see debug output</p>
+    
+    <script type="module">
+        // Test the SimulationInterfaceDebugger
+        import { simulationInterfaceDebugger } from './src/shared/utils/SimulationInterfaceDebug.js';
+        
+        console.log('🧪 Testing SimulationInterfaceDebugger...');
+        
+        // Test basic functionality
+        simulationInterfaceDebugger.setEnabled(true);
+        simulationInterfaceDebugger.log('Test message from SimulationInterfaceDebugger');
+        
+        // Test verbose logging
+        simulationInterfaceDebugger.setVerbose(true);
+        simulationInterfaceDebugger.verboseLog('Verbose test message', { test: 'data' });
+        
+        // Test debug methods
+        simulationInterfaceDebugger.debugSimulationContext({
+            currentTurn: 5,
+            isInitialized: true,
+            canProcessTurn: true,
+            currentSimulationState: {
+                time: 100,
+                characters: [{ id: 1 }, { id: 2 }],
+                events: [{ id: 1 }],
+                nodes: [{ id: 1 }]
+            },
+            turnHistory: [{ id: 1 }, { id: 2 }],
+            lodStats: { hero: 1, group: 2, background: 0, total: 3 }
+        });
+        
+        // Test world state flow debug
+        const mockWorldState = {
+            time: 100,
+            characters: [{ id: 1 }, { id: 2 }],
+            events: [{ id: 1 }],
+            nodes: [{ id: 1 }]
+        };
+        
+        simulationInterfaceDebugger.debugWorldStateFlow(
+            mockWorldState, // activeWorldState
+            mockWorldState, // currentSimulationState
+            null           // worldState prop
+        );
+        
+        // Test LOD debug
+        simulationInterfaceDebugger.debugLOD(
+            { hero: 1, group: 2, background: 0, total: 3 },
+            { lastTurnDuration: 50, averageTurnDuration: 45, totalProcessed: 100 },
+            [{ from: 'group', to: 'hero', character: 'Alice' }]
+        );
+        
+        // Test data structure debug
+        simulationInterfaceDebugger.debugDataStructures(mockWorldState);
+        
+        // Create console utilities
+        simulationInterfaceDebugger.createConsoleUtilities();
+        
+        console.log('✅ SimulationInterfaceDebugger test completed!');
+        console.log('🎮 Try these commands in console:');
+        console.log('- debugSimInterface.enable()');
+        console.log('- debugSimInterface.verbose()');
+        console.log('- debugSimInterface.checkLocalStorage()');
+        console.log('- debugSimInterface.checkMemory()');
+    </script>
+</body>
+</html>

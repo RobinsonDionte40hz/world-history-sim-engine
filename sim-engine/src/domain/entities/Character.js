@@ -1104,6 +1104,7 @@ class Character {
       name: this.name,
       age: this.age,
       level: this.level,
+      lodTier: this.lodTier,
 
       // Character type and assignments
       characterType: this.characterType.toJSON(),
@@ -1149,7 +1150,11 @@ class Character {
       decisionHistory: this.decisionHistory,
       needBasedBehaviorChanges: this.needBasedBehaviorChanges,
       needBasedInteractionModifiers: this.needBasedInteractionModifiers,
-      templateApplied: this.templateApplied
+      templateApplied: this.templateApplied,
+      
+      // LOD-specific properties for group tier characters
+      populationGroupId: this.populationGroupId,
+      groupStatistics: this.groupStatistics
     };
   }
 
@@ -1166,6 +1171,7 @@ class Character {
       name: data.name,
       age: data.age,
       level: data.level,
+      lodTier: data.lodTier,
 
       // Reconstruct character type and assignments
       characterType: data.characterType ? CharacterType.fromJSON(data.characterType) : undefined,
@@ -1209,7 +1215,11 @@ class Character {
       decisionHistory: data.decisionHistory,
       needBasedBehaviorChanges: data.needBasedBehaviorChanges || [],
       needBasedInteractionModifiers: data.needBasedInteractionModifiers || {},
-      templateApplied: data.templateApplied || null
+      templateApplied: data.templateApplied || null,
+      
+      // LOD-specific properties for group tier characters  
+      populationGroupId: data.populationGroupId,
+      groupStatistics: data.groupStatistics
     });
   }
 

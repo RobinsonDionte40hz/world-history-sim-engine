@@ -1,26 +1,17 @@
 //  WorldHistorySimInterface.js - Proper turn data flow
 import React, { useState, useEffect } from 'react';
 import { useSimulationContext } from '../contexts/SimulationContext.js';
+import { simulationInterfaceDebugger } from '../../shared/utils/SimulationInterfaceDebug.js';
 
-// Debug component to check data flow
+// Debug component to check data flow - now uses the debug utility
 const DebugDataFlow = ({ currentSimulationState, worldState, turnHistory, currentTurn }) => {
-  console.log('=== DEBUG DATA FLOW ===');
-  console.log('currentSimulationState:', currentSimulationState);
-  console.log('worldState prop:', worldState);
-  console.log('turnHistory:', turnHistory);
-  console.log('currentTurn:', currentTurn);
-
-  // More detailed logging
-  console.log('currentSimulationState.time:', currentSimulationState?.time);
-  console.log('worldState.time:', worldState?.time);
-  console.log('currentSimulationState.events:', currentSimulationState?.events);
-  console.log('worldState.events:', worldState?.events);
-  console.log('currentSimulationState.events length:', currentSimulationState?.events?.length);
-  console.log('worldState.events length:', worldState?.events?.length);
-  console.log('currentSimulationState has events array:', Array.isArray(currentSimulationState?.events));
-  console.log('worldState has events array:', Array.isArray(worldState?.events));
-
-  console.log('========================');
+  // Use the debug utility instead of direct console.log
+  simulationInterfaceDebugger.verboseLog('DebugDataFlow render', {
+    currentSimulationState: !!currentSimulationState,
+    worldState: !!worldState,
+    turnHistory: turnHistory?.length || 0,
+    currentTurn
+  });
 
   return (
     <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded text-xs max-w-sm max-h-64 overflow-y-auto">
@@ -53,14 +44,14 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
   const characters = displayWorldState.characters || displayWorldState.npcs || [];
   const npcs = displayWorldState.npcs || displayWorldState.characters || [];
 
-  // Debug logging for real data
-  console.log('DashboardView - RECEIVED worldState:', worldState);
-  console.log('DashboardView - worldState.time:', worldState?.time);
-  console.log('DashboardView - worldState.events:', worldState?.events);
-  console.log('DashboardView - events length:', worldState?.events?.length || 0);
-  console.log('DashboardView - characters length:', characters.length);
-  console.log('DashboardView - npcs length:', npcs.length);
-  console.log('DashboardView - turnManager stats:', turnManager.getCurrentStatistics());
+  // Debug logging for real data using the debug utility
+  simulationInterfaceDebugger.verboseLog('DashboardView render', {
+    worldStateTime: worldState?.time,
+    eventsCount: worldState?.events?.length || 0,
+    charactersCount: characters.length,
+    npcsCount: npcs.length,
+    turnManagerStats: turnManager.getCurrentStatistics()
+  });
 
   // Ensure resources object exists and has required properties
   const resources = displayWorldState.resources || {
@@ -72,7 +63,7 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
 
   // Get real timeline events from the turn manager
   const recentEvents = turnManager.getRecentEvents(5);
-  console.log('DashboardView - recent events:', recentEvents);
+  simulationInterfaceDebugger.verboseLog('DashboardView recent events', recentEvents);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -400,14 +391,14 @@ const WorldHistorySimInterface = ({
   const [selectedView, setSelectedView] = useState('overview');
   const [selectedCharacter, setSelectedCharacter] = useState(null);
 
-  // Add debug output
-  console.log('WorldHistorySimInterface - Context Data:', {
+  // Add debug output using the debug utility
+  simulationInterfaceDebugger.debugSimulationContext({
     currentTurn,
-    hasCurrentSimulationState: !!currentSimulationState,
-    hasWorldState: !!worldState,
-    turnHistoryLength: turnHistory?.length || 0,
-    currentSimulationStateEvents: currentSimulationState?.events?.length || 0,
-    worldStateEvents: worldState?.events?.length || 0
+    currentSimulationState,
+    worldState,
+    turnHistory,
+    canProcessTurn,
+    isInitialized
   });
 
   // Use current simulation state instead of worldState prop
@@ -425,15 +416,8 @@ const WorldHistorySimInterface = ({
     }
   };
 
-  // Debug the active world state
-  console.log('WorldHistorySimInterface - activeWorldState:', {
-    time: activeWorldState.time,
-    eventsCount: activeWorldState.events?.length || 0,
-    charactersCount: activeWorldState.characters?.length || activeWorldState.npcs?.length || 0,
-    nodesCount: activeWorldState.nodes?.length || 0,
-    hasEvents: !!activeWorldState.events,
-    eventsType: Array.isArray(activeWorldState.events) ? 'array' : typeof activeWorldState.events
-  });
+  // Debug the active world state using the debug utility
+  simulationInterfaceDebugger.debugWorldStateFlow(activeWorldState, currentSimulationState, worldState);
 
   // Auto-initialize simulation when prepared world data is available but not initialized
   useEffect(() => {
@@ -448,26 +432,31 @@ const WorldHistorySimInterface = ({
   const handleNextTurn = async () => {
     if (canProcessTurn) {
       try {
-        console.log('BEFORE TURN - Current State:', {
+        const beforeState = {
           currentTurn,
           eventsCount: activeWorldState?.events?.length || 0,
           charactersCount: activeWorldState?.characters?.length || 0
-        });
+        };
         
         const result = await processTurn();
         
-        console.log('AFTER TURN - New State:', {
-          newTurn: currentTurn + 1,
-          result,
-          newEventsCount: result?.worldState?.events?.length || 0,
-          newCharactersCount: result?.worldState?.characters?.length || 0
-        });
+        const afterState = {
+          currentTurn: currentTurn + 1,
+          eventsCount: result?.worldState?.events?.length || 0,
+          charactersCount: result?.worldState?.characters?.length || 0
+        };
+        
+        simulationInterfaceDebugger.debugTurnProcessing(beforeState, afterState, result);
         
       } catch (error) {
         console.error('Error processing turn:', error);
       }
     } else {
-      console.log('Cannot process turn - conditions not met:', { canProcessTurn, isInitialized, currentTurn });
+      simulationInterfaceDebugger.log('Cannot process turn - conditions not met', { 
+        canProcessTurn, 
+        isInitialized, 
+        currentTurn 
+      });
     }
   };
 
@@ -490,7 +479,7 @@ const WorldHistorySimInterface = ({
         totalResources: activeWorldState?.resources?.totalGold || 0
       };
       
-      console.log('Real turn manager stats:', stats); // Debug logging
+      simulationInterfaceDebugger.verboseLog('Real turn manager stats', stats);
       return stats;
     },
     

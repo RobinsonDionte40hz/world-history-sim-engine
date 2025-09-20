@@ -3,12 +3,12 @@
 console.log('Testing component imports...');
 
 try {
-  // Test ConditionalSimulationInterface
-  console.log('Testing ConditionalSimulationInterface import...');
-  require('./src/presentation/components/ConditionalSimulationInterface.js');
-  console.log('✓ ConditionalSimulationInterface imported successfully');
+  // Test WorldHistorySimInterface (unified interface)
+  console.log('Testing WorldHistorySimInterface import...');
+  require('./src/presentation/components/WorldHistorySimInterface.js');
+  console.log('✓ WorldHistorySimInterface imported successfully');
 } catch (error) {
-  console.error('✗ ConditionalSimulationInterface import failed:', error.message);
+  console.error('✗ WorldHistorySimInterface import failed:', error.message);
 }
 
 try {

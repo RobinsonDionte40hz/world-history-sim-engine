@@ -426,9 +426,6 @@ const runTick = async (worldState) => {
           settlement
         );
 
-        console.log(`Generated ${newConsequences.length} consequences for ${settlement.name}:`, 
-          newConsequences.map(c => c ? c.type : 'undefined'));
-
         // Filter out any undefined consequences
         const validConsequences = newConsequences.filter(c => c && c.id);
 
@@ -477,9 +474,16 @@ const runTick = async (worldState) => {
         const consequenceIds = validConsequences.map(c => c.id);
         const eventIds = validConsequences.map(c => `consequence_${c.id}_${worldState.time}`);
         
+        // Create satisfactionResult without consequences to avoid duplication
+        // since we already handled consequence generation separately
+        const satisfactionResultForUpdate = {
+          ...satisfactionResult,
+          consequences: [] // Remove duplicate consequences
+        };
+        
         worldState.settlements[index] = settlementService.updateNeedSatisfaction(
           updatedSettlement,
-          satisfactionResult,
+          satisfactionResultForUpdate,
           consequenceIds,
           eventIds
         );

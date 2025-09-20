@@ -431,25 +431,46 @@ function gatherAvailableInteractions(character, worldState) {
     currentNode
   });
 
-  // IMPORTANT: Ensure we're returning both basic and content interactions
+  // IMPORTANT: Prioritize assigned interactions over node content interactions
   const interactions = [];
   
-  // Add system interactions (basic interactions)
+  // Always add system interactions (basic needs, etc.)
   if (availableInteractionsData.systemInteractions && Array.isArray(availableInteractionsData.systemInteractions)) {
     interactions.push(...availableInteractionsData.systemInteractions);
   }
   
-  // Add content interactions - THIS IS THE KEY FIX
-  if (availableInteractionsData.contentInteractions && Array.isArray(availableInteractionsData.contentInteractions)) {
-    interactions.push(...availableInteractionsData.contentInteractions);
+  // Check if character has assigned interactions (from DirectInteractionAssignment)
+  const hasAssignedInteractions = character.assignments?.interactions?.size > 0;
+  
+  if (hasAssignedInteractions) {
+    // Use ONLY assigned interactions instead of node content interactions
+    console.log(`Character ${character.name} has ${character.assignments.interactions.size} assigned interactions, using those instead of node content`);
+    
+    // Get the assigned interactions from the world state
+    const assignedInteractionIds = Array.from(character.assignments.interactions);
+    const assignedInteractions = worldState.interactions?.filter(interaction => 
+      assignedInteractionIds.includes(interaction.id)
+    ) || [];
+    
+    interactions.push(...assignedInteractions);
+    console.log(`Added ${assignedInteractions.length} assigned interactions for ${character.name} (EXCLUDING node content interactions to prevent dual assignment)`);
+  } else {
+    // Fallback to node content interactions if no assigned interactions
+    if (availableInteractionsData.contentInteractions && Array.isArray(availableInteractionsData.contentInteractions)) {
+      interactions.push(...availableInteractionsData.contentInteractions);
+      console.log(`Character ${character.name} has no assigned interactions, using ${availableInteractionsData.contentInteractions.length} node content interactions`);
+    }
   }
 
   // INTEGRATION: Add routine interactions based on time and character assignments
   try {
-    const timeOfDay = dailyScheduleService.getTimeOfDay(worldState.time || Date.now());
-    const availableActivities = dailyScheduleService.getAvailableActivities(character, timeOfDay, worldState);
+    const worldTime = worldState.time || Date.now();
+    const timeOfDay = dailyScheduleService.getTimeOfDay(worldTime);
     
-    // Generate routine interactions for available activities
+    // Log time context for debugging
+    console.log(`Time context for ${character.name}: worldTime=${worldTime}, timeOfDay=${timeOfDay}`);
+    
+    // Generate routine interactions for the current time of day
     const routineInteractions = routineInteractionManager.generateRoutineInteractions(
       character,
       {
@@ -458,13 +479,15 @@ function gatherAvailableInteractions(character, worldState) {
           ? new Map(worldState.nodes.map(node => [node.id, node]))
           : worldState.nodes
       },
-      timeOfDay,
-      availableActivities
+      timeOfDay
     );
     
     if (routineInteractions && routineInteractions.length > 0) {
       interactions.push(...routineInteractions);
-      console.log(`Added ${routineInteractions.length} routine interactions for ${character.name}`);
+      console.log(`Added ${routineInteractions.length} routine interactions for ${character.name} during ${timeOfDay}:`,
+        routineInteractions.map(i => i.name || i.type).join(', '));
+    } else {
+      console.log(`No routine interactions generated for ${character.name} during ${timeOfDay}`);
     }
   } catch (error) {
     console.warn(`Error generating routine interactions for ${character.name}:`, error.message);
@@ -509,8 +532,12 @@ function gatherAvailableInteractions(character, worldState) {
   
   // Log breakdown by type for debugging
   const systemCount = availableInteractions.filter(i => i.isSystemInteraction).length;
-  const contentCount = availableInteractions.filter(i => !i.isSystemInteraction).length;
-  console.log(`  - ${systemCount} system interactions, ${contentCount} content interactions`);
+  const assignedCount = availableInteractions.filter(i => !i.isSystemInteraction && !i.category?.includes('routine')).length;
+  const routineCount = availableInteractions.filter(i => i.category === 'routine').length;
+  
+  console.log(`  - ${systemCount} system interactions`);
+  console.log(`  - ${assignedCount} assigned/content interactions`);
+  console.log(`  - ${routineCount} routine interactions`);
 
   return availableInteractions;
 }// Emergency handler (separate from main weighting)

@@ -7,6 +7,7 @@
 
 import debugWorldFlow from './debugWorldFlow';
 import debugNamingIssue from './debugNamingIssue';
+import { simulationInterfaceDebugger } from './SimulationInterfaceDebug.js';
 
 /**
  * Initialize debug utilities
@@ -14,9 +15,16 @@ import debugNamingIssue from './debugNamingIssue';
  */
 export const initDebugUtils = () => {
   if (process.env.NODE_ENV === 'development') {
-    // Load debug utilities
-    debugWorldFlow;
-    debugNamingIssue;
+    // Initialize debug utilities
+    if (debugWorldFlow) {
+      // debugWorldFlow exports create their own window functions
+    }
+    if (debugNamingIssue) {
+      // debugNamingIssue exports create their own window functions
+    }
+    
+    // Initialize simulation interface debugger
+    simulationInterfaceDebugger.createConsoleUtilities();
     
     console.log('🛠️ Debug utilities initialized for development');
     console.log('Available debug functions:');
@@ -26,8 +34,9 @@ export const initDebugUtils = () => {
     console.log('- window.debugWorldContext()');
     console.log('- window.clearAllWorldData()');
     console.log('- window.exportWorldData()');
-    console.log('- window.debugNamingIssue() - NEW: Debug naming confusion');
-    console.log('- window.debugWorldCreationFlow() - NEW: Debug world creation');
+    console.log('- window.debugNamingIssue() - Debug naming confusion');
+    console.log('- window.debugWorldCreationFlow() - Debug world creation');
+    console.log('- window.debugSimInterface - NEW: Simulation interface debugging');
   }
 };
 

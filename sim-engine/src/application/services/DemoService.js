@@ -10,6 +10,9 @@
 // Import BasicNeedsService for citizen tier assignments
 // const BasicNeedsService = require('../../domain/services/BasicNeedsService.js');
 
+// Import the new DirectInteractionAssignment utility for better demo interaction management
+// Note: This is used within the _generateValleyOfEchoes method for role-based assignment
+
 // Static reference to economic profiles to avoid module import issues
 const ECONOMIC_PROFILES = {
   LEADER: {
@@ -1580,25 +1583,41 @@ class DemoService {
       }
     });
 
-    // Assign interactions to all character arrays
-    const oakwoodHeroCharactersWithInteractions = oakwoodHeroCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
-    );
-    const ironholdHeroCharactersWithInteractions = ironholdHeroCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
-    );
-    const oakwoodGroupCharactersWithInteractions = oakwoodGroupCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
-    );
-    const ironholdGroupCharactersWithInteractions = ironholdGroupCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
-    );
-    const oakwoodBackgroundCharactersWithInteractions = oakwoodBackgroundCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
-    );
-    const ironholdBackgroundCharactersWithInteractions = ironholdBackgroundCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
-    );
+    // Initialize the new direct assignment system for better demo control
+    const directAssigner = new (require('./DirectInteractionAssignment.js'))();
+    directAssigner.initializeRoleBasedPools();
+
+    // Assign interactions using the new role-based system (much simpler and more semantic)
+    const oakwoodHeroCharactersWithInteractions = oakwoodHeroCharacters.map(char => {
+      directAssigner.assignByRole(char, 4); // Heroes get 4 interactions
+      char.assignments.interactions = new Set(directAssigner.getCharacterInteractions(char.id));
+      return char;
+    });
+    const ironholdHeroCharactersWithInteractions = ironholdHeroCharacters.map(char => {
+      directAssigner.assignByRole(char, 4); // Heroes get 4 interactions
+      char.assignments.interactions = new Set(directAssigner.getCharacterInteractions(char.id));
+      return char;
+    });
+    const oakwoodGroupCharactersWithInteractions = oakwoodGroupCharacters.map(char => {
+      directAssigner.assignByRole(char, 3); // Group NPCs get 3 interactions
+      char.assignments.interactions = new Set(directAssigner.getCharacterInteractions(char.id));
+      return char;
+    });
+    const ironholdGroupCharactersWithInteractions = ironholdGroupCharacters.map(char => {
+      directAssigner.assignByRole(char, 3); // Group NPCs get 3 interactions
+      char.assignments.interactions = new Set(directAssigner.getCharacterInteractions(char.id));
+      return char;
+    });
+    const oakwoodBackgroundCharactersWithInteractions = oakwoodBackgroundCharacters.map(char => {
+      directAssigner.assignByRole(char, 2); // Background NPCs get 2 interactions
+      char.assignments.interactions = new Set(directAssigner.getCharacterInteractions(char.id));
+      return char;
+    });
+    const ironholdBackgroundCharactersWithInteractions = ironholdBackgroundCharacters.map(char => {
+      directAssigner.assignByRole(char, 2); // Background NPCs get 2 interactions
+      char.assignments.interactions = new Set(directAssigner.getCharacterInteractions(char.id));
+      return char;
+    });
 
     // Combine all Characters
     const allCharacters = [
@@ -1616,11 +1635,30 @@ class DemoService {
       ...ironholdConfig.nodes
     ];
 
-    // Combine system interactions with config interactions and valley-specific interactions
-    const interactions = [
-      ...systemInteractions,
-      ...configInteractions
-    ];
+    // Get all interactions from the direct assignment system (includes role-based pools + universal)
+    const allRoleInteractions = [];
+    for (const role of ['administrator', 'merchant', 'farmer', 'artisan', 'universal']) {
+      allRoleInteractions.push(...directAssigner.getInteractionsForRole(role));
+    }
+
+    // Create interaction objects in the format expected by the world
+    const interactions = allRoleInteractions.map(interaction => ({
+      id: interaction.id,
+      name: interaction.name,
+      description: interaction.description,
+      type: interaction.type,
+      category: interaction.category,
+      requirements: interaction.requirements,
+      effects: interaction.effects,
+      tierRequirement: interaction.tierRequirement,
+      branches: [{
+        id: `${interaction.id}_success`,
+        name: `${interaction.name} Successfully`,
+        conditions: [],
+        effects: Object.entries(interaction.effects).map(([type, value]) => ({ type, value }))
+      }],
+      assignedCharacterIds: [] // Will be populated by assignment logic
+    }));
 
     return {
       // World Foundation
