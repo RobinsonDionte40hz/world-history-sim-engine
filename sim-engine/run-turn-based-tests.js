@@ -19,6 +19,12 @@ const testSuites = [
     priority: 1
   },
   {
+    name: 'Need Satisfaction Integration',
+    file: 'turn-processing-need-satisfaction.test.js',
+    description: 'Need satisfaction and consequence integration tests',
+    priority: 1
+  },
+  {
     name: 'Turn-Based Specific',
     file: 'turn-counter-integration-turnbased.test.js', 
     description: 'Turn-based simulation specific tests',

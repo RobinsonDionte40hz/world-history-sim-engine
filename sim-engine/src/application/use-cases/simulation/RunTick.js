@@ -10,17 +10,281 @@ import ConsequenceLifecycleManager from '../../../domain/services/ConsequenceLif
 import SettlementService from '../../../domain/services/SettlementService.js';
 import CharacterBehaviorModifierService from '../../../domain/services/CharacterBehaviorModifierService.js';
 
-const runTick = (worldState) => {
+// Import consciousness system services
+import { EnhancedConsciousnessState } from '../../../domain/value-objects/EnhancedConsciousnessState.js';
+import BehavioralStateService from '../../../domain/services/BehavioralStateService.js';
+import EventSignificanceService from '../../../domain/services/EventSignificanceService.js';
+import ConsciousnessUpdateService from '../../../domain/services/ConsciousnessUpdateService.js';
+import SignificantMemoryService from '../../../domain/services/SignificantMemoryService.js';
+import ConsciousnessCheckpointService from '../../../domain/services/ConsciousnessCheckpointService.js';
+import BatchProcessingService from '../../../domain/services/BatchProcessingService.js';
+import ConsciousnessConfigurationService from '../../../domain/services/ConsciousnessConfigurationService.js';
+import ConsciousnessErrorHandlingService from '../../../domain/services/ConsciousnessErrorHandlingService.js';
+import MemoryManagementService from '../../../domain/services/MemoryManagementService.js';
+
+/**
+ * Initialize consciousness system services
+ */
+function initializeConsciousnessServices() {
+  const errorHandler = new ConsciousnessErrorHandlingService();
+  const logger = console; // Use console for logging
+
+  return {
+    behavioralStateService: new BehavioralStateService(null, logger, errorHandler),
+    eventSignificanceService: new EventSignificanceService(),
+    consciousnessUpdateService: new ConsciousnessUpdateService(null, logger, errorHandler),
+    significantMemoryService: new SignificantMemoryService(logger, errorHandler),
+    consciousnessCheckpointService: new ConsciousnessCheckpointService(logger, errorHandler),
+    batchProcessingService: new BatchProcessingService(logger, errorHandler),
+    configurationService: new ConsciousnessConfigurationService(),
+    memoryManagementService: new MemoryManagementService(logger, errorHandler),
+    errorHandler,
+    logger
+  };
+}
+
+/**
+ * Process consciousness updates for all characters in the world state
+ */
+async function processConsciousnessUpdates(worldState, services, historyGenerator) {
+  const {
+    behavioralStateService,
+    eventSignificanceService,
+    significantMemoryService,
+    batchProcessingService,
+    memoryManagementService
+  } = services;
+
+  // Collect all consciousness update operations
+  const updateOperations = [];
+
+  worldState.npcs.forEach((npc, index) => {
+    try {
+      // Ensure character has consciousness state
+      if (!npc.consciousness) {
+        npc.consciousness = new EnhancedConsciousnessState({
+          baseFrequency: 7.5 + (Math.random() - 0.5) * 2, // 6.5-8.5 Hz
+          baseCoherence: 0.5 + Math.random() * 0.4 // 0.5-0.9 coherence
+        });
+      }
+
+      // Ensure character has significant memories array
+      if (!npc.significantMemories) {
+        npc.significantMemories = [];
+      }
+
+      // Process consciousness updates based on character state
+      const consciousnessEvents = generateConsciousnessEvents(npc, worldState);
+
+      consciousnessEvents.forEach(event => {
+        updateOperations.push({
+          character: npc,
+          event,
+          characterIndex: index
+        });
+      });
+
+    } catch (error) {
+      services.errorHandler.handleOperationFailure(error, {
+        operation: 'consciousness_initialization',
+        characterId: npc.id,
+        characterName: npc.name
+      });
+    }
+  });
+
+  // Process updates in batches for better performance
+  if (updateOperations.length > 0) {
+    const batchResults = await batchProcessingService.processParallelUpdates(
+      updateOperations,
+      {
+        batchSize: 10, // Process 10 characters at a time
+        concurrency: 3  // 3 concurrent batches
+      }
+    );
+
+    // Process successful updates for additional logic
+    if (batchResults.successfulUpdates > 0) {
+      for (const updateResult of batchResults.updateResults) {
+        if (updateResult.success && updateResult.updated) {
+          // Find the original update request to get character and event
+          const originalRequest = updateOperations.find(op =>
+            op.character.id === updateResult.characterId &&
+            op.event.type === updateResult.eventType
+          );
+
+          if (originalRequest) {
+            const { character, event } = originalRequest;
+
+            // Check event significance
+            const significance = eventSignificanceService.calculateEventSignificance(event, {
+              character,
+              worldState
+            });
+
+            if (significance >= 0.3) { // Significance threshold
+              // Regenerate behavioral state
+              character.consciousness.behavioralState =
+                behavioralStateService.generateBehavioralState(character);
+
+              // Add to significant memories if highly significant
+              if (significance >= 0.7) {
+                significantMemoryService.addMemoryIfSignificant(character, {
+                  type: event.type,
+                  description: event.description || `${event.type} event`,
+                  significance,
+                  emotionalImpact: event.emotionalImpact || 0.5,
+                  outcome: event.outcome || 'experienced',
+                  timestamp: Date.now(),
+                  context: event.context || {}
+                });
+              }
+
+              // Log consciousness event
+              if (historyGenerator) {
+                historyGenerator.logConsciousnessEvent({
+                  timestamp: worldState.time,
+                  character,
+                  event,
+                  significance,
+                  consciousnessChanges: updateResult.changes
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  try {
+    memoryManagementService.performWorldLevelCleanup(worldState);
+  } catch (error) {
+    services.logger.warn('Memory management cleanup failed:', error);
+  }
+}
+
+/**
+ * Generate consciousness-relevant events based on character state
+ */
+function generateConsciousnessEvents(character, worldState) {
+  const events = [];
+
+  // Energy-based consciousness events
+  const energyPercent = character.energy / (character.maxEnergy || 100);
+  if (energyPercent < 0.3) {
+    events.push({
+      type: 'energy_crisis',
+      description: 'Character is experiencing severe fatigue',
+      emotionalImpact: 0.8,
+      outcome: 'negative',
+      context: { energyLevel: energyPercent }
+    });
+  } else if (energyPercent > 0.9) {
+    events.push({
+      type: 'high_energy',
+      description: 'Character is feeling energetic and alert',
+      emotionalImpact: 0.6,
+      outcome: 'positive',
+      context: { energyLevel: energyPercent }
+    });
+  }
+
+  // Health-based consciousness events
+  const healthPercent = character.health / (character.maxHealth || 100);
+  if (healthPercent < 0.4) {
+    events.push({
+      type: 'health_crisis',
+      description: 'Character is in poor health',
+      emotionalImpact: 0.9,
+      outcome: 'negative',
+      context: { healthLevel: healthPercent }
+    });
+  }
+
+  // Mood-based consciousness events
+  const moodPercent = character.mood / 100;
+  if (moodPercent < 0.3) {
+    events.push({
+      type: 'low_mood',
+      description: 'Character is feeling depressed',
+      emotionalImpact: 0.7,
+      outcome: 'negative',
+      context: { moodLevel: moodPercent }
+    });
+  } else if (moodPercent > 0.8) {
+    events.push({
+      type: 'high_mood',
+      description: 'Character is feeling euphoric',
+      emotionalImpact: 0.8,
+      outcome: 'positive',
+      context: { moodLevel: moodPercent }
+    });
+  }
+
+  // Goal achievement events
+  if (character.goals && character.goals.length > 0) {
+    const completedGoals = character.goals.filter(goal => goal.completed);
+    if (completedGoals.length > 0) {
+      events.push({
+        type: 'goal_achievement',
+        description: `Character achieved ${completedGoals.length} goal(s)`,
+        emotionalImpact: 0.8,
+        outcome: 'positive',
+        context: { completedGoals: completedGoals.length }
+      });
+    }
+  }
+
+  // Social interaction events (based on recent interactions)
+  if (character.lastInteractionType === 'social') {
+    events.push({
+      type: 'social_interaction',
+      description: 'Character engaged in social interaction',
+      emotionalImpact: 0.5,
+      outcome: character.mood > 50 ? 'positive' : 'neutral',
+      context: { interactionType: 'social' }
+    });
+  }
+
+  // Environmental influence events
+  const currentNode = worldState.nodes.find(n => n.id === character.currentNodeId);
+  if (currentNode) {
+    if (currentNode.environmentalProperties?.climate === 'harsh') {
+      events.push({
+        type: 'environmental_stress',
+        description: 'Character is in a harsh environment',
+        emotionalImpact: 0.4,
+        outcome: 'negative',
+        context: { environment: 'harsh' }
+      });
+    } else if (currentNode.environmentalProperties?.climate === 'pleasant') {
+      events.push({
+        type: 'environmental_comfort',
+        description: 'Character is in a pleasant environment',
+        emotionalImpact: 0.3,
+        outcome: 'positive',
+        context: { environment: 'pleasant' }
+      });
+    }
+  }
+
+  return events;
+}
+
+const runTick = async (worldState) => {
   if (!worldState || !Array.isArray(worldState.npcs) || !Array.isArray(worldState.nodes)) {
     throw new Error('Invalid world state');
   }
 
   worldState.time = worldState.time || 0;
-  
+
   // Initialize events array if it doesn't exist
   if (!worldState.events) {
     worldState.events = [];
   }
+
+  // Initialize consciousness system services
+  const consciousnessServices = initializeConsciousnessServices();
 
   // Create a shared history generator instance for this tick
   const historyGenerator = new HistoryGenerator();
@@ -28,6 +292,9 @@ const runTick = (worldState) => {
   // Adjust tick interval based on average coherence (quantum-inspired)
   const avgCoherence = worldState.npcs.reduce((sum, npc) => sum + (npc.consciousness?.coherence || 0), 0) / worldState.npcs.length;
   const tickDelay = Math.max(100, 1000 - (avgCoherence * 900));  // 100-1000ms, higher coherence slows time
+
+  // Process consciousness updates for all characters
+  await processConsciousnessUpdates(worldState, consciousnessServices, historyGenerator);
 
   worldState.npcs.forEach((npc, index) => {
     let characterInstance = npc;
@@ -201,9 +468,8 @@ const runTick = (worldState) => {
         }
 
         // Update settlement with new need satisfaction data
-        const activeConsequences = updatedSettlement.needSatisfaction?.activeConsequences || [];
-        const consequenceIds = activeConsequences.map(c => c.id);
-        const eventIds = activeConsequences.map(c => `consequence_${c.id}_${worldState.time}`);
+        const consequenceIds = newConsequences.map(c => c.id);
+        const eventIds = newConsequences.map(c => `consequence_${c.id}_${worldState.time}`);
         
         worldState.settlements[index] = settlementService.updateNeedSatisfaction(
           updatedSettlement,

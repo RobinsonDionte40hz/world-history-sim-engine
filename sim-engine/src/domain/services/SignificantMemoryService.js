@@ -494,6 +494,87 @@ class SignificantMemoryService {
     const worldState = { npcs: characters };
     return this.memoryManager.performMemoryManagement(worldState, options);
   }
+
+  /**
+   * Get memory influence for decision making (compatible with existing interface)
+   * @param {Object} character - The character to get memory influence for
+   * @param {Object} interaction - The interaction being considered
+   * @returns {number} Memory influence modifier (-1 to 1, where positive encourages, negative discourages)
+   */
+  getMemoryInfluence(character, interaction) {
+    if (!character || !interaction) {
+      return 0; // Neutral influence
+    }
+
+    // Get relevant memories for this interaction
+    const relevantMemories = this.getRelevantMemories(
+      character,
+      interaction.type || interaction.category || 'unknown',
+      5, // maxMemories
+      {} // context
+    );
+
+    if (!relevantMemories || relevantMemories.length === 0) {
+      return 0; // No memories, neutral influence
+    }
+
+    // Calculate weighted influence based on significance and recency
+    let totalWeightedInfluence = 0;
+    let totalWeight = 0;
+
+    relevantMemories.forEach(memory => {
+      const significance = memory.significance || 0.5;
+      const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
+      const weight = significance * recencyWeight;
+
+      // Determine influence direction based on outcome
+      let influence = 0;
+      switch (memory.outcome) {
+        case 'critical_success':
+          influence = 0.8;
+          break;
+        case 'success':
+          influence = 0.4;
+          break;
+        case 'partial_success':
+          influence = 0.2;
+          break;
+        case 'neutral':
+          influence = 0.0;
+          break;
+        case 'partial_failure':
+          influence = -0.2;
+          break;
+        case 'failure':
+          influence = -0.4;
+          break;
+        case 'critical_failure':
+          influence = -0.8;
+          break;
+        default:
+          // Legacy support for simple positive/negative outcomes
+          if (memory.outcome === 'positive') {
+            influence = 0.4;
+          } else if (memory.outcome === 'negative') {
+            influence = -0.4;
+          }
+          break;
+      }
+
+      totalWeightedInfluence += influence * weight;
+      totalWeight += weight;
+    });
+
+    // Calculate final memory influence
+    if (totalWeight === 0) {
+      return 0;
+    }
+
+    const averageInfluence = totalWeightedInfluence / totalWeight;
+
+    // Bound the influence between -1 and 1
+    return Math.max(-1.0, Math.min(1.0, averageInfluence));
+  }
 }
 
 export default SignificantMemoryService;

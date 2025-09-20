@@ -357,8 +357,10 @@ class SettlementService extends BaseDomainService {
       }
       
       // Remove consequences that have exceeded their duration
-      if (consequence.startDate && consequence.duration) {
-        const endDate = consequence.startDate + (consequence.duration * 24 * 60 * 60 * 1000); // Convert days to ms
+      // If duration is 0 or not set, the consequence persists indefinitely
+      if (consequence.startDate && consequence.duration && consequence.duration > 0) {
+        const startTime = consequence.startDate instanceof Date ? consequence.startDate.getTime() : consequence.startDate;
+        const endDate = startTime + (consequence.duration * 24 * 60 * 60 * 1000); // Convert days to ms
         return now < endDate;
       }
       

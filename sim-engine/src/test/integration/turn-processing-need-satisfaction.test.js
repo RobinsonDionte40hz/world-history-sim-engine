@@ -1,9 +1,6 @@
 // src/test/integration/turn-processing-need-satisfaction.test.js
 
 import runTick from '../../application/use-cases/simulation/RunTick.js';
-import BasicNeedsService from '../../domain/services/BasicNeedsService.js';
-import NeedConsequenceService from '../../domain/services/NeedConsequenceService.js';
-import SettlementService from '../../domain/services/SettlementService.js';
 import Character from '../../domain/entities/Character.js';
 
 describe('Turn Processing with Need Satisfaction Integration', () => {
@@ -84,7 +81,7 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
   });
 
   describe('Settlement Need Satisfaction Processing', () => {
-    it('should initialize need satisfaction for settlements without it', () => {
+    it('should initialize need satisfaction for settlements without it', async () => {
       // Settlement without need satisfaction data
       const settlementWithoutNeeds = { ...mockSettlement };
       delete settlementWithoutNeeds.needSatisfaction;
@@ -94,7 +91,7 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
         settlements: [settlementWithoutNeeds]
       };
 
-      const updatedState = runTick(worldState);
+      const updatedState = await runTick(worldState);
 
       expect(updatedState.settlements[0].needSatisfaction).toBeDefined();
       expect(updatedState.settlements[0].needSatisfaction.current).toBeDefined();
@@ -112,8 +109,8 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       expect(updatedState.settlements[0].needSatisfaction.current.overall).toBeLessThanOrEqual(1);
     });
 
-    it('should calculate need satisfaction for settlements during turn processing', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should calculate need satisfaction for settlements during turn processing', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       expect(updatedState.settlements[0].needSatisfaction.current).toBeDefined();
       expect(updatedState.settlements[0].needSatisfaction.current.food).toBeGreaterThanOrEqual(0);
@@ -130,8 +127,8 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       expect(updatedState.settlements[0].needSatisfaction.current.overall).toBeLessThanOrEqual(1);
     });
 
-    it('should create history entries for need satisfaction changes', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should create history entries for need satisfaction changes', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       expect(updatedState.settlements[0].needSatisfaction.history).toBeDefined();
       expect(updatedState.settlements[0].needSatisfaction.history.length).toBeGreaterThan(0);
@@ -144,8 +141,8 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       expect(historyEntry.events).toBeDefined();
     });
 
-    it('should calculate trends for need satisfaction changes', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should calculate trends for need satisfaction changes', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       expect(updatedState.settlements[0].needSatisfaction.trends).toBeDefined();
       expect(updatedState.settlements[0].needSatisfaction.trends.food).toBeDefined();
@@ -158,7 +155,7 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
   });
 
   describe('Consequence Generation and Management', () => {
-    it('should generate consequences when needs are not satisfied', () => {
+    it('should generate consequences when needs are not satisfied', async () => {
       // Create a settlement with poor conditions
       const poorSettlement = {
         ...mockSettlement,
@@ -177,20 +174,23 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
         settlements: [poorSettlement]
       };
 
-      const updatedState = runTick(worldState);
+      const updatedState = await runTick(worldState);
 
       expect(updatedState.settlements[0].needSatisfaction.activeConsequences).toBeDefined();
       // Should have some consequences due to poor conditions
       expect(updatedState.settlements[0].needSatisfaction.activeConsequences.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should track active consequences properly', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should track active consequences properly', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       const activeConsequences = updatedState.settlements[0].needSatisfaction.activeConsequences;
       
-      if (activeConsequences.length > 0) {
-        const consequence = activeConsequences[0];
+      // Verify the consequences array exists and contains valid objects
+      expect(Array.isArray(activeConsequences)).toBe(true);
+      
+      // If there are consequences, verify their structure
+      activeConsequences.forEach(consequence => {
         expect(consequence.id).toBeDefined();
         expect(consequence.type).toBeDefined();
         expect(consequence.severity).toBeGreaterThanOrEqual(0);
@@ -199,41 +199,44 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
         expect(consequence.duration).toBeDefined();
         expect(consequence.triggers).toBeDefined();
         expect(consequence.resolved).toBe(false);
-      }
+      });
     });
   });
 
   describe('Historical Event Generation', () => {
-    it('should generate historical events for need satisfaction consequences', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should generate historical events for need satisfaction consequences', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       // Check if any historical events were generated
-      const historyEvents = updatedState.settlements[0].needSatisfaction.history[0]?.events || [];
+      const historyEntry = updatedState.settlements[0].needSatisfaction.history[0];
       
-      // Events should be generated if there are consequences
-      if (updatedState.settlements[0].needSatisfaction.activeConsequences.length > 0) {
-        expect(historyEvents.length).toBeGreaterThan(0);
-      }
+      // Verify that events array exists and is an array
+      expect(Array.isArray(historyEntry.events)).toBe(true);
+      
+      // The number of events in history should match the number of consequences in history
+      expect(historyEntry.events.length).toBe(historyEntry.consequences.length);
     });
 
-    it('should link consequences to historical events', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should link consequences to historical events', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       const historyEntry = updatedState.settlements[0].needSatisfaction.history[0];
       const activeConsequences = updatedState.settlements[0].needSatisfaction.activeConsequences;
 
-      if (activeConsequences.length > 0) {
-        expect(historyEntry.consequences.length).toBeGreaterThan(0);
-        expect(historyEntry.events.length).toBeGreaterThan(0);
-        
-        // Each consequence should have a corresponding event
-        expect(historyEntry.consequences.length).toBe(activeConsequences.length);
-      }
+      // Always check that consequences and events arrays exist
+      expect(Array.isArray(historyEntry.consequences)).toBe(true);
+      expect(Array.isArray(historyEntry.events)).toBe(true);
+      
+      // The history should reflect the consequences that were recorded
+      expect(historyEntry.consequences.length).toBe(historyEntry.events.length);
+      
+      // Active consequences should be based on the recorded consequences
+      expect(activeConsequences.length).toBe(historyEntry.consequences.length);
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle invalid settlement data gracefully', () => {
+    it('should handle invalid settlement data gracefully', async () => {
       const invalidSettlement = {
         id: 'invalid-settlement',
         // Missing required fields
@@ -245,10 +248,10 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       };
 
       // Should not throw an error
-      expect(() => runTick(worldState)).not.toThrow();
+      await expect(runTick(worldState)).resolves.toBeDefined();
     });
 
-    it('should continue processing other settlements if one fails', () => {
+    it('should continue processing other settlements if one fails', async () => {
       const validSettlement = { ...mockSettlement, id: 'valid-settlement' };
       const invalidSettlement = { id: 'invalid-settlement' }; // Missing required fields
 
@@ -257,7 +260,7 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
         settlements: [validSettlement, invalidSettlement]
       };
 
-      const updatedState = runTick(worldState);
+      const updatedState = await runTick(worldState);
 
       // Valid settlement should still be processed
       expect(updatedState.settlements[0].needSatisfaction).toBeDefined();
@@ -265,24 +268,24 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       expect(updatedState.settlements.length).toBe(2);
     });
 
-    it('should handle missing settlement array gracefully', () => {
+    it('should handle missing settlement array gracefully', async () => {
       const worldState = {
         ...mockWorldState,
         settlements: undefined
       };
 
       // Should not throw an error
-      expect(() => runTick(worldState)).not.toThrow();
+      await expect(runTick(worldState)).resolves.toBeDefined();
     });
   });
 
   describe('Multiple Turn Processing', () => {
-    it('should maintain need satisfaction history across multiple turns', () => {
+    it('should maintain need satisfaction history across multiple turns', async () => {
       let currentState = { ...mockWorldState };
 
       // Process multiple turns
       for (let turn = 0; turn < 3; turn++) {
-        currentState = runTick(currentState);
+        currentState = await runTick(currentState);
       }
 
       const settlement = currentState.settlements[0];
@@ -294,12 +297,12 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       expect(uniqueTimestamps.size).toBe(3);
     });
 
-    it('should update trends correctly across multiple turns', () => {
+    it('should update trends correctly across multiple turns', async () => {
       let currentState = { ...mockWorldState };
 
       // Process multiple turns
       for (let turn = 0; turn < 3; turn++) {
-        currentState = runTick(currentState);
+        currentState = await runTick(currentState);
       }
 
       const settlement = currentState.settlements[0];
@@ -316,8 +319,8 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
   });
 
   describe('Integration with Existing Systems', () => {
-    it('should not interfere with character processing', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should not interfere with character processing', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       // Character processing should still work
       expect(updatedState.npcs[0].energy).toBeDefined();
@@ -328,15 +331,15 @@ describe('Turn Processing with Need Satisfaction Integration', () => {
       expect(updatedState.settlements[0].needSatisfaction).toBeDefined();
     });
 
-    it('should increment time correctly', () => {
+    it('should increment time correctly', async () => {
       const initialTime = mockWorldState.time;
-      const updatedState = runTick(mockWorldState);
+      const updatedState = await runTick(mockWorldState);
 
       expect(updatedState.time).toBe(initialTime + 1);
     });
 
-    it('should maintain world state structure', () => {
-      const updatedState = runTick(mockWorldState);
+    it('should maintain world state structure', async () => {
+      const updatedState = await runTick(mockWorldState);
 
       expect(updatedState.worldName).toBe(mockWorldState.worldName);
       expect(updatedState.nodes).toBeDefined();

@@ -3,13 +3,22 @@
 import Character from '../../../domain/entities/Character.js';
 // import Interaction from '../../../domain/entities/Interaction.js'; // Currently unused
 import InteractionResolver from '../../../domain/services/InteractionResolver.js';
-import MemoryService from '../../../domain/services/MemoryService.js';
 import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
 import { getEmotionalModifier } from '../../../shared/utils/EmotionalUtils.js';
 
+// Import consciousness system services
+import BehavioralStateService from '../../../domain/services/BehavioralStateService.js';
+import SignificantMemoryService from '../../../domain/services/SignificantMemoryService.js';
+import ConsciousnessErrorHandlingService from '../../../domain/services/ConsciousnessErrorHandlingService.js';
+
 const DEBUG_MODE = true;  // Enable for enhanced decision logging
+
+// Initialize consciousness services at module level
+const errorHandler = new ConsciousnessErrorHandlingService();
+const behavioralStateService = new BehavioralStateService(null, console, errorHandler);
+const memoryService = new SignificantMemoryService(console, errorHandler);
 
 // SIMPLIFIED WEIGHT CALCULATION
 const calculateInteractionWeight = (character, interaction, worldState) => {
@@ -70,7 +79,6 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   }
   
   // Factor 5: MEMORY (Simple positive/negative)
-  const memoryService = new MemoryService();
   const memoryScore = memoryService.getMemoryInfluence(character, interaction);
   weight += memoryScore * 2;  // -2 to +2 based on past experience
   
@@ -141,7 +149,9 @@ const calculateInteractionWeight = (character, interaction, worldState) => {
   if (character.consciousness) {
     const consciousnessModifier = calculateConsciousnessInfluence(
       character.consciousness,
-      interaction
+      interaction,
+      character,
+      worldState
     );
     weight *= consciousnessModifier;
   }
@@ -177,25 +187,36 @@ function calculateAttributeBonus(attributes, requirements) {
 }
 
 /**
- * Helper function to calculate consciousness influence
+ * Helper function to calculate consciousness influence using BehavioralStateService
  */
-function calculateConsciousnessInfluence(consciousness, interaction) {
+function calculateConsciousnessInfluence(consciousness, interaction, character, worldState) {
   if (!consciousness) return 1.0;
-  
-  // Higher coherence = better decision making
-  const coherence = consciousness.coherence || 0.5;
-  
-  // Base modifier from coherence
-  let modifier = 0.5 + coherence;
-  
-  // Specific consciousness states might prefer certain interactions
-  if (consciousness.state === 'focused' && interaction.type === 'content') {
-    modifier *= 1.3;
-  } else if (consciousness.state === 'tired' && interaction.type === 'rest') {
-    modifier *= 1.5;
+
+  try {
+    // Get behavioral modifier from the service
+    const modifier = behavioralStateService.getBehavioralModifier(character, interaction.type || interaction.category || 'unknown');
+
+    // Apply memory influence
+    const memoryInfluence = memoryService.getMemoryInfluence(character, interaction);
+    const memoryModifier = 0.8 + (memoryInfluence * 0.4); // 0.8x to 1.2x based on memory
+
+    // Combine consciousness and memory modifiers
+    return modifier * memoryModifier;
+
+  } catch (error) {
+    console.warn('Error calculating consciousness influence:', error);
+    // Fallback to basic calculation
+    const coherence = consciousness.coherence || 0.5;
+    let modifier = 0.5 + coherence;
+
+    if (consciousness.state === 'focused' && interaction.type === 'content') {
+      modifier *= 1.3;
+    } else if (consciousness.state === 'tired' && interaction.type === 'rest') {
+      modifier *= 1.5;
+    }
+
+    return modifier;
   }
-  
-  return modifier;
 }
 
 /**
@@ -254,12 +275,29 @@ function selectWeightedInteraction(weights) {
  */
 function generateDecisionReasoning(character, selected, interactionWeights, context) {
   const currentNode = context.nodes.find(n => n.id === character.currentNodeId);
-  
+
+  // Get consciousness reasoning if available
+  let consciousnessReasoning = null;
+  if (character.consciousness) {
+    try {
+      const behavioralState = behavioralStateService.generateBehavioralState(character);
+
+      consciousnessReasoning = {
+        frequency: character.consciousness.baseFrequency || character.consciousness.frequency,
+        coherence: character.consciousness.baseCoherence || character.consciousness.coherence,
+        behavioralState: behavioralState,
+        decisionFactors: behavioralStateService.getDecisionFactors(character)
+      };
+    } catch (error) {
+      console.warn('Error generating consciousness reasoning:', error);
+    }
+  }
+
   return {
-    consciousnessInfluence: {
+    consciousnessInfluence: consciousnessReasoning || {
       frequency: character.consciousness?.frequency || 0,
       coherence: character.consciousness?.coherence || 0,
-      emotionalState: character.consciousness?.getCurrentEmotionalState ? 
+      emotionalState: character.consciousness?.getCurrentEmotionalState ?
         character.consciousness.getCurrentEmotionalState() : null
     },
     personalityFactors: character.personality ? {

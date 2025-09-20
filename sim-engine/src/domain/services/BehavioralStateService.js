@@ -100,6 +100,18 @@ class BehavioralStateService extends BaseDomainService {
                     socialDrive: 1.2,
                     coherence: 1.1
                 }
+            },
+            'system': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'discipline': 1.2,
+                    'adaptability': 1.1,
+                    'caution': 0.9
+                },
+                consciousnessFactors: {
+                    focus: 1.1,
+                    energy: 1.0
+                }
             }
         };
 
@@ -267,7 +279,7 @@ class BehavioralStateService extends BaseDomainService {
      * Get memory modifier for interaction type
      * @param {Object} character - Character with memory data
      * @param {string} interactionType - Type of interaction
-     * @param {Object} context - Context for memory retrieval
+     * @param {Object} context - Context for decision making
      * @returns {number} Memory modifier
      */
     getMemoryModifier(character, interactionType, context = {}) {
@@ -847,6 +859,119 @@ class BehavioralStateService extends BaseDomainService {
         analysis += ` (${Math.round((memoryModifier - 1) * 100)}% modifier)`;
 
         return analysis;
+    }
+
+    /**
+     * Generate behavioral state for a character (compatible with existing interface)
+     * @param {Object} character - Character with consciousness data
+     * @returns {Object} Behavioral state object
+     */
+    generateBehavioralState(character) {
+        if (!character || !character.consciousness) {
+            // Return default behavioral state for characters without consciousness
+            return {
+                energy: 'moderate',
+                focus: 'balanced',
+                mood: 'content',
+                socialDrive: 0.5,
+                riskTolerance: 0.5,
+                ambition: 0.5
+            };
+        }
+
+        const consciousness = character.consciousness;
+
+        // Extract frequency and coherence from consciousness
+        let frequency = consciousness.frequency || consciousness.baseFrequency || 7.5;
+        let coherence = consciousness.coherence || consciousness.baseCoherence || 0.7;
+
+        // Handle different consciousness formats
+        if (typeof consciousness.getBehavioralState === 'function') {
+            // If consciousness has its own generateBehavioralState method, use it
+            return consciousness.getBehavioralState();
+        }
+
+        // Generate behavioral state from frequency and coherence
+        const behavioralState = {
+            energy: this.mapFrequencyToEnergy(frequency),
+            focus: this.mapCoherenceToFocus(coherence),
+            mood: this.calculateMoodFromState(frequency, coherence),
+            socialDrive: Math.max(0, Math.min(1, (frequency - 4) / 8)),
+            riskTolerance: Math.max(0, Math.min(1, (frequency - 6) / 6)),
+            ambition: Math.max(0, Math.min(1, coherence * (frequency / 10)))
+        };
+
+        return behavioralState;
+    }
+
+    /**
+     * Map frequency to energy level
+     * @param {number} frequency - Consciousness frequency (3-15 Hz)
+     * @returns {string} Energy level: 'low', 'moderate', 'high'
+     */
+    mapFrequencyToEnergy(frequency) {
+        if (frequency < 5) return 'low';
+        if (frequency < 10) return 'moderate';
+        return 'high';
+    }
+
+    /**
+     * Map coherence to focus level
+     * @param {number} coherence - Emotional coherence (0.2-1.0)
+     * @returns {string} Focus level: 'scattered', 'balanced', 'focused'
+     */
+    mapCoherenceToFocus(coherence) {
+        if (coherence < 0.4) return 'scattered';
+        if (coherence < 0.8) return 'balanced';
+        return 'focused';
+    }
+
+    /**
+     * Calculate mood from frequency and coherence combination
+     * @param {number} frequency - Consciousness frequency
+     * @param {number} coherence - Emotional coherence
+     * @returns {string} Mood: 'depressed', 'content', 'optimistic', 'excited'
+     */
+    calculateMoodFromState(frequency, coherence) {
+        const moodScore = (frequency / 15) * 0.7 + coherence * 0.3;
+
+        if (moodScore < 0.3) return 'depressed';
+        if (moodScore < 0.6) return 'content';
+        if (moodScore < 0.8) return 'optimistic';
+        return 'excited';
+    }
+
+    /**
+     * Get decision factor bounds for validation
+     * @returns {Object} Bounds information
+     */
+    getDecisionFactors(character) {
+        if (!character) {
+            return {
+                behavioralModifier: 1.0,
+                personalityModifier: 1.0,
+                consciousnessModifier: 1.0,
+                memoryModifier: 1.0,
+                contextModifier: 1.0,
+                physicalModifier: 1.0
+            };
+        }
+
+        const behavioralModifier = this.getBehavioralModifier(character, 'unknown');
+        const personalityModifier = this.getPersonalityModifier(character, 'unknown');
+        const consciousnessModifier = this.getConsciousnessModifier(character, 'unknown');
+        const memoryModifier = this.getMemoryModifier(character, 'unknown', {});
+        const contextModifier = this.getContextModifier(character, 'unknown', {});
+        const physicalModifier = this.getPhysicalStateModifier(character);
+
+        return {
+            behavioralModifier,
+            personalityModifier,
+            consciousnessModifier,
+            memoryModifier,
+            contextModifier,
+            physicalModifier
+        };
     }
 }
 
