@@ -1,6 +1,32 @@
 /**
  * Simple Integration Test Runner for Routine Interaction System
- * (Non-Jest version to avoid ES6 import conflicts)
+ * (Non-Jes  const commuteInteraction = routineInte  const workInteraction = routineInteractions.find(i => i.type === 'work' || (i.type === 'content' && i.name.toLowerCase().includes('work')));
+  console.log(`Work at work location: ${workInteraction ? '✅ Allowed' : '❌ Not allowed'}`);
+
+  // Test commerce at commercial location
+  worldState.time = 14;
+  testCharacter.currentNodeId = 'oakwood-market-district';
+
+  const commerceTimeOfDay = scheduleService.getTimeOfDay(worldState.time);
+  const commerceInteractions = routineManager.generateRoutineInteractions(
+    testCharacter, worldState, commerceTimeOfDay
+  );
+
+  const commerceInteraction = commerceInteractions.find(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('commerce')));
+  console.log(`Commerce at market: ${commerceInteraction ? '✅ Allowed' : '❌ Not allowed'}`);i => i.type === 'commute' || (i.type === 'content' && i.name.toLowerCase().includes('commute')));
+  console.log(`Morning commute interaction: ${commuteInteraction ? '✅ Found' : '❌ Not found'}`);
+
+  // Test work time
+  worldState.time = 10;
+  const workTimeOfDay = scheduleService.getTimeOfDay(worldState.time);
+  console.log(`Time 10: ${workTimeOfDay} (expected: morning)`);
+
+  const workInteractions = routineManager.generateRoutineInteractions(
+    testCharacter, worldState, workTimeOfDay
+  );
+
+  const workInteraction = workInteractions.find(i => i.type === 'work' || (i.type === 'content' && i.name.toLowerCase().includes('work')));
+  console.log(`Work interaction: ${workInteraction ? '✅ Found' : '❌ Not found'}`);void ES6 import conflicts)
  */
 
 const RoutineInteractionManager = require('./src/domain/services/RoutineInteractionManager.js');
@@ -76,12 +102,11 @@ function testTimeBasedScheduling() {
   const timeOfDay = scheduleService.getTimeOfDay(worldState.time);
   console.log(`Time 8: ${timeOfDay} (expected: morning)`);
 
-  const availableActivities = scheduleService.getAvailableActivities(testCharacter, timeOfDay, worldState);
   const routineInteractions = routineManager.generateRoutineInteractions(
-    testCharacter, worldState, timeOfDay, availableActivities
+    testCharacter, worldState, timeOfDay
   );
 
-  const commuteInteraction = routineInteractions.find(i => i.type === 'commute');
+  const commuteInteraction = routineInteractions.find(i => i.originalType === 'commute');
   console.log(`Morning commute interaction: ${commuteInteraction ? '✅ Found' : '❌ Not found'}`);
 
   // Test work time
@@ -89,12 +114,11 @@ function testTimeBasedScheduling() {
   const workTimeOfDay = scheduleService.getTimeOfDay(worldState.time);
   console.log(`Time 10: ${workTimeOfDay} (expected: morning)`);
 
-  const workActivities = scheduleService.getAvailableActivities(testCharacter, workTimeOfDay, worldState);
   const workInteractions = routineManager.generateRoutineInteractions(
-    testCharacter, worldState, workTimeOfDay, workActivities
+    testCharacter, worldState, workTimeOfDay
   );
 
-  const workInteraction = workInteractions.find(i => i.type === 'work');
+  const workInteraction = workInteractions.find(i => i.originalType === 'work');
   console.log(`Work interaction: ${workInteraction ? '✅ Found' : '❌ Not found'}`);
 }
 
@@ -105,12 +129,11 @@ function testLocationPrerequisites() {
   testCharacter.currentNodeId = 'oakwood-administrative-center'; // Test work at admin center
 
   const timeOfDay = scheduleService.getTimeOfDay(worldState.time);
-  const availableActivities = scheduleService.getAvailableActivities(testCharacter, timeOfDay, worldState);
   const routineInteractions = routineManager.generateRoutineInteractions(
-    testCharacter, worldState, timeOfDay, availableActivities
+    testCharacter, worldState, timeOfDay
   );
 
-  const workInteraction = routineInteractions.find(i => i.type === 'work');
+  const workInteraction = routineInteractions.find(i => i.originalType === 'work');
   console.log(`Work at work location: ${workInteraction ? '✅ Allowed' : '❌ Not allowed'}`);
 
   // Test commerce at commercial location
@@ -118,12 +141,11 @@ function testLocationPrerequisites() {
   testCharacter.currentNodeId = 'oakwood-market-district';
 
   const commerceTimeOfDay = scheduleService.getTimeOfDay(worldState.time);
-  const commerceActivities = scheduleService.getAvailableActivities(testCharacter, commerceTimeOfDay, worldState);
   const commerceInteractions = routineManager.generateRoutineInteractions(
-    testCharacter, worldState, commerceTimeOfDay, commerceActivities
+    testCharacter, worldState, commerceTimeOfDay
   );
 
-  const commerceInteraction = commerceInteractions.find(i => i.type === 'commerce');
+  const commerceInteraction = commerceInteractions.find(i => i.originalType === 'commerce');
   console.log(`Commerce at market: ${commerceInteraction ? '✅ Allowed' : '❌ Not allowed'}`);
 }
 
@@ -162,9 +184,8 @@ function testPrerequisitesValidation() {
   testCharacter.currentNodeId = 'oakwood-administrative-center'; // At work location
 
   const timeOfDay = scheduleService.getTimeOfDay(worldState.time);
-  const availableActivities = scheduleService.getAvailableActivities(testCharacter, timeOfDay, worldState);
   const routineInteractions = routineManager.generateRoutineInteractions(
-    testCharacter, worldState, timeOfDay, availableActivities
+    testCharacter, worldState, timeOfDay
   );
 
   console.log(`Low energy prevents work: ${routineInteractions.length === 0 ? '✅ Yes' : '❌ No'}`);
@@ -183,7 +204,7 @@ function testPrerequisitesValidation() {
   );
 
   // Filter for commerce interactions only
-  commerceInteractions = commerceInteractions.filter(i => i.type === 'commerce');
+  commerceInteractions = commerceInteractions.filter(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('business')));
 
   console.log(`Commerce at residential (non-commercial): ${commerceInteractions.length === 0 ? '✅ Correctly prevented' : '❌ Should not generate'}`);
 
@@ -194,9 +215,9 @@ function testPrerequisitesValidation() {
   );
 
   // Filter for commerce interactions only
-  commerceInteractions = commerceInteractions.filter(i => i.type === 'commerce');
+  commerceInteractions = commerceInteractions.filter(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('business')));
 
-  const commerceInteraction = commerceInteractions.find(i => i.type === 'commerce');
+  const commerceInteraction = commerceInteractions.find(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('business')));
   console.log(`Commerce at market with sufficient wealth: ${commerceInteraction ? '✅ Allowed' : '❌ Not allowed'}`);
 
   // Test low wealth prevents commerce
@@ -206,12 +227,12 @@ function testPrerequisitesValidation() {
   );
 
   // Filter for commerce interactions only
-  commerceInteractions = commerceInteractions.filter(i => i.type === 'commerce');
+  commerceInteractions = commerceInteractions.filter(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('business')));
 
-  const lowWealthCommerceInteraction = commerceInteractions.find(i => i.type === 'commerce');
+  const lowWealthCommerceInteraction = commerceInteractions.find(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('business')));
   console.log(`Low wealth prevents commerce: ${lowWealthCommerceInteraction ? '❌ No' : '✅ Yes'}`);
   console.log(`  - Character wealth: ${testCharacter.wealth}, required: 50 (hero tier)`);
-  console.log(`  - Generated commerce interactions: ${commerceInteractions.filter(i => i.type === 'commerce').length}`);
+  console.log(`  - Generated commerce interactions: ${commerceInteractions.filter(i => i.type === 'commerce' || (i.type === 'content' && i.name.toLowerCase().includes('business'))).length}`);
 }
 
 // Run tests

@@ -1,6 +1,6 @@
 // src/domain/entities/interactions/ContentInteraction.js
 
-import InteractionBase from './InteractionBase.js';
+const InteractionBase = require('./InteractionBase.js');
 
 /**
  * ContentInteraction - Base class for user-defined content interactions
@@ -31,7 +31,8 @@ class ContentInteraction extends InteractionBase {
    * @param {number} config.lastUsed - Timestamp of last use
    */
   constructor(config = {}) {
-    // Set the type for content interactions
+    // Preserve the original type for routine interactions
+    const originalType = config.type;
     const contentConfig = { ...config, type: 'content' };
     super(contentConfig);
 
@@ -40,6 +41,9 @@ class ContentInteraction extends InteractionBase {
     this.author = config.author || 'system';
     this.tags = Array.isArray(config.tags) ? [...config.tags] : [];
     this.overrideFlags = { ...config.overrideFlags } || {};
+
+    // Store the original type for compatibility with existing code
+    this.originalType = originalType || 'content';
 
     // Backward compatibility properties from existing Interaction class
     this.requirements = Array.isArray(config.requirements) ? [...config.requirements] : [];
@@ -292,4 +296,6 @@ class ContentInteraction extends InteractionBase {
   }
 }
 
-export default ContentInteraction;
+// CommonJS export
+module.exports = ContentInteraction;
+module.exports.ContentInteraction = ContentInteraction;

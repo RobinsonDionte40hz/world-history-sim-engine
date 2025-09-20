@@ -5,6 +5,8 @@
  * commerce, and commuting. These sit between system interactions and content interactions.
  */
 
+const { ContentInteraction } = require('../entities/interactions/ContentInteraction.js');
+
 class RoutineInteractionManager {
   constructor() {
     this.routineGenerators = new Map();
@@ -105,118 +107,85 @@ class RoutineInteractionManager {
     // Generate appropriate work interaction based on LOD tier
     if (character.lodTier === 'background') {
       // Simple work interaction for background NPCs
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `work_${character.id}_${Date.now()}`,
         name: 'Work',
         type: 'work',
         category: 'routine',
         description: `Perform daily work duties at ${workNode.name}`,
-        requirements: { energy: 20 },
+        requirements: [{ attr: 'constitution', min: 8 }],
         branches: [{
           id: `work_success_${character.id}`,
           name: 'Work Successfully',
-          conditions: [],
           effects: [
-            { type: 'energy', value: -15 },
-            { type: 'wealth', value: 5 },
-            { type: 'experience', value: 2 }
+            { type: 'resource', target: 'wealth', value: 5 },
+            { type: 'attribute', target: 'constitution', value: 1 }
           ]
         }],
         effects: [],
-        context: {
-          duration: 4,
-          workType: workNode.type || 'general',
-          location: character.assignments.workNodeId
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['morning', 'midday', 'afternoon'],
-          atLocation: character.assignments.workNodeId,
-          energyRequired: 20
-        }
-      });
+        cooldown: 12,
+        repeatable: true,
+        tags: ['work', 'labor', workNode.type || 'general']
+      }));
     } else if (character.lodTier === 'group') {
       // Specialized work interaction for group NPCs
       const workType = this._getWorkTypeFromNode(workNode);
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `specialized_work_${character.id}_${Date.now()}`,
-        name: `${workType} Work`,
+        name: `${workType.charAt(0).toUpperCase() + workType.slice(1)} Work`,
         type: 'work',
         category: 'routine',
         description: `Perform specialized ${workType} work at ${workNode.name}`,
-        requirements: { energy: 25 },
+        requirements: [{ attr: 'constitution', min: 10 }],
         branches: [{
           id: `specialized_work_success_${character.id}`,
           name: 'Work Successfully',
-          conditions: [],
           effects: [
-            { type: 'energy', value: -20 },
-            { type: 'wealth', value: 8 },
-            { type: 'experience', value: 3 },
-            { type: 'skill', skill: workType, value: 1 }
+            { type: 'resource', target: 'wealth', value: 8 },
+            { type: 'attribute', target: 'constitution', value: 1 },
+            { type: 'resource', target: 'experience', value: 3 }
           ]
         }],
         effects: [],
-        context: {
-          duration: 6,
-          workType: workType,
-          location: character.assignments.workNodeId
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['morning', 'midday', 'afternoon'],
-          atLocation: character.assignments.workNodeId,
-          energyRequired: 25
-        }
-      });
+        cooldown: 12,
+        repeatable: true,
+        tags: ['work', 'specialized', workType]
+      }));
     } else if (character.lodTier === 'hero') {
       // Complex work interaction for hero NPCs
       const workType = this._getWorkTypeFromNode(workNode);
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `leadership_work_${character.id}_${Date.now()}`,
-        name: `Lead ${workType} Operations`,
+        name: `Lead ${workType.charAt(0).toUpperCase() + workType.slice(1)} Operations`,
         type: 'work',
         category: 'routine',
         description: `Lead and manage ${workType} operations at ${workNode.name}`,
-        requirements: { energy: 30 },
+        requirements: [{ attr: 'charisma', min: 12 }],
         branches: [
           {
             id: `leadership_work_excellent_${character.id}`,
             name: 'Excellent Leadership',
-            conditions: [{ type: 'attribute', attribute: 'charisma', minimum: 15 }],
+            condition: (char) => char.attributes?.charisma?.score >= 15,
             effects: [
-              { type: 'energy', value: -25 },
-              { type: 'wealth', value: 15 },
-              { type: 'experience', value: 5 },
-              { type: 'reputation', value: 2 },
-              { type: 'settlement_influence', value: 1 }
+              { type: 'resource', target: 'wealth', value: 15 },
+              { type: 'attribute', target: 'charisma', value: 1 },
+              { type: 'resource', target: 'reputation', value: 2 }
             ]
           },
           {
             id: `leadership_work_good_${character.id}`,
             name: 'Good Leadership',
-            conditions: [],
             effects: [
-              { type: 'energy', value: -20 },
-              { type: 'wealth', value: 10 },
-              { type: 'experience', value: 4 }
+              { type: 'resource', target: 'wealth', value: 10 },
+              { type: 'attribute', target: 'charisma', value: 1 }
             ]
           }
         ],
         effects: [],
-        context: {
-          duration: 8,
-          workType: workType,
-          leadership: true,
-          location: character.assignments.workNodeId
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['morning', 'midday', 'afternoon'],
-          atLocation: character.assignments.workNodeId,
-          energyRequired: 30
-        }
-      });
+        cooldown: 12,
+        repeatable: true,
+        tags: ['work', 'leadership', workType]
+      }));
     }
 
     return interactions;
@@ -249,113 +218,80 @@ class RoutineInteractionManager {
 
     // Generate social interaction based on LOD tier
     if (character.lodTier === 'background') {
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `socialize_${character.id}_${Date.now()}`,
         name: 'Socialize',
         type: 'social',
         category: 'routine',
         description: `Chat with others at ${currentNode.name}`,
-        requirements: { energy: 10 },
+        requirements: [{ attr: 'charisma', min: 8 }],
         branches: [{
           id: `socialize_success_${character.id}`,
           name: 'Have a Nice Chat',
-          conditions: [],
           effects: [
-            { type: 'energy', value: -5 },
-            { type: 'mood', value: 5 },
-            { type: 'social_bond', value: 1 }
+            { type: 'resource', target: 'mood', value: 5 },
+            { type: 'attribute', target: 'charisma', value: 1 }
           ]
         }],
         effects: [],
-        context: {
-          duration: 2,
-          socialType: 'casual',
-          participants: charactersAtLocation.length + 1
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['midday', 'evening'],
-          othersPresent: true,
-          energyRequired: 10
-        }
-      });
+        cooldown: 6,
+        repeatable: true,
+        tags: ['social', 'casual']
+      }));
     } else if (character.lodTier === 'group') {
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `network_${character.id}_${Date.now()}`,
         name: 'Network',
         type: 'social',
         category: 'routine',
         description: `Network and build relationships at ${currentNode.name}`,
-        requirements: { energy: 15 },
+        requirements: [{ attr: 'charisma', min: 10 }],
         branches: [{
           id: `network_success_${character.id}`,
           name: 'Build Useful Connections',
-          conditions: [],
           effects: [
-            { type: 'energy', value: -10 },
-            { type: 'mood', value: 8 },
-            { type: 'social_bond', value: 2 },
-            { type: 'contacts', value: 1 }
+            { type: 'resource', target: 'mood', value: 8 },
+            { type: 'attribute', target: 'charisma', value: 1 },
+            { type: 'resource', target: 'contacts', value: 1 }
           ]
         }],
         effects: [],
-        context: {
-          duration: 3,
-          socialType: 'networking',
-          participants: charactersAtLocation.length + 1
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['midday', 'evening'],
-          othersPresent: true,
-          energyRequired: 15
-        }
-      });
+        cooldown: 8,
+        repeatable: true,
+        tags: ['social', 'networking']
+      }));
     } else if (character.lodTier === 'hero') {
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `negotiate_${character.id}_${Date.now()}`,
         name: 'Negotiate Alliances',
         type: 'social',
         category: 'routine',
         description: `Negotiate alliances and agreements at ${currentNode.name}`,
-        requirements: { energy: 20 },
+        requirements: [{ attr: 'charisma', min: 12 }],
         branches: [
           {
             id: `negotiate_success_${character.id}`,
             name: 'Successful Negotiation',
-            conditions: [{ type: 'attribute', attribute: 'charisma', minimum: 14 }],
+            condition: (char) => char.attributes?.charisma?.score >= 14,
             effects: [
-              { type: 'energy', value: -15 },
-              { type: 'mood', value: 10 },
-              { type: 'social_bond', value: 3 },
-              { type: 'alliance', value: 1 },
-              { type: 'reputation', value: 1 }
+              { type: 'attribute', target: 'charisma', value: 1 },
+              { type: 'resource', target: 'influence', value: 5 },
+              { type: 'resource', target: 'reputation', value: 2 }
             ]
           },
           {
             id: `negotiate_partial_${character.id}`,
             name: 'Partial Success',
-            conditions: [],
             effects: [
-              { type: 'energy', value: -12 },
-              { type: 'mood', value: 5 },
-              { type: 'social_bond', value: 2 }
+              { type: 'resource', target: 'influence', value: 2 }
             ]
           }
         ],
         effects: [],
-        context: {
-          duration: 4,
-          socialType: 'negotiation',
-          participants: charactersAtLocation.length + 1
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['midday', 'evening'],
-          othersPresent: true,
-          energyRequired: 20
-        }
-      });
+        cooldown: 24, // 24 ticks cooldown
+        repeatable: false,
+        tags: ['social', 'diplomacy', 'negotiation']
+      }));
     }
 
     return interactions;
@@ -393,119 +329,84 @@ class RoutineInteractionManager {
 
     // Generate commerce interaction based on LOD tier
     if (character.lodTier === 'background') {
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `buy_goods_${character.id}_${Date.now()}`,
         name: 'Buy Goods',
         type: 'commerce',
         category: 'routine',
         description: `Purchase daily necessities at ${currentNode.name}`,
-        requirements: { wealth: 10, energy: 5 },
+        requirements: [{ attr: 'constitution', min: 8 }],
         branches: [{
           id: `buy_goods_success_${character.id}`,
           name: 'Purchase Successfully',
-          conditions: [],
           effects: [
-            { type: 'wealth', value: -8 },
-            { type: 'energy', value: -2 },
-            { type: 'supplies', value: 5 },
-            { type: 'satisfaction', value: 3 }
+            { type: 'resource', target: 'wealth', value: -8 },
+            { type: 'resource', target: 'supplies', value: 5 },
+            { type: 'resource', target: 'satisfaction', value: 3 }
           ]
         }],
         effects: [],
-        context: {
-          duration: 1,
-          commerceType: 'shopping',
-          location: character.currentNodeId
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['midday', 'afternoon', 'evening'],
-          atCommercialNode: true,
-          wealthRequired: 10,
-          energyRequired: 5
-        }
-      });
+        cooldown: 12,
+        repeatable: true,
+        tags: ['commerce', 'shopping']
+      }));
     } else if (character.lodTier === 'group') {
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `trade_goods_${character.id}_${Date.now()}`,
         name: 'Trade Goods',
         type: 'commerce',
         category: 'routine',
         description: `Trade goods and conduct business at ${currentNode.name}`,
-        requirements: { wealth: 20, energy: 10 },
+        requirements: [{ attr: 'charisma', min: 10 }],
         branches: [{
           id: `trade_goods_success_${character.id}`,
           name: 'Successful Trade',
-          conditions: [],
           effects: [
-            { type: 'wealth', value: -15 },
-            { type: 'energy', value: -5 },
-            { type: 'supplies', value: 8 },
-            { type: 'satisfaction', value: 5 },
-            { type: 'business_contacts', value: 1 }
+            { type: 'resource', target: 'wealth', value: -15 },
+            { type: 'resource', target: 'supplies', value: 8 },
+            { type: 'resource', target: 'satisfaction', value: 5 },
+            { type: 'resource', target: 'contacts', value: 1 }
           ]
         }],
         effects: [],
-        context: {
-          duration: 2,
-          commerceType: 'trading',
-          location: character.currentNodeId
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['midday', 'afternoon', 'evening'],
-          atCommercialNode: true,
-          wealthRequired: 20,
-          energyRequired: 10
-        }
-      });
+        cooldown: 12,
+        repeatable: true,
+        tags: ['commerce', 'trading']
+      }));
     } else if (character.lodTier === 'hero') {
-      interactions.push({
+      interactions.push(new ContentInteraction({
         id: `invest_business_${character.id}_${Date.now()}`,
         name: 'Invest in Business',
         type: 'commerce',
         category: 'routine',
         description: `Make strategic business investments at ${currentNode.name}`,
-        requirements: { wealth: 50, energy: 15 },
+        requirements: [{ attr: 'intelligence', min: 13 }],
         branches: [
           {
             id: `invest_success_${character.id}`,
             name: 'Investment Pays Off',
-            conditions: [{ type: 'attribute', attribute: 'intelligence', minimum: 13 }],
+            condition: (char) => char.attributes?.intelligence?.score >= 15,
             effects: [
-              { type: 'wealth', value: -40 },
-              { type: 'energy', value: -10 },
-              { type: 'investment_returns', value: 60 },
-              { type: 'business_empire', value: 1 },
-              { type: 'reputation', value: 2 }
+              { type: 'resource', target: 'wealth', value: -40 },
+              { type: 'resource', target: 'investment_returns', value: 60 },
+              { type: 'resource', target: 'reputation', value: 2 }
             ]
           },
           {
             id: `invest_conservative_${character.id}`,
             name: 'Conservative Investment',
-            conditions: [],
             effects: [
-              { type: 'wealth', value: -30 },
-              { type: 'energy', value: -8 },
-              { type: 'investment_returns', value: 35 },
-              { type: 'business_contacts', value: 2 }
+              { type: 'resource', target: 'wealth', value: -30 },
+              { type: 'resource', target: 'investment_returns', value: 35 },
+              { type: 'resource', target: 'contacts', value: 2 }
             ]
           }
         ],
         effects: [],
-        context: {
-          duration: 3,
-          commerceType: 'investment',
-          location: character.currentNodeId
-        },
-        assignedCharacterIds: [character.id],
-        availableWhen: {
-          timeOfDay: ['midday', 'afternoon', 'evening'],
-          atCommercialNode: true,
-          wealthRequired: 50,
-          energyRequired: 15
-        }
-      });
+        cooldown: 24,
+        repeatable: true,
+        tags: ['commerce', 'investment']
+      }));
     }
 
     return interactions;
@@ -555,38 +456,25 @@ class RoutineInteractionManager {
     if (!destinationNode) return interactions;
 
     // Generate commute interaction
-    interactions.push({
+    interactions.push(new ContentInteraction({
       id: `commute_${commuteType}_${character.id}_${Date.now()}`,
       name: `Commute ${commuteType === 'to_work' ? 'to Work' : 'Home'}`,
       type: 'commute',
       category: 'routine',
       description: `Travel ${commuteType === 'to_work' ? 'to work' : 'home'} at ${destinationNode.name}`,
-      requirements: { energy: 10 },
+      requirements: [{ attr: 'constitution', min: 8 }],
       branches: [{
         id: `commute_success_${character.id}`,
         name: 'Arrive Safely',
-        conditions: [],
         effects: [
-          { type: 'energy', value: -8 },
-          { type: 'current_location', value: destinationNodeId },
-          { type: 'commute_completed', value: 1 }
+          { type: 'resource', target: 'current_location', value: destinationNodeId }
         ]
       }],
       effects: [],
-      context: {
-        duration: 2,
-        commuteType: commuteType,
-        destination: destinationNodeId,
-        origin: currentNodeId
-      },
-      assignedCharacterIds: [character.id],
-      availableWhen: {
-        timeOfDay: timeOfDay,
-        atOrigin: currentNodeId,
-        destinationExists: destinationNodeId,
-        energyRequired: 10
-      }
-    });
+      cooldown: 1,
+      repeatable: true,
+      tags: ['commute', commuteType]
+    }));
 
     return interactions;
   }
@@ -618,7 +506,7 @@ class RoutineInteractionManager {
    * @returns {boolean} True if commercial node
    */
   _isCommercialNode(node) {
-    return node.type === 'market' || node.type === 'commercial' ||
+    return node.type === 'market' || node.type === 'commercial' || node.type === 'economic' ||
            node.name.toLowerCase().includes('market') ||
            node.name.toLowerCase().includes('shop') ||
            node.name.toLowerCase().includes('merchant');

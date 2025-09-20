@@ -100,4 +100,4 @@ class InteractionBase {
   }
 }
 
-export default InteractionBase;
+module.exports = InteractionBase;
