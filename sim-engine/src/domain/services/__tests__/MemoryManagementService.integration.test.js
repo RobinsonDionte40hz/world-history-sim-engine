@@ -5,12 +5,12 @@
  * with the full consciousness system including all services.
  */
 
-import MemoryManagementService from '../src/domain/services/MemoryManagementService.js';
-import SignificantMemoryService from '../src/domain/services/SignificantMemoryService.js';
-import ConsciousnessCheckpointService from '../src/domain/services/ConsciousnessCheckpointService.js';
-import BehavioralStateService from '../src/domain/services/BehavioralStateService.js';
-import ConsciousnessUpdateService from '../src/domain/services/ConsciousnessUpdateService.js';
-import ConsciousnessErrorHandlingService from '../src/domain/services/ConsciousnessErrorHandlingService.js';
+import MemoryManagementService from '../MemoryManagementService.js';
+import SignificantMemoryService from '../SignificantMemoryService.js';
+import ConsciousnessCheckpointService from '../ConsciousnessCheckpointService.js';
+import BehavioralStateService from '../BehavioralStateService.js';
+import ConsciousnessUpdateService from '../ConsciousnessUpdateService.js';
+import ConsciousnessErrorHandlingService from '../ConsciousnessErrorHandlingService.js';
 
 // Mock logger
 const mockLogger = {

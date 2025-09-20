@@ -1,436 +1,273 @@
 /**
  * ConditionalSimulationInterface Component Tests
- * 
- * Tests for simulation preparation pipeline validation checking and conditional rendering.
- * Verifies world builder to simulation interface transitions.
- * Tests initialization loading and error states for mappless world processing.
- * Validates preparation phase progress display when world is incomplete.
+ *
+ * NOTE: ConditionalSimulationInterface has been deprecated and now re-exports WorldHistorySimInterface.
+ * These tests have been updated to reflect the current implementation.
  */
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ConditionalSimulationInterface from './ConditionalSimulationInterface.js';
+import { SimulationProvider } from '../contexts/SimulationContext.js';
 
-// Mock child components
-jest.mock('./WorldBuilderInterface.js', () => {
-  return function MockWorldBuilderInterface({ worldBuilderState, templateManager, onValidationChange }) {
-    return (
-      <div data-testid="world-builder-interface">
-        <div>World Builder Interface</div>
-        <div>Current Phase: {worldBuilderState?.currentPhase || 1}</div>
-        <div>Is Complete: {worldBuilderState?.isWorldComplete ? 'Yes' : 'No'}</div>
-      </div>
-    );
-  };
-});
-
-jest.mock('../features/SimulationControl.js', () => {
-  return function MockSimulationControl() {
-    return <div data-testid="simulation-control">Simulation Control</div>;
-  };
-});
-
-jest.mock('../features/HistoryTimeline.js', () => {
-  return function MockHistoryTimeline() {
-    return <div data-testid="history-timeline">History Timeline</div>;
-  };
-});
-
-jest.mock('../features/NpcViewer.js', () => {
-  return function MockNpcViewer({ npc }) {
-    return <div data-testid="npc-viewer">NPC Viewer: {npc?.name || 'None'}</div>;
-  };
-});
-
-jest.mock('../features/WorldMap.js', () => {
-  return function MockWorldMap() {
-    return <div data-testid="world-map">World Map</div>;
-  };
-});
+// Mock the simulation context
+jest.mock('../contexts/SimulationContext.js', () => ({
+  SimulationProvider: ({ children }) => <div data-testid="simulation-provider">{children}</div>,
+  useSimulationContext: () => ({
+    isInitialized: true,
+    currentTurn: 0,
+    canProcessTurn: true,
+    resetSimulation: jest.fn(),
+    processTurn: jest.fn(),
+    simulationReadinessStatus: { isSimulationReady: true },
+    preparedWorldData: { id: 'test-world' },
+    turnHistory: [],
+    currentSimulationState: {
+      time: 0,
+      characters: [],
+      nodes: [],
+      events: [],
+      resources: { totalGold: 0 }
+    },
+    worldState: {
+      time: 0,
+      characters: [],
+      nodes: [],
+      events: [],
+      resources: { totalGold: 0 }
+    },
+    lodStats: { hero: 0, group: 0, background: 0 },
+    lodProcessingMetrics: { averageTurnDuration: 100 },
+    isLODInitialized: false,
+    getLODProcessingRecommendations: jest.fn(() => [
+      {
+        type: 'performance',
+        message: 'Consider increasing background tier population to reduce processing time',
+        severity: 'warning'
+      }
+    ])
+  })
+}));
 
 describe('ConditionalSimulationInterface', () => {
-  const mockTemplateManager = {
-    getAllTemplates: jest.fn(() => [])
+  const defaultProps = {
+    worldState: {
+      time: 0,
+      characters: [],
+      nodes: [],
+      events: [],
+      resources: { totalGold: 0 }
+    },
+    simulationService: {}
   };
-
-  const createMockWorldBuilderState = (overrides = {}) => ({
-    currentStep: 1,
-    isWorldComplete: false,
-    stepValidationStatus: {
-      1: false, 2: false, 3: false, 4: false, 5: false, 6: false
-    },
-    validationStatus: {
-      isValid: false,
-      errors: [],
-      warnings: [],
-      completeness: 0
-    },
-    buildWorld: jest.fn(() => ({ id: 'test-world' })),
-    ...overrides
-  });
-
-  const createMockSimulationState = (overrides = {}) => ({
-    isInitialized: false,
-    worldState: null,
-    ...overrides
-  });
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('Initialization and Error Handling', () => {
-    it('should render error message when world builder state is not provided', () => {
+  describe('Re-export Behavior', () => {
+    it('should render WorldHistorySimInterface when simulation is initialized', () => {
       render(
-        <ConditionalSimulationInterface
-          worldBuilderState={null}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
       );
 
-      expect(screen.getByText('World Builder Not Available')).toBeInTheDocument();
-      expect(screen.getByText('Please initialize the world builder to begin.')).toBeInTheDocument();
-    });
-
-    it('should render world builder interface when world builder state is provided', () => {
-      const worldBuilderState = createMockWorldBuilderState();
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      expect(screen.getByText('World Builder')).toBeInTheDocument();
-      expect(screen.getByTestId('world-builder-interface')).toBeInTheDocument();
-    });
-  });
-
-  describe('Preparation Phase Progress Display', () => {
-    it('should display all preparation phases with correct status', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        currentStep: 3,
-        stepValidationStatus: {
-          1: true, 2: true, 3: false, 4: false, 5: false, 6: false
-        },
-        validationStatus: {
-          completeness: 0.33
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      // Check all steps are displayed
-      expect(screen.getByText('Phase 1: Create World')).toBeInTheDocument();
-      expect(screen.getByText('Phase 2: Create Nodes')).toBeInTheDocument();
-      expect(screen.getByText('Phase 3: Create Interactions')).toBeInTheDocument();
-      expect(screen.getByText('Phase 4: Create Characters')).toBeInTheDocument();
-      expect(screen.getByText('Phase 5: Populate Nodes')).toBeInTheDocument();
-      expect(screen.getByText('Phase 6: Simulation Ready')).toBeInTheDocument();
-
-      // Check phase status
-      expect(screen.getAllByText('Complete')).toHaveLength(2); // Phases 1 and 2
-      expect(screen.getByText('Current')).toBeInTheDocument(); // Phase 3
-      expect(screen.getAllByText('Pending')).toHaveLength(3); // Phases 4, 5, 6
-
-      // Check progress bar
-      expect(screen.getByText('Progress: 2/6 phases')).toBeInTheDocument();
-      expect(screen.getByText('33% complete')).toBeInTheDocument();
-    });
-
-    it('should show start simulation button when all phases are complete', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        currentStep: 6,
-        isWorldComplete: true,
-        stepValidationStatus: {
-          1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-        },
-        validationStatus: {
-          isValid: true,
-          completeness: 1.0
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      expect(screen.getByText('Start Simulation')).toBeInTheDocument();
-      expect(screen.getByText('100% complete')).toBeInTheDocument();
-    });
-  });
-
-  describe('Validation Messages', () => {
-    it('should display validation errors', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        validationStatus: {
-          errors: ['World name is required', 'At least one node is required'],
-          warnings: []
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      expect(screen.getByText('Validation Errors')).toBeInTheDocument();
-      expect(screen.getByText('• World name is required')).toBeInTheDocument();
-      expect(screen.getByText('• At least one node is required')).toBeInTheDocument();
-    });
-
-    it('should display validation warnings', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        validationStatus: {
-          errors: [],
-          warnings: ['Consider adding more character variety', 'Node capacity might be low']
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      expect(screen.getByText('Warnings')).toBeInTheDocument();
-      expect(screen.getByText('• Consider adding more character variety')).toBeInTheDocument();
-      expect(screen.getByText('• Node capacity might be low')).toBeInTheDocument();
-    });
-  });
-
-  describe('World Builder to Simulation Transition', () => {
-    it('should call onWorldComplete when starting simulation', async () => {
-      const mockOnWorldComplete = jest.fn();
-      const worldBuilderState = createMockWorldBuilderState({
-        isWorldComplete: true,
-        stepValidationStatus: {
-          1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-        },
-        validationStatus: {
-          isValid: true
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          onWorldComplete={mockOnWorldComplete}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      const startButton = screen.getByText('Start Simulation');
-      fireEvent.click(startButton);
-
-      await waitFor(() => {
-        expect(worldBuilderState.buildWorld).toHaveBeenCalled();
-      });
-      expect(mockOnWorldComplete).toHaveBeenCalledWith({ id: 'test-world' });
-    });
-
-    it('should show transition error when world building fails', async () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        isWorldComplete: true,
-        stepValidationStatus: {
-          1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-        },
-        validationStatus: {
-          isValid: true
-        },
-        buildWorld: jest.fn(() => {
-          throw new Error('Failed to build world');
-        })
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      const startButton = screen.getByText('Start Simulation');
-      fireEvent.click(startButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Transition Error')).toBeInTheDocument();
-      });
-      
-      expect(screen.getByText('Failed to transition to simulation: Failed to build world')).toBeInTheDocument();
-    });
-
-    it('should show loading state during transition', async () => {
-      let resolveTransition;
-      const transitionPromise = new Promise((resolve) => {
-        resolveTransition = resolve;
-      });
-
-      const mockOnWorldComplete = jest.fn(() => transitionPromise);
-      const worldBuilderState = createMockWorldBuilderState({
-        isWorldComplete: true,
-        stepValidationStatus: {
-          1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-        },
-        validationStatus: {
-          isValid: true
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          onWorldComplete={mockOnWorldComplete}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      const startButton = screen.getByText('Start Simulation');
-      fireEvent.click(startButton);
-
-      // Should show loading state immediately
-      await waitFor(() => {
-        expect(screen.getByText('Initializing Simulation...')).toBeInTheDocument();
-      });
-
-      // Resolve the transition
-      resolveTransition();
-    });
-  });
-
-  describe('Simulation Interface Display', () => {
-    it('should render simulation interface when world is complete and simulation is initialized', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        isWorldComplete: true,
-        stepValidationStatus: {
-          1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-        }
-      });
-
-      const simulationState = createMockSimulationState({
-        isInitialized: true,
-        worldState: {
-          npcs: [{ name: 'Test NPC' }]
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={simulationState}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      // Should show simulation interface components
-      expect(screen.getByText('World History Simulation')).toBeInTheDocument();
-      expect(screen.getByTestId('simulation-control')).toBeInTheDocument();
-      expect(screen.getByTestId('world-map')).toBeInTheDocument();
-      expect(screen.getByTestId('npc-viewer')).toBeInTheDocument();
-      expect(screen.getByTestId('history-timeline')).toBeInTheDocument();
-      
-      // Should not show world builder interface
-      expect(screen.queryByTestId('world-builder-interface')).not.toBeInTheDocument();
-    });
-
-    it('should allow returning to world builder from simulation interface', async () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        isWorldComplete: true,
-        stepValidationStatus: {
-          1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-        }
-      });
-
-      const simulationState = createMockSimulationState({
-        isInitialized: true,
-        worldState: {
-          npcs: [{ name: 'Test NPC' }]
-        }
-      });
-
-      render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={simulationState}
-          templateManager={mockTemplateManager}
-        />
-      );
-
-      // Should be in simulation interface initially
+      // Should render the simulation interface header
       expect(screen.getByText('World History Simulation')).toBeInTheDocument();
 
-      // Click edit world button
-      const editButton = screen.getByText('Edit World');
-      fireEvent.click(editButton);
+      // Should show turn counter
+      const header = screen.getByRole('banner');
+      expect(header).toHaveTextContent('Turn: 0');
 
-      // Should return to world builder
-      await waitFor(() => {
-        expect(screen.getByText('World Builder')).toBeInTheDocument();
-      });
-      expect(screen.getByTestId('world-builder-interface')).toBeInTheDocument();
+      // Should show navigation tabs
+      expect(screen.getByText('overview')).toBeInTheDocument();
+      expect(screen.getByText('timeline')).toBeInTheDocument();
+      expect(screen.getByText('statistics')).toBeInTheDocument();
+      expect(screen.getByText('characters')).toBeInTheDocument();
+      expect(screen.getByText('settlements')).toBeInTheDocument();
+      expect(screen.getByText('relationships')).toBeInTheDocument();
+    });
+
+    it('should show Process Turn and Reset buttons', () => {
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
+      );
+
+      expect(screen.getByText('Process Turn')).toBeInTheDocument();
+      expect(screen.getByText('Reset')).toBeInTheDocument();
+    });
+
+    it('should display population and resource statistics', () => {
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
+      );
+
+      expect(screen.getByText('Total Population')).toBeInTheDocument();
+      expect(screen.getByText('Active NPCs')).toBeInTheDocument();
+      expect(screen.getByText('Total Resources')).toBeInTheDocument();
+      expect(screen.getByText('Active Settlements')).toBeInTheDocument();
+    });
+
+    it('should show LOD system status when available', () => {
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
+      );
+
+      expect(screen.getByText('LOD Performance')).toBeInTheDocument();
+      expect(screen.getByText('Hero NPCs')).toBeInTheDocument();
+      expect(screen.getByText('Group NPCs')).toBeInTheDocument();
+      expect(screen.getByText('Background NPCs')).toBeInTheDocument();
     });
   });
 
-  describe('Error Prevention', () => {
-    it('should not allow starting simulation when preparation is incomplete', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        currentStep: 3,
-        isWorldComplete: false,
-        stepValidationStatus: {
-          1: true, 2: true, 3: false, 4: false, 5: false, 6: false
-        }
-      });
-
+  describe('Navigation', () => {
+    it('should allow switching between different views', async () => {
       render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
       );
 
-      // Start simulation button should not be present
-      expect(screen.queryByText('Start Simulation')).not.toBeInTheDocument();
+      // Should start on overview
+      expect(screen.getByText('NPC Activity & Decisions')).toBeInTheDocument();
+
+      // Click on statistics tab
+      const statisticsTab = screen.getByText('statistics');
+      fireEvent.click(statisticsTab);
+
+      // Should show statistics view
+      await waitFor(() => {
+        expect(screen.getByText('Level of Detail (LOD) System')).toBeInTheDocument();
+      });
     });
 
-    it('should handle missing phase validation gracefully', () => {
-      const worldBuilderState = createMockWorldBuilderState({
-        stepValidationStatus: null
+    it('should highlight the active navigation tab', () => {
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
+      );
+
+      // Overview tab should be active (blue styling)
+      const overviewTab = screen.getByText('overview');
+      expect(overviewTab).toHaveClass('border-blue-600', 'text-blue-600');
+    });
+  });
+
+  describe('Turn Processing', () => {
+    it('should enable Process Turn button when turn can be processed', () => {
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
+      );
+
+      const processButton = screen.getByText('Process Turn');
+      expect(processButton).not.toBeDisabled();
+    });
+
+    it('should show turn counter with current value', () => {
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...defaultProps} />
+        </SimulationProvider>
+      );
+
+      // Look for the turn counter in the header specifically
+      const header = screen.getByRole('banner');
+      expect(header).toHaveTextContent('Turn: 0');
+    });
+  });
+
+  describe('Data Display', () => {
+    it('should show recent events when available', () => {
+      const mockWithEvents = {
+        ...defaultProps,
+        worldState: {
+          ...defaultProps.worldState,
+          events: [
+            {
+              turn: 1,
+              type: 'interaction',
+              description: 'Test event occurred',
+              timestamp: new Date().toISOString(),
+              significance: 5
+            }
+          ]
+        }
+      };
+
+      // Update the mock to include events in currentSimulationState
+      const originalMock = jest.requireMock('../contexts/SimulationContext.js');
+      originalMock.useSimulationContext = () => ({
+        isInitialized: true,
+        currentTurn: 0,
+        canProcessTurn: true,
+        resetSimulation: jest.fn(),
+        processTurn: jest.fn(),
+        simulationReadinessStatus: { isSimulationReady: true },
+        preparedWorldData: { id: 'test-world' },
+        turnHistory: [],
+        currentSimulationState: {
+          time: 0,
+          characters: [],
+          nodes: [],
+          events: [
+            {
+              turn: 1,
+              type: 'interaction',
+              description: 'Test event occurred',
+              timestamp: new Date().toISOString(),
+              significance: 5
+            }
+          ],
+          resources: { totalGold: 0 }
+        },
+        worldState: mockWithEvents.worldState,
+        lodStats: { hero: 0, group: 0, background: 0 },
+        lodProcessingMetrics: { averageTurnDuration: 100 },
+        isLODInitialized: false,
+        getLODProcessingRecommendations: jest.fn(() => [
+          {
+            type: 'performance',
+            message: 'Consider increasing background tier population to reduce processing time',
+            severity: 'warning'
+          }
+        ])
       });
 
       render(
-        <ConditionalSimulationInterface
-          worldBuilderState={worldBuilderState}
-          simulationState={null}
-          templateManager={mockTemplateManager}
-        />
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...mockWithEvents} />
+        </SimulationProvider>
+      );
+
+      expect(screen.getByText('Recent Events')).toBeInTheDocument();
+      expect(screen.getByText('Test event occurred')).toBeInTheDocument();
+    });
+
+    it('should handle empty world state gracefully', () => {
+      const emptyProps = {
+        worldState: null,
+        simulationService: {}
+      };
+
+      render(
+        <SimulationProvider>
+          <ConditionalSimulationInterface {...emptyProps} />
+        </SimulationProvider>
       );
 
       // Should still render without crashing
-      expect(screen.getByText('World Builder')).toBeInTheDocument();
-      expect(screen.getByText('Progress: 0/6 steps')).toBeInTheDocument();
+      expect(screen.getByText('World History Simulation')).toBeInTheDocument();
     });
   });
 });

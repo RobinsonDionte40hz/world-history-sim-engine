@@ -153,25 +153,88 @@ describe('SimulationService', () => {
   describe('mappless world processing', () => {
     test('should process valid mappless world config', () => {
       const config = createValidMapplessConfig();
-      const worldState = service.processMapplessWorldState(config);
+
+      // Convert raw config to prepared world data format
+      const preparedWorldData = {
+        worldProperties: {
+          name: config.worldName,
+          description: config.worldDescription,
+          rules: config.rules,
+          initialConditions: config.initialConditions
+        },
+        nodes: new Map(config.nodes.map(node => [node.id, node])),
+        characters: new Map(config.characters.map(character => [character.id, character])),
+        interactions: new Map(config.interactions.map(interaction => [interaction.id, interaction])),
+        simulationMetadata: {
+          preparedAt: new Date().toISOString(),
+          source: 'WorldBuilder',
+          worldId: 'test-world-123',
+          version: '2.0.0',
+          pipelineVersion: '1.0.0'
+        }
+      };
+
+      const worldState = service.initialize(preparedWorldData);
 
       expect(worldState.worldName).toBe('Test World');
       expect(worldState.nodes).toHaveLength(1);
-      expect(worldState.npcs).toHaveLength(1);
+      expect(worldState.characters).toHaveLength(1);
       expect(worldState.interactions).toHaveLength(1);
       expect(worldState.time).toBe(0);
     });
 
     test('should assign characters to correct nodes', () => {
       const config = createValidMapplessConfig();
-      const worldState = service.processMapplessWorldState(config);
 
-      expect(worldState.npcs[0].currentNodeId).toBe('node1');
+      // Convert raw config to prepared world data format
+      const preparedWorldData = {
+        worldProperties: {
+          name: config.worldName,
+          description: config.worldDescription,
+          rules: config.rules,
+          initialConditions: config.initialConditions
+        },
+        nodes: new Map(config.nodes.map(node => [node.id, node])),
+        characters: new Map(config.characters.map(character => [character.id, character])),
+        interactions: new Map(config.interactions.map(interaction => [interaction.id, interaction])),
+        simulationMetadata: {
+          preparedAt: new Date().toISOString(),
+          source: 'WorldBuilder',
+          worldId: 'test-world-123',
+          version: '2.0.0',
+          pipelineVersion: '1.0.0'
+        }
+      };
+
+      const worldState = service.initialize(preparedWorldData);
+
+      expect(worldState.characters[0].currentNodeId).toBe('node1');
     });
 
     test('should initialize resources from nodes', () => {
       const config = createValidMapplessConfig();
-      const worldState = service.processMapplessWorldState(config);
+
+      // Convert raw config to prepared world data format
+      const preparedWorldData = {
+        worldProperties: {
+          name: config.worldName,
+          description: config.worldDescription,
+          rules: config.rules,
+          initialConditions: config.initialConditions
+        },
+        nodes: new Map(config.nodes.map(node => [node.id, node])),
+        characters: new Map(config.characters.map(character => [character.id, character])),
+        interactions: new Map(config.interactions.map(interaction => [interaction.id, interaction])),
+        simulationMetadata: {
+          preparedAt: new Date().toISOString(),
+          source: 'WorldBuilder',
+          worldId: 'test-world-123',
+          version: '2.0.0',
+          pipelineVersion: '1.0.0'
+        }
+      };
+
+      const worldState = service.initialize(preparedWorldData);
 
       expect(worldState.resources.food).toBe(100);
     });
@@ -228,8 +291,29 @@ describe('SimulationService', () => {
 
     test('should return true when world is complete', () => {
       const config = createValidMapplessConfig();
-      service.worldState = service.processMapplessWorldState(config);
-      
+
+      // Convert raw config to prepared world data format
+      const preparedWorldData = {
+        worldProperties: {
+          name: config.worldName,
+          description: config.worldDescription,
+          rules: config.rules,
+          initialConditions: config.initialConditions
+        },
+        nodes: new Map(config.nodes.map(node => [node.id, node])),
+        characters: new Map(config.characters.map(character => [character.id, character])),
+        interactions: new Map(config.interactions.map(interaction => [interaction.id, interaction])),
+        simulationMetadata: {
+          preparedAt: new Date().toISOString(),
+          source: 'WorldBuilder',
+          worldId: 'test-world-123',
+          version: '2.0.0',
+          pipelineVersion: '1.0.0'
+        }
+      };
+
+      service.initialize(preparedWorldData);
+
       const result = service.canStart();
       expect(result.canStart).toBe(true);
       expect(result.reason).toBe('Ready to start');

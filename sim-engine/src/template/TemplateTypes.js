@@ -27,6 +27,98 @@ export const CharacterTemplate = {
     description: 'The character\'s subrace identifier',
     nullable: true
   },
+  // Consciousness configuration for character templates
+  consciousness: {
+    type: 'object',
+    description: 'Consciousness parameters for character behavior and decision making',
+    properties: {
+      frequency: {
+        type: 'number',
+        description: 'Consciousness frequency (3.0-15.0 Hz, affects alertness and processing speed)',
+        minimum: 3.0,
+        maximum: 15.0,
+        default: 7.0
+      },
+      coherence: {
+        type: 'number',
+        description: 'Consciousness coherence (0.2-1.0, affects stability and focus)',
+        minimum: 0.2,
+        maximum: 1.0,
+        default: 0.5
+      },
+      behavioralState: {
+        type: 'object',
+        description: 'Pre-configured behavioral state parameters',
+        properties: {
+          energy: {
+            type: 'number',
+            description: 'Energy level (0.0-1.0, affects activity willingness)',
+            minimum: 0.0,
+            maximum: 1.0,
+            default: 0.6
+          },
+          focus: {
+            type: 'number',
+            description: 'Focus level (0.0-1.0, affects attention and concentration)',
+            minimum: 0.0,
+            maximum: 1.0,
+            default: 0.5
+          },
+          socialDrive: {
+            type: 'number',
+            description: 'Social drive (0.0-1.0, affects social interaction willingness)',
+            minimum: 0.0,
+            maximum: 1.0,
+            default: 0.5
+          },
+          riskTolerance: {
+            type: 'number',
+            description: 'Risk tolerance (0.0-1.0, affects willingness to take risks)',
+            minimum: 0.0,
+            maximum: 1.0,
+            default: 0.5
+          },
+          ambition: {
+            type: 'number',
+            description: 'Ambition level (0.0-1.0, affects goal pursuit intensity)',
+            minimum: 0.0,
+            maximum: 1.0,
+            default: 0.5
+          }
+        },
+        nullable: true
+      },
+      updateRules: {
+        type: 'object',
+        description: 'Custom consciousness update rules for this character type',
+        properties: {
+          significanceThreshold: {
+            type: 'number',
+            description: 'Minimum significance threshold for consciousness updates (0.0-1.0)',
+            minimum: 0.0,
+            maximum: 1.0,
+            default: 0.3
+          },
+          adaptationRate: {
+            type: 'number',
+            description: 'Rate at which consciousness adapts to events (0.1-2.0)',
+            minimum: 0.1,
+            maximum: 2.0,
+            default: 1.0
+          },
+          stabilityFactor: {
+            type: 'number',
+            description: 'Resistance to consciousness changes (0.1-2.0)',
+            minimum: 0.1,
+            maximum: 2.0,
+            default: 1.0
+          }
+        },
+        nullable: true
+      }
+    },
+    nullable: true
+  },
   // Environmental data for character templates
   assignedNode: {
     type: 'string',

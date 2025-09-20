@@ -143,10 +143,10 @@ class Character {
     this.lastInteractionType = config.lastInteractionType || null;
 
     // Ensure consciousness exists with proper structure
-    this.consciousness = config.consciousness || {
-      frequency: 40, // Default gamma baseline
-      coherence: 0.5
-    };
+    this.consciousness = this._initializeConsciousness(config.consciousness);
+
+    // Store template application metadata if provided
+    this.templateApplied = config.templateApplied || null;
 
     // Ensure goals array exists
     this.goals = Array.isArray(config.goals) ? config.goals : [];
@@ -1148,7 +1148,8 @@ class Character {
       goals: this.goals,
       decisionHistory: this.decisionHistory,
       needBasedBehaviorChanges: this.needBasedBehaviorChanges,
-      needBasedInteractionModifiers: this.needBasedInteractionModifiers
+      needBasedInteractionModifiers: this.needBasedInteractionModifiers,
+      templateApplied: this.templateApplied
     };
   }
 
@@ -1207,7 +1208,8 @@ class Character {
       goals: data.goals,
       decisionHistory: data.decisionHistory,
       needBasedBehaviorChanges: data.needBasedBehaviorChanges || [],
-      needBasedInteractionModifiers: data.needBasedInteractionModifiers || {}
+      needBasedInteractionModifiers: data.needBasedInteractionModifiers || {},
+      templateApplied: data.templateApplied || null
     });
   }
 
@@ -1256,7 +1258,8 @@ class Character {
       goals: this.goals,
       decisionHistory: this.decisionHistory,
       needBasedBehaviorChanges: this.needBasedBehaviorChanges,
-      needBasedInteractionModifiers: this.needBasedInteractionModifiers
+      needBasedInteractionModifiers: this.needBasedInteractionModifiers,
+      templateApplied: this.templateApplied
     };
   }
 
@@ -1578,6 +1581,66 @@ class Character {
   }
 
   /**
+   * Initialize consciousness with proper structure and validation
+   * @param {Object} consciousnessConfig - Consciousness configuration from template
+   * @returns {Object} Properly structured consciousness object
+   * @private
+   */
+  _initializeConsciousness(consciousnessConfig) {
+    // Default consciousness structure
+    const defaultConsciousness = {
+      frequency: 7.0, // Default alpha baseline (7 Hz)
+      coherence: 0.5, // Default coherence
+      behavioralState: {
+        energy: 0.6,
+        focus: 0.5,
+        socialDrive: 0.5,
+        riskTolerance: 0.5,
+        ambition: 0.5
+      },
+      updateRules: {
+        significanceThreshold: 0.3,
+        adaptationRate: 1.0,
+        stabilityFactor: 1.0
+      }
+    };
+
+    if (!consciousnessConfig) {
+      return defaultConsciousness;
+    }
+
+    // Merge provided config with defaults
+    const mergedConsciousness = {
+      ...defaultConsciousness,
+      ...consciousnessConfig,
+      behavioralState: {
+        ...defaultConsciousness.behavioralState,
+        ...consciousnessConfig.behavioralState
+      },
+      updateRules: {
+        ...defaultConsciousness.updateRules,
+        ...consciousnessConfig.updateRules
+      }
+    };
+
+    // Validate and clamp consciousness parameters
+    mergedConsciousness.frequency = Math.max(3.0, Math.min(15.0, mergedConsciousness.frequency));
+    mergedConsciousness.coherence = Math.max(0.2, Math.min(1.0, mergedConsciousness.coherence));
+
+    // Validate behavioral state parameters
+    Object.keys(mergedConsciousness.behavioralState).forEach(key => {
+      mergedConsciousness.behavioralState[key] = Math.max(0.0, Math.min(1.0, mergedConsciousness.behavioralState[key]));
+    });
+
+    // Validate update rules
+    mergedConsciousness.updateRules.significanceThreshold = Math.max(0.0, Math.min(1.0, mergedConsciousness.updateRules.significanceThreshold));
+    mergedConsciousness.updateRules.adaptationRate = Math.max(0.1, Math.min(2.0, mergedConsciousness.updateRules.adaptationRate));
+    mergedConsciousness.updateRules.stabilityFactor = Math.max(0.1, Math.min(2.0, mergedConsciousness.updateRules.stabilityFactor));
+
+    return mergedConsciousness;
+  }
+
+  /**
    * Deserialize relationships from various formats (static method)
    * @param {Array|string|Map} data - Relationships data
    * @returns {Map} - Deserialized relationships Map
@@ -1618,18 +1681,152 @@ class Character {
   }
 
   /**
-   * Logs a decision made by the character for memory tracking
-   * @param {string} interactionId - ID of the interaction executed
-   * @param {string} outcome - Outcome of the interaction ('positive', 'negative', 'neutral')
+   * Create a Character from a template configuration
+   * @param {Object|string} templateConfig - Template configuration or template name
+   * @param {Object} customizations - Customizations to apply to the template
+   * @returns {Character} New Character instance
+   * @static
    */
-  logDecision(interactionId, outcome) {
-    const decision = {
-      interactionId,
-      outcome,
-      timestamp: Date.now(),
-      significance: outcome === 'positive' ? 0.7 : outcome === 'negative' ? 0.3 : 0.5
+  static fromTemplate(templateConfig, customizations = {}) {
+    if (!templateConfig) {
+      throw new Error('Template configuration is required');
+    }
+
+    // If templateConfig is a string, treat it as a template name and try to get it from CharacterTemplateService
+    if (typeof templateConfig === 'string') {
+      // Import CharacterTemplateService dynamically to avoid circular dependencies
+      const CharacterTemplateService = require('../services/CharacterTemplateService.js').default;
+      const templateService = new CharacterTemplateService();
+
+      const template = templateService.getPredefinedTemplate(templateConfig);
+      if (!template) {
+        throw new Error(`Predefined template '${templateConfig}' not found`);
+      }
+
+      // Apply consciousness template to base character config
+      const baseConfig = {
+        name: customizations.name || template.name,
+        age: customizations.age || 25,
+        level: customizations.level || 1,
+        ...customizations
+      };
+
+      // Extract consciousness customizations
+      const consciousnessCustomizations = customizations.consciousness || {};
+
+      // Apply consciousness from template with customizations
+      const characterData = templateService.applyConsciousnessTemplate(
+        baseConfig,
+        template,
+        consciousnessCustomizations
+      );
+
+      return new Character(characterData);
+    }
+
+    // Handle object template configuration
+    // Merge template with customizations
+    const characterConfig = {
+      ...templateConfig,
+      ...customizations,
+      id: customizations.id || `${templateConfig.id || 'template'}_instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: customizations.name || templateConfig.name,
+      // Ensure consciousness is properly merged
+      consciousness: templateConfig.consciousness ? {
+        ...templateConfig.consciousness,
+        ...customizations.consciousness,
+        behavioralState: {
+          ...templateConfig.consciousness.behavioralState,
+          ...customizations.consciousness?.behavioralState
+        },
+        updateRules: {
+          ...templateConfig.consciousness.updateRules,
+          ...customizations.consciousness?.updateRules
+        }
+      } : customizations.consciousness,
+      // Set template applied metadata for object templates
+      templateApplied: {
+        name: templateConfig.name || 'Custom Template',
+        appliedAt: Date.now()
+      }
     };
-    this.decisionHistory.push(decision);
+
+    return new Character(characterConfig);
+  }
+
+  /**
+   * Validate consciousness configuration
+   * @param {Object} consciousness - Consciousness configuration to validate
+   * @returns {Object} Validation result with isValid and errors
+   * @static
+   */
+  static validateConsciousnessConfig(consciousness) {
+    const errors = [];
+
+    if (!consciousness || typeof consciousness !== 'object') {
+      errors.push('Consciousness configuration must be an object');
+      return { isValid: false, errors };
+    }
+
+    // Validate frequency
+    if (consciousness.frequency !== undefined) {
+      if (typeof consciousness.frequency !== 'number' || consciousness.frequency < 3.0 || consciousness.frequency > 15.0) {
+        errors.push('Consciousness frequency must be between 3.0 and 15.0');
+      }
+    }
+
+    // Validate coherence
+    if (consciousness.coherence !== undefined) {
+      if (typeof consciousness.coherence !== 'number' || consciousness.coherence < 0.2 || consciousness.coherence > 1.0) {
+        errors.push('Consciousness coherence must be between 0.2 and 1.0');
+      }
+    }
+
+    // Validate behavioral state
+    if (consciousness.behavioralState) {
+      const behavioralParams = ['energy', 'focus', 'socialDrive', 'riskTolerance', 'ambition'];
+      behavioralParams.forEach(param => {
+        if (consciousness.behavioralState[param] !== undefined) {
+          if (typeof consciousness.behavioralState[param] !== 'number' ||
+              consciousness.behavioralState[param] < 0.0 ||
+              consciousness.behavioralState[param] > 1.0) {
+            errors.push(`${param} must be between 0.0 and 1.0`);
+          }
+        }
+      });
+    }
+
+    // Validate update rules
+    if (consciousness.updateRules) {
+      if (consciousness.updateRules.significanceThreshold !== undefined) {
+        if (typeof consciousness.updateRules.significanceThreshold !== 'number' ||
+            consciousness.updateRules.significanceThreshold < 0.0 ||
+            consciousness.updateRules.significanceThreshold > 1.0) {
+          errors.push('Significance threshold must be between 0.0 and 1.0');
+        }
+      }
+
+      if (consciousness.updateRules.adaptationRate !== undefined) {
+        if (typeof consciousness.updateRules.adaptationRate !== 'number' ||
+            consciousness.updateRules.adaptationRate < 0.1 ||
+            consciousness.updateRules.adaptationRate > 2.0) {
+          errors.push('Adaptation rate must be between 0.1 and 2.0');
+        }
+      }
+
+      if (consciousness.updateRules.stabilityFactor !== undefined) {
+        if (typeof consciousness.updateRules.stabilityFactor !== 'number' ||
+            consciousness.updateRules.stabilityFactor < 0.1 ||
+            consciousness.updateRules.stabilityFactor > 2.0) {
+          errors.push('Stability factor must be between 0.1 and 2.0');
+        }
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 
   /**

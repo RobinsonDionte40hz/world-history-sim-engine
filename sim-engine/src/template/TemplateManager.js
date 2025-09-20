@@ -2,6 +2,7 @@ import TemplateValidator from './TemplateValidator';
 import TemplateGenerator from './TemplateGenerator';
 import EnvironmentalPresetService from '../domain/services/EnvironmentalPresetService.js';
 import Node from '../domain/entities/Node.js';
+import BehavioralStateTemplates from './BehavioralStateTemplates.js';
 
 class TemplateManager {
   constructor() {
@@ -222,7 +223,165 @@ class TemplateManager {
   }
 
   /**
-   * Instantiates a node template with environmental data support
+   * Creates a character template with behavioral state configuration
+   * @param {string} archetype - The behavioral archetype (warrior, merchant, etc.)
+   * @param {Object} customizations - Customizations to apply
+   * @returns {Object} Character template with behavioral state
+   */
+  createCharacterTemplateWithBehavioralState(archetype, customizations = {}) {
+    const behavioralTemplate = BehavioralStateTemplates.getTemplate(archetype);
+    if (!behavioralTemplate) {
+      throw new Error(`Unknown behavioral archetype: ${archetype}`);
+    }
+
+    const template = {
+      ...behavioralTemplate,
+      ...customizations,
+      id: customizations.id || `${archetype}_template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: customizations.name || behavioralTemplate.name,
+      description: customizations.description || behavioralTemplate.description,
+      version: '1.0.0',
+      tags: ['character', archetype, 'behavioral-state', ...(customizations.tags || [])],
+      metadata: {
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        author: 'System',
+        archetype,
+        behavioralStateConfigured: true
+      }
+    };
+
+    return this.addTemplate('characters', template);
+  }
+
+  /**
+   * Gets all available behavioral archetypes
+   * @returns {Array} Array of archetype names
+   */
+  getAvailableBehavioralArchetypes() {
+    return BehavioralStateTemplates.getAvailableArchetypes();
+  }
+
+  /**
+   * Creates multiple character templates for different archetypes
+   * @param {Array} archetypes - Array of archetype names
+   * @param {Object} baseCustomizations - Base customizations applied to all
+   * @returns {Array} Array of created templates
+   */
+  createArchetypeTemplates(archetypes, baseCustomizations = {}) {
+    const createdTemplates = [];
+
+    archetypes.forEach(archetype => {
+      try {
+        const template = this.createCharacterTemplateWithBehavioralState(archetype, baseCustomizations);
+        createdTemplates.push(template);
+      } catch (error) {
+        console.warn(`Failed to create template for archetype ${archetype}: ${error.message}`);
+      }
+    });
+
+    return createdTemplates;
+  }
+
+  /**
+   * Instantiates a character with behavioral state from template
+   * @param {string} templateId - Template ID
+   * @param {Object} customizations - Customizations to apply
+   * @returns {Object} Instantiated character configuration
+   */
+  instantiateCharacterWithBehavioralState(templateId, customizations = {}) {
+    const template = this.getTemplate('characters', templateId);
+    if (!template) {
+      throw new Error(`Character template not found: ${templateId}`);
+    }
+
+    // Ensure consciousness configuration exists
+    const consciousness = template.consciousness || {
+      frequency: 7.0,
+      coherence: 0.5,
+      behavioralState: {
+        energy: 0.6,
+        focus: 0.5,
+        socialDrive: 0.5,
+        riskTolerance: 0.5,
+        ambition: 0.5
+      },
+      updateRules: {
+        significanceThreshold: 0.3,
+        adaptationRate: 1.0,
+        stabilityFactor: 1.0
+      }
+    };
+
+    // Merge with customizations
+    const mergedConsciousness = {
+      ...consciousness,
+      ...customizations.consciousness,
+      behavioralState: {
+        ...consciousness.behavioralState,
+        ...customizations.consciousness?.behavioralState
+      },
+      updateRules: {
+        ...consciousness.updateRules,
+        ...customizations.consciousness?.updateRules
+      }
+    };
+
+    // Create character configuration
+    const characterConfig = {
+      ...template,
+      ...customizations,
+      id: customizations.id || `${template.id}_instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: customizations.name || template.name,
+      consciousness: mergedConsciousness,
+      templateId: templateId,
+      isTemplateInstance: true,
+      metadata: {
+        ...template.metadata,
+        instantiatedAt: new Date().toISOString(),
+        customizations: Object.keys(customizations)
+      }
+    };
+
+    return characterConfig;
+  }
+
+  /**
+   * Validates behavioral state configuration in a template
+   * @param {string} templateId - Template ID
+   * @returns {Object} Validation result
+   */
+  validateBehavioralStateTemplate(templateId) {
+    const template = this.getTemplate('characters', templateId);
+    if (!template) {
+      return {
+        isValid: false,
+        errors: ['Template not found'],
+        warnings: []
+      };
+    }
+
+    if (!template.consciousness) {
+      return {
+        isValid: false,
+        errors: ['Template missing consciousness configuration'],
+        warnings: []
+      };
+    }
+
+    // Use BehavioralStateTemplates validation with correct structure
+    const validation = BehavioralStateTemplates.validateConfig({ consciousness: template.consciousness });
+
+    return {
+      isValid: validation.isValid,
+      errors: validation.errors,
+      warnings: [],
+      behavioralStateValid: validation.isValid
+    };
+  }
+
+  /**
+   * Instantiates a node template with customizations
    * @param {string} templateId - Template ID
    * @param {Object} customizations - Customizations to apply
    * @returns {Object} Instantiated node configuration
@@ -1367,6 +1526,7 @@ class TemplateManager {
 
     return createdTemplates;
   }
+
 }
 
 export default TemplateManager; 

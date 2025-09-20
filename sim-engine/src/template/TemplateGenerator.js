@@ -33,7 +33,24 @@ class TemplateGenerator {
         dexterity: 0,
         constitution: 0
       },
-      background: ''
+      background: '',
+      // Default consciousness configuration
+      consciousness: {
+        frequency: 7.0, // Default alpha baseline
+        coherence: 0.5,
+        behavioralState: {
+          energy: 0.6,
+          focus: 0.5,
+          socialDrive: 0.5,
+          riskTolerance: 0.5,
+          ambition: 0.5
+        },
+        updateRules: {
+          significanceThreshold: 0.3,
+          adaptationRate: 1.0,
+          stabilityFactor: 1.0
+        }
+      }
     };
   }
 

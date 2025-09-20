@@ -9,7 +9,7 @@
  * - Memory usage monitoring and reporting
  */
 
-import MemoryManagementService from '../src/domain/services/MemoryManagementService.js';
+import MemoryManagementService from '../MemoryManagementService.js';
 
 // Mock logger for testing
 const mockLogger = {

@@ -5,10 +5,10 @@
  * consciousness system components to ensure comprehensive error recovery.
  */
 
-import ConsciousnessErrorHandlingService from '../domain/services/ConsciousnessErrorHandlingService.js';
-import BehavioralStateService from '../domain/services/BehavioralStateService.js';
-import ConsciousnessUpdateService from '../domain/services/ConsciousnessUpdateService.js';
-import EventSignificanceService from '../domain/services/EventSignificanceService.js';
+import ConsciousnessErrorHandlingService from '../ConsciousnessErrorHandlingService.js';
+import BehavioralStateService from '../BehavioralStateService.js';
+import ConsciousnessUpdateService from '../ConsciousnessUpdateService.js';
+import EventSignificanceService from '../EventSignificanceService.js';
 
 describe('Consciousness Error Handling Integration', () => {
     let errorHandler;

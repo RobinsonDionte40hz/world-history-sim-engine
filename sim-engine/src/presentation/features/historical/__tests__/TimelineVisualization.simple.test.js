@@ -24,23 +24,33 @@ jest.mock('../components/TimelineControls', () => {
 });
 
 jest.mock('../components/TimelineTooltip', () => {
-  const TimelineTooltip = React.forwardRef(({ event, visible }, ref) => (
-    <div ref={ref} data-testid="timeline-tooltip" style={{ display: visible ? 'block' : 'none' }}>
-      {event && <span>{event.description}</span>}
-    </div>
-  ));
-  TimelineTooltip.displayName = 'TimelineTooltip';
-  return TimelineTooltip;
+  return {
+    __esModule: true,
+    default: React.forwardRef(({ event, visible }, ref) => (
+      React.createElement('div', {
+        ref,
+        'data-testid': 'timeline-tooltip',
+        style: { display: visible ? 'block' : 'none' }
+      }, event && React.createElement('span', null, event.description))
+    ))
+  };
 });
 
 jest.mock('../components/TimelineExport', () => {
-  return function MockTimelineExport({ onExport, disabled }) {
-    return (
-      <div data-testid="timeline-export">
-        <button onClick={() => onExport('svg')} disabled={disabled}>Export SVG</button>
-        <button onClick={() => onExport('json')} disabled={disabled}>Export JSON</button>
-      </div>
-    );
+  return {
+    __esModule: true,
+    default: ({ onExport, disabled }) => (
+      React.createElement('div', { 'data-testid': 'timeline-export' },
+        React.createElement('button', {
+          onClick: () => onExport('svg'),
+          disabled
+        }, 'Export SVG'),
+        React.createElement('button', {
+          onClick: () => onExport('json'),
+          disabled
+        }, 'Export JSON')
+      )
+    )
   };
 });
 

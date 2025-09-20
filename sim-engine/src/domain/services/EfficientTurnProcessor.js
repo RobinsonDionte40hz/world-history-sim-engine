@@ -155,6 +155,57 @@ class EfficientTurnProcessor extends BaseDomainService {
         };
 
         try {
+            // Determine LOD tier for processing optimization
+            const lodTier = this._determineLodTier(character);
+
+            if (lodTier === 'hero') {
+                // Full processing for hero NPCs
+                return await this._processHeroCharacterTurn(character, worldState, turnContext);
+            } else {
+                // Simplified processing for group NPCs
+                return await this._processGroupCharacterTurn(character, worldState, turnContext);
+            }
+
+        } catch (error) {
+            if (this.logger) {
+                this.logger.warn(`Character turn processing failed for ${character.id}: ${error.message}`);
+            }
+            // Add the error to the result so it can be handled by the caller
+            result.errors.push({
+                characterId: character.id,
+                error: error.message
+            });
+            return result;
+        }
+    }
+
+    /**
+     * Determine LOD tier for a character
+     * @param {Object} character - Character to evaluate
+     * @returns {string} LOD tier ('hero' or 'group')
+     */
+    _determineLodTier(character) {
+        // Use character's lodTier property, defaulting to 'hero' for individual processing
+        return character.lodTier || 'hero';
+    }
+
+    /**
+     * Process turn for hero-tier character (full processing)
+     * @param {Object} character - Hero character to process
+     * @param {Object} worldState - Current world state
+     * @param {Object} turnContext - Turn context
+     * @returns {Object} Character processing result
+     */
+    async _processHeroCharacterTurn(character, worldState, turnContext) {
+        const result = {
+            consciousnessUpdated: false,
+            memoryUpdated: false,
+            usedCachedState: false,
+            significantEvents: [],
+            errors: []
+        };
+
+        try {
             // Check for significant changes that would require consciousness update
             const significantChanges = this.checkForSignificantChanges(character, worldState, turnContext);
 
@@ -214,10 +265,67 @@ class EfficientTurnProcessor extends BaseDomainService {
             return result;
 
         } catch (error) {
-            if (this.logger) {
-                this.logger.warn(`Character turn processing failed for ${character.id}: ${error.message}`);
+            result.errors.push({
+                characterId: character.id,
+                error: error.message
+            });
+            return result;
+        }
+    }
+
+    /**
+     * Process turn for group-tier character (simplified processing)
+     * @param {Object} character - Group character to process
+     * @param {Object} worldState - Current world state
+     * @param {Object} turnContext - Turn context
+     * @returns {Object} Character processing result
+     */
+    async _processGroupCharacterTurn(character, worldState, turnContext) {
+        const result = {
+            consciousnessUpdated: false,
+            memoryUpdated: false,
+            usedCachedState: true, // Group characters always use cached states
+            significantEvents: [],
+            errors: []
+        };
+
+        try {
+            // Simplified significant change check - only check critical changes
+            const criticalChanges = this._checkCriticalChangesOnly(character, worldState, turnContext);
+
+            if (criticalChanges.hasChanges) {
+                // Critical changes detected - update consciousness (less frequently for groups)
+                const updateResult = await this._updateCharacterConsciousness(
+                    character,
+                    criticalChanges.events,
+                    worldState
+                );
+
+                result.consciousnessUpdated = true;
+                result.significantEvents.push(...updateResult.events);
+
             }
-            // Add the error to the result so it can be handled by the caller
+
+            // Generate simplified behavior for group characters
+            const behaviorResult = this._generateSimplifiedBehavior(character, worldState, turnContext);
+
+            // Only evaluate behavior significance for high-confidence actions
+            if (behaviorResult.confidence > 0.8) {
+                const behaviorSignificance = this._evaluateBehaviorSignificance(
+                    character,
+                    behaviorResult,
+                    worldState
+                );
+
+                if (behaviorSignificance.isSignificant) {
+                    result.significantEvents.push(behaviorSignificance.event);
+                    result.consciousnessUpdated = true;
+                }
+            }
+
+            return result;
+
+        } catch (error) {
             result.errors.push({
                 characterId: character.id,
                 error: error.message
@@ -240,46 +348,138 @@ class EfficientTurnProcessor extends BaseDomainService {
         };
 
         try {
-            // Check for relationship changes
-            const relationshipChanges = this._checkRelationshipChanges(character, worldState);
-            if (relationshipChanges.length > 0) {
+            // Quick health check first - most likely to trigger updates
+            const energyPercent = character.energy / character.maxEnergy;
+            const healthPercent = character.health / 100;
+
+            if (energyPercent < 0.2) {
                 changes.hasChanges = true;
-                changes.events.push(...relationshipChanges);
+                changes.events.push({
+                    type: 'energy_crisis',
+                    outcome: 'negative',
+                    description: `Character ${character.name} is critically low on energy`,
+                    characterId: character.id,
+                    energyPercent: energyPercent,
+                    significance: 0.7
+                });
+                return changes; // Early exit for critical health issues
             }
 
-            // Check for goal status changes
-            const goalChanges = this._checkGoalChanges(character, worldState);
-            if (goalChanges.length > 0) {
+            if (healthPercent < 0.3) {
                 changes.hasChanges = true;
-                changes.events.push(...goalChanges);
+                changes.events.push({
+                    type: 'health_crisis',
+                    outcome: 'negative',
+                    description: `Character ${character.name} is critically injured`,
+                    characterId: character.id,
+                    healthPercent: healthPercent,
+                    significance: 0.8
+                });
+                return changes; // Early exit for critical health issues
             }
 
-            // Check for environmental changes
-            const environmentalChanges = this._checkEnvironmentalChanges(character, worldState, turnContext);
-            if (environmentalChanges.length > 0) {
-                changes.hasChanges = true;
-                changes.events.push(...environmentalChanges);
+            // Check goal completions (high significance)
+            if (character.goals && character.goals.length > 0) {
+                const completedGoals = character.goals.filter(goal => goal.status === 'completed');
+                if (completedGoals.length > 0) {
+                    changes.hasChanges = true;
+                    completedGoals.forEach(goal => {
+                        changes.events.push({
+                            type: 'goal_completion',
+                            outcome: 'success',
+                            description: `Character ${character.name} completed goal: ${goal.description}`,
+                            characterId: character.id,
+                            goalId: goal.id,
+                            significance: 0.8
+                        });
+                    });
+                    return changes; // Early exit for goal completions
+                }
             }
 
-            // Check for health/energy changes
-            const healthChanges = this._checkHealthChanges(character, worldState);
-            if (healthChanges.length > 0) {
+            // Check for dangerous environment
+            const currentNode = worldState.nodes?.find(node => node.id === character.currentNodeId);
+            if (currentNode?.environment?.isDangerous?.()) {
                 changes.hasChanges = true;
-                changes.events.push(...healthChanges);
+                changes.events.push({
+                    type: 'environmental_change',
+                    outcome: 'negative',
+                    description: `Character ${character.name} is in dangerous environment`,
+                    characterId: character.id,
+                    nodeId: currentNode.id,
+                    significance: 0.5
+                });
             }
 
-            // Check for economic changes
-            const economicChanges = this._checkEconomicChanges(character, worldState);
-            if (economicChanges.length > 0) {
-                changes.hasChanges = true;
-                changes.events.push(...economicChanges);
+            // Check economic hardship (only if wealth is very low)
+            if (character.wealth !== undefined && character.wealth < 10) {
+                const significance = this.eventSignificanceService.calculateEventSignificance(
+                    {
+                        type: 'economic_hardship',
+                        outcome: 'negative',
+                        characterId: character.id,
+                        wealth: character.wealth
+                    },
+                    {
+                        character: character,
+                        worldState: worldState
+                    }
+                );
+
+                if (significance >= this.significanceThreshold) {
+                    changes.hasChanges = true;
+                    changes.events.push({
+                        type: 'economic_hardship',
+                        outcome: 'negative',
+                        description: `Character ${character.name} is experiencing economic hardship`,
+                        characterId: character.id,
+                        wealth: character.wealth,
+                        significance: significance
+                    });
+                }
             }
 
-            // Check for social context changes
-            const socialChanges = this._checkSocialContextChanges(character, worldState, turnContext);
-            if (socialChanges.length > 0) {
-                changes.hasChanges = true;
-                changes.events.push(...socialChanges);
+            // Simplified checks for other change types (less frequent)
+            if (Math.random() < 0.3) { // Only check 30% of the time for performance
+                // Check relationships (simplified)
+                const currentRelationships = character.relationships || new Map();
+                if (currentRelationships.size > 0) {
+                    const significance = this.eventSignificanceService.calculateEventSignificance(
+                        {
+                            type: 'relationship_change',
+                            outcome: 'positive',
+                            characterId: character.id
+                        },
+                        {
+                            character: character,
+                            worldState: worldState
+                        }
+                    );
+
+                    if (significance >= this.significanceThreshold) {
+                        changes.hasChanges = true;
+                        changes.events.push({
+                            type: 'relationship_change',
+                            outcome: 'positive',
+                            description: `Character ${character.name} has active relationships`,
+                            characterId: character.id,
+                            significance: significance
+                        });
+                    }
+                }
+
+                // Check social context (simplified)
+                if (turnContext.groupSize && turnContext.groupSize > 10) {
+                    changes.hasChanges = true;
+                    changes.events.push({
+                        type: 'social_context_change',
+                        outcome: 'neutral',
+                        description: `Character ${character.name} is in a large group`,
+                        characterId: character.id,
+                        groupSize: turnContext.groupSize,
+                        significance: 0.4
+                    });
+                }
             }
 
             return changes;
@@ -528,11 +728,144 @@ class EfficientTurnProcessor extends BaseDomainService {
     }
 
     /**
-     * Check for relationship changes
+     * Check for critical changes only (simplified for group characters)
      * @param {Object} character - Character to check
-     * @param {Object} worldState - World state
-     * @returns {Array} Relationship change events
+     * @param {Object} worldState - Current world state
+     * @param {Object} turnContext - Turn context
+     * @returns {Object} Critical changes result
      */
+    _checkCriticalChangesOnly(character, worldState, turnContext) {
+        const changes = {
+            hasChanges: false,
+            events: []
+        };
+
+        try {
+            // Only check for critical health and environmental changes for group characters
+
+            // Check for severe health/energy changes
+            const energyPercent = character.energy / character.maxEnergy;
+            const healthPercent = character.health / 100;
+
+            if (energyPercent < 0.1) { // More critical threshold for groups
+                changes.hasChanges = true;
+                changes.events.push({
+                    type: 'energy_crisis',
+                    outcome: 'negative',
+                    description: `Character ${character.name} is critically low on energy`,
+                    characterId: character.id,
+                    energyPercent: energyPercent,
+                    significance: 0.9
+                });
+            }
+
+            if (healthPercent < 0.2) { // More critical threshold for groups
+                changes.hasChanges = true;
+                changes.events.push({
+                    type: 'health_crisis',
+                    outcome: 'negative',
+                    description: `Character ${character.name} is critically injured`,
+                    characterId: character.id,
+                    healthPercent: healthPercent,
+                    significance: 0.9
+                });
+            }
+
+            // Check for extremely dangerous environments
+            const currentNode = worldState.nodes?.find(node => node.id === character.currentNodeId);
+            if (currentNode && currentNode.environment?.isDangerous?.()) {
+                // Only trigger for group characters if environment is particularly dangerous
+                changes.hasChanges = true;
+                changes.events.push({
+                    type: 'environmental_crisis',
+                    outcome: 'negative',
+                    description: `Character ${character.name} is in extremely dangerous environment`,
+                    characterId: character.id,
+                    nodeId: currentNode.id,
+                    significance: 0.8
+                });
+            }
+
+            return changes;
+
+        } catch (error) {
+            if (this.logger) {
+                this.logger.warn(`Error checking critical changes: ${error.message}`);
+            }
+            return changes;
+        }
+    }
+
+    /**
+     * Generate simplified behavior for group characters
+     * @param {Object} character - Character to generate behavior for
+     * @param {Object} worldState - Current world state
+     * @param {Object} turnContext - Turn context
+     * @returns {Object} Simplified behavior result
+     */
+    _generateSimplifiedBehavior(character, worldState, turnContext = {}) {
+        try {
+            // Get available interactions (same as full processing)
+            const availableInteractions = this._getAvailableInteractions(character, worldState);
+
+            if (availableInteractions.length === 0) {
+                return {
+                    action: 'idle',
+                    reason: 'no_available_interactions',
+                    confidence: 0.5
+                };
+            }
+
+            // Simplified decision making - use basic personality traits only
+            const personalityTraits = character.personality?.getAllTraits?.() || [];
+            const aggression = personalityTraits.find(t => t.id === 'aggression')?.intensity || 0.5;
+            const curiosity = personalityTraits.find(t => t.id === 'curiosity')?.intensity || 0.5;
+
+            // Simple behavior selection based on personality and context
+            let selectedInteraction;
+            let confidence = 0.6; // Base confidence for group characters
+
+            if (turnContext.urgency === 'high') {
+                // High urgency - prefer rest or safe actions
+                selectedInteraction = availableInteractions.find(i => i.type === 'rest') || availableInteractions[0];
+                confidence = 0.8;
+            } else if (aggression > 0.7) {
+                // Aggressive characters prefer combat
+                selectedInteraction = availableInteractions.find(i => i.type === 'combat') || availableInteractions[0];
+                confidence = Math.min(aggression, 0.9);
+            } else if (curiosity > 0.7) {
+                // Curious characters prefer exploration
+                selectedInteraction = availableInteractions.find(i => i.type === 'exploration') || availableInteractions[0];
+                confidence = Math.min(curiosity, 0.9);
+            } else {
+                // Default to economic activities
+                selectedInteraction = availableInteractions.find(i => i.type === 'economic') || availableInteractions[0];
+            }
+
+            return {
+                action: 'execute_interaction',
+                interaction: selectedInteraction,
+                confidence: confidence,
+                decisionFactor: confidence * 2.0, // Simplified decision factor
+                reasoning: {
+                    primaryFactor: 'simplified_group_logic',
+                    personalityInfluence: { aggression, curiosity }
+                }
+            };
+
+        } catch (error) {
+            if (this.logger) {
+                this.logger.warn(`Error generating simplified behavior: ${error.message}`);
+            }
+
+            return {
+                action: 'idle',
+                reason: 'behavior_generation_error',
+                error: error.message,
+                confidence: 0.1
+            };
+        }
+    }
     _checkRelationshipChanges(character, worldState) {
         const events = [];
 

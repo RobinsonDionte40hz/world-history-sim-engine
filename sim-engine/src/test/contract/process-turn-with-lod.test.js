@@ -15,7 +15,7 @@
  */
 
 const processTurnWithLOD = require('../../application/use-cases/simulation/ProcessTurnWithLOD.js');
-const { LODManager } = require('../../domain/services/LODManager.js');
+const LODManager = require('../../domain/services/LODManager.js');
 const HistoryGenerator = require('../../domain/services/HistoryGenerator.js');
 
 describe('ProcessTurnWithLOD Use Case - Contract Tests', () => {

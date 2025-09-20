@@ -5,7 +5,7 @@
  * fallback calculations, and diagnostic reporting for the consciousness system.
  */
 
-import ConsciousnessErrorHandlingService from '../domain/services/ConsciousnessErrorHandlingService.js';
+import ConsciousnessErrorHandlingService from '../ConsciousnessErrorHandlingService.js';
 
 describe('ConsciousnessErrorHandlingService', () => {
     let errorHandler;

@@ -1091,7 +1091,7 @@ describe('CharacterManager', () => {
 
       // Check for proper roles
       expect(screen.getAllByRole('checkbox')).toHaveLength(3);
-      expect(screen.getAllByRole('button')).toHaveLength(6); // Create Character, Filters, Sort order, 3 character action menus
+      expect(screen.getAllByRole('button')).toHaveLength(10); // Create Character, 4 LOD tabs, Filters, Sort order, 3 character action menus, Clear All Filters
       expect(screen.getByRole('textbox')).toBeInTheDocument(); // Search input
     });
 
@@ -1113,7 +1113,11 @@ describe('CharacterManager', () => {
       await user.tab();
       expect(screen.getByText('Create Character')).toHaveFocus();
 
-      await user.tab();
+      await user.tab(); // All Characters tab
+      await user.tab(); // Heroes tab
+      await user.tab(); // Groups tab
+      await user.tab(); // Background tab
+      await user.tab(); // Search input
       expect(screen.getByPlaceholderText(/Search characters/)).toHaveFocus();
     });
   });

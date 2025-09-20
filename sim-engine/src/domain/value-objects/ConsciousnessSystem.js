@@ -45,11 +45,11 @@ class ConsciousnessState {
         let baseEmotion;
         
         // Practical emotion mapping with content as baseline
-        if (freq < 5) baseEmotion = { primary: 'tired', secondary: 'cautious', energy: 0.4 };
-        else if (freq < 8) baseEmotion = { primary: 'content', secondary: 'stable', energy: 0.6 }; // Normal baseline
-        else if (freq < 10) baseEmotion = { primary: 'alert', secondary: 'engaged', energy: 0.8 };
-        else if (freq < 12) baseEmotion = { primary: 'energized', secondary: 'motivated', energy: 0.9 };
-        else if (freq < 14) baseEmotion = { primary: 'excited', secondary: 'ambitious', energy: 1.0 };
+        if (freq < 30) baseEmotion = { primary: 'tired', secondary: 'cautious', energy: 0.4 };
+        else if (freq < 45) baseEmotion = { primary: 'content', secondary: 'stable', energy: 0.6 }; // Normal baseline
+        else if (freq < 60) baseEmotion = { primary: 'alert', secondary: 'engaged', energy: 0.8 };
+        else if (freq < 75) baseEmotion = { primary: 'energized', secondary: 'motivated', energy: 0.9 };
+        else if (freq < 85) baseEmotion = { primary: 'excited', secondary: 'ambitious', energy: 1.0 };
         else baseEmotion = { primary: 'manic', secondary: 'reckless', energy: 1.2 }; // Dangerous high state
         
         // Apply temporary emotional modifiers
@@ -411,6 +411,18 @@ class ConsciousnessSystem {
         if (!state) {
             throw new Error(`Consciousness state with ID ${id} not found`);
         }
+        
+        // Handle frequency mapping - if config has 'frequency', map it to currentFrequency
+        if (config.frequency !== undefined) {
+            state.currentFrequency = config.frequency;
+        }
+        
+        // Handle coherence mapping - if config has 'coherence', map it to emotionalCoherence
+        if (config.coherence !== undefined) {
+            state.emotionalCoherence = config.coherence;
+        }
+        
+        // Apply other config properties
         Object.assign(state, config);
         state.lastUpdate = Date.now();
         return state;
@@ -605,6 +617,23 @@ class ConsciousnessSystem {
         if (frequency < 10) return 'hopeful';
         if (frequency < 13) return 'excited';
         return 'ecstatic';
+    }
+
+    // Emotional state management methods
+    getCurrentEmotionalState(characterId) {
+        const state = this.getConsciousnessState(characterId);
+        if (!state) {
+            throw new Error(`Consciousness state with ID ${characterId} not found`);
+        }
+        return state.getCurrentEmotionalState();
+    }
+
+    applyEmotionalEvent(characterId, eventType, intensity, duration) {
+        const state = this.getConsciousnessState(characterId);
+        if (!state) {
+            throw new Error(`Consciousness state with ID ${characterId} not found`);
+        }
+        return state.applyEmotionalEvent(eventType, intensity, duration);
     }
 
     // Data Persistence

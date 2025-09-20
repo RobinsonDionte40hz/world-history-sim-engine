@@ -1,6 +1,6 @@
 // src/domain/value-objects/__tests__/CharacterType.test.js
 
-import { CharacterType } from '../CharacterType.js';
+import CharacterType from '../CharacterType.js';
 import { ValidationError } from '../../../shared/types/ValueObjectTypes.js';
 
 describe('CharacterType Value Object', () => {
