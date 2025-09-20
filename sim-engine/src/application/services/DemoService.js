@@ -192,7 +192,9 @@ class DemoService {
           branches: interaction.branches || [],
           effects: interaction.effects || [],
           context: interaction.context || {},
-          assignedCharacterIds: interaction.assignedCharacterIds || []
+          assignedCharacterIds: interaction.assignedCharacterIds || [],
+          // Preserve associatedNodeId for content interactions
+          associatedNodeId: interaction.associatedNodeId
         };
 
         interactionsMap.set(processedInteraction.id, processedInteraction);
@@ -1190,8 +1192,8 @@ class DemoService {
    */
   static _generateValleyOfEchoes() {
     // Import the proper Valley of Echoes demo components
-    const oakwoodConfig = require('../../configs/valley-of-echoes/oakwood-config.js');
-    const ironholdConfig = require('../../configs/valley-of-echoes/ironhold-config.js');
+    const oakwoodConfig = require('../../data/demos/valley-of-echoes/oakwood-federation-config.js');
+    const ironholdConfig = require('../../data/demos/valley-of-echoes/ironhold-dominion-config.js');
 
     // Build Oakwood Federation settlement
     const oakwoodSettlement = {
@@ -1233,6 +1235,7 @@ class DemoService {
 
     // Create hero characters for Oakwood
     const oakwoodHeroCharacters = oakwoodConfig.heroCharacters.map(char => {
+      const assignedNodeId = Array.from(char.assignments.nodes)[0]; // Get first node from Set
       const character = {
         id: char.id,
         name: char.name,
@@ -1242,11 +1245,11 @@ class DemoService {
         consciousness: char.consciousness,
         personality: char.personality,
         assignments: {
-          nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+          nodes: new Set([assignedNodeId]),
           interactions: new Set(),
           settlements: new Set([oakwoodConfig.id])
         },
-        currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
+        currentNodeId: assignedNodeId,
         background: char.role || 'Hero character'
       };
 
@@ -1256,6 +1259,7 @@ class DemoService {
 
     // Create hero characters for Ironhold
     const ironholdHeroCharacters = ironholdConfig.heroCharacters.map(char => {
+      const assignedNodeId = Array.from(char.assignments.nodes)[0]; // Get first node from Set
       const character = {
         id: char.id,
         name: char.name,
@@ -1265,11 +1269,11 @@ class DemoService {
         consciousness: char.consciousness,
         personality: char.personality,
         assignments: {
-          nodes: new Set([char.assignedNode || char.assignments?.nodes?.values().next().value]),
+          nodes: new Set([assignedNodeId]),
           interactions: new Set(),
           settlements: new Set([ironholdConfig.id])
         },
-        currentNodeId: char.assignedNode || char.assignments?.nodes?.values().next().value,
+        currentNodeId: assignedNodeId,
         background: char.role || 'Hero character'
       };
 
@@ -1279,6 +1283,7 @@ class DemoService {
 
     // Create group-level characters for Oakwood population groups
     const oakwoodGroupCharacters = oakwoodConfig.populationGroups.map(group => {
+      const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
       const character = {
         id: group.id,
         name: group.name,
@@ -1288,11 +1293,11 @@ class DemoService {
         demographics: group.demographics,
         groupStatistics: group.statistics,
         assignments: {
-          nodes: new Set([group.assignedNode]),
+          nodes: new Set([assignedNodeId]),
           interactions: new Set(),
           settlements: new Set([oakwoodConfig.id])
         },
-        currentNodeId: group.assignedNode,
+        currentNodeId: assignedNodeId,
         background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
       };
 
@@ -1302,6 +1307,7 @@ class DemoService {
 
     // Create group-level characters for Ironhold population groups
     const ironholdGroupCharacters = ironholdConfig.populationGroups.map(group => {
+      const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
       const character = {
         id: group.id,
         name: group.name,
@@ -1311,11 +1317,11 @@ class DemoService {
         demographics: group.demographics,
         groupStatistics: group.statistics,
         assignments: {
-          nodes: new Set([group.assignedNode]),
+          nodes: new Set([assignedNodeId]),
           interactions: new Set(),
           settlements: new Set([ironholdConfig.id])
         },
-        currentNodeId: group.assignedNode,
+        currentNodeId: assignedNodeId,
         background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
       };
 
@@ -1326,6 +1332,7 @@ class DemoService {
     // Create individual background characters for Oakwood
     const oakwoodBackgroundCharacters = [];
     oakwoodConfig.populationGroups.forEach(group => {
+      const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
       for (let i = 0; i < group.size; i++) {
         const character = {
           id: `${group.id}-bg-${i}`,
@@ -1339,11 +1346,11 @@ class DemoService {
             economicClass: group.demographics.economicClass
           },
           assignments: {
-            nodes: new Set([group.assignedNode]),
+            nodes: new Set([assignedNodeId]),
             interactions: new Set(),
             settlements: new Set([oakwoodConfig.id])
           },
-          currentNodeId: group.assignedNode,
+          currentNodeId: assignedNodeId,
           background: `${group.demographics.occupation} in ${group.name}`
         };
 
@@ -1355,6 +1362,7 @@ class DemoService {
     // Create individual background characters for Ironhold
     const ironholdBackgroundCharacters = [];
     ironholdConfig.populationGroups.forEach(group => {
+      const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
       for (let i = 0; i < group.size; i++) {
         const character = {
           id: `${group.id}-bg-${i}`,
@@ -1368,11 +1376,11 @@ class DemoService {
             economicClass: group.demographics.economicClass
           },
           assignments: {
-            nodes: new Set([group.assignedNode]),
+            nodes: new Set([assignedNodeId]),
             interactions: new Set(),
             settlements: new Set([ironholdConfig.id])
           },
-          currentNodeId: group.assignedNode,
+          currentNodeId: assignedNodeId,
           background: `${group.demographics.occupation} in ${group.name}`
         };
 
@@ -1382,7 +1390,7 @@ class DemoService {
     });
 
     // Simple interaction assignment function
-    const assignInteractionsToCharacter = (character, availableInteractions) => {
+    const assignInteractionsToCharacter = (character, systemInteractions, configInteractions) => {
       if (!character.assignments) {
         character.assignments = {
           nodes: new Set(),
@@ -1398,13 +1406,66 @@ class DemoService {
         character.assignments.interactions = new Set();
       }
 
-      // Determine how many interactions to assign (1-3 based on character level/type)
-      const maxAssignments = Math.min(3, Math.max(1, character.lodTier === 'hero' ? 3 :
-                                                   character.lodTier === 'group' ? 2 : 1));
+      // Get interactions available in character's assigned nodes
+      const nodeInteractions = configInteractions.filter(interaction => 
+        interaction.associatedNodeId && character.assignments.nodes.has(interaction.associatedNodeId)
+      );
 
-      // Randomly select interactions to assign
-      const shuffled = [...availableInteractions].sort(() => 0.5 - Math.random());
-      const selectedInteractions = shuffled.slice(0, maxAssignments);
+      // Combine system interactions with node-specific interactions
+      const allAvailableInteractions = [...systemInteractions, ...nodeInteractions];
+
+      // Filter interactions based on character's LOD tier
+      const tierAppropriateInteractions = allAvailableInteractions.filter(interaction => {
+        if (!interaction.tierRequirement) {
+          // System interactions - available to all
+          return interaction.type !== 'content';
+        }
+
+        // Content interactions - check tier requirements
+        switch (character.lodTier) {
+          case 'background':
+            return interaction.tierRequirement === 'background';
+          case 'group':
+            return ['background', 'group'].includes(interaction.tierRequirement);
+          case 'hero':
+            return true; // Heroes can access all interactions
+          default:
+            return false;
+        }
+      });
+
+      // Determine how many interactions to assign based on tier
+      let maxAssignments;
+      switch (character.lodTier) {
+        case 'background':
+          maxAssignments = 2; // Background NPCs get system + 1 content interaction
+          break;
+        case 'group':
+          maxAssignments = 3; // Group NPCs get system + 2 content interactions
+          break;
+        case 'hero':
+          maxAssignments = 4; // Hero NPCs get system + 3 content interactions
+          break;
+        default:
+          maxAssignments = 2;
+      }
+
+      // Prioritize node-specific interactions, then add system interactions
+      const nodeSpecificInteractions = tierAppropriateInteractions.filter(i => i.associatedNodeId);
+      const systemOnlyInteractions = tierAppropriateInteractions.filter(i => !i.associatedNodeId);
+
+      // Select node interactions first, then system interactions
+      const selectedInteractions = [];
+      
+      // Add node-specific interactions (up to half of max assignments)
+      const maxNodeInteractions = Math.ceil(maxAssignments / 2);
+      const shuffledNode = [...nodeSpecificInteractions].sort(() => 0.5 - Math.random());
+      selectedInteractions.push(...shuffledNode.slice(0, maxNodeInteractions));
+
+      // Fill remaining slots with system interactions
+      const remainingSlots = maxAssignments - selectedInteractions.length;
+      const shuffledSystem = [...systemOnlyInteractions].sort(() => 0.5 - Math.random());
+      selectedInteractions.push(...shuffledSystem.slice(0, remainingSlots));
 
       // Assign interactions to character
       selectedInteractions.forEach(interaction => {
@@ -1493,24 +1554,50 @@ class DemoService {
       }
     ];
 
+    // Extract content interactions from config files FIRST
+    const configInteractions = [];
+    [...oakwoodConfig.nodes, ...ironholdConfig.nodes].forEach(node => {
+      if (node.contentInteractions && Array.isArray(node.contentInteractions)) {
+        node.contentInteractions.forEach(interaction => {
+          // Format interaction for simulation pipeline
+          const formattedInteraction = {
+            id: interaction.id,
+            name: interaction.name,
+            description: interaction.description || '',
+            type: interaction.type || 'content',
+            category: interaction.category || 'general',
+            requirements: interaction.requirements || {},
+            effects: interaction.effects || {},
+            branches: interaction.branches || [],
+            context: interaction.context || {},
+            assignedCharacterIds: [], // Will be populated by assignment logic
+            // Add node association for filtering
+            associatedNodeId: node.id,
+            tierRequirement: this._determineInteractionTier(interaction)
+          };
+          configInteractions.push(formattedInteraction);
+        });
+      }
+    });
+
     // Assign interactions to all character arrays
     const oakwoodHeroCharactersWithInteractions = oakwoodHeroCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions)
+      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
     );
     const ironholdHeroCharactersWithInteractions = ironholdHeroCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions)
+      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
     );
     const oakwoodGroupCharactersWithInteractions = oakwoodGroupCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions)
+      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
     );
     const ironholdGroupCharactersWithInteractions = ironholdGroupCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions)
+      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
     );
     const oakwoodBackgroundCharactersWithInteractions = oakwoodBackgroundCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions)
+      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
     );
     const ironholdBackgroundCharactersWithInteractions = ironholdBackgroundCharacters.map(char =>
-      assignInteractionsToCharacter(char, systemInteractions)
+      assignInteractionsToCharacter(char, systemInteractions, configInteractions)
     );
 
     // Combine all Characters
@@ -1529,23 +1616,10 @@ class DemoService {
       ...ironholdConfig.nodes
     ];
 
-    // Combine system interactions with valley-specific interactions
+    // Combine system interactions with config interactions and valley-specific interactions
     const interactions = [
       ...systemInteractions,
-      {
-        id: 'valley_trade',
-        name: 'Valley Trade Negotiations',
-        description: 'Negotiate trade agreements between Oakwood and Ironhold',
-        category: 'economic',
-        assignedCharacterIds: ['council-chair-elara', 'lord-protector-garret'],
-        branches: [
-          {
-            text: 'Propose trade agreement',
-            effects: [{ type: 'trade', established: true }],
-            outcomes: ['Trade relations between the settlements improve']
-          }
-        ]
-      }
+      ...configInteractions
     ];
 
     return {
@@ -1685,6 +1759,47 @@ class DemoService {
     };
 
     return baseWealth[citizenTier]?.[lodTier] || 50;
+  }
+
+  /**
+   * Determine the appropriate LOD tier for an interaction
+   * @private
+   * @param {Object} interaction - Interaction object from config
+   * @returns {string} LOD tier requirement ('background', 'group', 'hero', or 'all')
+   */
+  static _determineInteractionTier(interaction) {
+    // Check interaction type and requirements to determine appropriate tier
+    const type = interaction.type?.toLowerCase() || '';
+    const category = interaction.category?.toLowerCase() || '';
+    const requirements = interaction.requirements || {};
+
+    // Labor/work interactions are typically for background and group tiers
+    if (type === 'labor' || category === 'craft' || category === 'mining' || category === 'agricultural') {
+      return 'background'; // Basic work available to all, but primarily background
+    }
+
+    // Military and training interactions for soldiers (group tier)
+    if (type === 'military' || category === 'training' || category === 'discipline') {
+      return 'group';
+    }
+
+    // Educational and complex social interactions for higher tiers
+    if (type === 'educational' || (type === 'social' && Object.keys(requirements).length > 2)) {
+      return 'group';
+    }
+
+    // Cultural and leadership interactions for hero tier
+    if (type === 'cultural' || category === 'tradition' || category === 'leadership') {
+      return 'hero';
+    }
+
+    // High complexity interactions (many requirements) for hero tier
+    if (Object.keys(requirements).length >= 3) {
+      return 'hero';
+    }
+
+    // Default to background tier for simple interactions
+    return 'background';
   }
 }
 

@@ -5,6 +5,7 @@
 
 const DemoService = require('./src/application/services/DemoService.js');
 const WorldBuilder = require('./src/domain/services/WorldBuilder.js');
+const TemplateManager = require('./src/template/TemplateManager.js');
 
 async function initializeValleyOfEchoesForUI() {
   console.log('🌍 Initializing Valley of Echoes Demo for UI...\n');
@@ -18,6 +19,39 @@ async function initializeValleyOfEchoesForUI() {
     console.log(`   - ${demoWorld.characters?.length || 0} characters`);
     console.log(`   - ${demoWorld.nodes?.length || 0} nodes`);
     console.log(`   - ${demoWorld.interactions?.length || 0} interactions`);
+
+    // Step 1.5: Save job interactions as templates
+    console.log('\n📝 Saving job interactions as templates...');
+    const jobInteractions = demoWorld.interactions.filter(interaction => 
+      interaction.category === 'labor' || 
+      interaction.category === 'craft' || 
+      interaction.category === 'mining' || 
+      interaction.category === 'agricultural'
+    );
+    
+    console.log(`   - Found ${jobInteractions.length} job interactions to save as templates`);
+    
+    jobInteractions.forEach(interaction => {
+      const templateData = {
+        ...interaction,
+        metadata: {
+          ...interaction.metadata,
+          isTemplate: true,
+          category: interaction.category,
+          difficulty: 'intermediate',
+          author: 'Valley of Echoes Demo',
+          version: '1.0.0',
+          tags: ['job', 'work', interaction.category, 'valley-of-echoes']
+        }
+      };
+      
+      try {
+        TemplateManager.addTemplate('interactions', templateData);
+        console.log(`   - Saved template: ${interaction.name}`);
+      } catch (error) {
+        console.warn(`   - Failed to save template ${interaction.name}:`, error.message);
+      }
+    });
 
     // Step 2: Prepare world for simulation using WorldBuilder
     console.log('\n🏗️ Preparing world for simulation...');

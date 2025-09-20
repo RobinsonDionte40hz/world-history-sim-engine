@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Save, Upload } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
@@ -707,7 +707,77 @@ const InteractionEditor = ({
   const [bulkOptions, setBulkOptions] = useState({ count: 5, distribution: 'random' });
   const [selectedInteractions, setSelectedInteractions] = useState([]);
   
-  const { saveTemplate, loadTemplate } = useTemplates();
+  const { saveTemplate, loadTemplate, loadTemplates } = useTemplates();
+
+  // Auto-load Valley of Echoes job interactions as templates on component mount
+  useEffect(() => {
+    const loadJobTemplates = async () => {
+      try {
+        // Check if job templates already exist
+        const existingTemplates = await loadTemplates();
+        const hasJobTemplates = existingTemplates.interactions?.some(template => 
+          template.metadata?.tags?.includes('valley-of-echoes') && 
+          template.metadata?.tags?.includes('job')
+        );
+
+        if (hasJobTemplates) {
+          console.log('Valley of Echoes job templates already loaded');
+          return;
+        }
+
+        // Load job interactions from Valley of Echoes demo
+        console.log('Loading Valley of Echoes job interactions as templates...');
+        
+        // Import DemoService dynamically to avoid ES6 import issues
+        const DemoService = (await import('../../application/services/DemoService.js')).default;
+        const demoWorld = DemoService.generateDemoWorld('valley_of_echoes_demo');
+        
+        // Filter for job interactions
+        const jobInteractions = demoWorld.interactions.filter(interaction =>
+          interaction.category === 'labor' ||
+          interaction.category === 'craft' ||
+          interaction.category === 'mining' ||
+          interaction.category === 'agricultural'
+        );
+
+        console.log(`Found ${jobInteractions.length} job interactions to save as templates`);
+
+        // Save each job interaction as a template
+        for (const interaction of jobInteractions) {
+          const templateData = {
+            ...interaction,
+            metadata: {
+              ...interaction.metadata,
+              isTemplate: true,
+              category: interaction.category,
+              difficulty: 'intermediate',
+              author: 'Valley of Echoes Demo',
+              version: '1.0.0',
+              tags: ['job', 'work', interaction.category, 'valley-of-echoes'],
+              description: interaction.description || `A ${interaction.category} job interaction from the Valley of Echoes demo`
+            }
+          };
+
+          try {
+            await saveTemplate('interactions', templateData);
+            console.log(`✅ Saved template: ${interaction.name}`);
+          } catch (error) {
+            console.warn(`❌ Failed to save template ${interaction.name}:`, error.message);
+          }
+        }
+
+        console.log('🎯 Valley of Echoes job templates loaded successfully');
+        
+        // Refresh templates to show the new ones
+        await loadTemplates();
+        
+      } catch (error) {
+        console.error('Failed to load Valley of Echoes job templates:', error);
+      }
+    };
+
+    loadJobTemplates();
+  }, [saveTemplate, loadTemplates]);
 
   // Detect context for text templating with enhanced interaction-specific context
   const detectedContext = useMemo(() => {

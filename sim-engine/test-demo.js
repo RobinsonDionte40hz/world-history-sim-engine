@@ -1,4 +1,4 @@
-const { runValleyOfEchoesDemo } = require('./examples/valley-of-echoes-demo/demo-script.js');
+import { runValleyOfEchoesDemo } from './examples/valley-of-echoes-demo/demo-script.js';
 
 async function testDemo() {
   try {

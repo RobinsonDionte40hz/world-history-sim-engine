@@ -45,7 +45,42 @@ const ironholdDominionConfig = {
       capacity: {
         maxCharacters: 30,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'fortification_work',
+          name: 'Fortification Engineering',
+          description: 'Design and maintain defensive structures and siege engines',
+          type: 'labor',
+          category: 'engineering',
+          requirements: {
+            energy: 30,
+            intelligence: 13,
+            dexterity: 12
+          },
+          effects: {
+            experience: 7,
+            wealth: 15,
+            satisfaction: 12
+          },
+          branches: [
+            {
+              id: 'engineering_success',
+              name: 'Work Successfully',
+              conditions: [],
+              effects: [
+                { type: 'skill', skill: 'engineering', value: 3 },
+                { type: 'resource', resource: 'fortifications', value: 1 },
+                { type: 'wealth', value: 15 }
+              ]
+            }
+          ],
+          context: {
+            duration: 4,
+            location: 'command_center'
+          }
+        }
+      ]
     },
     {
       id: 'ironhold-forge-district',
@@ -181,7 +216,42 @@ const ironholdDominionConfig = {
       capacity: {
         maxCharacters: 40,
         currentCharacters: 0
-      }
+      },
+      contentInteractions: [
+        {
+          id: 'military_training',
+          name: 'Military Training',
+          description: 'Practice combat skills and maintain military readiness',
+          type: 'training',
+          category: 'military',
+          requirements: {
+            energy: 35,
+            strength: 12,
+            constitution: 12
+          },
+          effects: {
+            experience: 8,
+            wealth: 5,
+            satisfaction: 8
+          },
+          branches: [
+            {
+              id: 'training_success',
+              name: 'Train Successfully',
+              conditions: [],
+              effects: [
+                { type: 'skill', skill: 'combat', value: 3 },
+                { type: 'attribute', attribute: 'strength', value: 1 },
+                { type: 'wealth', value: 5 }
+              ]
+            }
+          ],
+          context: {
+            duration: 3,
+            location: 'training_grounds'
+          }
+        }
+      ]
     }
   ],
 
