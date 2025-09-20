@@ -1,0 +1,584 @@
+/**
+ * ConsciousnessMonitoringDashboard.css
+ *
+ * Styles for the Consciousness Monitoring Dashboard component.
+ * Provides a clean, professional interface for monitoring consciousness system health.
+ */
+
+.consciousness-dashboard {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #333;
+  background: #2a2a2a;
+  border-radius: 8px 8px 0 0;
+}
+
+.dashboard-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-indicator {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-indicator.active {
+  background: #2d5a2d;
+  color: #90ee90;
+}
+
+.status-indicator.inactive {
+  background: #5a2d2d;
+  color: #ff6b6b;
+}
+
+.reset-button,
+.refresh-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.reset-button {
+  background: #ff6b6b;
+  color: white;
+}
+
+.reset-button:hover {
+  background: #ff5252;
+}
+
+.refresh-button {
+  background: #4a90e2;
+  color: white;
+}
+
+.refresh-button:hover {
+  background: #357abd;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background: #333;
+  color: #fff;
+}
+
+.dashboard-tabs {
+  display: flex;
+  background: #252525;
+  border-bottom: 1px solid #333;
+}
+
+.dashboard-tabs button {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  color: #b0b0b0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.dashboard-tabs button:hover {
+  color: #ffffff;
+  background: #2a2a2a;
+}
+
+.dashboard-tabs button.active {
+  color: #4a90e2;
+  border-bottom-color: #4a90e2;
+}
+
+.dashboard-content {
+  padding: 20px;
+  min-height: 400px;
+}
+
+/* Loading and Error States */
+.dashboard-loading,
+.dashboard-error,
+.dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #333;
+  border-top: 4px solid #4a90e2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dashboard-error .error-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.dashboard-error button {
+  padding: 8px 16px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.dashboard-error button:hover {
+  background: #357abd;
+}
+
+/* Overview Tab */
+.overview-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: #252525;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.metric-card h3 {
+  margin: 0 0 12px 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.health-score {
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.health-indicator {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.health-indicator.good {
+  background: #4caf50;
+}
+
+.health-indicator.warning {
+  background: #ff9800;
+}
+
+.health-indicator.critical {
+  background: #f44336;
+}
+
+.metric-card p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: #b0b0b0;
+}
+
+.recent-alerts {
+  background: #252525;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.recent-alerts h3 {
+  margin: 0 0 12px 0;
+  color: #ffffff;
+}
+
+.no-alerts {
+  color: #666;
+  font-style: italic;
+  margin: 0;
+}
+
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alert-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.alert-item.critical {
+  background: rgba(244, 67, 54, 0.1);
+  border-left: 3px solid #f44336;
+}
+
+.alert-item.warning {
+  background: rgba(255, 152, 0, 0.1);
+  border-left: 3px solid #ff9800;
+}
+
+.alert-item.info {
+  background: rgba(76, 144, 226, 0.1);
+  border-left: 3px solid #4a90e2;
+}
+
+.alert-level {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.alert-type {
+  flex: 1;
+}
+
+.alert-time {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+/* Performance Tab */
+.performance-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.performance-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.metric-group {
+  background: #252525;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.metric-group h3 {
+  margin: 0 0 16px 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+.metric-item:last-child {
+  border-bottom: none;
+}
+
+.metric-item label {
+  color: #b0b0b0;
+  font-size: 0.9rem;
+}
+
+.metric-item span {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.metric-item span.error {
+  color: #f44336;
+}
+
+.metric-item span.warning {
+  color: #ff9800;
+}
+
+/* Behavioral Tab */
+.behavioral-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.behavioral-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.decision-factors {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.factors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.factor-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* Alerts Tab */
+.alerts-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.alerts-section {
+  background: #252525;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.alerts-section h3 {
+  margin: 0 0 16px 0;
+  color: #ffffff;
+}
+
+.alerts-list.acknowledged {
+  opacity: 0.7;
+}
+
+.alert-item.acknowledged {
+  opacity: 0.6;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.acknowledge-button {
+  padding: 4px 8px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.acknowledge-button:hover {
+  background: #357abd;
+}
+
+.alert-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.alert-data-item {
+  background: #2a2a2a;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+/* Analytics Tab */
+.analytics-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.analytics-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.analytics-section {
+  background: #252525;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.analytics-section h3 {
+  margin: 0 0 16px 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+}
+
+.trend-list,
+.evolution-list,
+.patterns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.trend-item,
+.evolution-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.trend-good {
+  color: #4caf50;
+}
+
+.trend-warning {
+  color: #ff9800;
+}
+
+.trend-critical {
+  color: #f44336;
+}
+
+.pattern-group {
+  margin-bottom: 16px;
+}
+
+.pattern-group h4 {
+  margin: 0 0 8px 0;
+  color: #b0b0b0;
+  font-size: 0.95rem;
+}
+
+.pattern-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pattern-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .consciousness-dashboard {
+    margin: 0 10px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .dashboard-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-tabs {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-tabs button {
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-metrics,
+  .behavioral-metrics,
+  .analytics-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .alert-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .alert-data {
+    grid-template-columns: 1fr;
+  }
+}
