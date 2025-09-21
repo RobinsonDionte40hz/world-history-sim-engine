@@ -6,6 +6,8 @@ import InteractionResolver from '../../../domain/services/InteractionResolver.js
 import EvolutionService from '../../../domain/services/EvolutionService.js';
 import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
 import InteractionManager from '../../../domain/services/InteractionManager.js';
+import NavigationService from '../../../domain/services/NavigationService.js';
+import MovementInteraction from '../../../domain/entities/interactions/MovementInteraction.js';
 import { getEmotionalModifier } from '../../../shared/utils/EmotionalUtils.js';
 
 // Import consciousness system services
@@ -437,6 +439,32 @@ function gatherAvailableInteractions(character, worldState) {
   // Always add system interactions (basic needs, etc.)
   if (availableInteractionsData.systemInteractions && Array.isArray(availableInteractionsData.systemInteractions)) {
     interactions.push(...availableInteractionsData.systemInteractions);
+  }
+  
+  // Add movement options using NavigationService
+  try {
+    const navigationService = new NavigationService();
+    const perception = { currentNode, environmentalFactors: {} }; // Simplified perception
+    const movementOptions = navigationService.getMovementOptions(character, worldState, perception);
+    
+    // Convert movement options to MovementInteractions
+    movementOptions.forEach(option => {
+      if (option.canMove && option.targetNodeId !== character.currentNodeId) {
+        const movementInteraction = new MovementInteraction({
+          targetNodeId: option.targetNodeId,
+          movementType: 'walk',
+          name: `Move to ${option.targetNodeName}`,
+          description: `Travel to ${option.targetNodeName}`,
+          baseEnergyCost: Math.round(option.movementCost * 10),
+          estimatedTime: option.estimatedTime
+        });
+        interactions.push(movementInteraction);
+      }
+    });
+    
+    console.log(`Added ${movementOptions.filter(o => o.canMove && o.targetNodeId !== character.currentNodeId).length} movement options for ${character.name}`);
+  } catch (error) {
+    console.warn(`Error generating movement interactions for ${character.name}:`, error.message);
   }
   
   // Check if character has assigned interactions (from DirectInteractionAssignment)

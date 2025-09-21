@@ -114,7 +114,11 @@ class PerceptionInteraction extends SystemInteraction {
     // Check if character has properly initialized attributes
     if (!character.attributes || typeof character.attributes.getTotalModifier !== 'function') {
       console.warn('Character attributes not properly initialized, using default values:', character.name);
-      return 0.5; // Default moderate effectiveness
+      // For group-tier characters or characters without attributes, use default values
+      if (character.lodTier === 'group') {
+        return 0.5; // Group characters have moderate default perception
+      }
+      return 0.5; // Default moderate effectiveness for characters without attributes
     }
 
     const intelligence = character.attributes.getTotalModifier('intelligence');

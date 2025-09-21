@@ -48,6 +48,11 @@ class Character {
       this.maxEnergy = 100;
       this.health = 100;
       this.mood = 50;
+      
+      // Auto-assign currentNodeId from assignments if not provided
+      this.currentNodeId = config.currentNodeId || 
+        (this.assignments?.nodes?.size > 0 ? Array.from(this.assignments.nodes)[0] : null);
+      
       this.consciousness = { frequency: 0.5, coherence: 0.5 };
       this.goals = [];
       this.decisionHistory = [];
@@ -130,9 +135,16 @@ class Character {
       racialModifiedAttributes = this._convertAttributesToSimple(this.baseAttributes);
     }
     
-    this.attributes = config.attributes instanceof Attributes
-      ? config.attributes
-      : new Attributes(this._convertSimpleToAttributes(racialModifiedAttributes));
+    // Ensure attributes are always an Attributes instance
+    if (config.attributes instanceof Attributes) {
+      this.attributes = config.attributes;
+    } else if (config.attributes && typeof config.attributes === 'object') {
+      // Convert plain object to Attributes instance
+      this.attributes = new Attributes(config.attributes);
+    } else {
+      // Use racial modified attributes as fallback
+      this.attributes = new Attributes(this._convertSimpleToAttributes(racialModifiedAttributes));
+    }
 
     // Apply racial modifiers to base skills
     this.baseSkills = config.baseSkills || this._getDefaultSkills();
@@ -157,7 +169,11 @@ class Character {
     this.maxEnergy = config.maxEnergy !== undefined ? config.maxEnergy : 100;
     this.health = config.health !== undefined ? config.health : 100;
     this.mood = config.mood !== undefined ? config.mood : 50;
-    this.currentNodeId = config.currentNodeId || null;
+    
+    // Auto-assign currentNodeId from assignments if not provided
+    this.currentNodeId = config.currentNodeId || 
+      (this.assignments?.nodes?.size > 0 ? Array.from(this.assignments.nodes)[0] : null);
+    
     this.lastInteractionType = config.lastInteractionType || null;
 
     // Ensure consciousness exists with proper structure
@@ -1212,6 +1228,7 @@ class Character {
       baseAttributes: data.baseAttributes,
       attributes: data.attributes ? Attributes.fromJSON(data.attributes) : undefined,
       baseSkills: data.baseSkills,
+      skills: data.skills || {},
 
       // Other properties
       inventory: data.inventory,

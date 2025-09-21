@@ -184,6 +184,104 @@ class BehavioralStateService extends BaseDomainService {
                     coherence: 1.1
                 }
             },
+            // Content interactions - flexible user-defined interactions
+            'content': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.2,
+                    'adaptability': 1.1,
+                    'caution': 0.9
+                },
+                consciousnessFactors: {
+                    focus: 1.1,
+                    coherence: 1.0
+                }
+            },
+            // Custom interaction types
+            'observational': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.4,
+                    'awareness': 1.3,
+                    'analytical': 1.2
+                },
+                consciousnessFactors: {
+                    focus: 1.3,
+                    coherence: 1.2
+                }
+            },
+            'administrative': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'discipline': 1.3,
+                    'organization': 1.2,
+                    'patience': 1.1
+                },
+                consciousnessFactors: {
+                    focus: 1.2,
+                    ambition: 1.1
+                }
+            },
+            'labor': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'discipline': 1.2,
+                    'endurance': 1.3,
+                    'practicality': 1.1
+                },
+                consciousnessFactors: {
+                    energy: 1.1,
+                    focus: 0.9
+                }
+            },
+            'planning': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'analytical': 1.3,
+                    'foresight': 1.2,
+                    'caution': 1.1
+                },
+                consciousnessFactors: {
+                    focus: 1.3,
+                    ambition: 1.2
+                }
+            },
+            'innovation': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'curiosity': 1.4,
+                    'creativity': 1.3,
+                    'risk_taking': 1.2
+                },
+                consciousnessFactors: {
+                    focus: 1.2,
+                    ambition: 1.3
+                }
+            },
+            'creative': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'creativity': 1.4,
+                    'imagination': 1.3,
+                    'expression': 1.2
+                },
+                consciousnessFactors: {
+                    coherence: 1.2,
+                    socialDrive: 1.1
+                }
+            },
+            'analytical': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'analytical': 1.4,
+                    'logic': 1.3,
+                    'precision': 1.2
+                },
+                consciousnessFactors: {
+                    focus: 1.4,
+                    coherence: 1.3
+                }
+            },
             'unknown': {
                 baseModifier: 1.0,
                 personalityTraits: {
@@ -329,6 +427,43 @@ class BehavioralStateService extends BaseDomainService {
                 primaryStat: 'average',
                 secondaryStat: 'constitution',
                 description: 'Resting and recovery'
+            },
+            // Content interactions
+            'content': {
+                primaryStat: 'average',
+                secondaryStat: 'wisdom',
+                description: 'User-defined content interactions'
+            },
+            // Custom interaction types
+            'observational': {
+                primaryStat: 'wisdom',
+                secondaryStat: 'intelligence',
+                description: 'Observation and monitoring activities'
+            },
+            'administrative': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'wisdom',
+                description: 'Administrative and organizational tasks'
+            },
+            'labor': {
+                primaryStat: 'strength',
+                secondaryStat: 'constitution',
+                description: 'Physical labor and work activities'
+            },
+            'innovation': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'wisdom',
+                description: 'Creative problem solving and innovation'
+            },
+            'creative': {
+                primaryStat: 'charisma',
+                secondaryStat: 'intelligence',
+                description: 'Creative and artistic expression'
+            },
+            'analytical': {
+                primaryStat: 'intelligence',
+                secondaryStat: 'wisdom',
+                description: 'Analytical thinking and data processing'
             }
         };
 

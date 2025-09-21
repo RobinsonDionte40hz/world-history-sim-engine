@@ -1,5 +1,7 @@
 // src/application/services/DemoService.js
 
+import Character from '../../domain/entities/Character.js';
+
 // For now, we'll skip DataStructureUtils validation during testing
 // const DataStructureUtils = require('../../shared/utils/DataStructureUtils.js');
 
@@ -168,19 +170,15 @@ class DemoService {
     const charactersMap = new Map();
     if (rawWorldData.characters && Array.isArray(rawWorldData.characters)) {
       rawWorldData.characters.forEach(character => {
-        // Ensure character has required properties and fix assignments
-        const processedCharacter = {
-          ...character,
-          id: character.id || `char_${Date.now()}_${Math.random()}`,
-          name: character.name || 'Unnamed Character',
-          assignments: {
-            nodes: character.assignments?.nodes || new Set(),
-            interactions: character.assignments?.interactions || new Set()
-          },
-          // Preserve currentNodeId for simulation
-          currentNodeId: character.currentNodeId || null
-        };
-        charactersMap.set(processedCharacter.id, processedCharacter);
+        // Characters are already Character instances from _generateValleyOfEchoes
+        // Just ensure they have the required properties for pipeline
+        if (!character.id) {
+          character.id = `char_${Date.now()}_${Math.random()}`;
+        }
+        if (!character.name) {
+          character.name = 'Unnamed Character';
+        }
+        charactersMap.set(character.id, character);
       });
     }
     
@@ -1242,12 +1240,12 @@ class DemoService {
     // Create hero characters for Oakwood
     const oakwoodHeroCharacters = oakwoodConfig.heroCharacters.map(char => {
       const assignedNodeId = Array.from(char.assignments.nodes)[0]; // Get first node from Set
-      const character = {
+      const characterConfig = {
         id: char.id,
         name: char.name,
         lodTier: 'hero',
         characterType: { typeId: 'hero', category: 'npc' },
-        attributes: char.attributes,
+        attributes: char.attributes, // Will be converted to Attributes instance by Character constructor
         consciousness: char.consciousness,
         personality: char.personality,
         assignments: {
@@ -1259,19 +1257,22 @@ class DemoService {
         background: char.role || 'Hero character'
       };
 
-      // Assign citizen tier
-      return this._assignCitizenTier(character, 'hero');
+      // Apply citizen tier
+      const characterWithTier = this._assignCitizenTier(characterConfig, 'hero');
+      
+      // Create proper Character instance
+      return new Character(characterWithTier);
     });
 
     // Create hero characters for Ironhold
     const ironholdHeroCharacters = ironholdConfig.heroCharacters.map(char => {
       const assignedNodeId = Array.from(char.assignments.nodes)[0]; // Get first node from Set
-      const character = {
+      const characterConfig = {
         id: char.id,
         name: char.name,
         lodTier: 'hero',
         characterType: { typeId: 'hero', category: 'npc' },
-        attributes: char.attributes,
+        attributes: char.attributes, // Will be converted to Attributes instance by Character constructor
         consciousness: char.consciousness,
         personality: char.personality,
         assignments: {
@@ -1283,14 +1284,17 @@ class DemoService {
         background: char.role || 'Hero character'
       };
 
-      // Assign citizen tier
-      return this._assignCitizenTier(character, 'hero');
+      // Apply citizen tier
+      const characterWithTier = this._assignCitizenTier(characterConfig, 'hero');
+      
+      // Create proper Character instance
+      return new Character(characterWithTier);
     });
 
     // Create group-level characters for Oakwood population groups
     const oakwoodGroupCharacters = oakwoodConfig.populationGroups.map(group => {
       const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
-      const character = {
+      const characterConfig = {
         id: group.id,
         name: group.name,
         lodTier: 'group',
@@ -1307,14 +1311,17 @@ class DemoService {
         background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
       };
 
-      // Assign citizen tier
-      return this._assignCitizenTier(character, 'group');
+      // Apply citizen tier
+      const characterWithTier = this._assignCitizenTier(characterConfig, 'group');
+      
+      // Create proper Character instance
+      return new Character(characterWithTier);
     });
 
     // Create group-level characters for Ironhold population groups
     const ironholdGroupCharacters = ironholdConfig.populationGroups.map(group => {
       const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
-      const character = {
+      const characterConfig = {
         id: group.id,
         name: group.name,
         lodTier: 'group',
@@ -1331,8 +1338,11 @@ class DemoService {
         background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
       };
 
-      // Assign citizen tier
-      return this._assignCitizenTier(character, 'group');
+      // Apply citizen tier
+      const characterWithTier = this._assignCitizenTier(characterConfig, 'group');
+      
+      // Create proper Character instance
+      return new Character(characterWithTier);
     });
 
     // Create individual background characters for Oakwood
@@ -1340,7 +1350,7 @@ class DemoService {
     oakwoodConfig.populationGroups.forEach(group => {
       const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
       for (let i = 0; i < group.size; i++) {
-        const character = {
+        const characterConfig = {
           id: `${group.id}-bg-${i}`,
           name: `${group.name} ${i + 1}`,
           lodTier: 'background',
@@ -1360,8 +1370,11 @@ class DemoService {
           background: `${group.demographics.occupation} in ${group.name}`
         };
 
-        // Assign citizen tier
-        oakwoodBackgroundCharacters.push(this._assignCitizenTier(character, 'background'));
+        // Apply citizen tier
+        const characterWithTier = this._assignCitizenTier(characterConfig, 'background');
+        
+        // Create proper Character instance
+        oakwoodBackgroundCharacters.push(new Character(characterWithTier));
       }
     });
 
@@ -1370,7 +1383,7 @@ class DemoService {
     ironholdConfig.populationGroups.forEach(group => {
       const assignedNodeId = Array.from(group.assignments.nodes)[0]; // Get first node from Set
       for (let i = 0; i < group.size; i++) {
-        const character = {
+        const characterConfig = {
           id: `${group.id}-bg-${i}`,
           name: `${group.name} ${i + 1}`,
           lodTier: 'background',
@@ -1390,8 +1403,11 @@ class DemoService {
           background: `${group.demographics.occupation} in ${group.name}`
         };
 
-        // Assign citizen tier
-        ironholdBackgroundCharacters.push(this._assignCitizenTier(character, 'background'));
+        // Apply citizen tier
+        const characterWithTier = this._assignCitizenTier(characterConfig, 'background');
+        
+        // Create proper Character instance
+        ironholdBackgroundCharacters.push(new Character(characterWithTier));
       }
     });
 
@@ -1679,4 +1695,4 @@ class DemoService {
   }
 }
 
-module.exports = DemoService;
+export default DemoService;

@@ -53,7 +53,7 @@ describe('InteractionFactory Content Type Fix', () => {
 
       expect(() => {
         InteractionFactory.fromJSON(invalidJSON);
-      }).toThrow('Unknown interaction type in JSON: unknown-type. Supported types: wait, rest, examine, movement, perception, content, system, base');
+      }).toThrow('Unknown interaction type in JSON: unknown-type. Supported types: wait, rest, examine, movement, perception, content, social, observational, administrative, economic, labor, planning, innovation, creative, analytical, system, base');
     });
 
     test('should handle both short and long system interaction types', () => {

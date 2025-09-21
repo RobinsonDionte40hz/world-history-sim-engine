@@ -106,6 +106,21 @@ class SimulationService {
     // Ensure we have Map structure for simulation processing
     const mapData = DataStructureUtils.ensureMapStructure(preparedWorldData);
 
+    // Convert plain character objects to Character instances
+    if (mapData.characters instanceof Map) {
+      const convertedCharacters = new Map();
+      for (const [id, character] of mapData.characters) {
+        if (character instanceof Character) {
+          convertedCharacters.set(id, character);
+        } else {
+          // Convert plain object to Character instance
+          console.log(`Converting plain character object to Character instance: ${character.name}`);
+          convertedCharacters.set(id, Character.fromJSON(character));
+        }
+      }
+      mapData.characters = convertedCharacters;
+    }
+
     // Validate that this looks like prepared world data
     if (!mapData.worldProperties || !mapData.worldProperties.name) {
       throw new Error('Invalid prepared world data structure: missing required worldProperties.name');
@@ -390,7 +405,8 @@ class SimulationService {
       this.validateWorldStateBeforeProcessing();
 
       const previousTime = this.worldState.time;
-      const previousState = this.deepCloneState(this.worldState);
+      // Temporarily disable deep cloning due to ES module issues
+      const previousState = null; // this.deepCloneState(this.worldState);
       
       // Track turn start
       const turnStartTime = Date.now();
@@ -411,9 +427,36 @@ class SimulationService {
       
       // Process the turn using existing runTick logic
       // Ensure world state has npcs field for runTick compatibility
+      const charactersArray = this.worldState.characters instanceof Map 
+        ? Array.from(this.worldState.characters.values())
+        : this.worldState.characters || this.worldState.npcs || [];
+      
+      // Debug: Check if characters are Character instances before passing to runTick
+      console.log('🔧 [SimulationService] CHARACTER DEBUG - Characters before runTick:');
+      charactersArray.slice(0, 3).forEach((c, index) => {
+        console.log(`  Character ${index}:`, {
+          name: c.name,
+          isCharacterInstance: c instanceof Character,
+          constructor: c.constructor.name,
+          hasAttributes: !!c.attributes,
+          attributesConstructor: c.attributes ? c.attributes.constructor.name : 'none',
+          attributesHasGetTotalModifier: c.attributes ? typeof c.attributes.getTotalModifier === 'function' : false,
+          lodTier: c.lodTier,
+          rawAttributes: c.attributes
+        });
+      });
+      
+      // Count LOD tiers before turn
+      const lodTiersBefore = {
+        hero: charactersArray.filter(c => c.lodTier === 'hero').length,
+        group: charactersArray.filter(c => c.lodTier === 'group').length,
+        background: charactersArray.filter(c => c.lodTier === 'background').length
+      };
+      console.log('🔧 [SimulationService] LOD Tiers BEFORE turn:', lodTiersBefore);
+      
       const worldStateForRunTick = {
         ...this.worldState,
-        npcs: this.worldState.characters || this.worldState.npcs || []
+        npcs: charactersArray
       };
       const runTickResult = runTick(worldStateForRunTick);
       
@@ -427,6 +470,17 @@ class SimulationService {
         // Ensure characters field is updated from npcs if needed
         characters: updatedState.npcs || updatedState.characters || this.worldState.characters
       };
+
+      // Debug: Check LOD tiers AFTER turn
+      const charactersAfter = this.worldState.characters instanceof Map 
+        ? Array.from(this.worldState.characters.values())
+        : this.worldState.characters || [];
+      const lodTiersAfter = {
+        hero: charactersAfter.filter(c => c.lodTier === 'hero').length,
+        group: charactersAfter.filter(c => c.lodTier === 'group').length,
+        background: charactersAfter.filter(c => c.lodTier === 'background').length
+      };
+      console.log('🔧 [SimulationService] LOD Tiers AFTER turn:', lodTiersAfter);
 
       // Increment time for turn-based progression
       if (typeof this.worldState.time === 'number') {
@@ -566,7 +620,7 @@ class SimulationService {
     };
 
     // Track character changes and actions
-    if (previousState.characters && currentState.characters) {
+    if (previousState && previousState.characters && currentState.characters) {
       currentState.characters.forEach((currentCharacter, index) => {
         const previousCharacter = previousState.characters[index];
         
@@ -593,7 +647,7 @@ class SimulationService {
     }
 
     // Track resource changes
-    if (previousState.resources && currentState.resources) {
+    if (previousState && previousState.resources && currentState.resources) {
       for (const [resourceType, currentAmount] of Object.entries(currentState.resources)) {
         const previousAmount = previousState.resources[resourceType] || 0;
         if (currentAmount !== previousAmount) {
@@ -610,7 +664,7 @@ class SimulationService {
     }
 
     // Track settlement changes (need satisfaction updates)
-    if (previousState.settlements && currentState.settlements) {
+    if (previousState && previousState.settlements && currentState.settlements) {
       currentState.settlements.forEach((currentSettlement, index) => {
         const previousSettlement = previousState.settlements[index];
         
@@ -743,14 +797,51 @@ class SimulationService {
     return this.currentTurnSummary;
   }
 
-  // Deep clone state for comparison
+  // Deep clone state for comparison (class-aware)
   deepCloneState(state) {
     try {
-      return JSON.parse(JSON.stringify(state));
+      return this.deepCloneWorldState(state);
     } catch (error) {
       console.error('Failed to clone state:', error);
       return null;
     }
+  }
+
+  // Class-aware deep cloning that preserves Character instances
+  deepCloneWorldState(state) {
+    if (!state || typeof state !== 'object') {
+      return state;
+    }
+
+    if (state instanceof Map) {
+      const clonedMap = new Map();
+      for (const [key, value] of state) {
+        clonedMap.set(key, this.deepCloneWorldState(value));
+      }
+      return clonedMap;
+    }
+
+    if (Array.isArray(state)) {
+      return state.map(item => this.deepCloneWorldState(item));
+    }
+
+    // Handle Character instances specially
+    if (state.constructor && state.constructor.name === 'Character' && typeof state.toJSON === 'function') {
+      // Use the already imported Character class
+      return Character.fromJSON(state.toJSON());
+    }
+
+    // Handle other objects with fromJSON/toJSON methods
+    if (state.constructor && state.constructor.fromJSON && typeof state.toJSON === 'function') {
+      return state.constructor.fromJSON(state.toJSON());
+    }
+
+    // Regular object cloning
+    const cloned = {};
+    for (const [key, value] of Object.entries(state)) {
+      cloned[key] = this.deepCloneWorldState(value);
+    }
+    return cloned;
   }
 
   // Get current world state (public accessor)

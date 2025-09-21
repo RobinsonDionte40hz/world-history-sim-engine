@@ -628,12 +628,13 @@ export const SimulationProvider = ({ children }) => {
     try {
       // Step 1: Process LOD pre-turn operations
       try {
-        console.log('Processing LOD pre-turn operations...');
-        const preLODState = await processLODTurn(currentSimulationState);
-        console.log('Pre-turn LOD processing complete, state valid:', !!preLODState);
-        if (preLODState) {
-          worldStateToUse = preLODState;
-        }
+        console.log('Processing LOD pre-turn operations... (TEMPORARILY DISABLED)');
+        // TEMPORARILY DISABLED: LOD processing is demoting all hero characters
+        // const preLODState = await processLODTurn(currentSimulationState);
+        // console.log('Pre-turn LOD processing complete, state valid:', !!preLODState);
+        // if (preLODState) {
+        //   worldStateToUse = preLODState;
+        // }
       } catch (lodError) {
         errors.push({ phase: 'pre_lod', error: lodError.message });
         console.warn('LOD pre-turn processing failed, continuing with original state:', lodError.message);
@@ -679,13 +680,14 @@ export const SimulationProvider = ({ children }) => {
 
       // Step 3: Process LOD post-turn operations
       try {
-        console.log('Processing LOD post-turn operations...');
-        const finalWorldState = await processLODTurn(worldStateToUse, turnResult);
-        console.log('Post-turn LOD processing complete, finalWorldState:', finalWorldState);
+        console.log('Processing LOD post-turn operations... (TEMPORARILY DISABLED)');
+        // TEMPORARILY DISABLED: LOD processing is demoting all hero characters
+        // const finalWorldState = await processLODTurn(worldStateToUse, turnResult);
+        // console.log('Post-turn LOD processing complete, finalWorldState:', finalWorldState);
 
-        if (finalWorldState && finalWorldState.worldState) {
-          worldStateToUse = finalWorldState.worldState;
-        }
+        // if (finalWorldState && finalWorldState.worldState) {
+        //   worldStateToUse = finalWorldState.worldState;
+        // }
       } catch (postLodError) {
         errors.push({ phase: 'post_lod', error: postLodError.message });
         console.warn('LOD post-turn processing failed, continuing with simulation result:', postLodError.message);
@@ -746,7 +748,7 @@ export const SimulationProvider = ({ children }) => {
     } finally {
       setIsProcessingTurn(false);
     }
-  }, [currentSimulationState, isProcessingTurn, isInitialized, processLODTurn, formatWorldStateForDashboard, saveCharacterState]);
+  }, [currentSimulationState, isProcessingTurn, isInitialized, formatWorldStateForDashboard, saveCharacterState]);
 
   // Reset simulation function
   const resetSimulation = useCallback(() => {

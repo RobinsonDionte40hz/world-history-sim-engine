@@ -52,10 +52,47 @@ class InteractionFactory {
       case 'perceptioninteraction':
         return new PerceptionInteraction(config);
 
-      // Content interactions
+      // Content interactions - handle custom types
       case 'content':
       case 'contentinteraction':
         return new ContentInteraction(config);
+
+      // Custom interaction types that map to ContentInteraction
+      case 'social':
+      case 'socialinteraction':
+        return new ContentInteraction({ ...config, type: 'social' });
+
+      case 'observational':
+      case 'observationalinteraction':
+        return new ContentInteraction({ ...config, type: 'observational' });
+
+      case 'administrative':
+      case 'administrativeinteraction':
+        return new ContentInteraction({ ...config, type: 'administrative' });
+
+      case 'economic':
+      case 'economicinteraction':
+        return new ContentInteraction({ ...config, type: 'economic' });
+
+      case 'labor':
+      case 'laborinteraction':
+        return new ContentInteraction({ ...config, type: 'labor' });
+
+      case 'planning':
+      case 'planninginteraction':
+        return new ContentInteraction({ ...config, type: 'planning' });
+
+      case 'innovation':
+      case 'innovationinteraction':
+        return new ContentInteraction({ ...config, type: 'innovation' });
+
+      case 'creative':
+      case 'creativeinteraction':
+        return new ContentInteraction({ ...config, type: 'creative' });
+
+      case 'analytical':
+      case 'analyticalinteraction':
+        return new ContentInteraction({ ...config, type: 'analytical' });
 
       // Base classes (for testing or advanced usage)
       case 'system':
@@ -67,7 +104,7 @@ class InteractionFactory {
         return new InteractionBase(config);
 
       default:
-        throw new Error(`Unknown interaction type: ${type}. Supported types: wait, rest, examine, movement, perception, content, system, base`);
+        throw new Error(`Unknown interaction type: ${type}. Supported types: wait, rest, examine, movement, perception, content, social, observational, administrative, economic, labor, planning, innovation, creative, analytical, system, base`);
     }
   }
 
@@ -162,6 +199,15 @@ class InteractionFactory {
       'movement', 'move', 'movementinteraction',
       'perception', 'perceive', 'perceptioninteraction',
       'content', 'contentinteraction',
+      'social', 'socialinteraction',
+      'observational', 'observationalinteraction',
+      'administrative', 'administrativeinteraction',
+      'economic', 'economicinteraction',
+      'labor', 'laborinteraction',
+      'planning', 'planninginteraction',
+      'innovation', 'innovationinteraction',
+      'creative', 'creativeinteraction',
+      'analytical', 'analyticalinteraction',
       'system', 'systeminteraction',
       'base', 'interactionbase'
     ].includes(normalizedType);
@@ -174,6 +220,8 @@ class InteractionFactory {
   static getSupportedTypes() {
     return [
       'wait', 'rest', 'examine', 'movement', 'perception', 'content',
+      'social', 'observational', 'administrative', 'economic', 'labor',
+      'planning', 'innovation', 'creative', 'analytical',
       'system', 'base'
     ];
   }
@@ -257,6 +305,34 @@ class InteractionFactory {
       case 'contentinteraction':
       case 'content':
         return ContentInteraction.fromJSON(json);
+      // Custom interaction types that map to ContentInteraction
+      case 'social':
+      case 'socialinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'observational':
+      case 'observationalinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'administrative':
+      case 'administrativeinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'economic':
+      case 'economicinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'labor':
+      case 'laborinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'planning':
+      case 'planninginteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'innovation':
+      case 'innovationinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'creative':
+      case 'creativeinteraction':
+        return ContentInteraction.fromJSON(json);
+      case 'analytical':
+      case 'analyticalinteraction':
+        return ContentInteraction.fromJSON(json);
       case 'systeminteraction':
       case 'system':
         return SystemInteraction.fromJSON(json);
@@ -264,7 +340,7 @@ class InteractionFactory {
       case 'base':
         return InteractionBase.fromJSON(json);
       default:
-        throw new Error(`Unknown interaction type in JSON: ${json.type}. Supported types: wait, rest, examine, movement, perception, content, system, base`);
+        throw new Error(`Unknown interaction type in JSON: ${json.type}. Supported types: wait, rest, examine, movement, perception, content, social, observational, administrative, economic, labor, planning, innovation, creative, analytical, system, base`);
     }
   }
 

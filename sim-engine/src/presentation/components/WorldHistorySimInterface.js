@@ -66,7 +66,7 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
   simulationInterfaceDebugger.verboseLog('DashboardView recent events', recentEvents);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-gray-900 dark:text-gray-100">
       {/* Statistics Cards - Now show real data */}
       <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
@@ -241,12 +241,34 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {npc.lastInteractionType ?
-                          `Last Action: ${npc.lastInteractionType}` :
-                          'No recent activity'
-                        }
-                      </p>
+                      <div className="flex items-start justify-between mt-1">
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {npc.lastInteractionType ?
+                              `Last Action: ${npc.lastInteractionType}` :
+                              'No recent activity'
+                            }
+                          </p>
+                          {/* Current Location Display */}
+                          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 flex items-center">
+                            <span className="mr-1">📍</span>
+                            Location: {(() => {
+                              if (npc.currentNodeId) {
+                                const currentNode = displayWorldState.nodes?.find(n => n.id === npc.currentNodeId);
+                                return currentNode ? currentNode.name : npc.currentNodeId;
+                              }
+                              return 'Unknown';
+                            })()}
+                          </p>
+                          {/* Movement Status */}
+                          {npc.lastInteractionType === 'Move' && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center">
+                              <span className="mr-1">🚶</span>
+                              Recently moved locations
+                            </p>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex items-center space-x-4 mt-2 text-xs">
                         <span>Energy: {npc.energy || 0}/100</span>
                         <span>Mood: {npc.mood || 0}/100</span>
@@ -255,15 +277,47 @@ const DashboardView = ({ worldState, turnManager, currentTurn }) => {
                           <span>Wealth: {typeof npc.wealth === 'object' ? JSON.stringify(npc.wealth) : npc.wealth}</span>
                         )}
                         {npc.influence !== undefined && (
-                          <span>Influence: {typeof npc.influence === 'object' ? JSON.stringify(npc.influence) : npc.influence}</span>
+                          <span>
+                            Influence: {
+                              typeof npc.influence === 'object' && npc.influence.values ? 
+                                `Political: ${npc.influence.values.political || 0}, Social: ${npc.influence.values.social || 0}, Economic: ${npc.influence.values.economic || 0}` : 
+                                npc.influence
+                            }
+                          </span>
                         )}
                       </div>
                     </div>
-                    {npc.lastInteractionType && (
-                      <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
-                        Active
+                    <div className="flex flex-col space-y-1">
+                      {npc.lastInteractionType && (
+                        <div className="flex items-center space-x-1">
+                          <span className="text-sm">
+                            {(() => {
+                              const interactionType = npc.lastInteractionType.toLowerCase();
+                              if (interactionType.includes('move')) return '🚶';
+                              if (interactionType.includes('work') || interactionType.includes('farm') || interactionType.includes('craft')) return '🔨';
+                              if (interactionType.includes('trade') || interactionType.includes('market')) return '💰';
+                              if (interactionType.includes('social')) return '👥';
+                              if (interactionType.includes('rest')) return '😴';
+                              if (interactionType.includes('eat')) return '🍽️';
+                              return '⚡';
+                            })()}
+                          </span>
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full font-medium">
+                            Active
+                          </span>
+                        </div>
+                      )}
+                      {/* LOD Processing Status */}
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        npc.lodTier === 'hero' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                        npc.lodTier === 'group' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                      }`}>
+                        {npc.lodTier === 'hero' ? '🎯 Full AI' :
+                         npc.lodTier === 'group' ? '📊 Statistical' :
+                         '📈 Aggregate'}
                       </span>
-                    )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -588,7 +642,7 @@ const WorldHistorySimInterface = ({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-gray-900 dark:text-gray-100">
         {selectedView === 'overview' && (
           <div className="space-y-6">
             <DashboardView 
@@ -623,6 +677,7 @@ const WorldHistorySimInterface = ({
               turnManager={realTurnManager}
               selectedCharacter={selectedCharacter}
               setSelectedCharacter={setSelectedCharacter}
+              turnHistory={turnHistory}
             />
           </div>
         )}
@@ -1083,7 +1138,7 @@ const UnifiedStatisticsView = ({ worldState, turnManager, data }) => {
   );
 };
 
-const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, setSelectedCharacter }) => {
+const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, setSelectedCharacter, turnHistory }) => {
   // Get LOD data from simulation context
   const { changeCharacterLODTier, lodProcessingMetrics } = useSimulationContext();
 
@@ -1425,6 +1480,212 @@ const UnifiedCharactersView = ({ worldState, turnManager, selectedCharacter, set
                 <div className="text-2xl font-bold text-purple-600">{selectedCharacter.lastInteractionType || 'None'}</div>
                 <div className="text-sm text-gray-500">Last Action</div>
               </div>
+            </div>
+          </div>
+
+          {/* Current Location & Movement Status */}
+          <div className="mt-6">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Current Location & Movement</h4>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">📍</span>
+                  <div>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                      {(() => {
+                        if (selectedCharacter.currentNodeId) {
+                          const currentNode = worldState?.nodes?.find(n => n.id === selectedCharacter.currentNodeId);
+                          return currentNode ? currentNode.name : selectedCharacter.currentNodeId;
+                        }
+                        return 'Unknown Location';
+                      })()}
+                    </div>
+                    <div className="text-xs text-blue-700 dark:text-blue-300">
+                      Node ID: {selectedCharacter.currentNodeId || 'Not assigned'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  {selectedCharacter.lastInteractionType === 'Move' ? (
+                    <div className="flex items-center text-green-600 dark:text-green-400">
+                      <span className="mr-1">🚶</span>
+                      <span className="text-sm font-medium">Recently Moved</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-gray-600 dark:text-gray-400">
+                      <span className="mr-1">⏸️</span>
+                      <span className="text-sm">Stationary</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Available Movement Options */}
+              <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                <div className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  Available Movements:
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {selectedCharacter.assignments?.nodes && selectedCharacter.assignments.nodes.size > 0 ? (
+                    Array.from(selectedCharacter.assignments.nodes)
+                      .filter(nodeId => nodeId !== selectedCharacter.currentNodeId)
+                      .slice(0, 4)
+                      .map(nodeId => {
+                        const node = worldState?.nodes?.find(n => n.id === nodeId);
+                        return (
+                          <div key={nodeId} className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded text-blue-800 dark:text-blue-200">
+                            {node ? node.name : nodeId}
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <div className="text-blue-600 dark:text-blue-400 col-span-2">
+                      No assigned movement options
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Turn Activity */}
+          <div className="mt-6">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Recent Turn Activity</h4>
+            <div className="space-y-3">
+              {selectedCharacter.decisionHistory && selectedCharacter.decisionHistory.length > 0 ? (
+                selectedCharacter.decisionHistory.slice(-5).reverse().map((decision, index) => (
+                  <div key={index} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          {/* Interaction Type Icon */}
+                          <span className="text-lg">
+                            {(() => {
+                              const interactionName = decision.selectedInteraction.name.toLowerCase();
+                              const interactionType = decision.selectedInteraction.type?.toLowerCase();
+                              if (interactionName.includes('move') || interactionType === 'movement') return '🚶';
+                              if (interactionName.includes('work') || interactionName.includes('farm') || interactionName.includes('craft')) return '🔨';
+                              if (interactionName.includes('trade') || interactionName.includes('market')) return '💰';
+                              if (interactionName.includes('social') || interactionName.includes('talk') || interactionName.includes('meet')) return '👥';
+                              if (interactionName.includes('rest') || interactionName.includes('sleep')) return '😴';
+                              if (interactionName.includes('eat') || interactionName.includes('food')) return '🍽️';
+                              if (interactionName.includes('study') || interactionName.includes('learn')) return '📚';
+                              if (interactionName.includes('explore')) return '🔍';
+                              if (interactionName.includes('fight') || interactionName.includes('battle')) return '⚔️';
+                              return '⚡'; // Default for system interactions
+                            })()}
+                          </span>
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                              {decision.selectedInteraction.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-2">
+                              <span>{decision.selectedInteraction.type}</span>
+                              <span>•</span>
+                              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                decision.selectedInteraction.weight > 0.7 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                decision.selectedInteraction.weight > 0.4 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              }`}>
+                                {(decision.selectedInteraction.weight * 100).toFixed(0)}% confidence
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400 ml-2">
+                        {new Date(decision.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                    
+                    {/* Decision Reasoning */}
+                    {decision.reasoning && (
+                      <div className="mt-2">
+                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Decision Factors:
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                          {decision.reasoning.primary && (
+                            <div>• <span className="font-medium">Primary:</span> {decision.reasoning.primary}</div>
+                          )}
+                          {decision.reasoning.contextual && (
+                            <div>• <span className="font-medium">Context:</span> {decision.reasoning.contextual}</div>
+                          )}
+                          {decision.reasoning.emotional && (
+                            <div>• <span className="font-medium">Emotional:</span> {decision.reasoning.emotional}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Alternative Options */}
+                    {decision.topAlternatives && decision.topAlternatives.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Considered Alternatives:
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {decision.topAlternatives.map((alt, i) => (
+                            <span key={i}>
+                              {alt.name} ({(alt.weight * 100).toFixed(1)}%)
+                              {i < decision.topAlternatives.length - 1 ? ', ' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                  <div className="text-2xl mb-2">🎭</div>
+                  <div className="text-sm">No recent activity recorded</div>
+                  <div className="text-xs mt-1">Character decisions will appear here after processing turns</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Turn History Context */}
+          <div className="mt-6">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Historical Context</h4>
+            <div className="space-y-2">
+              {turnHistory && turnHistory.length > 0 ? (
+                <div className="text-sm space-y-2">
+                  {turnHistory.slice(-3).reverse().map((turn, index) => (
+                    <div key={index} className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="font-medium text-blue-900 dark:text-blue-100">
+                          Turn {turn.turn || 'Unknown'}
+                        </div>
+                        <div className="text-xs text-blue-600 dark:text-blue-400">
+                          {turn.timestamp ? new Date(turn.timestamp).toLocaleDateString() : 'No date'}
+                        </div>
+                      </div>
+                      {turn.summary && (
+                        <div className="text-xs text-blue-800 dark:text-blue-200">
+                          {turn.summary}
+                        </div>
+                      )}
+                      {turn.events && turn.events.length > 0 && (
+                        <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                          {turn.events.filter(event => event.character?.id === selectedCharacter.id).length} personal events
+                        </div>
+                      )}
+                    </div>
+                  )) || (
+                    <div className="text-center py-2 text-gray-500 dark:text-gray-400 text-sm">
+                      No turn history available
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                  <div className="text-2xl mb-2">📜</div>
+                  <div className="text-sm">No historical data available</div>
+                  <div className="text-xs mt-1">Turn history will be recorded as the simulation progresses</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
