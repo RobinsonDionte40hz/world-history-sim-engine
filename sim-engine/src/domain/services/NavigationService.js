@@ -77,7 +77,7 @@ class NavigationService {
     });
 
     // Multi-hop paths if character has high mobility
-    if (character.attributes?.dexterity > 14 || character.skills?.includes('pathfinding')) {
+    if (character.attributes?.dexterity > 14 || (Array.isArray(character.skills) && character.skills.includes('pathfinding'))) {
       const multiHopPaths = this.findMultiHopPaths(
         character,
         currentNode,

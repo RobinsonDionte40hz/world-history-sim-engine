@@ -2,6 +2,28 @@
 import React, { useState, useEffect } from 'react';
 import { useSimulationContext } from '../contexts/SimulationContext.js';
 import { simulationInterfaceDebugger } from '../../shared/utils/SimulationInterfaceDebug.js';
+import DailyScheduleService from '../../domain/services/DailyScheduleService.js';
+
+// Helper function to get time of day from world time
+const getTimeOfDay = (worldTime) => {
+  if (typeof worldTime !== 'number') return 'Unknown';
+  
+  const dailyScheduleService = new DailyScheduleService();
+  return dailyScheduleService.getTimeOfDay(worldTime);
+};
+
+// Helper function to format time display
+const formatTimeDisplay = (worldTime) => {
+  if (typeof worldTime !== 'number') return 'Unknown Time';
+  
+  const timeOfDay = getTimeOfDay(worldTime);
+  const hourOfDay = worldTime % 24;
+  
+  // Capitalize first letter
+  const formattedTimeOfDay = timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1);
+  
+  return `${formattedTimeOfDay} (Hour ${hourOfDay})`;
+};
 
 // Debug component to check data flow - now uses the debug utility
 const DebugDataFlow = ({ currentSimulationState, worldState, turnHistory, currentTurn }) => {
@@ -588,11 +610,21 @@ const WorldHistorySimInterface = ({
                 World History Simulation
               </h1>
               
-              {/* Real-time turn counter */}
-              <div className="flex items-center space-x-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-full">
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                  Turn: {currentTurn !== null ? currentTurn : '--'}
-                </span>
+              {/* Real-time turn counter with time of day */}
+              <div className="flex items-center space-x-3 px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-full">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Turn: {currentTurn !== null ? currentTurn : '--'}
+                  </span>
+                  <span className="text-xs text-blue-600 dark:text-blue-300">
+                    {currentSimulationState?.time !== undefined ? 
+                      formatTimeDisplay(currentSimulationState.time) : 
+                      worldState?.time !== undefined ? 
+                        formatTimeDisplay(worldState.time) : 
+                        'Unknown Time'
+                    }
+                  </span>
+                </div>
                 {canProcessTurn && (
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 )}
@@ -1783,20 +1815,43 @@ const CharacterCard = ({ character, onSelect, isSelected, onTierChange }) => {
 };
 
 const UnifiedSettlementsView = ({ worldState, turnManager }) => {
-  // Get settlements from world state
+  // Get settlements from world state - check both nodes and dedicated settlements array
   const nodes = worldState?.nodes || [];
   const nodeArray = Array.from(nodes.values ? nodes.values() : nodes);
-  const settlements = nodeArray.filter(node => node.type === 'settlement');
+  const settlementNodes = nodeArray.filter(node => node.type === 'settlement');
+  
+  // Also check for dedicated settlements array (from DemoService)
+  const dedicatedSettlements = worldState?.settlements || [];
+  
+  // Combine both sources, preferring dedicated settlements if they exist
+  const settlements = dedicatedSettlements.length > 0 ? dedicatedSettlements : settlementNodes;
 
   // Calculate settlement statistics with NaN protection
   const totalPopulation = settlements.reduce((sum, settlement) => {
-    const pop = settlement.population || 0;
+    // Handle different population data structures
+    let pop = 0;
+    if (typeof settlement.population === 'number') {
+      pop = settlement.population;
+    } else if (settlement.population?.total) {
+      pop = settlement.population.total;
+    } else if (settlement.population?.count) {
+      pop = settlement.population.count;
+    }
     return sum + (isNaN(pop) ? 0 : pop);
   }, 0);
   
   const totalResources = settlements.reduce((sum, settlement) => {
-    const gold = settlement.resources?.totalGold || 0;
-    return sum + (isNaN(gold) ? 0 : gold);
+    // Handle different resource data structures
+    let resources = 0;
+    if (settlement.resources?.totalGold) {
+      resources = settlement.resources.totalGold;
+    } else if (settlement.resources?.amounts) {
+      // Sum all resource amounts
+      resources = Object.values(settlement.resources.amounts).reduce((acc, val) => acc + (isNaN(val) ? 0 : val), 0);
+    } else if (settlement.economy?.totalWealth) {
+      resources = settlement.economy.totalWealth;
+    }
+    return sum + (isNaN(resources) ? 0 : resources);
   }, 0);
 
   // Safe average calculation
@@ -1953,7 +2008,16 @@ const UnifiedSettlementsView = ({ worldState, turnManager }) => {
 // Settlement Card Component
 const SettlementCard = ({ settlement }) => {
   const getSettlementSize = (population) => {
-    const pop = isNaN(population) ? 0 : population;
+    // Handle different population data structures
+    let pop = 0;
+    if (typeof population === 'number') {
+      pop = population;
+    } else if (population?.total) {
+      pop = population.total;
+    } else if (population?.count) {
+      pop = population.count;
+    }
+    
     if (pop >= 10000) return { label: 'City', color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900' };
     if (pop >= 1000) return { label: 'Town', color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900' };
     if (pop >= 100) return { label: 'Village', color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900' };
@@ -1979,7 +2043,14 @@ const SettlementCard = ({ settlement }) => {
           <p className="text-sm text-gray-600 dark:text-gray-400">Population</p>
           <p className="text-lg font-semibold">
             {(() => {
-              const pop = settlement.population || 0;
+              let pop = 0;
+              if (typeof settlement.population === 'number') {
+                pop = settlement.population;
+              } else if (settlement.population?.total) {
+                pop = settlement.population.total;
+              } else if (settlement.population?.count) {
+                pop = settlement.population.count;
+              }
               return isNaN(pop) ? 0 : pop.toLocaleString();
             })()}
           </p>
@@ -1988,26 +2059,34 @@ const SettlementCard = ({ settlement }) => {
           <p className="text-sm text-gray-600 dark:text-gray-400">Resources</p>
           <p className="text-lg font-semibold">
             {(() => {
-              const gold = settlement.resources?.totalGold || 0;
-              return isNaN(gold) ? 0 : gold.toLocaleString();
+              let resources = 0;
+              if (settlement.resources?.totalGold) {
+                resources = settlement.resources.totalGold;
+              } else if (settlement.resources?.amounts) {
+                // Sum all resource amounts
+                resources = Object.values(settlement.resources.amounts).reduce((acc, val) => acc + (isNaN(val) ? 0 : val), 0);
+              } else if (settlement.economy?.totalWealth) {
+                resources = settlement.economy.totalWealth;
+              }
+              return isNaN(resources) ? 0 : resources.toLocaleString();
             })()}
           </p>
         </div>
       </div>
 
       {/* Government */}
-      {settlement.government && (
+      {(settlement.government || settlement.governance) && (
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Government</h4>
           <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
             <div className="flex justify-between text-sm mb-1">
               <span className="text-gray-600 dark:text-gray-400">Type:</span>
-              <span>{settlement.government.type || 'Unknown'}</span>
+              <span>{settlement.government?.type || settlement.governance?.system || settlement.governance?.type || 'Unknown'}</span>
             </div>
-            {settlement.government.leader && (
+            {(settlement.government?.leader || settlement.governance?.leader) && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Leader:</span>
-                <span>{settlement.government.leader}</span>
+                <span>{settlement.government.leader || settlement.governance.leader}</span>
               </div>
             )}
           </div>
@@ -2092,22 +2171,61 @@ const SettlementCard = ({ settlement }) => {
 };
 
 const UnifiedRelationshipsView = ({ worldState, turnManager }) => {
-  // Get settlements and relationships from world state
+  // Get settlements from world state - check both nodes and dedicated settlements array
   const nodes = worldState?.nodes || [];
   const nodeArray = Array.from(nodes.values ? nodes.values() : nodes);
-  const settlements = nodeArray.filter(node => node.type === 'settlement');
+  const settlementNodes = nodeArray.filter(node => node.type === 'settlement');
+  
+  // Also check for dedicated settlements array (from DemoService)
+  const dedicatedSettlements = worldState?.settlements || [];
+  
+  // Combine both sources, preferring dedicated settlements if they exist
+  const settlements = dedicatedSettlements.length > 0 ? dedicatedSettlements : settlementNodes;
 
   // Get relationships from world state (assuming they exist in interactions or relationships)
   const interactions = worldState?.interactions || [];
   const interactionArray = Array.from(interactions.values ? interactions.values() : interactions);
 
   // Filter for relationship-type interactions
-  const relationships = interactionArray.filter(interaction =>
+  let relationships = interactionArray.filter(interaction =>
     interaction.type === 'diplomatic' ||
     interaction.type === 'trade' ||
     interaction.type === 'alliance' ||
     interaction.type === 'conflict'
   );
+
+  // If no relationships exist but we have multiple settlements, create basic ones
+  if (relationships.length === 0 && settlements.length > 1) {
+    relationships = [];
+    for (let i = 0; i < settlements.length; i++) {
+      for (let j = i + 1; j < settlements.length; j++) {
+        const settlementA = settlements[i];
+        const settlementB = settlements[j];
+        
+        // Create a basic diplomatic relationship
+        relationships.push({
+          id: `rel_${settlementA.id}_${settlementB.id}`,
+          type: 'diplomatic',
+          participants: [settlementA.id, settlementB.id],
+          status: 'neutral',
+          description: `Diplomatic relationship between ${settlementA.name} and ${settlementB.name}`,
+          events: [],
+          created: Date.now()
+        });
+        
+        // Create a basic trade relationship
+        relationships.push({
+          id: `trade_${settlementA.id}_${settlementB.id}`,
+          type: 'trade',
+          participants: [settlementA.id, settlementB.id],
+          status: 'active',
+          description: `Trade agreement between ${settlementA.name} and ${settlementB.name}`,
+          events: [],
+          created: Date.now()
+        });
+      }
+    }
+  }
 
   // Calculate relationship statistics
   const relationshipStats = relationships.reduce((acc, rel) => {
