@@ -33,26 +33,22 @@ class RoutineInteractionManager {
   _initializeTimeSchedule() {
     this.timeOfDaySchedule.set('morning', ['commute', 'work']);
     this.timeOfDaySchedule.set('midday', ['work', 'commerce', 'social']);
-    this.timeOfDaySchedule.set('afternoon', ['work', 'commerce']);
-    this.timeOfDaySchedule.set('evening', ['commute', 'social', 'commerce']);
-    this.timeOfDaySchedule.set('night', ['rest']);
+    this.timeOfDaySchedule.set('night', ['commute', 'social', 'commerce', 'rest']);
   }
 
   /**
    * Get time of day from world time
    * @param {number} worldTime - Current world time in ticks
-   * @returns {string} Time of day: 'morning', 'midday', 'afternoon', 'evening', 'night'
+   * @returns {string} Time of day: 'morning', 'midday', 'night'
    */
   getTimeOfDay(worldTime) {
-    // Assuming 24 ticks per day, 6 ticks per time period
-    const ticksPerDay = 24;
+    // 3 ticks per day for demo schedule (each turn = 8 hours)
+    const ticksPerDay = 3;
     const hourOfDay = (worldTime % ticksPerDay);
 
-    if (hourOfDay >= 6 && hourOfDay < 12) return 'morning';
-    if (hourOfDay >= 12 && hourOfDay < 15) return 'midday';
-    if (hourOfDay >= 15 && hourOfDay < 18) return 'afternoon';
-    if (hourOfDay >= 18 && hourOfDay < 22) return 'evening';
-    return 'night';
+    if (hourOfDay === 0) return 'morning';   // Turn 0 = Morning
+    if (hourOfDay === 1) return 'midday';    // Turn 1 = Midday
+    return 'night';  // Turn 2 = Night
   }
 
   /**
@@ -202,8 +198,8 @@ class RoutineInteractionManager {
   _generateSocialInteractions(character, worldState, timeOfDay) {
     const interactions = [];
 
-    // Social interactions are available in evening and sometimes midday
-    if (!['midday', 'evening'].includes(timeOfDay)) {
+    // Social interactions are available in night and sometimes midday
+    if (!['midday', 'night'].includes(timeOfDay)) {
       return interactions;
     }
 
@@ -309,7 +305,7 @@ class RoutineInteractionManager {
     const interactions = [];
 
     // Commerce interactions are available during business hours
-    if (!['midday', 'afternoon', 'evening'].includes(timeOfDay)) {
+    if (!['midday', 'night'].includes(timeOfDay)) {
       return interactions;
     }
 
@@ -444,8 +440,8 @@ class RoutineInteractionManager {
       // Morning commute to work
       destinationNodeId = workNodeId;
       commuteType = 'to_work';
-    } else if (timeOfDay === 'evening' && currentNodeId === workNodeId) {
-      // Evening commute home
+    } else if (timeOfDay === 'night' && currentNodeId === workNodeId) {
+      // Night commute home
       destinationNodeId = homeNodeId;
       commuteType = 'to_home';
     } else {
@@ -486,7 +482,7 @@ class RoutineInteractionManager {
    * @returns {boolean} True if work time
    */
   _isWorkTime(timeOfDay) {
-    return ['morning', 'midday', 'afternoon'].includes(timeOfDay);
+    return ['morning', 'midday'].includes(timeOfDay);
   }
 
   /**
@@ -496,7 +492,7 @@ class RoutineInteractionManager {
    * @returns {boolean} True if commute time
    */
   _isCommuteTime(timeOfDay) {
-    return ['morning', 'evening'].includes(timeOfDay);
+    return ['morning', 'night'].includes(timeOfDay);
   }
 
   /**

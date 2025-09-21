@@ -17,12 +17,13 @@ const formatTimeDisplay = (worldTime) => {
   if (typeof worldTime !== 'number') return 'Unknown Time';
   
   const timeOfDay = getTimeOfDay(worldTime);
-  const hourOfDay = worldTime % 24;
+  const dayNumber = Math.floor(worldTime / 3) + 1; // Day counter (every 3 turns = 1 day)
+  const turnOfDay = (worldTime % 3) + 1; // Turn within the day (1, 2, or 3)
   
   // Capitalize first letter
   const formattedTimeOfDay = timeOfDay.charAt(0).toUpperCase() + timeOfDay.slice(1);
   
-  return `${formattedTimeOfDay} (Hour ${hourOfDay})`;
+  return `${formattedTimeOfDay} (Day ${dayNumber}, Turn ${turnOfDay})`;
 };
 
 // Debug component to check data flow - now uses the debug utility

@@ -7,61 +7,43 @@
 
 class DailyScheduleService {
   constructor() {
-    this.ticksPerDay = 24;
+    this.ticksPerDay = 3; // 3 turns = 1 day (each turn = 8 hours)
     this.ticksPerHour = 1;
     this.timeSlots = this._initializeTimeSlots();
   }
 
   /**
-   * Initialize time slot definitions
+   * Initialize time slot definitions for 3-turn daily cycle
    * @private
    * @returns {Map} Time slot mappings
    */
   _initializeTimeSlots() {
     const slots = new Map();
 
-    // Morning: 6 AM - 12 PM (6-12 ticks)
+    // Morning: Turn 0 (8 hours)
     slots.set('morning', {
-      startTick: 6,
-      endTick: 12,
+      startTick: 0,
+      endTick: 1,
       name: 'Morning',
       activities: ['commute_to_work', 'work', 'breakfast'],
       priority: 'work'
     });
 
-    // Midday: 12 PM - 3 PM (12-15 ticks)
+    // Midday: Turn 1 (8 hours)
     slots.set('midday', {
-      startTick: 12,
-      endTick: 15,
+      startTick: 1,
+      endTick: 2,
       name: 'Midday',
       activities: ['work', 'lunch', 'commerce', 'social'],
       priority: 'work'
     });
 
-    // Afternoon: 3 PM - 6 PM (15-18 ticks)
-    slots.set('afternoon', {
-      startTick: 15,
-      endTick: 18,
-      name: 'Afternoon',
-      activities: ['work', 'commerce', 'meetings'],
-      priority: 'work'
-    });
-
-    // Evening: 6 PM - 10 PM (18-22 ticks)
-    slots.set('evening', {
-      startTick: 18,
-      endTick: 22,
-      name: 'Evening',
-      activities: ['commute_home', 'social', 'commerce', 'dinner'],
-      priority: 'social'
-    });
-
-    // Night: 10 PM - 6 AM (22-6 ticks, wraps around)
+    // Night: Turn 2 (8 hours)
     slots.set('night', {
-      startTick: 22,
-      endTick: 6,
+      startTick: 2,
+      endTick: 0,
       name: 'Night',
-      activities: ['rest', 'sleep'],
+      activities: ['commute_home', 'social', 'commerce', 'rest', 'sleep'],
       priority: 'rest',
       wrapsAround: true
     });
@@ -72,7 +54,7 @@ class DailyScheduleService {
   /**
    * Get current time of day from world time
    * @param {number} worldTime - Current world time in ticks
-   * @returns {string} Time of day: 'morning', 'midday', 'afternoon', 'evening', 'night'
+   * @returns {string} Time of day: 'morning', 'midday', 'night'
    */
   getTimeOfDay(worldTime) {
     const hourOfDay = worldTime % this.ticksPerDay;
@@ -142,8 +124,8 @@ class DailyScheduleService {
   shouldBeAtWork(character, timeOfDay) {
     if (!character.assignments?.workNodeId) return false;
 
-    // Work time slots
-    const workTimeSlots = ['morning', 'midday', 'afternoon'];
+    // Work time slots for 8-hour demo schedule
+    const workTimeSlots = ['morning', 'midday'];
     return workTimeSlots.includes(timeOfDay);
   }
 
@@ -169,28 +151,27 @@ class DailyScheduleService {
   getCharacterSchedule(character) {
     const schedule = {};
 
-    // Default schedule based on assignments
+    // Default schedule based on assignments for 8-hour demo cycle
     if (character.assignments?.workNodeId) {
       schedule.morning = 'commute_to_work';
       schedule.midday = 'work';
-      schedule.afternoon = 'work';
-      schedule.evening = 'commute_home';
+      schedule.night = 'commute_home';
     }
 
     if (character.assignments?.homeNodeId) {
       schedule.night = 'rest';
     }
 
-    // Add social/commerce based on LOD tier
+    // Add social/commerce based on LOD tier for 8-hour schedule
     if (character.lodTier === 'hero') {
       schedule.midday = 'work_meetings';
-      schedule.evening = 'social_politics';
+      schedule.night = 'social_politics';
     } else if (character.lodTier === 'group') {
       schedule.midday = 'work_specialized';
-      schedule.evening = 'social_networking';
+      schedule.night = 'social_networking';
     } else {
       // Background NPCs have simpler schedules
-      schedule.evening = 'social_casual';
+      schedule.night = 'social_casual';
     }
 
     return schedule;
