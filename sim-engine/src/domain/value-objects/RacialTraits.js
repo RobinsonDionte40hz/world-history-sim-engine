@@ -542,9 +542,13 @@ class RacialTraits {
       throw new Error('Invalid JSON data for RacialTraits');
     }
 
+    // Handle legacy data or missing race ID by providing default
+    const raceId = data.raceId || 'human';
+    const subraceId = data.subraceId || null;
+
     // Create a new instance without custom modifiers to avoid double application
     // The JSON data already contains the calculated modifiers
-    return new RacialTraits(data.raceId, data.subraceId);
+    return new RacialTraits(raceId, subraceId);
   }
 
   /**

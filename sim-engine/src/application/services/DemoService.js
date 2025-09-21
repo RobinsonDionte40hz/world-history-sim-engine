@@ -1308,7 +1308,16 @@ class DemoService {
           settlements: new Set([oakwoodConfig.id])
         },
         currentNodeId: assignedNodeId,
-        background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
+        background: `Population group representing ${group.size} ${group.name.toLowerCase()}`,
+        // Add default attributes for group characters
+        baseAttributes: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10
+        }
       };
 
       // Apply citizen tier
@@ -1335,7 +1344,16 @@ class DemoService {
           settlements: new Set([ironholdConfig.id])
         },
         currentNodeId: assignedNodeId,
-        background: `Population group representing ${group.size} ${group.name.toLowerCase()}`
+        background: `Population group representing ${group.size} ${group.name.toLowerCase()}`,
+        // Add default attributes for group characters
+        baseAttributes: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10
+        }
       };
 
       // Apply citizen tier
@@ -1367,7 +1385,16 @@ class DemoService {
             settlements: new Set([oakwoodConfig.id])
           },
           currentNodeId: assignedNodeId,
-          background: `${group.demographics.occupation} in ${group.name}`
+          background: `${group.demographics.occupation} in ${group.name}`,
+          // Add default attributes for background characters
+          baseAttributes: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10
+          }
         };
 
         // Apply citizen tier
@@ -1400,7 +1427,16 @@ class DemoService {
             settlements: new Set([ironholdConfig.id])
           },
           currentNodeId: assignedNodeId,
-          background: `${group.demographics.occupation} in ${group.name}`
+          background: `${group.demographics.occupation} in ${group.name}`,
+          // Add default attributes for background characters
+          baseAttributes: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10
+          }
         };
 
         // Apply citizen tier

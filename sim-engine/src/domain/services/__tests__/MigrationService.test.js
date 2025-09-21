@@ -2,7 +2,7 @@
 
 import { MigrationService } from '../MigrationService.js';
 import { Alignment } from '../../value-objects/Alignment.js';
-import { Influence } from '../../value-objects/Influence.js';
+import Influence from '../../value-objects/Influence.js';
 import { Prestige } from '../../value-objects/Prestige.js';
 import PersonalityProfile from '../../value-objects/PersonalityProfile.js';
 import RacialTraits from '../../value-objects/RacialTraits.js';

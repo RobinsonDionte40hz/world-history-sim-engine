@@ -98,17 +98,25 @@ const LocalStorageWorldRepository = {
             }
           }
         }),
-        npcs: savedState.npcs.map(npcData => {
+        npcs: savedState.npcs ? savedState.npcs.map(npcData => {
           try {
-            return new Character(npcData);
+            return Character.fromJSON(npcData);
           } catch (error) {
-            console.warn('Failed to create Character entity, using plain object:', error);
+            console.warn('Failed to create Character entity from npcs, using plain object:', error);
             return npcData;
           }
-        }),
+        }) : [],
+        characters: savedState.characters ? savedState.characters.map(charData => {
+          try {
+            return Character.fromJSON(charData);
+          } catch (error) {
+            console.warn('Failed to create Character entity from characters, using plain object:', error);
+            return charData;
+          }
+        }) : [],
         resources: savedState.resources,
-        // Preserve additional world state properties
-        ...savedState
+        // Preserve additional world state properties (excluding npcs and characters to avoid duplication)
+        ...Object.fromEntries(Object.entries(savedState).filter(([key]) => !['npcs', 'characters', 'nodes', 'resources', 'time'].includes(key)))
       };
     }
     return null;

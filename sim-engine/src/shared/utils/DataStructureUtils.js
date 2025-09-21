@@ -1,5 +1,8 @@
 // src/shared/utils/DataStructureUtils.js
 
+// Import Character for proper instance handling
+import Character from '../../domain/entities/Character.js';
+
 /**
  * DataStructureUtils - Centralized utilities for consistent Map/Array handling
  * 
@@ -38,7 +41,38 @@ class DataStructureUtils {
         if (!character.id) {
           throw new Error('Character missing required id property');
         }
-        result.characters.set(character.id, character);
+        
+        // Ensure character is a proper Character instance
+        let characterInstance = character;
+        if (!(character instanceof Character)) {
+          try {
+            characterInstance = Character.fromJSON(character);
+            console.log(`DataStructureUtils: Converted ${character.name} to Character instance`);
+          } catch (error) {
+            console.warn(`DataStructureUtils: Failed to convert ${character.name || character.id} to Character instance:`, error);
+            // Fall back to the original object if conversion fails
+            characterInstance = character;
+          }
+        }
+        
+        result.characters.set(character.id, characterInstance);
+      });
+    } else if (data.characters instanceof Map) {
+      // Ensure Map values are proper Character instances
+      result.characters = new Map();
+      data.characters.forEach((character, id) => {
+        let characterInstance = character;
+        if (!(character instanceof Character)) {
+          try {
+            characterInstance = Character.fromJSON(character);
+            console.log(`DataStructureUtils: Converted Map character ${character.name} to Character instance`);
+          } catch (error) {
+            console.warn(`DataStructureUtils: Failed to convert Map character ${character.name || id} to Character instance:`, error);
+            // Fall back to the original object if conversion fails
+            characterInstance = character;
+          }
+        }
+        result.characters.set(id, characterInstance);
       });
     } else if (data.characters && !(data.characters instanceof Map)) {
       throw new Error('Characters must be an Array or Map');
@@ -93,7 +127,21 @@ class DataStructureUtils {
 
     // Convert characters Map to Array
     if (data.characters instanceof Map) {
-      result.characters = Array.from(data.characters.values());
+      result.characters = Array.from(data.characters.values()).map(character => {
+        // Ensure character is a proper Character instance
+        if (!(character instanceof Character)) {
+          try {
+            const characterInstance = Character.fromJSON(character);
+            console.log(`DataStructureUtils: Converted ${character.name} to Character instance during array conversion`);
+            return characterInstance;
+          } catch (error) {
+            console.warn(`DataStructureUtils: Failed to convert ${character.name || character.id} to Character instance:`, error);
+            // Fall back to the original object if conversion fails
+            return character;
+          }
+        }
+        return character;
+      });
     } else if (data.characters && !Array.isArray(data.characters)) {
       throw new Error('Characters must be a Map or Array');
     }

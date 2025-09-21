@@ -319,7 +319,7 @@ const runTick = async (worldState) => {
         const assignedNodeId = Array.from(characterInstance.assignments.nodes)[0];
         const characterData = characterInstance.toJSON();
         characterData.currentNodeId = assignedNodeId; // Explicitly set to ensure override
-        characterInstance = new Character(characterData);
+        characterInstance = Character.fromJSON(characterData);
         console.log(`Assigned character ${characterInstance.name} to node ${assignedNodeId} from assignments`);
       }
       // Fallback to first available node
@@ -327,13 +327,13 @@ const runTick = async (worldState) => {
         const firstNodeId = worldState.nodes[0].id;
         const characterData = characterInstance.toJSON();
         characterData.currentNodeId = firstNodeId; // Explicitly set to ensure override
-        characterInstance = new Character(characterData);
+        characterInstance = Character.fromJSON(characterData);
         console.log(`Assigned character ${characterInstance.name} to first available node ${firstNodeId}`);
       }
     }
 
     // Create a new Character instance with updated basic state
-    const updatedNpc = new Character({
+    const updatedNpc = Character.fromJSON({
       ...characterInstance.toJSON(),
       // Update basic properties
       energy: Math.max(0, Math.min(100, (characterInstance.energy || 50) - 1)),
@@ -367,7 +367,7 @@ const runTick = async (worldState) => {
     const behavior = generateBehavior(modifiedNpc, worldState);
     if (behavior && behavior.resolution) {
       // Create a new Character instance with the interaction type tracked
-      const npcWithInteraction = new Character({
+      const npcWithInteraction = Character.fromJSON({
         ...modifiedNpc.toJSON(),
         lastInteractionType: behavior.interaction.type
       });

@@ -1,6 +1,6 @@
 // src/domain/value-objects/__tests__/Influence.test.js
 
-import { Influence } from '../Influence';
+import Influence from '../Influence.js';
 
 describe('Influence Value Object', () => {
   const mockDomains = [

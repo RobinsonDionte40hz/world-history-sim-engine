@@ -1,9 +1,9 @@
-// src/domain/entities/__tests__/Character.integration.test.js
+//import { Character } from '../Character.js';
+import { Alignment } from '../../value-objects/Alignment.js';
+import Influence from '../../value-objects/Influence.js';
+import { Prestige } from '../../value-objects/Prestige.js';
 
 import Character from '../Character.js';
-import { Alignment } from '../../value-objects/Alignment.js';
-import { Influence } from '../../value-objects/Influence.js';
-import { Prestige } from '../../value-objects/Prestige.js';
 import PersonalityProfile from '../../value-objects/PersonalityProfile.js';
 import RacialTraits from '../../value-objects/RacialTraits.js';
 

@@ -1,7 +1,7 @@
 // src/domain/services/__tests__/InfluenceService.test.js
 
 import InfluenceService from '../InfluenceService';
-import { Influence } from '../../value-objects/Influence';
+import Influence from '../../value-objects/Influence.js';
 
 describe('InfluenceService', () => {
   let influenceService;

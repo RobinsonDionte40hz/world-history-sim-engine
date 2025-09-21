@@ -269,6 +269,46 @@ class Prestige {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid JSON data for Prestige');
     }
+
+    // Handle legacy data or missing tracks by providing default tracks
+    let tracks = data.tracks || [];
+    if (!Array.isArray(tracks) || tracks.length === 0) {
+      // Provide default prestige tracks if none are present
+      tracks = [
+        {
+          id: 'honor',
+          name: 'Honor',
+          description: 'Personal honor and reputation',
+          min: 0,
+          max: 100,
+          defaultValue: 25,
+          decayRate: 0.02,
+          levels: [
+            { name: 'Disgraced', min: 0, max: 9, politicalPower: 0 },
+            { name: 'Unknown', min: 10, max: 24, politicalPower: 1 },
+            { name: 'Respectable', min: 25, max: 49, politicalPower: 2 },
+            { name: 'Honored', min: 50, max: 74, politicalPower: 4 },
+            { name: 'Legendary', min: 75, max: 100, politicalPower: 8 }
+          ]
+        },
+        {
+          id: 'social',
+          name: 'Social Prestige',
+          description: 'Standing in social circles',
+          min: 0,
+          max: 100,
+          defaultValue: 20,
+          decayRate: 0.03,
+          levels: [
+            { name: 'Outcast', min: 0, max: 9, politicalPower: 0 },
+            { name: 'Commoner', min: 10, max: 24, politicalPower: 0 },
+            { name: 'Notable', min: 25, max: 49, politicalPower: 1 },
+            { name: 'Prominent', min: 50, max: 74, politicalPower: 3 },
+            { name: 'Elite', min: 75, max: 100, politicalPower: 6 }
+          ]
+        }
+      ];
+    }
     
     const historyFromSerialization = {};
     
@@ -283,7 +323,7 @@ class Prestige {
       }
     }
     
-    return new Prestige(data.tracks || [], data.values || {}, historyFromSerialization);
+    return new Prestige(tracks, data.values || {}, historyFromSerialization);
   }
   
   /**

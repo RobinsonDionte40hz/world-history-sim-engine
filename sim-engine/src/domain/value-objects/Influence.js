@@ -200,6 +200,59 @@ class Influence {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid JSON data for Influence');
     }
+
+    // Handle legacy data or missing domains by providing default domains
+    let domains = data.domains || [];
+    if (!Array.isArray(domains) || domains.length === 0) {
+      // Provide default influence domains if none are present
+      domains = [
+        {
+          id: 'political',
+          name: 'Political Influence',
+          description: 'Influence in political circles',
+          min: 0,
+          max: 100,
+          defaultValue: 0,
+          tiers: [
+            { name: 'None', min: 0, max: 9 },
+            { name: 'Minor', min: 10, max: 24 },
+            { name: 'Moderate', min: 25, max: 49 },
+            { name: 'Major', min: 50, max: 74 },
+            { name: 'Dominant', min: 75, max: 100 }
+          ]
+        },
+        {
+          id: 'social',
+          name: 'Social Influence',
+          description: 'Influence in social circles',
+          min: 0,
+          max: 100,
+          defaultValue: 10,
+          tiers: [
+            { name: 'Outcast', min: 0, max: 9 },
+            { name: 'Unknown', min: 10, max: 24 },
+            { name: 'Known', min: 25, max: 49 },
+            { name: 'Popular', min: 50, max: 74 },
+            { name: 'Celebrity', min: 75, max: 100 }
+          ]
+        },
+        {
+          id: 'economic',
+          name: 'Economic Influence',
+          description: 'Influence in economic matters',
+          min: 0,
+          max: 100,
+          defaultValue: 5,
+          tiers: [
+            { name: 'Destitute', min: 0, max: 9 },
+            { name: 'Poor', min: 10, max: 24 },
+            { name: 'Middle Class', min: 25, max: 49 },
+            { name: 'Wealthy', min: 50, max: 74 },
+            { name: 'Elite', min: 75, max: 100 }
+          ]
+        }
+      ];
+    }
     
     const historyFromSerialization = {};
     
@@ -214,7 +267,7 @@ class Influence {
       }
     }
     
-    return new Influence(data.domains || [], data.values || {}, historyFromSerialization);
+    return new Influence(domains, data.values || {}, historyFromSerialization);
   }
   
   /**

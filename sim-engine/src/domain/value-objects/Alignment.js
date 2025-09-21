@@ -191,7 +191,41 @@ export class Alignment {
       throw new Error('Invalid JSON data for Alignment');
     }
 
-    return new Alignment(data.axes || [], data.values || {}, data.history || {});
+    // Handle legacy data or missing axes by providing default axes
+    let axes = data.axes || [];
+    if (!Array.isArray(axes) || axes.length === 0) {
+      // Provide default alignment axes if none are present
+      axes = [
+        {
+          id: 'moral',
+          name: 'Moral Axis',
+          description: 'Good vs Evil alignment',
+          min: -50,
+          max: 50,
+          defaultValue: 0,
+          zones: [
+            { name: 'Evil', min: -50, max: -16 },
+            { name: 'Neutral', min: -15, max: 15 },
+            { name: 'Good', min: 16, max: 50 }
+          ]
+        },
+        {
+          id: 'ethical',
+          name: 'Ethical Axis',
+          description: 'Lawful vs Chaotic alignment',
+          min: -50,
+          max: 50,
+          defaultValue: 0,
+          zones: [
+            { name: 'Chaotic', min: -50, max: -16 },
+            { name: 'Neutral', min: -15, max: 15 },
+            { name: 'Lawful', min: 16, max: 50 }
+          ]
+        }
+      ];
+    }
+
+    return new Alignment(axes, data.values || {}, data.history || {});
   }
 
   /**

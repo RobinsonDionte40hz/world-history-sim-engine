@@ -53,6 +53,11 @@ class Character {
       this.currentNodeId = config.currentNodeId || 
         (this.assignments?.nodes?.size > 0 ? Array.from(this.assignments.nodes)[0] : null);
       
+      // Initialize basic attributes for group characters to prevent interaction system warnings
+      // Use config.baseAttributes if provided, otherwise use defaults
+      const baseAttrs = config.baseAttributes || this._getDefaultAttributes();
+      this.attributes = new Attributes(this._convertSimpleToAttributes(baseAttrs));
+      
       this.consciousness = { frequency: 0.5, coherence: 0.5 };
       this.goals = [];
       this.decisionHistory = [];
@@ -1225,9 +1230,27 @@ class Character {
       economicProfile: data.economicProfile ? EconomicProfile.fromJSON(data.economicProfile) : undefined,
 
       // Attributes and skills
-      baseAttributes: data.baseAttributes,
+      baseAttributes: data.baseAttributes || {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10
+      },
       attributes: data.attributes ? Attributes.fromJSON(data.attributes) : undefined,
-      baseSkills: data.baseSkills,
+      baseSkills: data.baseSkills || {
+        athletics: 0,
+        acrobatics: 0,
+        stealth: 0,
+        investigation: 0,
+        perception: 0,
+        insight: 0,
+        persuasion: 0,
+        deception: 0,
+        intimidation: 0,
+        performance: 0
+      },
       skills: data.skills || {},
 
       // Other properties
