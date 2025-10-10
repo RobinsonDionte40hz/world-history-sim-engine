@@ -5,6 +5,7 @@ import Interaction from './Interaction.js';
 import InteractionBase from './interactions/InteractionBase.js';
 import Environment from '../value-objects/Environment.js';
 import NodeConnection from '../value-objects/NodeConnection.js';
+import NodeTypeProfile from './NodeTypeProfile.js';
 
 class Node {
   constructor(config = {}) {
@@ -60,6 +61,42 @@ class Node {
     this.settlementRole = config.settlementRole || null; // Role within settlement ('core', 'district', 'outpost')
     this.settlementEffects = config.settlementEffects || {}; // Settlement bonuses applied to this node
 
+    // Node type system integration
+    this.typeProfile = config.typeProfile || null; // NodeTypeProfile instance defining capabilities
+
+    // Economic capabilities (derived from type profile)
+    this.economicCapabilities = config.economicCapabilities || {
+      hasMarkets: false,
+      hasTrade: false,
+      hasTaxation: false,
+      hasBanking: false,
+      economicComplexity: 'none'
+    };
+
+    // Political capabilities (derived from type profile)
+    this.politicalCapabilities = config.politicalCapabilities || {
+      hasGovernment: false,
+      hasLeadership: false,
+      hasDiplomacy: false,
+      hasLaws: false,
+      politicalComplexity: 'none'
+    };
+
+    // Resource production/consumption properties (derived from type profile)
+    this.resourceProduction = config.resourceProduction || {
+      canProduce: false,
+      productionTypes: [],
+      productionCapacity: 0,
+      currentProduction: {}
+    };
+
+    this.resourceConsumption = config.resourceConsumption || {
+      canConsume: false,
+      consumptionTypes: [],
+      consumptionCapacity: 0,
+      currentConsumption: {}
+    };
+    
     // Enhanced connection data using NodeConnection objects
     this.connections = Array.isArray(config.connections) ? 
       config.connections.map(conn => conn instanceof NodeConnection ? conn : new NodeConnection(conn)) : 
@@ -178,387 +215,221 @@ class Node {
     return Math.min(1, danger);
   }
 
-  /**
-   * Gets environmental modifiers for specific interaction types
-   * This is a placeholder implementation until EnvironmentalCalculationService is available
-   * @param {string} interactionType - Type of interaction (e.g., 'combat', 'social', 'stealth')
-   * @returns {Object} Environmental modifiers
-   */
-  getEnvironmentalModifiers(interactionType) {
-    const modifiers = {};
-    
-    // Terrain modifiers
-    const terrainMods = this._getTerrainModifiers(this.environment.terrain);
-    Object.assign(modifiers, terrainMods);
-    
-    // Climate modifiers
-    const climateMods = this._getClimateModifiers(this.environment.climate);
-    Object.assign(modifiers, climateMods);
-    
-    // Lighting modifiers
-    const lightingMods = this._getLightingModifiers(this.environment.lighting);
-    Object.assign(modifiers, lightingMods);
-    
-    // Interaction-specific modifiers
-    const interactionMods = this._getInteractionModifiers(interactionType);
-    Object.assign(modifiers, interactionMods);
-    
-    return modifiers;
-  }
+  // ===== NODE TYPE SYSTEM METHODS =====
 
   /**
-   * Helper method for terrain modifiers
-   * @private
+   * Set the node type profile
+   * @param {NodeTypeProfile} typeProfile - The node type profile to set
    */
-  _getTerrainModifiers(terrain) {
-    const terrainModifiers = {
-      'plains': { movement: 1.0, visibility: 1.2 },
-      'forest': { stealth: 1.3, movement: 0.8, visibility: 0.7 },
-      'mountains': { movement: 0.6, defense: 1.4, visibility: 1.5 },
-      'desert': { movement: 0.7, survival: 0.6, visibility: 1.3 },
-      'swamp': { movement: 0.5, disease_resistance: 0.7, stealth: 1.2 },
-      'urban': { social: 1.2, information: 1.4, stealth: 0.8 }
-    };
-    
-    return terrainModifiers[terrain] || {};
-  }
-
-  /**
-   * Helper method for climate modifiers
-   * @private
-   */
-  _getClimateModifiers(climate) {
-    const climateModifiers = {
-      'arctic': { 
-        constitution_checks: 0.8, 
-        survival: 0.7, 
-        movement: 0.8 
-      },
-      'tropical': { 
-        disease_resistance: 0.8, 
-        plant_knowledge: 1.2 
-      },
-      'arid': { 
-        survival: 0.7, 
-        constitution_checks: 0.9, 
-        visibility: 1.2 
-      },
-      'temperate': { 
-        // Balanced, no significant modifiers
-      }
-    };
-    
-    return climateModifiers[climate] || {};
-  }
-
-  /**
-   * Helper method for lighting modifiers
-   * @private
-   */
-  _getLightingModifiers(lighting) {
-    const lightingModifiers = {
-      'bright': { visibility: 1.3, stealth: 0.7 },
-      'normal': { /* no modifiers */ },
-      'dim': { visibility: 0.8, stealth: 1.2 },
-      'dark': { visibility: 0.4, stealth: 1.5, fear_checks: 0.8 },
-      'magical': { magic_checks: 1.2, perception: 1.1 }
-    };
-    
-    return lightingModifiers[lighting] || {};
-  }
-
-  /**
-   * Helper method for interaction-specific modifiers
-   * @private
-   */
-  _getInteractionModifiers(interactionType) {
-    const modifiers = {};
-    
-    if (interactionType === 'combat') {
-      if (this.environment.terrain === 'mountains') {
-        modifiers.ranged_attacks = 1.2;
-      }
-      if (this.environment.lighting === 'dark') {
-        modifiers.accuracy = 0.7;
-      }
+  setTypeProfile(typeProfile) {
+    if (typeProfile && !(typeProfile instanceof NodeTypeProfile)) {
+      throw new Error('typeProfile must be a NodeTypeProfile instance');
     }
-    
-    if (interactionType === 'social') {
-      if (this.type === 'settlement') {
-        modifiers.persuasion = 1.1;
-      }
-      if (this.environment.density > 0.8) {
-        modifiers.intimidation = 0.8; // Harder to intimidate in crowds
-      }
+    this.typeProfile = typeProfile;
+
+    // Update derived properties from the type profile
+    if (typeProfile) {
+      this.economicCapabilities = { ...typeProfile.economicCapabilities };
+      this.politicalCapabilities = { ...typeProfile.politicalCapabilities };
+      this.resourceProduction = {
+        canProduce: typeProfile.resourceProfile.canProduce,
+        productionTypes: [...typeProfile.resourceProfile.productionTypes],
+        productionCapacity: typeProfile.resourceProfile.productionCapacity,
+        currentProduction: this.resourceProduction?.currentProduction || {}
+      };
+      this.resourceConsumption = {
+        canConsume: typeProfile.resourceProfile.canConsume,
+        consumptionTypes: [...typeProfile.resourceProfile.consumptionTypes],
+        consumptionCapacity: typeProfile.resourceProfile.consumptionCapacity,
+        currentConsumption: this.resourceConsumption?.currentConsumption || {}
+      };
     }
-    
-    return modifiers;
   }
 
   /**
-   * Calculates population density
-   * @returns {number} Population density (population / size)
+   * Get the node type profile
+   * @returns {NodeTypeProfile|null} The node's type profile
    */
-  getPopulationDensity() {
-    return this.population / this.size;
+  getTypeProfile() {
+    return this.typeProfile;
   }
 
   /**
-   * Determines if the node is overcrowded
-   * @param {number} threshold - Overcrowding threshold (default: 0.8)
-   * @returns {boolean} True if overcrowded
+   * Check if this node has a specific capability
+   * @param {string} capability - The capability to check
+   * @returns {boolean} True if the node has the capability
    */
-  isOvercrowded(threshold = 0.8) {
-    return this.getPopulationDensity() > threshold;
+  hasCapability(capability) {
+    return this.typeProfile ? this.typeProfile.hasCapability(capability) : false;
   }
 
   /**
-   * Calculates population capacity based on environmental factors
-   * @returns {number} Maximum sustainable population
+   * Get all capabilities for this node
+   * @returns {string[]} Array of capability names
    */
-  getPopulationCapacity() {
-    let baseCapacity = this.size;
-    
-    // Environmental factors
-    baseCapacity *= this.environment.shelterQuality;
-    baseCapacity *= this.environment.waterAvailability;
-    baseCapacity *= (1 - (this.environment.hazards.length * 0.1));
-    
-    // Climate adjustments
-    const climateMultipliers = {
-      'temperate': 1.0,
-      'tropical': 0.9,
-      'arid': 0.6,
-      'arctic': 0.4
-    };
-    
-    baseCapacity *= climateMultipliers[this.environment.climate] || 1.0;
-    
-    return Math.floor(baseCapacity);
+  getCapabilities() {
+    return this.typeProfile ? this.typeProfile.getCapabilities() : [];
   }
 
   /**
-   * Assigns this node to a settlement
-   * @param {string} settlementId - ID of the settlement
-   * @param {string} role - Role within the settlement ('core', 'district', 'outpost')
-   * @param {Object} settlementEffects - Effects applied by the settlement
-   */
-  assignToSettlement(settlementId, role = 'district', settlementEffects = {}) {
-    this.settlementId = settlementId;
-    this.settlementRole = role;
-    this.settlementEffects = { ...settlementEffects };
-  }
-
-  /**
-   * Removes this node from its current settlement
-   */
-  removeFromSettlement() {
-    this.settlementId = null;
-    this.settlementRole = null;
-    this.settlementEffects = {};
-  }
-
-  /**
-   * Checks if this node belongs to a settlement
-   * @returns {boolean} True if node belongs to a settlement
-   */
-  isInSettlement() {
-    return this.settlementId !== null;
-  }
-
-  /**
-   * Gets the settlement effects applied to this node
-   * @returns {Object} Settlement effects
-   */
-  getSettlementEffects() {
-    return { ...this.settlementEffects };
-  }
-
-  /**
-   * Updates settlement effects for this node
-   * @param {Object} effects - New settlement effects
-   */
-  updateSettlementEffects(effects) {
-    this.settlementEffects = { ...effects };
-  }
-
-  /**
-   * Calculates effective environmental modifiers including settlement bonuses
-   * @param {string} interactionType - Type of interaction (e.g., 'combat', 'social', 'stealth')
-   * @returns {Object} Effective environmental modifiers
-   */
-  getEffectiveEnvironmentalModifiers(interactionType) {
-    const baseModifiers = this.getEnvironmentalModifiers(interactionType);
-    const effectiveModifiers = { ...baseModifiers };
-
-    // Apply settlement effects if node belongs to a settlement
-    if (this.isInSettlement() && this.settlementEffects) {
-      // Defense bonuses affect combat interactions
-      if (interactionType === 'combat' && this.settlementEffects.defenseBonus) {
-        effectiveModifiers.defense = (effectiveModifiers.defense || 0) + this.settlementEffects.defenseBonus;
-        effectiveModifiers.combat_effectiveness = (effectiveModifiers.combat_effectiveness || 0) + this.settlementEffects.defenseBonus;
-      }
-
-      // Economy bonuses affect social/trade interactions
-      if (['social', 'trade'].includes(interactionType) && this.settlementEffects.economyBonus) {
-        effectiveModifiers.persuasion = (effectiveModifiers.persuasion || 0) + this.settlementEffects.economyBonus;
-        effectiveModifiers.trade = (effectiveModifiers.trade || 0) + this.settlementEffects.economyBonus;
-      }
-
-      // Cultural influence affects social interactions
-      if (interactionType === 'social' && this.settlementEffects.culturalInfluence) {
-        effectiveModifiers.cultural_appeal = (effectiveModifiers.cultural_appeal || 0) + this.settlementEffects.culturalInfluence;
-        effectiveModifiers.diplomacy = (effectiveModifiers.diplomacy || 0) + this.settlementEffects.culturalInfluence;
-      }
-
-      // Resource production bonuses affect resource gathering
-      if (interactionType === 'resource_gathering' && this.settlementEffects.resourceProductionBonus) {
-        effectiveModifiers.resource_yield = (effectiveModifiers.resource_yield || 0) + this.settlementEffects.resourceProductionBonus;
-        effectiveModifiers.gathering_efficiency = (effectiveModifiers.gathering_efficiency || 0) + this.settlementEffects.resourceProductionBonus;
-      }
-    }
-
-    return effectiveModifiers;
-  }
-
-  /**
-   * Gets effective population capacity including settlement bonuses
-   * @returns {number} Effective population capacity
-   */
-  getEffectivePopulationCapacity() {
-    let capacity = this.getPopulationCapacity();
-
-    // Apply settlement population capacity bonus
-    if (this.isInSettlement() && this.settlementEffects.populationCapacityBonus) {
-      capacity += this.settlementEffects.populationCapacityBonus;
-    }
-
-    return Math.floor(capacity);
-  }
-
-  /**
-   * Gets effective resource production including settlement bonuses
+   * Check if this node can produce a specific resource
    * @param {string} resourceType - Type of resource
-   * @returns {number} Effective resource production rate
+   * @returns {boolean} True if can produce this resource type
    */
-  getEffectiveResourceProduction(resourceType) {
-    // Base production (simplified - would be more complex in real implementation)
-    let baseProduction = 0;
-
-    // Environmental factors affecting resource production
-    if (resourceType === 'food') {
-      baseProduction = this.environment.waterAvailability * this.environment.shelterQuality * 10;
-    } else if (resourceType === 'materials') {
-      baseProduction = this.environment.terrain === 'forest' ? 15 : 5;
-    } else if (resourceType === 'water') {
-      baseProduction = this.environment.waterAvailability * 20;
-    }
-
-    // Apply settlement resource production bonus
-    if (this.isInSettlement() && this.settlementEffects.resourceProductionBonus) {
-      baseProduction *= (1 + this.settlementEffects.resourceProductionBonus);
-    }
-
-    return Math.floor(baseProduction);
+  canProduceResource(resourceType) {
+    return this.resourceProduction.canProduce &&
+           this.resourceProduction.productionTypes.includes(resourceType);
   }
 
   /**
-   * Gets node statistics including settlement information
-   * @returns {Object} Node statistics
+   * Check if this node can consume a specific resource
+   * @param {string} resourceType - Type of resource
+   * @returns {boolean} True if can consume this resource type
    */
-  getStatistics() {
-    return {
-      id: this.id,
-      name: this.name,
-      type: this.type,
-      population: this.population,
-      populationCapacity: this.getPopulationCapacity(),
-      effectivePopulationCapacity: this.getEffectivePopulationCapacity(),
-      settlementId: this.settlementId,
-      settlementRole: this.settlementRole,
-      settlementEffects: this.getSettlementEffects(),
-      connections: this.connections.length,
-      environment: {
-        climate: this.environment.climate,
-        terrain: this.environment.terrain,
-        danger: this.getEnvironmentalDanger()
+  canConsumeResource(resourceType) {
+    return this.resourceConsumption.canConsume &&
+           this.resourceConsumption.consumptionTypes.includes(resourceType);
+  }
+
+  /**
+   * Get the economic complexity level
+   * @returns {string} Economic complexity ('none', 'minimal', 'moderate', 'full')
+   */
+  getEconomicComplexity() {
+    return this.economicCapabilities.economicComplexity || 'none';
+  }
+
+  /**
+   * Get the political complexity level
+   * @returns {string} Political complexity ('none', 'minimal', 'moderate', 'full')
+   */
+  getPoliticalComplexity() {
+    return this.politicalCapabilities.politicalComplexity || 'none';
+  }
+
+  /**
+   * Check if this node has economic systems enabled
+   * @returns {boolean} True if economic systems are enabled
+   */
+  hasEconomicSystems() {
+    return this.getEconomicComplexity() !== 'none';
+  }
+
+  /**
+   * Check if this node has political systems enabled
+   * @returns {boolean} True if political systems are enabled
+   */
+  hasPoliticalSystems() {
+    return this.getPoliticalComplexity() !== 'none';
+  }
+
+  /**
+   * Update resource production for this turn
+   * @param {Object} production - Production amounts by resource type
+   */
+  updateResourceProduction(production) {
+    if (!this.resourceProduction.canProduce) {
+      return;
+    }
+
+    this.resourceProduction.currentProduction = { ...production };
+
+    // Cap production at capacity
+    const totalProduction = Object.values(production).reduce((sum, amount) => sum + amount, 0);
+    if (totalProduction > this.resourceProduction.productionCapacity) {
+      const scaleFactor = this.resourceProduction.productionCapacity / totalProduction;
+      for (const resourceType in this.resourceProduction.currentProduction) {
+        this.resourceProduction.currentProduction[resourceType] *= scaleFactor;
       }
-    };
-  }
-
-  /**
-   * Gets all connections of a specific type
-   * @param {string} connectionType - Connection type to filter by
-   * @returns {Array<NodeConnection>} Array of matching connections
-   */
-  getConnectionsByType(connectionType) {
-    return this.connections.filter(conn => conn.type === connectionType);
-  }
-
-  /**
-   * Gets all connected node IDs
-   * @returns {Array<string>} Array of connected node IDs
-   */
-  getConnectedNodeIds() {
-    return this.connections.map(conn => conn.targetNodeId);
-  }
-
-  /**
-   * Checks if this node is connected to another node
-   * @param {string} nodeId - Node ID to check
-   * @returns {boolean} True if connected
-   */
-  isConnectedTo(nodeId) {
-    return this.connections.some(conn => conn.targetNodeId === nodeId);
-  }
-
-  /**
-   * Adds a new connection to this node
-   * @param {NodeConnection} connection - Connection to add
-   */
-  addConnection(connection) {
-    if (!(connection instanceof NodeConnection)) {
-      throw new Error('Connection must be a NodeConnection instance');
-    }
-    
-    // Check if connection already exists
-    if (!this.isConnectedTo(connection.targetNodeId)) {
-      this.connections.push(connection);
     }
   }
 
   /**
-   * Removes a connection to a specific node
-   * @param {string} nodeId - Target node ID to disconnect
-   * @returns {boolean} True if connection was removed
+   * Update resource consumption for this turn
+   * @param {Object} consumption - Consumption amounts by resource type
    */
-  removeConnection(nodeId) {
-    const initialLength = this.connections.length;
-    this.connections = this.connections.filter(conn => conn.targetNodeId !== nodeId);
-    return this.connections.length < initialLength;
+  updateResourceConsumption(consumption) {
+    if (!this.resourceConsumption.canConsume) {
+      return;
+    }
+
+    this.resourceConsumption.currentConsumption = { ...consumption };
+
+    // Cap consumption at capacity
+    const totalConsumption = Object.values(consumption).reduce((sum, amount) => sum + amount, 0);
+    if (totalConsumption > this.resourceConsumption.consumptionCapacity) {
+      const scaleFactor = this.resourceConsumption.consumptionCapacity / totalConsumption;
+      for (const resourceType in this.resourceConsumption.currentConsumption) {
+        this.resourceConsumption.currentConsumption[resourceType] *= scaleFactor;
+      }
+    }
   }
 
+  /**
+   * Get current resource production
+   * @returns {Object} Current production by resource type
+   */
+  getCurrentProduction() {
+    return { ...this.resourceProduction.currentProduction };
+  }
+
+  /**
+   * Get current resource consumption
+   * @returns {Object} Current consumption by resource type
+   */
+  getCurrentConsumption() {
+    return { ...this.resourceConsumption.currentConsumption };
+  }
+
+  /**
+   * Validate that this node's configuration matches its type profile
+   * @returns {Object} Validation result with isValid and errors array
+   */
+  validateTypeProfile() {
+    if (!this.typeProfile) {
+      return {
+        isValid: true, // No type profile means no restrictions
+        errors: []
+      };
+    }
+
+    return this.typeProfile.validateNodeConfig({
+      type: this.type,
+      economicCapabilities: this.economicCapabilities,
+      politicalCapabilities: this.politicalCapabilities,
+      resourceProduction: this.resourceProduction,
+      resourceConsumption: this.resourceConsumption,
+      population: this.population,
+      settlementId: this.settlementId
+    });
+  }
+
+  /**
+   * Serialize node to JSON
+   * @returns {Object} JSON representation
+   */
   toJSON() {
     const json = {
       id: this.id,
       name: this.name,
       description: this.description,
       type: this.type,
-      // No position in mapless architecture
       contentInteractions: this.contentInteractions.map(i => i.toJSON ? i.toJSON() : i),
-      // Maintain backward compatibility - include interactions for older save files
-      interactions: this.contentInteractions.map(i => i.toJSON ? i.toJSON() : i),
-      resources: this.resources,
+      resources: [...this.resources],
       environment: this.environment.toJSON ? this.environment.toJSON() : this.environment,
       size: this.size,
       population: this.population,
-      connections: this.connections.map(conn => conn.toJSON ? conn.toJSON() : conn),
-      // Maintain backward compatibility
-      connectedNodes: this.getConnectedNodeIds(),
-      // Settlement integration properties
       settlementId: this.settlementId,
       settlementRole: this.settlementRole,
-      settlementEffects: this.settlementEffects
+      settlementEffects: { ...this.settlementEffects },
+      connections: this.connections.map(conn => conn.toJSON ? conn.toJSON() : conn),
+
+      // Node type system properties
+      typeProfile: this.typeProfile ? this.typeProfile.id : null,
+      economicCapabilities: { ...this.economicCapabilities },
+      politicalCapabilities: { ...this.politicalCapabilities },
+      resourceProduction: { ...this.resourceProduction },
+      resourceConsumption: { ...this.resourceConsumption }
     };
 
     // Include customData if it exists
@@ -569,25 +440,30 @@ class Node {
     return json;
   }
 
+  /**
+   * Deserialize node from JSON
+   * @param {Object} data - JSON data
+   * @returns {Node} New Node instance
+   */
   static fromJSON(data) {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid JSON data for Node');
     }
-    
+
     // Handle environment data
     let environment = data.environment;
     if (environment && typeof environment === 'object' && !(environment instanceof Environment)) {
       environment = Environment.fromJSON(environment);
     }
-    
+
     // Handle connections data
     let connections = data.connections;
     if (Array.isArray(connections)) {
-      connections = connections.map(connData => 
+      connections = connections.map(connData =>
         connData instanceof NodeConnection ? connData : NodeConnection.fromJSON(connData)
       );
     }
-    
+
     // Handle interaction migration
     let contentInteractions = data.contentInteractions;
     if (!contentInteractions && data.interactions) {
@@ -595,7 +471,7 @@ class Node {
       contentInteractions = data.interactions;
       console.warn(`Node ${data.id}: Migrating legacy 'interactions' to 'contentInteractions' during deserialization.`);
     }
-    
+
     return new Node({
       ...data,
       environment,
