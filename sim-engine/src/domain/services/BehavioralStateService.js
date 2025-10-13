@@ -10,6 +10,7 @@ import BaseDomainService from './BaseDomainService.js';
 import SignificantMemoryService from './SignificantMemoryService.js';
 import ConsciousnessErrorHandlingService from './ConsciousnessErrorHandlingService.js';
 import MemoryManagementService from './MemoryManagementService.js';
+import MemoryQueryService from './MemoryQueryService.js';
 
 class BehavioralStateService extends BaseDomainService {
     constructor(memoryService, logger = null, errorHandler = null) {
@@ -21,6 +22,14 @@ class BehavioralStateService extends BaseDomainService {
 
         // Memory management service for automatic memory optimization
         this.memoryManager = new MemoryManagementService(logger, errorHandler);
+
+        // Advanced memory querying service for enhanced decision making
+        this.memoryQueryService = new MemoryQueryService(
+            this.memoryService,
+            this.memoryService, // SignificantMemoryService is the same instance
+            logger,
+            errorHandler
+        );
 
         // Interaction type mappings for behavioral modifiers
         this.interactionTypeMappings = {
@@ -632,7 +641,7 @@ class BehavioralStateService extends BaseDomainService {
     }
 
     /**
-     * Get memory modifier for interaction type
+     * Get memory modifier for interaction type using advanced querying
      * @param {Object} character - Character with memory data
      * @param {string} interactionType - Type of interaction
      * @param {Object} context - Context for decision making
@@ -653,93 +662,314 @@ class BehavioralStateService extends BaseDomainService {
                 skipGarbageCollection: true // We'll handle garbage collection separately
             });
 
-            // Get relevant memories for this interaction type
-            const relevantMemories = this.memoryService.getRelevantMemories(
+            // Use advanced memory querying for more sophisticated analysis
+            const memoryAnalysis = this.memoryQueryService.queryInteractionPatterns(
                 character,
                 interactionType,
-                5, // maxMemories
-                context
+                {
+                    limit: 10, // Analyze recent patterns
+                    sortBy: 'timestamp',
+                    sortOrder: 'desc'
+                }
             );
 
-            if (!relevantMemories || relevantMemories.length === 0) {
-                return 1.0; // No memories, neutral modifier
-            }
+            // Get contextual memories based on current situation
+            const contextualMemories = this._getContextualMemories(character, interactionType, context);
 
-            // Calculate weighted memory influence based on significance and recency
-            let totalWeightedInfluence = 0;
-            let totalWeight = 0;
+            // Calculate comprehensive memory influence
+            const patternInfluence = this._calculatePatternInfluence(memoryAnalysis);
+            const contextInfluence = this._calculateContextInfluence(contextualMemories, context);
+            const relationshipInfluence = this._calculateRelationshipInfluence(character, interactionType, context);
 
-            relevantMemories.forEach(memory => {
-                const significance = memory.significance || 0.5;
-                const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
-                const weight = significance * recencyWeight;
-
-                // Determine influence direction based on outcome
-                let influence = 0;
-                switch (memory.outcome) {
-                    case 'critical_success':
-                        influence = 0.4;
-                        break;
-                    case 'success':
-                        influence = 0.2;
-                        break;
-                    case 'partial_success':
-                        influence = 0.1;
-                        break;
-                    case 'neutral':
-                        influence = 0.0;
-                        break;
-                    case 'partial_failure':
-                        influence = -0.1;
-                        break;
-                    case 'failure':
-                        influence = -0.2;
-                        break;
-                    case 'critical_failure':
-                        influence = -0.4;
-                        break;
-                    default:
-                        // Legacy support for simple positive/negative outcomes
-                        if (memory.outcome === 'positive') {
-                            influence = 0.2;
-                        } else if (memory.outcome === 'negative') {
-                            influence = -0.2;
-                        }
-                        break;
-                }
-
-                totalWeightedInfluence += influence * weight;
-                totalWeight += weight;
-            });
-
-            // Calculate final memory modifier
-            if (totalWeight === 0) {
-                return 1.0;
-            }
-
-            const averageInfluence = totalWeightedInfluence / totalWeight;
+            // Combine influences with weights
+            const totalInfluence = (
+                patternInfluence * 0.5 +    // 50% weight on general patterns
+                contextInfluence * 0.3 +    // 30% weight on current context
+                relationshipInfluence * 0.2  // 20% weight on relationships
+            );
 
             // Apply memory influence with diminishing returns
-            // Memory influence is bounded between 0.8x and 1.3x (±30% max influence)
-            const memoryModifier = 1 + (averageInfluence * 0.75); // Scale influence
+            // Memory influence is bounded between 0.7x and 1.4x (±40% max influence)
+            const memoryModifier = 1 + (totalInfluence * 0.6); // Scale influence
 
-            return Math.max(0.8, Math.min(1.3, memoryModifier));
+            return Math.max(0.7, Math.min(1.4, memoryModifier));
 
         } catch (error) {
             // Use error handling service for memory calculation failures
             const errorResult = this.errorHandler.handleCalculationFailure(error, {
-                calculationType: 'memory_influence',
+                calculationType: 'advanced_memory_influence',
                 character,
                 interactionType,
                 context
             });
 
             if (this.logger) {
-                this.logger.warn(`Error calculating memory modifier: ${error.message}`);
+                this.logger.warn(`Error calculating advanced memory modifier: ${error.message}`);
             }
 
             return errorResult.fallbackValue || 1.0;
         }
+    }
+
+    /**
+     * Get contextual memories based on current situation
+     * @param {Object} character - Character to query
+     * @param {string} interactionType - Type of interaction
+     * @param {Object} context - Current context
+     * @returns {Array<Object>} Contextual memories
+     */
+    _getContextualMemories(character, interactionType, context = {}) {
+        const queryCriteria = {
+            type: [interactionType],
+            limit: 5,
+            sortBy: 'timestamp',
+            sortOrder: 'desc'
+        };
+
+        // Add location context if available
+        if (context.location) {
+            queryCriteria.location = [context.location];
+        }
+
+        // Add time context for recent memories
+        if (context.timeSensitive) {
+            queryCriteria.timeRange = {
+                start: Date.now() - (24 * 60 * 60 * 1000) // Last 24 hours
+            };
+        }
+
+        return this.memoryQueryService.queryPersonalMemories(character, queryCriteria);
+    }
+
+    /**
+     * Calculate pattern influence from interaction pattern analysis
+     * @param {Object} patternAnalysis - Pattern analysis from MemoryQueryService
+     * @returns {number} Pattern influence (-1 to 1)
+     */
+    _calculatePatternInfluence(patternAnalysis) {
+        if (!patternAnalysis || patternAnalysis.totalMemories === 0) {
+            return 0; // No pattern data
+        }
+
+        const { successRate, trend, recentActivity } = patternAnalysis;
+
+        // Base influence from success rate
+        let influence = (successRate - 0.5) * 2; // Convert 0-1 to -1 to 1
+
+        // Adjust based on trend
+        switch (trend) {
+            case 'improving':
+                influence += 0.1;
+                break;
+            case 'declining':
+                influence -= 0.1;
+                break;
+            case 'stable':
+            default:
+                // No trend adjustment
+                break;
+        }
+
+        // Adjust based on recent activity (more recent = stronger influence)
+        if (recentActivity > 3) {
+            influence *= 1.2; // Strengthen recent patterns
+        }
+
+        return Math.max(-1, Math.min(1, influence));
+    }
+
+    /**
+     * Calculate context influence from current situation memories
+     * @param {Array<Object>} contextualMemories - Memories from current context
+     * @param {Object} context - Current context
+     * @returns {number} Context influence (-1 to 1)
+     */
+    _calculateContextInfluence(contextualMemories, context = {}) {
+        if (!contextualMemories || contextualMemories.length === 0) {
+            return 0; // No contextual memories
+        }
+
+        let totalInfluence = 0;
+        let totalWeight = 0;
+
+        contextualMemories.forEach(memory => {
+            const significance = memory.significance || 0.5;
+            const recencyWeight = this.calculateRecencyWeight(memory.timestamp);
+            const weight = significance * recencyWeight;
+
+            // Calculate outcome influence
+            let outcomeInfluence = 0;
+            switch (memory.outcome) {
+                case 'critical_success':
+                    outcomeInfluence = 0.3;
+                    break;
+                case 'success':
+                    outcomeInfluence = 0.15;
+                    break;
+                case 'partial_success':
+                    outcomeInfluence = 0.05;
+                    break;
+                case 'neutral':
+                    outcomeInfluence = 0.0;
+                    break;
+                case 'partial_failure':
+                    outcomeInfluence = -0.05;
+                    break;
+                case 'failure':
+                    outcomeInfluence = -0.15;
+                    break;
+                case 'critical_failure':
+                    outcomeInfluence = -0.3;
+                    break;
+                default:
+                    outcomeInfluence = 0.0;
+                    break;
+            }
+
+            // Apply context similarity bonus
+            const contextSimilarity = this._calculateContextSimilarity(memory, context);
+            outcomeInfluence *= (1 + contextSimilarity * 0.5); // Up to 50% bonus for similar contexts
+
+            totalInfluence += outcomeInfluence * weight;
+            totalWeight += weight;
+        });
+
+        return totalWeight > 0 ? Math.max(-1, Math.min(1, totalInfluence / totalWeight)) : 0;
+    }
+
+    /**
+     * Calculate relationship influence for social interactions
+     * @param {Object} character - Character making decision
+     * @param {string} interactionType - Type of interaction
+     * @param {Object} context - Current context
+     * @returns {number} Relationship influence (-1 to 1)
+     */
+    _calculateRelationshipInfluence(character, interactionType, context = {}) {
+        // Only apply to social interactions
+        if (!['social', 'relationship', 'romance', 'conflict'].includes(interactionType)) {
+            return 0;
+        }
+
+        if (!context.participants || context.participants.length === 0) {
+            return 0;
+        }
+
+        let totalRelationshipInfluence = 0;
+        let participantCount = 0;
+
+        for (const participantId of context.participants) {
+            const relationshipMemories = this.memoryQueryService.queryRelationshipMemories(
+                character,
+                participantId,
+                {
+                    limit: 3,
+                    sortBy: 'timestamp',
+                    sortOrder: 'desc'
+                }
+            );
+
+            if (relationshipMemories.length > 0) {
+                const relationshipInfluence = this._calculateRelationshipStrength(relationshipMemories);
+                totalRelationshipInfluence += relationshipInfluence;
+                participantCount++;
+            }
+        }
+
+        return participantCount > 0 ? totalRelationshipInfluence / participantCount : 0;
+    }
+
+    /**
+     * Calculate relationship strength from memories
+     * @param {Array<Object>} relationshipMemories - Memories involving relationship
+     * @returns {number} Relationship influence (-1 to 1)
+     */
+    _calculateRelationshipStrength(relationshipMemories) {
+        if (!relationshipMemories || relationshipMemories.length === 0) {
+            return 0;
+        }
+
+        let positiveInteractions = 0;
+        let negativeInteractions = 0;
+        let totalSignificance = 0;
+
+        relationshipMemories.forEach(memory => {
+            totalSignificance += memory.significance || 0.5;
+
+            switch (memory.outcome) {
+                case 'critical_success':
+                case 'success':
+                    positiveInteractions += 2;
+                    break;
+                case 'partial_success':
+                    positiveInteractions += 1;
+                    break;
+                case 'partial_failure':
+                    negativeInteractions += 1;
+                    break;
+                case 'failure':
+                case 'critical_failure':
+                    negativeInteractions += 2;
+                    break;
+                default:
+                    // Neutral outcomes don't affect relationship strength
+                    break;
+            }
+        });
+
+        const netInteractions = positiveInteractions - negativeInteractions;
+        const averageSignificance = totalSignificance / relationshipMemories.length;
+
+        // Normalize to -1 to 1 range
+        const relationshipScore = Math.max(-1, Math.min(1, netInteractions * 0.1));
+        return relationshipScore * averageSignificance;
+    }
+
+    /**
+     * Calculate similarity between memory context and current context
+     * @param {Object} memory - Memory object
+     * @param {Object} context - Current context
+     * @returns {number} Similarity score (0 to 1)
+     */
+    _calculateContextSimilarity(memory, context = {}) {
+        let similarityScore = 0;
+        let factors = 0;
+
+        // Location similarity
+        if (memory.location && context.location) {
+            if (memory.location === context.location) {
+                similarityScore += 1;
+            }
+            factors++;
+        }
+
+        // Time similarity (similar time of day)
+        if (memory.timestamp && context.timestamp) {
+            const memoryHour = new Date(memory.timestamp).getHours();
+            const contextHour = new Date(context.timestamp).getHours();
+            const hourDifference = Math.abs(memoryHour - contextHour);
+
+            if (hourDifference <= 2) {
+                similarityScore += 0.8;
+            } else if (hourDifference <= 6) {
+                similarityScore += 0.4;
+            }
+            factors++;
+        }
+
+        // Participant similarity
+        if (memory.participants && context.participants) {
+            const memoryParticipants = new Set(memory.participants);
+            const contextParticipants = new Set(context.participants);
+            const intersection = new Set([...memoryParticipants].filter(x => contextParticipants.has(x)));
+            const union = new Set([...memoryParticipants, ...contextParticipants]);
+
+            if (union.size > 0) {
+                similarityScore += (intersection.size / union.size);
+                factors++;
+            }
+        }
+
+        return factors > 0 ? similarityScore / factors : 0;
     }
 
     /**

@@ -2,6 +2,15 @@
 
 import ContentInteraction from './interactions/ContentInteraction.js';
 
+// Import BranchWeightingService for personality-weighted selection
+let BranchWeightingService;
+try {
+  BranchWeightingService = require('../services/BranchWeightingService.js').default;
+} catch (error) {
+  // BranchWeightingService not available, will use fallback selection
+  BranchWeightingService = null;
+}
+
 class Interaction extends ContentInteraction {
   constructor(config = {}) {
     super(config);
@@ -23,12 +32,40 @@ class Interaction extends ContentInteraction {
     });
   }
 
-  // Override selectBranch to maintain exact existing behavior with weighted selection
-  selectBranch(character) {
+// Override selectBranch to maintain exact existing behavior with weighted selection
+  selectBranch(character, context = {}) {
     if (!this.branches.length) return null;
     const validBranches = this.branches.filter(b => !b.condition || b.condition(character));
     if (!validBranches.length) return null;
 
+    // Try personality-weighted selection if BranchWeightingService is available
+    if (typeof BranchWeightingService !== 'undefined' && BranchWeightingService && character) {
+      try {
+        const weightingService = new BranchWeightingService();
+        const selectionResult = weightingService.selectWeightedBranch(
+          character,
+          validBranches,
+          {
+            interactionType: this.type,
+            location: context.location,
+            participants: context.participants,
+            ...context
+          }
+        );
+
+        return selectionResult ? selectionResult.branch : this.fallbackSelectBranch(validBranches, character);
+      } catch (error) {
+        // Fall back to original weighted selection if personality weighting fails
+        console.warn('BranchWeightingService failed, falling back to original selection:', error.message);
+      }
+    }
+
+    // Original weighted selection logic (maintain exact existing behavior)
+    return this.fallbackSelectBranch(validBranches, character);
+  }
+
+  // Original selection logic moved to separate method for clarity
+  fallbackSelectBranch(validBranches, character) {
     // Weighted selection inspired by resonance (from papers' R(E1,E2,t) eq)
     return weightedSelect(validBranches, branch => {
       const energyDiff = character.attributes.intelligence?.score || 10 - (branch.requiredEnergy || 10);

@@ -2,6 +2,15 @@
 
 const InteractionBase = require('./InteractionBase.js');
 
+// Import BranchWeightingService for personality-weighted selection
+let BranchWeightingService;
+try {
+  BranchWeightingService = require('../../services/BranchWeightingService.js').default;
+} catch (error) {
+  // BranchWeightingService not available, will use fallback selection
+  BranchWeightingService = null;
+}
+
 /**
  * ContentInteraction - Base class for user-defined content interactions
  *
@@ -219,9 +228,10 @@ class ContentInteraction extends InteractionBase {
   /**
    * Selects a branch based on character state and conditions
    * @param {Object} character - The character making the choice
+   * @param {Object} context - Additional context for selection (optional)
    * @returns {Object|null} Selected branch or null if none available
    */
-  selectBranch(character) {
+  selectBranch(character, context = {}) {
     if (!this.branches.length) return null;
 
     const validBranches = this.branches.filter(branch =>
@@ -230,7 +240,29 @@ class ContentInteraction extends InteractionBase {
 
     if (!validBranches.length) return null;
 
-    // Simple selection - can be enhanced with weighted selection
+    // Try personality-weighted selection if BranchWeightingService is available
+    if (BranchWeightingService && character) {
+      try {
+        const weightingService = new BranchWeightingService();
+        const selectionResult = weightingService.selectWeightedBranch(
+          character,
+          validBranches,
+          {
+            interactionType: this.type,
+            location: context.location,
+            participants: context.participants,
+            ...context
+          }
+        );
+
+        return selectionResult ? selectionResult.branch : validBranches[0];
+      } catch (error) {
+        // Fall back to simple selection if weighted selection fails
+        console.warn('BranchWeightingService failed, falling back to simple selection:', error.message);
+      }
+    }
+
+    // Fallback: Simple selection (first valid branch)
     return validBranches[0];
   }
 
