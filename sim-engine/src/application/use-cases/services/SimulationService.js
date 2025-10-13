@@ -7,6 +7,13 @@ import Character from '../../../domain/entities/Character.js';
 import Node from '../../../domain/entities/Node.js';
 import DataStructureUtils from '../../../shared/utils/DataStructureUtils.js';
 
+// Import new services for Task 6 integration
+import ResourceFlowService from '../../../domain/services/ResourceFlowService.js';
+import EconomicCentralizationService from '../../../domain/services/EconomicCentralizationService.js';
+import { PoliticalTrackingService } from '../../../domain/services/PoliticalTrackingService.js';
+import MemoryQueryService from '../../../domain/services/MemoryQueryService.js';
+import SignificantMemoryService from '../../../domain/services/SignificantMemoryService.js';
+
 class SimulationService {
   constructor() {
     this.worldState = null;
@@ -19,6 +26,12 @@ class SimulationService {
     this.maxTurnHistory = 100;
     this.currentTurnSummary = null;
     this.isInitialized = false; // Track initialization status
+
+    // Initialize new services for Task 6 integration
+    this.resourceFlowService = new ResourceFlowService();
+    this.economicCentralizationService = new EconomicCentralizationService();
+    this.politicalTrackingService = new PoliticalTrackingService();
+    this.memoryQueryService = new MemoryQueryService(null, new SignificantMemoryService());
   }
 
   /**
@@ -388,7 +401,7 @@ class SimulationService {
 
   // Process a single turn manually (replaces automatic ticking)
   // Process a single turn manually (for turn-based simulation)
-  processTurn() {
+  async processTurn() {
     if (!this.worldState) {
       throw new Error('Simulation not initialized');
     }
@@ -423,6 +436,24 @@ class SimulationService {
         if (!Array.isArray(this.worldState.nodes) || !Array.isArray(this.worldState.characters || this.worldState.npcs)) {
           throw new Error('Invalid world state structure');
         }
+      }
+
+      // Task 6.1: Integrate new services with SimulationService turn processing
+
+      // Step 1: Process resource flows before character actions
+      console.log('Processing resource flows...');
+      try {
+        await this._processResourceFlows();
+      } catch (error) {
+        console.warn('Resource flow processing failed:', error.message);
+      }
+
+      // Step 2: Process economic centralization for settlement-type nodes
+      console.log('Processing economic centralization...');
+      try {
+        await this._processEconomicCentralization();
+      } catch (error) {
+        console.warn('Economic centralization processing failed:', error.message);
       }
       
       // Process the turn using existing runTick logic
@@ -470,6 +501,22 @@ class SimulationService {
         // Ensure characters field is updated from npcs if needed
         characters: updatedState.npcs || updatedState.characters || this.worldState.characters
       };
+
+      // Step 3: Process political events and tracking after character actions
+      console.log('Processing political events and tracking...');
+      try {
+        await this._processPoliticalEvents();
+      } catch (error) {
+        console.warn('Political event processing failed:', error.message);
+      }
+
+      // Step 4: Update memory indexing
+      console.log('Updating memory indexing...');
+      try {
+        await this._updateMemoryIndexing();
+      } catch (error) {
+        console.warn('Memory indexing update failed:', error.message);
+      }
 
       // Debug: Check LOD tiers AFTER turn
       const charactersAfter = this.worldState.characters instanceof Map 
@@ -1272,6 +1319,243 @@ class SimulationService {
     }
 
     console.log('World state data structure validation and auto-fix completed successfully');
+  }
+
+  // Task 6.1: Helper methods for new service integrations
+
+  /**
+   * Process resource flows for all settlements
+   * @private
+   */
+  async _processResourceFlows() {
+    if (!this.worldState.settlements || this.worldState.settlements.length === 0) {
+      return;
+    }
+
+    const settlementIds = this.worldState.settlements.map(s => s.id);
+    const context = {
+      economicConditions: this.worldState.economicConditions || {},
+      timeMultiplier: 1.0,
+      dryRun: false
+    };
+
+    try {
+      // Process resource flows for each settlement
+      for (const settlementId of settlementIds) {
+        const flows = await this.resourceFlowService.calculateResourceFlows(settlementId, context);
+        
+        // Process each flow
+        for (const flow of flows) {
+          await this.resourceFlowService.processResourceFlow(flow, context);
+        }
+      }
+      
+      console.log(`Processed resource flows for ${settlementIds.length} settlements`);
+    } catch (error) {
+      console.warn('Resource flow processing error:', error.message);
+    }
+  }
+
+  /**
+   * Process economic centralization for settlement-type nodes
+   * @private
+   */
+  async _processEconomicCentralization() {
+    if (!this.worldState.settlements || this.worldState.settlements.length === 0) {
+      return;
+    }
+
+    const context = {
+      settlementIds: this.worldState.settlements.map(s => s.id),
+      economicConditions: this.worldState.economicConditions || {},
+      timeMultiplier: 1.0,
+      dryRun: false
+    };
+
+    try {
+      const results = await this.economicCentralizationService.executeEconomicCentralization(context);
+      console.log(`Economic centralization processed: ${results.settlementsProcessed.length} settlements, ${results.totalFlowsExecuted} flows executed`);
+    } catch (error) {
+      console.warn('Economic centralization processing error:', error.message);
+    }
+  }
+
+  /**
+   * Process political events and tracking
+   * @private
+   */
+  async _processPoliticalEvents() {
+    // Process leadership changes based on character actions
+    await this._processLeadershipChanges();
+    
+    // Process diplomatic relationship changes
+    await this._processDiplomaticChanges();
+    
+    console.log('Political events processed');
+  }
+
+  /**
+   * Process leadership changes based on character actions
+   * @private
+   */
+  async _processLeadershipChanges() {
+    if (!this.worldState.characters || !this.worldState.settlements) {
+      return;
+    }
+
+    // Check for characters that have gained significant influence
+    const influentialCharacters = this.worldState.characters.filter(char => {
+      // Characters with high prestige, leadership roles, or significant achievements
+      return (char.prestige && char.prestige > 50) || 
+             (char.role === 'leader') || 
+             (char.achievements && char.achievements.length > 5);
+    });
+
+    for (const character of influentialCharacters) {
+      const settlement = this.worldState.settlements.find(s => 
+        s.id === character.assignedSettlementId || 
+        this.worldState.nodes.find(n => n.id === character.currentNodeId)?.settlementId === s.id
+      );
+
+      if (settlement && settlement.government?.leaderId !== character.id) {
+        // Check if character should become leader
+        const shouldBecomeLeader = this._shouldCharacterBecomeLeader(character, settlement);
+        
+        if (shouldBecomeLeader) {
+          try {
+            const oldLeader = settlement.government?.leaderId ? 
+              this.worldState.characters.find(c => c.id === settlement.government.leaderId) : null;
+            
+            this.politicalTrackingService.recordLeadershipChange(
+              settlement, 
+              oldLeader, 
+              character, 
+              'achievement'
+            );
+
+            // Update settlement government
+            if (!settlement.government) settlement.government = {};
+            settlement.government.leaderId = character.id;
+            settlement.government.leaderName = character.name;
+            
+            console.log(`Leadership change: ${character.name} became leader of ${settlement.name}`);
+          } catch (error) {
+            console.warn(`Failed to record leadership change for ${character.name}:`, error.message);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Process diplomatic relationship changes
+   * @private
+   */
+  async _processDiplomaticChanges() {
+    if (!this.worldState.settlements || this.worldState.settlements.length < 2) {
+      return;
+    }
+
+    // Check pairs of settlements for relationship changes
+    for (let i = 0; i < this.worldState.settlements.length; i++) {
+      for (let j = i + 1; j < this.worldState.settlements.length; j++) {
+        const settlement1 = this.worldState.settlements[i];
+        const settlement2 = this.worldState.settlements[j];
+        
+        // Check for trade relationships, conflicts, or alliances
+        const relationshipChange = this._detectRelationshipChange(settlement1, settlement2);
+        
+        if (relationshipChange) {
+          try {
+            this.politicalTrackingService.updateDiplomaticRelationship(
+              settlement1,
+              settlement2,
+              relationshipChange.newStatus,
+              relationshipChange.reason
+            );
+            
+            console.log(`Diplomatic change: ${settlement1.name} - ${settlement2.name} relationship changed to ${relationshipChange.newStatus}`);
+          } catch (error) {
+            console.warn(`Failed to update diplomatic relationship between ${settlement1.name} and ${settlement2.name}:`, error.message);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Update memory indexing for the turn
+   * @private
+   */
+  async _updateMemoryIndexing() {
+    if (!this.worldState.characters) {
+      return;
+    }
+
+    try {
+      // Update memory indexes for all characters
+      for (const character of this.worldState.characters) {
+        // Index personal memories
+        this.memoryQueryService._getCharacterMemories(character);
+        
+        // Index settlement memories if character belongs to a settlement
+        const settlement = this.worldState.settlements?.find(s => 
+          s.id === character.assignedSettlementId
+        );
+        
+        if (settlement) {
+          this.memoryQueryService._getSettlementMemories(settlement);
+        }
+      }
+      
+      // Update global index
+      this.memoryQueryService.globalIndex = [];
+      
+      console.log('Memory indexing updated');
+    } catch (error) {
+      console.warn('Memory indexing update error:', error.message);
+    }
+  }
+
+  /**
+   * Determine if a character should become a leader
+   * @private
+   */
+  _shouldCharacterBecomeLeader(character, settlement) {
+    // Simple logic: character becomes leader if they have high prestige and no current leader
+    const hasHighPrestige = (character.prestige || 0) > 70;
+    const noCurrentLeader = !settlement.government?.leaderId;
+    const hasLeadershipQualities = (character.attributes?.charisma || 0) > 14;
+    
+    return hasHighPrestige && (noCurrentLeader || Math.random() < 0.1) && hasLeadershipQualities;
+  }
+
+  /**
+   * Detect relationship changes between settlements
+   * @private
+   */
+  _detectRelationshipChange(settlement1, settlement2) {
+    // Simple logic based on proximity, resources, and random chance
+    const distance = Math.abs((settlement1.position?.x || 0) - (settlement2.position?.x || 0)) + 
+                     Math.abs((settlement1.position?.y || 0) - (settlement2.position?.y || 0));
+    
+    // Close settlements more likely to form relationships
+    if (distance < 50 && Math.random() < 0.05) {
+      return {
+        newStatus: Math.random() < 0.7 ? 'trade_agreement' : 'alliance',
+        reason: 'proximity_and_opportunity'
+      };
+    }
+    
+    // Resource competition might lead to tension
+    if (distance < 100 && Math.random() < 0.02) {
+      return {
+        newStatus: 'tension',
+        reason: 'resource_competition'
+      };
+    }
+    
+    return null;
   }
 }
 

@@ -218,7 +218,8 @@ describe('ConsciousnessCheckpointService Integration', () => {
     expect(npc.significantMemories.length).toBe(30);
 
     // Perform maintenance
-    const result = ConsciousnessCheckpointService.performMaintenance(worldState);
+    const service = new ConsciousnessCheckpointService();
+    const result = service.performMaintenance(worldState);
 
     expect(result.processedNPCs).toBe(1);
     expect(result.prunedEvents).toBe(10); // 30 - 20 = 10

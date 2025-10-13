@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InvestmentEditor from '../InvestmentEditor';
 import CharacterEconomicService from '../../../domain/services/CharacterEconomicService';
-import { EconomicProfile } from '../../../domain/value-objects/EconomicProfile';
+import EconomicProfile from '../../../domain/value-objects/EconomicProfile';
 import Character from '../../../domain/entities/Character';
 
 // Mock the CharacterEconomicService

@@ -6,9 +6,57 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MainPage from './MainPage.js';
 
-// Mock the ConditionalSimulationInterface component
+// Mock the Navigation component BEFORE importing MainPage
+jest.mock('../UI/Navigation.js', () => {
+  return function MockNavigation({ children, ...props }) {
+    return (
+      <nav data-testid="navigation" {...props}>
+        {children}
+      </nav>
+    );
+  };
+});
+
+import MainPage from './MainPage.js'; // eslint-disable-line import/first
+
+// Mock react-router-dom BEFORE importing components that use it
+const mockNavigate = jest.fn();
+const mockLocation = { pathname: '/', search: '', hash: '' };
+const mockNavigation = { state: 'idle' };
+
+jest.mock('react-router-dom', () => ({
+  useNavigate: jest.fn(() => mockNavigate),
+  useLocation: jest.fn(() => mockLocation),
+  useNavigation: jest.fn(() => mockNavigation)
+}));
+
+// Mock NavigationContext BEFORE importing components that use it
+jest.mock('../contexts/NavigationContext.js', () => ({
+  useNavigation: jest.fn(() => ({
+    searchQuery: '',
+    setSearchQuery: jest.fn(),
+    searchResults: [],
+    isSearching: false,
+    clearSearch: jest.fn(),
+    sidebarOpen: false,
+    setSidebarOpen: jest.fn(),
+    toggleSidebar: jest.fn(),
+    bookmarks: [],
+    recentPages: []
+  }))
+}));
+
+// Mock the NavigationContext
+jest.mock('../contexts/NavigationContext.js', () => ({
+  useNavigation: jest.fn(() => ({
+    searchQuery: '',
+    setSearchQuery: jest.fn(),
+    searchResults: [],
+    isSearching: false,
+    clearSearch: jest.fn()
+  }))
+}));
 jest.mock('../components/ConditionalSimulationInterface.js', () => {
   return function MockConditionalSimulationInterface({ 
     worldBuilderState, 
@@ -34,7 +82,14 @@ jest.mock('../components/ConditionalSimulationInterface.js', () => {
 
 // Mock the SimulationContext
 jest.mock('../contexts/SimulationContext.js', () => ({
-  useSimulationContext: jest.fn(() => ({
+  useSimulationContext: jest.fn()
+}));
+
+// Set up the mock implementation
+const mockUseSimulationContext = require('../contexts/SimulationContext.js').useSimulationContext;
+
+beforeEach(() => {
+  mockUseSimulationContext.mockReturnValue({
     templateManager: { 
       getAllTemplates: jest.fn(() => [])
     },
@@ -48,7 +103,7 @@ jest.mock('../contexts/SimulationContext.js', () => ({
         nodePopulations: {}
       },
       currentStep: 1,
-      isWorldComplete: false,
+      isWorldComplete: true, // Set to true to show ConditionalSimulationInterface
       stepValidationStatus: {
         1: false, 2: false, 3: false, 4: false, 5: false, 6: false
       }
@@ -59,8 +114,8 @@ jest.mock('../contexts/SimulationContext.js', () => ({
       isInitialized: false,
       canStart: false
     }
-  }))
-}));
+  });
+});
 
 describe('MainPage - Basic Tests', () => {
   beforeEach(() => {

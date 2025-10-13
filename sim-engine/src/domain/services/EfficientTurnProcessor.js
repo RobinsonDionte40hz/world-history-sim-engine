@@ -12,6 +12,9 @@ import ConsciousnessUpdateService from './ConsciousnessUpdateService.js';
 import EventSignificanceService from './EventSignificanceService.js';
 import SignificantMemoryService from './SignificantMemoryService.js';
 import ConsciousnessCheckpointService from './ConsciousnessCheckpointService.js';
+import { PoliticalTrackingService } from './PoliticalTrackingService.js';
+import ResourceFlowService from './ResourceFlowService.js';
+import BranchWeightingService from './BranchWeightingService.js';
 
 class EfficientTurnProcessor extends BaseDomainService {
     constructor(
@@ -20,6 +23,9 @@ class EfficientTurnProcessor extends BaseDomainService {
         eventSignificanceService = null,
         significantMemoryService = null,
         consciousnessCheckpointService = null,
+        politicalTrackingService = null,
+        resourceFlowService = null,
+        branchWeightingService = null,
         logger = null
     ) {
         super();
@@ -28,6 +34,9 @@ class EfficientTurnProcessor extends BaseDomainService {
         this.eventSignificanceService = eventSignificanceService || new EventSignificanceService();
         this.significantMemoryService = significantMemoryService || new SignificantMemoryService();
         this.consciousnessCheckpointService = consciousnessCheckpointService || new ConsciousnessCheckpointService();
+        this.politicalTrackingService = politicalTrackingService || new PoliticalTrackingService();
+        this.resourceFlowService = resourceFlowService || new ResourceFlowService();
+        this.branchWeightingService = branchWeightingService || new BranchWeightingService();
         this.logger = logger;
 
         // Performance tracking
@@ -142,6 +151,18 @@ class EfficientTurnProcessor extends BaseDomainService {
                     if (this.logger) {
                         this.logger.error(`Error processing character ${character.id || 'unknown'}: ${error.message}`);
                     }
+                }
+            }
+
+            // Validate resource flows after character processing
+            const resourceValidationResult = await this._validateResourceFlows(worldState, turnContext);
+            if (resourceValidationResult.hasIssues) {
+                results.resourceFlowIssues = resourceValidationResult.issues;
+                results.errors.push(...resourceValidationResult.errors);
+
+                // Log resource flow issues
+                if (this.logger) {
+                    this.logger.warn(`Resource flow validation found ${resourceValidationResult.issues.length} issues`);
                 }
             }
 
@@ -718,7 +739,7 @@ class EfficientTurnProcessor extends BaseDomainService {
     }
 
     /**
-     * Generate behavior from cached behavioral state
+     * Generate behavior from cached behavioral state using personality-weighted selection
      * @param {Object} character - Character to generate behavior for
      * @param {Object} worldState - Current world state
      * @param {Object} turnContext - Turn context
@@ -743,49 +764,70 @@ class EfficientTurnProcessor extends BaseDomainService {
                 };
             }
 
-            // Calculate decision factors for each interaction using BehavioralStateService
-            const decisionFactors = availableInteractions.map(interaction => {
-                const factor = this.behavioralStateService.getBehavioralModifier(
-                    character,
-                    interaction.type,
-                    {
-                        ...turnContext,
-                        interaction: interaction,
-                        worldState: worldState
-                    }
-                );
+            // Convert interactions to branches for personality-weighted selection
+            const branches = availableInteractions.map(interaction => ({
+                id: interaction.id,
+                type: interaction.type,
+                name: interaction.name,
+                metadata: {
+                    // Personality preferences based on interaction type
+                    personalityAffinities: this._getPersonalityAffinitiesForInteraction(interaction),
+                    // Alignment leanings
+                    alignmentLean: this._getAlignmentLeanForInteraction(interaction),
+                    // Attribute preferences
+                    attributePreference: this._getAttributePreferenceForInteraction(interaction),
+                    // Tags for categorization
+                    tags: interaction.tags || [interaction.type],
+                    // Difficulty/effort level
+                    effortLevel: this._calculateEffortLevel(interaction),
+                    // Expected outcomes
+                    expectedOutcomes: this._getExpectedOutcomes(interaction),
+                    // Behavioral modifier from service
+                    behavioralModifier: this.behavioralStateService ? 
+                        this.behavioralStateService.getBehavioralModifier(character, interaction.type, {
+                            worldState: worldState,
+                            turnContext: turnContext,
+                            interaction: interaction
+                        }) : 1.0
+                },
+                // Condition to check if interaction is valid for character
+                condition: (char) => this._isInteractionValidForCharacter(interaction, char, worldState)
+            }));
 
-                return {
-                    interaction: interaction,
-                    factor: factor,
-                    breakdown: this.behavioralStateService.calculateDecisionFactor(
-                        character,
-                        interaction.type,
-                        {
-                            ...turnContext,
-                            interaction: interaction,
-                            worldState: worldState
-                        }
-                    )
-                };
-            });
+            // Use BranchWeightingService for personality-weighted selection
+            const selectionResult = this.branchWeightingService.selectWeightedBranch(
+                character,
+                branches,
+                {
+                    ...turnContext,
+                    worldState: worldState,
+                    interactionType: 'behavior_selection',
+                    location: character.currentNodeId,
+                    availableInteractions: availableInteractions.length
+                },
+                'weighted_random' // Use weighted random selection for behavior
+            );
 
-            // Select the interaction with the highest decision factor
-            const bestDecision = decisionFactors.reduce((best, current) => {
-                return current.factor > best.factor ? current : best;
-            });
+            const selectedBranch = selectionResult.branch;
+            const selectedInteraction = availableInteractions.find(i => i.id === selectedBranch.id);
+
+            // Calculate confidence based on weight (normalize to 0-1 range)
+            const confidence = Math.min(Math.max(selectionResult.weight / 2.0, 0.1), 1.0);
 
             return {
                 action: 'execute_interaction',
-                interaction: bestDecision.interaction,
-                confidence: Math.min(bestDecision.factor / 3.0, 1.0), // Normalize to 0-1
-                decisionFactor: bestDecision.factor,
-                alternatives: decisionFactors.length - 1,
+                interaction: selectedInteraction,
+                confidence: confidence,
+                decisionFactor: selectionResult.weight,
+                alternatives: branches.length - 1,
                 reasoning: {
-                    primaryFactor: bestDecision.breakdown.breakdown,
-                    comparison: decisionFactors.map(d => ({
-                        interaction: d.interaction.id,
-                        factor: d.factor
+                    primaryFactor: selectionResult.reason,
+                    selectionMethod: selectionResult.selectionMethod,
+                    weightBreakdown: selectionResult.weightBreakdown,
+                    comparison: branches.map(branch => ({
+                        interaction: branch.id,
+                        type: branch.type,
+                        weight: branch.id === selectedBranch.id ? selectionResult.weight : null
                     }))
                 }
             };
@@ -798,6 +840,12 @@ class EfficientTurnProcessor extends BaseDomainService {
             // For service failures, re-throw to be handled by the main processing loop
             if (error.message.includes('Service temporarily unavailable') ||
                 error.message.includes('Service failure')) {
+                throw error;
+            }
+
+            // For behavioral state service failures, also re-throw
+            if (error.message.includes('behavioralStateService') ||
+                error.message.includes('getBehavioralModifier')) {
                 throw error;
             }
 
@@ -1174,6 +1222,11 @@ class EfficientTurnProcessor extends BaseDomainService {
                 result.significantEvents.push(...behaviorUpdateResult.events);
             }
 
+            // Track political career progression for significant actions
+            if (behaviorSignificance.isSignificant) {
+                await this._trackPoliticalCareerProgression(character, behaviorSignificance.event, worldState);
+            }
+
             return result;
 
         } catch (error) {
@@ -1247,6 +1300,11 @@ class EfficientTurnProcessor extends BaseDomainService {
                 result.consciousnessUpdated = true;
             }
 
+            // Track political career progression for significant actions
+            if (behaviorSignificance.isSignificant && behaviorSignificance.event.significance > 0.6) {
+                await this._trackPoliticalCareerProgression(character, behaviorSignificance.event, worldState);
+            }
+
             return result;
 
         } catch (error) {
@@ -1308,6 +1366,9 @@ class EfficientTurnProcessor extends BaseDomainService {
                 if (behaviorSignificance.isSignificant && behaviorSignificance.event.significance > 0.8) {
                     result.significantEvents.push(behaviorSignificance.event);
                     result.consciousnessUpdated = true;
+
+                    // Track political career progression for significant actions (rare for citizens)
+                    await this._trackPoliticalCareerProgression(character, behaviorSignificance.event, worldState);
                 }
             }
 
@@ -1446,7 +1507,7 @@ class EfficientTurnProcessor extends BaseDomainService {
     }
 
     /**
-     * Generate specialist behavior with professional focus
+     * Generate specialist behavior with professional focus using personality-weighted selection
      * @param {Object} character - Specialist character
      * @param {Object} worldState - World state
      * @param {Object} turnContext - Turn context
@@ -1464,52 +1525,73 @@ class EfficientTurnProcessor extends BaseDomainService {
                 };
             }
 
-            // Use behavioral state service with specialist context
-            const decisionFactors = availableInteractions.map(interaction => {
-                const factor = this.behavioralStateService.getBehavioralModifier(
-                    character,
-                    interaction.type,
-                    {
-                        ...turnContext,
-                        interaction: interaction,
-                        worldState: worldState,
-                        specialistContext: true
-                    }
-                );
-
-                return {
-                    interaction: interaction,
-                    factor: factor,
-                    breakdown: this.behavioralStateService.calculateDecisionFactor(
-                        character,
-                        interaction.type,
-                        {
-                            ...turnContext,
-                            interaction: interaction,
+            // Convert interactions to branches for personality-weighted selection
+            const branches = availableInteractions.map(interaction => ({
+                id: interaction.id,
+                type: interaction.type,
+                name: interaction.name,
+                metadata: {
+                    // Specialist-focused personality affinities
+                    personalityAffinities: this._getSpecialistPersonalityAffinities(interaction, character.profession),
+                    // Professional alignment preferences
+                    alignmentLean: this._getAlignmentLeanForInteraction(interaction),
+                    // Specialist attribute preferences
+                    attributePreference: this._getSpecialistAttributePreferences(interaction, character.profession),
+                    // Professional tags
+                    tags: ['specialist', character.profession || 'professional', interaction.type],
+                    // Professional effort level
+                    effortLevel: this._calculateEffortLevel(interaction),
+                    // Professional outcomes
+                    expectedOutcomes: this._getSpecialistOutcomes(interaction, character.profession),
+                    // Behavioral modifier from service
+                    behavioralModifier: this.behavioralStateService ? 
+                        this.behavioralStateService.getBehavioralModifier(character, interaction.type, {
                             worldState: worldState,
-                            specialistContext: true
-                        }
-                    )
-                };
-            });
+                            turnContext: turnContext,
+                            interaction: interaction,
+                            profession: character.profession
+                        }) : 1.0
+                },
+                // Condition for specialist validity
+                condition: (char) => this._isSpecialistInteractionValid(interaction, char, worldState)
+            }));
 
-            const bestDecision = decisionFactors.reduce((best, current) => {
-                return current.factor > best.factor ? current : best;
-            });
+            // Use BranchWeightingService for professional behavior selection
+            const selectionResult = this.branchWeightingService.selectWeightedBranch(
+                character,
+                branches,
+                {
+                    ...turnContext,
+                    worldState: worldState,
+                    interactionType: 'specialist_behavior',
+                    profession: character.profession,
+                    specialistContext: true
+                },
+                'personality_driven' // Specialists use personality-driven selection
+            );
+
+            const selectedBranch = selectionResult.branch;
+            const selectedInteraction = availableInteractions.find(i => i.id === selectedBranch.id);
+
+            // Higher confidence for specialists due to professional expertise
+            const confidence = Math.min(Math.max(selectionResult.weight / 2.5, 0.4), 1.0);
 
             return {
                 action: 'execute_interaction',
-                interaction: bestDecision.interaction,
-                confidence: Math.min(bestDecision.factor / 2.5, 1.0), // Moderate confidence scaling
-                decisionFactor: bestDecision.factor,
-                alternatives: decisionFactors.length - 1,
+                interaction: selectedInteraction,
+                confidence: confidence,
+                decisionFactor: selectionResult.weight,
+                alternatives: branches.length - 1,
                 reasoning: {
-                    primaryFactor: bestDecision.breakdown.breakdown,
-                    comparison: decisionFactors.map(d => ({
-                        interaction: d.interaction.id,
-                        factor: d.factor
-                    })),
-                    specialistRole: character.profession || 'general_specialist'
+                    primaryFactor: selectionResult.reason,
+                    selectionMethod: selectionResult.selectionMethod,
+                    profession: character.profession,
+                    weightBreakdown: selectionResult.weightBreakdown,
+                    comparison: branches.map(branch => ({
+                        interaction: branch.id,
+                        type: branch.type,
+                        weight: branch.id === selectedBranch.id ? selectionResult.weight : null
+                    }))
                 }
             };
 
@@ -1534,6 +1616,13 @@ class EfficientTurnProcessor extends BaseDomainService {
      * @param {Object} turnContext - Turn context
      * @returns {Object} Citizen behavior result
      */
+    /**
+     * Generate citizen behavior with personality-weighted selection for daily activities
+     * @param {Object} character - Citizen character
+     * @param {Object} worldState - World state
+     * @param {Object} turnContext - Turn context
+     * @returns {Object} Citizen behavior result
+     */
     _generateCitizenBehavior(character, worldState, turnContext = {}) {
         try {
             const availableInteractions = this._getCitizenInteractions(character, worldState);
@@ -1546,44 +1635,73 @@ class EfficientTurnProcessor extends BaseDomainService {
                 };
             }
 
-            // Simplified decision making for citizens
-            const basicNeeds = this._assessBasicNeeds(character);
+            // Convert interactions to branches for personality-weighted selection
+            const branches = availableInteractions.map(interaction => ({
+                id: interaction.id,
+                type: interaction.type,
+                name: interaction.name,
+                metadata: {
+                    // Citizen personality affinities (more balanced than specialists)
+                    personalityAffinities: this._getCitizenPersonalityAffinities(interaction),
+                    // Citizen alignment preferences (more neutral)
+                    alignmentLean: this._getAlignmentLeanForInteraction(interaction),
+                    // Citizen attribute preferences (general life skills)
+                    attributePreference: this._getCitizenAttributePreferences(interaction),
+                    // Citizen tags
+                    tags: ['citizen', 'daily_life', interaction.type],
+                    // Citizen effort level (generally lower than specialists)
+                    effortLevel: this._calculateEffortLevel(interaction),
+                    // Citizen expected outcomes (practical benefits)
+                    expectedOutcomes: this._getCitizenOutcomes(interaction),
+                    // Behavioral modifier from service
+                    behavioralModifier: this.behavioralStateService ? 
+                        this.behavioralStateService.getBehavioralModifier(character, interaction.type, {
+                            worldState: worldState,
+                            turnContext: turnContext,
+                            interaction: interaction,
+                            citizenContext: true
+                        }) : 1.0
+                },
+                // Condition for citizen validity
+                condition: (char) => this._isCitizenInteractionValid(interaction, char, worldState)
+            }));
 
-            // Simple priority-based selection
-            let selectedInteraction;
-            let confidence = 0.7; // Base confidence for citizens
+            // Use BranchWeightingService for citizen behavior selection
+            const selectionResult = this.branchWeightingService.selectWeightedBranch(
+                character,
+                branches,
+                {
+                    ...turnContext,
+                    worldState: worldState,
+                    interactionType: 'citizen_behavior',
+                    citizenContext: true,
+                    basicNeeds: this._assessBasicNeeds(character)
+                },
+                'personality_driven' // Citizens use personality-driven selection
+            );
 
-            // Priority 1: Address critical needs
-            if (basicNeeds.critical.length > 0) {
-                selectedInteraction = availableInteractions.find(i =>
-                    basicNeeds.critical.includes(i.type)
-                ) || availableInteractions[0];
-                confidence = 0.9;
-            }
-            // Priority 2: Work/economic activities
-            else if (turnContext.timeOfDay === 'morning' || turnContext.timeOfDay === 'afternoon') {
-                selectedInteraction = availableInteractions.find(i =>
-                    i.type === 'work' || i.type === 'economic'
-                ) || availableInteractions[0];
-                confidence = 0.8;
-            }
-            // Priority 3: Social/rest activities
-            else {
-                selectedInteraction = availableInteractions.find(i =>
-                    i.type === 'social' || i.type === 'rest'
-                ) || availableInteractions[0];
-                confidence = 0.6;
-            }
+            const selectedBranch = selectionResult.branch;
+            const selectedInteraction = availableInteractions.find(i => i.id === selectedBranch.id);
+
+            // Moderate confidence for citizens due to simpler decision-making
+            const confidence = Math.min(Math.max(selectionResult.weight / 3.0, 0.3), 0.9);
 
             return {
                 action: 'execute_interaction',
                 interaction: selectedInteraction,
                 confidence: confidence,
-                decisionFactor: confidence * 1.5, // Simple decision factor
+                decisionFactor: selectionResult.weight,
+                alternatives: branches.length - 1,
                 reasoning: {
-                    primaryFactor: 'citizen_basic_logic',
-                    basicNeeds: basicNeeds,
-                    timeOfDay: turnContext.timeOfDay
+                    primaryFactor: selectionResult.reason,
+                    selectionMethod: selectionResult.selectionMethod,
+                    basicNeeds: this._assessBasicNeeds(character),
+                    weightBreakdown: selectionResult.weightBreakdown,
+                    comparison: branches.map(branch => ({
+                        interaction: branch.id,
+                        type: branch.type,
+                        weight: branch.id === selectedBranch.id ? selectionResult.weight : null
+                    }))
                 }
             };
 
@@ -1825,11 +1943,6 @@ class EfficientTurnProcessor extends BaseDomainService {
     _getAvailableInteractions(character, worldState) {
         const interactions = [];
 
-        // If worldState has no interactions, return empty array
-        if (!worldState || !worldState.interactions || worldState.interactions.length === 0) {
-            return interactions;
-        }
-
         // Get profession-specific interactions
         if (character.profession) {
             const professionInteractions = this._getProfessionInteractions(character.profession);
@@ -2047,6 +2160,1017 @@ class EfficientTurnProcessor extends BaseDomainService {
         }
 
         return interactions;
+    }
+
+    /**
+     * Get specialist interactions for a character
+     * @param {Object} character - Character to get interactions for
+     * @param {Object} worldState - World state
+     * @returns {Array} Specialist-specific interactions
+     */
+    _getSpecialistInteractions(character, worldState) {
+        const interactions = [];
+
+        // Get profession-specific interactions
+        if (character.profession) {
+            const professionInteractions = this._getProfessionInteractions(character.profession);
+            interactions.push(...professionInteractions);
+        }
+
+        // Get settlement-specific interactions for specialists
+        const settlement = this._getCharacterSettlement(character, worldState);
+        if (settlement) {
+            const settlementInteractions = this._getSettlementInteractions(character, settlement);
+            interactions.push(...settlementInteractions);
+        }
+
+        // Add specialist-specific universal interactions
+        interactions.push(
+            {
+                id: 'specialist_rest',
+                name: 'Specialist Rest',
+                type: 'rest',
+                description: 'Take time to rest and recover energy',
+                requirements: { energy: 5 },
+                effects: { energy: 20, health: 5 }
+            },
+            {
+                id: 'professional_networking',
+                name: 'Professional Networking',
+                type: 'social',
+                description: 'Network with other professionals',
+                requirements: { energy: 8 },
+                effects: { social: 5, energy: -5, reputation: 2 }
+            }
+        );
+
+        // Filter interactions based on character capabilities
+        return interactions.filter(interaction => {
+            // Check energy requirements
+            if (interaction.requirements?.energy && character.energy < interaction.requirements.energy) {
+                return false;
+            }
+
+            // Check wealth requirements
+            if (interaction.requirements?.wealth && (character.wealth || 0) < interaction.requirements.wealth) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Get citizen interactions for a character
+     * @param {Object} character - Character to get interactions for
+     * @param {Object} worldState - World state
+     * @returns {Array} Citizen-specific interactions
+     */
+    _getCitizenInteractions(character, worldState) {
+        const interactions = [];
+
+        // Get settlement-specific interactions for citizens
+        const settlement = this._getCharacterSettlement(character, worldState);
+        if (settlement) {
+            const settlementInteractions = this._getSettlementInteractions(character, settlement);
+            interactions.push(...settlementInteractions);
+        }
+
+        // Add citizen-specific universal interactions
+        interactions.push(
+            {
+                id: 'citizen_rest',
+                name: 'Citizen Rest',
+                type: 'rest',
+                description: 'Take time to rest and recover energy',
+                requirements: { energy: 5 },
+                effects: { energy: 20, health: 5 }
+            },
+            {
+                id: 'daily_work',
+                name: 'Daily Work',
+                type: 'work',
+                description: 'Perform daily work tasks',
+                requirements: { energy: 10 },
+                effects: { wealth: 5, energy: -8, experience: 1 }
+            },
+            {
+                id: 'social_gathering',
+                name: 'Social Gathering',
+                type: 'social',
+                description: 'Spend time with community members',
+                requirements: { energy: 6 },
+                effects: { social: 4, energy: -4, happiness: 2 }
+            },
+            {
+                id: 'market_visit',
+                name: 'Visit Market',
+                type: 'economic',
+                description: 'Visit the local market',
+                requirements: { wealth: 2 },
+                effects: { wealth: -2, satisfaction: 3 }
+            }
+        );
+
+        // Filter interactions based on character capabilities
+        return interactions.filter(interaction => {
+            // Check energy requirements
+            if (interaction.requirements?.energy && character.energy < interaction.requirements.energy) {
+                return false;
+            }
+
+            // Check wealth requirements
+            if (interaction.requirements?.wealth && (character.wealth || 0) < interaction.requirements.wealth) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Track political career progression for significant character actions
+     * @param {Object} character - The character performing the action
+     * @param {Object} event - The significant event
+     * @param {Object} worldState - Current world state
+     * @private
+     */
+    async _trackPoliticalCareerProgression(character, event, worldState) {
+        try {
+            // Check if this action has political significance
+            const politicalSignificance = this._evaluatePoliticalSignificance(character, event, worldState);
+
+            if (politicalSignificance.hasPoliticalImpact) {
+                // Track the political event
+                await this.politicalTrackingService.trackPoliticalEvent({
+                    characterId: character.id,
+                    event: event,
+                    politicalImpact: politicalSignificance.impact,
+                    worldState: worldState
+                });
+
+                // Check for leadership opportunities
+                const leadershipOpportunity = await this.politicalTrackingService.checkLeadershipOpportunity(
+                    character,
+                    politicalSignificance.impact,
+                    worldState
+                );
+
+                if (leadershipOpportunity.available) {
+                    // Create leadership advancement event
+                    const advancementEvent = {
+                        type: 'leadership_advancement',
+                        characterId: character.id,
+                        advancement: leadershipOpportunity.advancement,
+                        reason: leadershipOpportunity.reason,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Update character's political status
+                    character.updatePoliticalStatus(leadershipOpportunity.advancement);
+
+                    return { tracked: true, advancementEvent };
+                }
+            }
+
+            return { tracked: true };
+        } catch (error) {
+            console.warn(`Failed to track political career progression for character ${character.id}:`, error);
+            return { tracked: false, error: error.message };
+        }
+    }
+
+    /**
+     * Evaluate the political significance of a character action
+     * @param {Object} character - The character
+     * @param {Object} event - The event to evaluate
+     * @param {Object} worldState - Current world state
+     * @returns {Object} Political significance assessment
+     * @private
+     */
+    _evaluatePoliticalSignificance(character, event, worldState) {
+        const significance = {
+            hasPoliticalImpact: false,
+            impact: {
+                influence: 0,
+                reputation: 0,
+                power: 0,
+                legitimacy: 0
+            }
+        };
+
+        // Evaluate based on event type and character context
+        switch (event.type) {
+            case 'diplomatic_action':
+                significance.hasPoliticalImpact = true;
+                significance.impact.influence += 2;
+                significance.impact.reputation += event.success ? 1 : -1;
+                break;
+
+            case 'economic_decision':
+                if (event.scale === 'large') {
+                    significance.hasPoliticalImpact = true;
+                    significance.impact.power += 1;
+                    significance.impact.legitimacy += event.publicSupport ? 1 : -1;
+                }
+                break;
+
+            case 'social_interaction':
+                if (event.involvesLeadership) {
+                    significance.hasPoliticalImpact = true;
+                    significance.impact.influence += 1;
+                    significance.impact.reputation += event.positiveOutcome ? 1 : -1;
+                }
+                break;
+
+            case 'conflict_resolution':
+                significance.hasPoliticalImpact = true;
+                significance.impact.power += event.victory ? 2 : -1;
+                significance.impact.reputation += event.diplomatic ? 1 : 0;
+                break;
+
+            case 'resource_distribution':
+                if (event.favorsAllies) {
+                    significance.hasPoliticalImpact = true;
+                    significance.impact.legitimacy += 1;
+                    significance.impact.influence += 1;
+                }
+                break;
+
+            default:
+                // No political impact for unrecognized event types
+                break;
+        }
+
+        // Factor in character's current political position
+        if (character.politicalStatus) {
+            const positionMultiplier = this._getPoliticalPositionMultiplier(character.politicalStatus.position);
+            significance.impact.influence *= positionMultiplier;
+            significance.impact.power *= positionMultiplier;
+        }
+
+        return significance;
+    }
+
+    /**
+     * Get multiplier for political impact based on current position
+     * @param {string} position - Current political position
+     * @returns {number} Impact multiplier
+     * @private
+     */
+    _getPoliticalPositionMultiplier(position) {
+        const multipliers = {
+            'citizen': 0.5,
+            'specialist': 0.8,
+            'leader': 1.5,
+            'council_member': 1.2,
+            'governor': 1.8,
+            'ruler': 2.0
+        };
+
+        return multipliers[position] || 1.0;
+    }
+
+    /**
+     * Validate resource flows in the world state
+     * @param {Object} worldState - Current world state
+     * @param {Object} turnContext - Turn context
+     * @returns {Object} Validation result
+     * @private
+     */
+    async _validateResourceFlows(worldState, turnContext) {
+        const result = {
+            hasIssues: false,
+            issues: [],
+            errors: []
+        };
+
+        try {
+            if (!this.resourceFlowService) {
+                // If no resource flow service is available, skip validation
+                return result;
+            }
+
+            // Calculate and validate resource flows for all settlements
+            const settlements = worldState.settlements || [];
+            const allFlows = [];
+
+            // Calculate flows for each settlement
+            for (const settlement of settlements) {
+                try {
+                    const context = {
+                        availableNodes: worldState.nodes || [],
+                        economicConditions: worldState.economicConditions || {},
+                        timeMultiplier: turnContext?.timeMultiplier || 1.0
+                    };
+
+                    const flows = await this.resourceFlowService.calculateResourceFlows(settlement.id, context);
+                    allFlows.push(...flows);
+                } catch (error) {
+                    // Log but continue with other settlements
+                    if (this.logger) {
+                        this.logger.warn(`Failed to calculate flows for settlement ${settlement.id}: ${error.message}`);
+                    }
+                }
+            }
+
+            // Validate each flow
+            for (const flow of allFlows) {
+                try {
+                    const validationResult = await this.resourceFlowService.validateResourceFlow(flow);
+
+                    if (!validationResult.isValid || validationResult.issues.length > 0) {
+                        result.hasIssues = true;
+
+                        // Process validation issues
+                        validationResult.issues.forEach(issue => {
+                            const severity = issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'warning' : 'info';
+
+                            result.issues.push({
+                                type: issue.type,
+                                severity: severity,
+                                description: issue.message,
+                                field: issue.field,
+                                affectedEntities: [flow.sourceNodeId, flow.targetNodeId],
+                                suggestedActions: validationResult.recommendations?.map(r => r.action) || [],
+                                impact: this._calculateFlowImpact(flow, issue),
+                                flow: {
+                                    id: flow.id,
+                                    sourceNodeId: flow.sourceNodeId,
+                                    targetNodeId: flow.targetNodeId,
+                                    resourceType: flow.resourceType,
+                                    amount: flow.effectiveAmount || flow.amount
+                                }
+                            });
+
+                            // Add as error if critical
+                            if (severity === 'critical') {
+                                result.errors.push({
+                                    type: 'resource_flow_error',
+                                    message: issue.message,
+                                    field: issue.field,
+                                    affectedEntities: [flow.sourceNodeId, flow.targetNodeId],
+                                    impact: this._calculateFlowImpact(flow, issue)
+                                });
+                            }
+                        });
+                    }
+                } catch (error) {
+                    // Log validation error but continue
+                    if (this.logger) {
+                        this.logger.warn(`Failed to validate flow ${flow.id}: ${error.message}`);
+                    }
+                }
+            }
+
+            // Log summary
+            if (this.logger && result.hasIssues) {
+                const criticalCount = result.issues.filter(i => i.severity === 'critical').length;
+                const warningCount = result.issues.filter(i => i.severity === 'warning').length;
+
+                this.logger.warn(`Resource flow validation: ${criticalCount} critical, ${warningCount} warnings, ${allFlows.length} flows checked`);
+            }
+
+            return result;
+
+        } catch (error) {
+            if (this.logger) {
+                this.logger.error(`Resource flow validation failed: ${error.message}`);
+            }
+
+            result.errors.push({
+                type: 'validation_error',
+                message: `Resource flow validation failed: ${error.message}`
+            });
+
+            return result;
+        }
+    }
+
+    /**
+     * Calculate the impact of a flow validation issue
+     * @param {Object} flow - The resource flow
+     * @param {Object} issue - The validation issue
+     * @returns {string} Impact description
+     * @private
+     */
+    _calculateFlowImpact(flow, issue) {
+        const amount = flow.effectiveAmount || flow.amount;
+        const resourceType = flow.resourceType;
+
+        switch (issue.field) {
+            case 'sourceNodeId':
+                return `Cannot process ${amount} ${resourceType} flow due to missing source`;
+            case 'targetNodeId':
+                return `Cannot deliver ${amount} ${resourceType} due to missing target`;
+            case 'amount':
+                return `Insufficient ${resourceType} supply may cause shortages`;
+            case 'capacity':
+                return `Storage capacity exceeded may cause ${resourceType} waste`;
+            case 'efficiency':
+                return `Low efficiency reduces economic value of ${resourceType} transfers`;
+            default:
+                return `Flow issue affects ${amount} ${resourceType}`;
+        }
+    }
+
+    /**
+     * Get personality affinities for an interaction type
+     * @param {Object} interaction - The interaction object
+     * @returns {Object} Personality trait affinities
+     * @private
+     */
+    _getPersonalityAffinitiesForInteraction(interaction) {
+        const affinities = {};
+
+        switch (interaction.type) {
+            case 'combat':
+                affinities.aggression = 0.8;
+                affinities.bravery = 0.7;
+                affinities.impulsiveness = 0.6;
+                break;
+            case 'trade':
+                affinities.greed = 0.6;
+                affinities.social = 0.7;
+                affinities.intelligence = 0.5;
+                break;
+            case 'exploration':
+                affinities.curiosity = 0.8;
+                affinities.bravery = 0.6;
+                affinities.independence = 0.7;
+                break;
+            case 'social':
+                affinities.social = 0.8;
+                affinities.empathy = 0.7;
+                affinities.charisma = 0.6;
+                break;
+            case 'craft':
+                affinities.patience = 0.7;
+                affinities.creativity = 0.6;
+                affinities.focus = 0.8;
+                break;
+            case 'rest':
+                affinities.patience = 0.5;
+                affinities.discipline = 0.6;
+                break;
+            case 'work':
+                affinities.discipline = 0.7;
+                affinities.responsibility = 0.8;
+                break;
+            default:
+                // Neutral affinities for unknown types
+                break;
+        }
+
+        return affinities;
+    }
+
+    /**
+     * Get alignment leanings for an interaction type
+     * @param {Object} interaction - The interaction object
+     * @returns {Object} Alignment preferences
+     * @private
+     */
+    _getAlignmentLeanForInteraction(interaction) {
+        switch (interaction.type) {
+            case 'combat':
+                return { lawful: 0.3, chaotic: 0.7, good: 0.4, evil: 0.6 };
+            case 'trade':
+                return { lawful: 0.8, chaotic: 0.2, good: 0.6, evil: 0.4 };
+            case 'exploration':
+                return { lawful: 0.4, chaotic: 0.6, good: 0.5, evil: 0.5 };
+            case 'social':
+                return { lawful: 0.6, chaotic: 0.4, good: 0.8, evil: 0.2 };
+            case 'craft':
+                return { lawful: 0.7, chaotic: 0.3, good: 0.6, evil: 0.4 };
+            case 'rest':
+                return { lawful: 0.5, chaotic: 0.5, good: 0.5, evil: 0.5 };
+            case 'work':
+                return { lawful: 0.8, chaotic: 0.2, good: 0.7, evil: 0.3 };
+            default:
+                return { lawful: 0.5, chaotic: 0.5, good: 0.5, evil: 0.5 };
+        }
+    }
+
+    /**
+     * Get attribute preferences for an interaction type
+     * @param {Object} interaction - The interaction object
+     * @returns {Object} Attribute preferences
+     * @private
+     */
+    _getAttributePreferenceForInteraction(interaction) {
+        switch (interaction.type) {
+            case 'combat':
+                return { strength: 0.8, dexterity: 0.7, constitution: 0.6 };
+            case 'trade':
+                return { charisma: 0.8, intelligence: 0.6, wisdom: 0.5 };
+            case 'exploration':
+                return { dexterity: 0.7, wisdom: 0.6, constitution: 0.5 };
+            case 'social':
+                return { charisma: 0.9, wisdom: 0.6, intelligence: 0.5 };
+            case 'craft':
+                return { dexterity: 0.7, intelligence: 0.6, wisdom: 0.5 };
+            case 'rest':
+                return { constitution: 0.6, wisdom: 0.4 };
+            case 'work':
+                return { constitution: 0.6, strength: 0.5, wisdom: 0.4 };
+            default:
+                return {};
+        }
+    }
+
+    /**
+     * Calculate effort level for an interaction
+     * @param {Object} interaction - The interaction object
+     * @returns {number} Effort level (0-1, higher = more effort required)
+     * @private
+     */
+    _calculateEffortLevel(interaction) {
+        // Base effort on energy requirements and type
+        let effort = 0.5; // Default moderate effort
+
+        if (interaction.requirements?.energy) {
+            // Higher energy requirements = higher effort
+            effort = Math.min(interaction.requirements.energy / 20, 1.0);
+        }
+
+        // Adjust based on interaction type
+        switch (interaction.type) {
+            case 'combat':
+                effort = Math.max(effort, 0.8); // Combat is always high effort
+                break;
+            case 'exploration':
+                effort = Math.max(effort, 0.7); // Exploration requires effort
+                break;
+            case 'craft':
+                effort = Math.max(effort, 0.6); // Crafting requires focus
+                break;
+            case 'rest':
+                effort = Math.min(effort, 0.2); // Rest is low effort
+                break;
+            case 'social':
+                effort = Math.max(effort, 0.4); // Social requires some effort
+                break;
+            default:
+                // Keep default effort level
+                break;
+        }
+
+        return effort;
+    }
+
+    /**
+     * Get expected outcomes for an interaction
+     * @param {Object} interaction - The interaction object
+     * @returns {Array} Expected outcomes
+     * @private
+     */
+    _getExpectedOutcomes(interaction) {
+        const outcomes = [];
+
+        // Add effects as expected outcomes
+        if (interaction.effects) {
+            Object.entries(interaction.effects).forEach(([effectType, value]) => {
+                if (typeof value === 'number') {
+                    outcomes.push({
+                        type: effectType,
+                        value: value,
+                        probability: 0.8 // Assume 80% chance for stated effects
+                    });
+                }
+            });
+        }
+
+        // Add type-specific outcomes
+        switch (interaction.type) {
+            case 'combat':
+                outcomes.push({ type: 'experience', value: 3, probability: 0.6 });
+                outcomes.push({ type: 'risk', value: -2, probability: 0.4 });
+                break;
+            case 'trade':
+                outcomes.push({ type: 'wealth', value: 5, probability: 0.7 });
+                outcomes.push({ type: 'reputation', value: 1, probability: 0.8 });
+                break;
+            case 'exploration':
+                outcomes.push({ type: 'knowledge', value: 2, probability: 0.9 });
+                outcomes.push({ type: 'discovery', value: 1, probability: 0.3 });
+                break;
+            case 'social':
+                outcomes.push({ type: 'relationships', value: 1, probability: 0.8 });
+                outcomes.push({ type: 'mood', value: 2, probability: 0.7 });
+                break;
+            case 'craft':
+                outcomes.push({ type: 'wealth', value: 3, probability: 0.8 });
+                outcomes.push({ type: 'skill', value: 1, probability: 0.6 });
+                break;
+            default:
+                // No specific outcomes for unknown interaction types
+                break;
+        }
+
+        return outcomes;
+    }
+
+    /**
+     * Check if an interaction is valid for a character
+     * @param {Object} interaction - The interaction object
+     * @param {Object} character - The character
+     * @param {Object} worldState - The world state
+     * @returns {boolean} Whether the interaction is valid
+     * @private
+     */
+    _isInteractionValidForCharacter(interaction, character, worldState) {
+        // Check energy requirements
+        if (interaction.requirements?.energy && character.energy < interaction.requirements.energy) {
+            return false;
+        }
+
+        // Check wealth requirements
+        if (interaction.requirements?.wealth && (character.wealth || 0) < interaction.requirements.wealth) {
+            return false;
+        }
+
+        // Check health requirements (implicit)
+        if (interaction.type === 'combat' && character.health < 20) {
+            return false; // Too injured for combat
+        }
+
+        // Check location-specific requirements
+        if (interaction.type === 'trade' && !this._isTradeLocation(character.currentNodeId, worldState)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a location is suitable for trading
+     * @param {string} nodeId - Node ID to check
+     * @param {Object} worldState - World state
+     * @returns {boolean} Whether trading is possible here
+     * @private
+     */
+    _isTradeLocation(nodeId, worldState) {
+        const node = worldState.nodes?.find(n => n.id === nodeId);
+        if (!node) return false;
+
+        // Trading is possible in settlements or market nodes
+        return node.type === 'settlement' ||
+               node.environment?.hasMarket ||
+               node.name?.toLowerCase().includes('market');
+    }
+
+    /**
+     * Get specialist personality affinities for interactions
+     * @param {Object} interaction - Interaction object
+     * @param {string} profession - Character profession
+     * @returns {Object} Personality affinity mappings
+     */
+    _getSpecialistPersonalityAffinities(interaction, profession) {
+        const baseAffinities = this._getPersonalityAffinitiesForInteraction(interaction);
+
+        // Add profession-specific affinities
+        const professionAffinities = {
+            // Scholars prefer intellectual interactions
+            scholar: {
+                curiosity: interaction.type === 'research' ? 1.5 : 1.0,
+                empathy: interaction.type === 'teaching' ? 1.3 : 1.0,
+                aggression: interaction.type === 'debate' ? 1.2 : 0.8
+            },
+            // Merchants prefer economic interactions
+            merchant: {
+                social: interaction.type === 'trade' ? 1.5 : 1.0,
+                curiosity: interaction.type === 'negotiation' ? 1.3 : 1.0,
+                aggression: interaction.type === 'bargaining' ? 1.2 : 0.9
+            },
+            // Guards prefer security interactions
+            guard: {
+                aggression: interaction.type === 'patrol' ? 1.4 : 1.0,
+                social: interaction.type === 'community' ? 1.2 : 1.0,
+                empathy: interaction.type === 'protection' ? 1.3 : 1.0
+            },
+            // Healers prefer medical interactions
+            healer: {
+                empathy: interaction.type === 'treatment' ? 1.5 : 1.0,
+                curiosity: interaction.type === 'diagnosis' ? 1.4 : 1.0,
+                social: interaction.type === 'counseling' ? 1.3 : 1.0
+            }
+        };
+
+        const profAffinities = professionAffinities[profession] || {};
+        return { ...baseAffinities, ...profAffinities };
+    }
+
+    /**
+     * Get specialist attribute preferences for interactions
+     * @param {Object} interaction - Interaction object
+     * @param {string} profession - Character profession
+     * @returns {Object} Attribute preference mappings
+     */
+    _getSpecialistAttributePreferences(interaction, profession) {
+        const basePreferences = this._getAttributePreferenceForInteraction(interaction);
+
+        // Add profession-specific attribute preferences
+        const professionPreferences = {
+            scholar: {
+                intelligence: interaction.type === 'research' ? 1.5 : 1.0,
+                wisdom: interaction.type === 'teaching' ? 1.3 : 1.0,
+                charisma: interaction.type === 'debate' ? 1.2 : 1.0
+            },
+            merchant: {
+                charisma: interaction.type === 'trade' ? 1.4 : 1.0,
+                intelligence: interaction.type === 'negotiation' ? 1.3 : 1.0,
+                wisdom: interaction.type === 'assessment' ? 1.2 : 1.0
+            },
+            guard: {
+                strength: interaction.type === 'patrol' ? 1.3 : 1.0,
+                constitution: interaction.type === 'defense' ? 1.4 : 1.0,
+                wisdom: interaction.type === 'assessment' ? 1.2 : 1.0
+            },
+            healer: {
+                wisdom: interaction.type === 'diagnosis' ? 1.5 : 1.0,
+                dexterity: interaction.type === 'treatment' ? 1.3 : 1.0,
+                charisma: interaction.type === 'counseling' ? 1.2 : 1.0
+            }
+        };
+
+        const profPreferences = professionPreferences[profession] || {};
+        return { ...basePreferences, ...profPreferences };
+    }
+
+    /**
+     * Get specialist expected outcomes for interactions
+     * @param {Object} interaction - Interaction object
+     * @param {string} profession - Character profession
+     * @returns {Array} Expected outcomes
+     */
+    _getSpecialistOutcomes(interaction, profession) {
+        const baseOutcomes = this._getExpectedOutcomes(interaction);
+
+        // Add profession-specific outcomes
+        const professionOutcomes = {
+            scholar: ['knowledge_gain', 'reputation_boost', 'intellectual_satisfaction'],
+            merchant: ['wealth_gain', 'network_expansion', 'economic_satisfaction'],
+            guard: ['security_improvement', 'community_trust', 'professional_satisfaction'],
+            healer: ['health_improvement', 'gratitude', 'moral_satisfaction']
+        };
+
+        const profOutcomes = professionOutcomes[profession] || [];
+        return [...baseOutcomes, ...profOutcomes];
+    }
+
+    /**
+     * Validate if interaction is appropriate for specialist
+     * @param {Object} interaction - Interaction object
+     * @param {Object} character - Character object
+     * @param {Object} worldState - World state
+     * @returns {boolean} Whether interaction is valid
+     */
+    _isSpecialistInteractionValid(interaction, character, worldState) {
+        // Basic validation first
+        if (!this._isInteractionValidForCharacter(interaction, character, worldState)) {
+            return false;
+        }
+
+        // Specialist-specific validation
+        const profession = character.profession || 'general';
+
+        // Check if interaction type matches profession expertise
+        const professionInteractions = {
+            scholar: ['research', 'teaching', 'debate', 'study'],
+            merchant: ['trade', 'negotiation', 'bargaining', 'assessment'],
+            guard: ['patrol', 'defense', 'security', 'assessment'],
+            healer: ['treatment', 'diagnosis', 'counseling', 'care']
+        };
+
+        const validTypes = professionInteractions[profession] || [];
+        if (!validTypes.includes(interaction.type)) {
+            return false;
+        }
+
+        // Check profession-specific requirements
+        switch (profession) {
+            case 'merchant':
+                return this._isTradeLocation(character.currentNodeId || interaction.location, worldState);
+            case 'guard':
+                return interaction.type === 'patrol' || interaction.type === 'defense';
+            case 'healer':
+                return interaction.type === 'treatment' || interaction.type === 'diagnosis';
+            case 'scholar':
+                return interaction.type === 'research' || interaction.type === 'teaching';
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Get citizen personality affinities for interactions
+     * @param {Object} interaction - Interaction object
+     * @returns {Object} Personality affinity mappings
+     */
+    _getCitizenPersonalityAffinities(interaction) {
+        const baseAffinities = this._getPersonalityAffinitiesForInteraction(interaction);
+
+        // Citizens have more balanced, practical personality responses
+        const citizenAffinities = {
+            // Work activities appeal to responsible citizens
+            work: {
+                responsibility: 1.2,
+                discipline: 1.1,
+                patience: 1.0
+            },
+            // Economic activities appeal to practical citizens
+            economic: {
+                greed: 0.9,
+                social: 1.1,
+                responsibility: 1.0
+            },
+            // Social activities appeal to social citizens
+            social: {
+                social: 1.3,
+                empathy: 1.2,
+                charisma: 1.1
+            },
+            // Rest activities appeal to balanced citizens
+            rest: {
+                patience: 1.1,
+                discipline: 0.9,
+                responsibility: 0.8
+            }
+        };
+
+        const citizenAffinitiesForType = citizenAffinities[interaction.type] || {};
+        return { ...baseAffinities, ...citizenAffinitiesForType };
+    }
+
+    /**
+     * Get citizen attribute preferences for interactions
+     * @param {Object} interaction - Interaction object
+     * @returns {Object} Attribute preference mappings
+     */
+    _getCitizenAttributePreferences(interaction) {
+        const basePreferences = this._getAttributePreferenceForInteraction(interaction);
+
+        // Citizens value practical, everyday attributes
+        const citizenPreferences = {
+            work: {
+                constitution: 1.2, // Endurance for daily work
+                wisdom: 1.1, // Practical judgment
+                strength: 1.0 // Physical capability
+            },
+            economic: {
+                charisma: 1.2, // Dealing with people
+                intelligence: 1.1, // Basic math/trading
+                wisdom: 1.0 // Value assessment
+            },
+            social: {
+                charisma: 1.3, // Social skills
+                empathy: 1.2, // Understanding others
+                wisdom: 1.0 // Social judgment
+            },
+            rest: {
+                constitution: 1.1, // Recovery ability
+                wisdom: 1.0, // Self-care judgment
+                patience: 0.9 // Ability to relax
+            }
+        };
+
+        const citizenPreferencesForType = citizenPreferences[interaction.type] || {};
+        return { ...basePreferences, ...citizenPreferencesForType };
+    }
+
+    /**
+     * Get citizen expected outcomes for interactions
+     * @param {Object} interaction - Interaction object
+     * @returns {Array} Expected outcomes
+     */
+    _getCitizenOutcomes(interaction) {
+        const baseOutcomes = this._getExpectedOutcomes(interaction);
+
+        // Citizens focus on practical, daily life outcomes
+        const citizenOutcomes = {
+            work: ['income', 'daily_satisfaction', 'community_contribution'],
+            economic: ['financial_security', 'basic_needs_met', 'economic_stability'],
+            social: ['social_connections', 'emotional_support', 'community_belonging'],
+            rest: ['energy_recovery', 'stress_relief', 'daily_balance']
+        };
+
+        const citizenOutcomesForType = citizenOutcomes[interaction.type] || [];
+        return [...baseOutcomes, ...citizenOutcomesForType];
+    }
+
+    /**
+     * Validate if interaction is appropriate for citizen
+     * @param {Object} interaction - Interaction object
+     * @param {Object} character - Character object
+     * @param {Object} worldState - World state
+     * @returns {boolean} Whether interaction is valid
+     */
+    _isCitizenInteractionValid(interaction, character, worldState) {
+        // Basic validation first
+        if (!this._isInteractionValidForCharacter(interaction, character, worldState)) {
+            return false;
+        }
+
+        // Citizen-specific validation - more permissive than specialists
+        const basicNeeds = this._assessBasicNeeds(character);
+
+        // Critical needs override other restrictions
+        if (basicNeeds.critical.length > 0) {
+            const addressesCriticalNeed = basicNeeds.critical.some(need =>
+                this._interactionAddressesNeed(interaction, need)
+            );
+            if (addressesCriticalNeed) {
+                return true;
+            }
+        }
+
+        // Check time-of-day appropriateness for citizens
+        const currentHour = new Date().getHours();
+        const isWorkHours = currentHour >= 6 && currentHour <= 18;
+
+        if (interaction.type === 'work' && !isWorkHours) {
+            return false; // Work only during work hours
+        }
+
+        if (interaction.type === 'rest' && isWorkHours && basicNeeds.critical.length === 0) {
+            return false; // Rest less likely during work hours unless critical needs
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if an interaction addresses a specific need
+     * @param {Object} interaction - Interaction object
+     * @param {string} need - Need type
+     * @returns {boolean} Whether interaction addresses the need
+     */
+    _interactionAddressesNeed(interaction, need) {
+        const needMappings = {
+            hunger: ['economic', 'work', 'rest'],
+            fatigue: ['rest'],
+            injury: ['rest', 'social'],
+            poverty: ['work', 'economic'],
+            loneliness: ['social']
+        };
+
+        return needMappings[need]?.includes(interaction.type) || false;
+    }
+
+    /**
+     * Assess basic needs for a character
+     * @param {Object} character - Character to assess
+     * @returns {Object} Basic needs assessment
+     */
+    _assessBasicNeeds(character) {
+        const needs = {
+            critical: [],
+            moderate: [],
+            satisfied: []
+        };
+
+        // Check energy/fatigue
+        if (character.energy < 20) {
+            needs.critical.push('fatigue');
+        } else if (character.energy < 50) {
+            needs.moderate.push('fatigue');
+        } else {
+            needs.satisfied.push('fatigue');
+        }
+
+        // Check health/injury
+        if (character.health < 30) {
+            needs.critical.push('injury');
+        } else if (character.health < 70) {
+            needs.moderate.push('injury');
+        } else {
+            needs.satisfied.push('injury');
+        }
+
+        // Check wealth/poverty (if available)
+        if (character.wealth !== undefined) {
+            if (character.wealth < 5) {
+                needs.critical.push('poverty');
+            } else if (character.wealth < 20) {
+                needs.moderate.push('poverty');
+            } else {
+                needs.satisfied.push('poverty');
+            }
+        }
+
+        // Check social needs (if available)
+        if (character.social !== undefined) {
+            if (character.social < 20) {
+                needs.critical.push('loneliness');
+            } else if (character.social < 50) {
+                needs.moderate.push('loneliness');
+            } else {
+                needs.satisfied.push('loneliness');
+            }
+        }
+
+        return needs;
     }
 }
 

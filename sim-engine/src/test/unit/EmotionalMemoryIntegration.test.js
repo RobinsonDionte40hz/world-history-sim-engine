@@ -5,7 +5,7 @@
  * with the existing memory service and consciousness system.
  */
 
-import EmotionalUtils from '../../shared/utils/EmotionalUtils.js';
+import * as EmotionalUtils from '../../shared/utils/EmotionalUtils.js';
 
 describe('Emotional Memory Integration', () => {
   let mockCharacter, mockEvent, mockEmotionalState;
