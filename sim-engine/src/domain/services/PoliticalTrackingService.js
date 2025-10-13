@@ -148,15 +148,25 @@ export class PoliticalTrackingService extends BaseDomainService {
    * @returns {Array} Array of PoliticalRelationship objects
    */
   getSettlementDiplomaticRelationships(settlementId) {
-    const relationships = [];
-
-    for (const relationship of this.diplomaticRelationships.values()) {
-      if (relationship.settlement1Id === settlementId || relationship.settlement2Id === settlementId) {
-        relationships.push(relationship);
+    try {
+      if (!settlementId) {
+        console.warn('PoliticalTrackingService: No settlement ID provided for diplomatic relationships');
+        return [];
       }
-    }
 
-    return relationships;
+      const relationships = [];
+
+      for (const relationship of this.diplomaticRelationships.values()) {
+        if (relationship.settlement1Id === settlementId || relationship.settlement2Id === settlementId) {
+          relationships.push(relationship);
+        }
+      }
+
+      return relationships;
+    } catch (error) {
+      console.warn(`PoliticalTrackingService: Error retrieving diplomatic relationships for settlement ${settlementId}:`, error);
+      return [];
+    }
   }
 
   /**
@@ -461,5 +471,138 @@ export class PoliticalTrackingService extends BaseDomainService {
    */
   _setMetadata(key, value) {
     // In a real implementation, this would persist metadata
+  }
+
+  /**
+   * Get political history for a settlement with fallback for missing data
+   * @param {string} settlementId - Settlement ID
+   * @returns {Array} Political events array (empty array if no data)
+   */
+  getSettlementPoliticalHistory(settlementId) {
+    try {
+      if (!settlementId) {
+        console.warn('PoliticalTrackingService: No settlement ID provided for political history');
+        return [];
+      }
+
+      const events = [];
+      for (const [, event] of this.politicalEvents) {
+        if (event.settlementId === settlementId) {
+          events.push(event);
+        }
+      }
+
+      // Sort by timestamp (most recent first)
+      return events.sort((a, b) => b.timestamp - a.timestamp);
+    } catch (error) {
+      console.warn(`PoliticalTrackingService: Error retrieving political history for settlement ${settlementId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get leadership history for a settlement with fallback for missing data
+   * @param {string} settlementId - Settlement ID
+   * @returns {Array} Leadership records array (empty array if no data)
+   */
+  getSettlementLeadershipHistory(settlementId) {
+    try {
+      if (!settlementId) {
+        console.warn('PoliticalTrackingService: No settlement ID provided for leadership history');
+        return [];
+      }
+
+      const history = this.leadershipHistory.get(settlementId);
+      return history || [];
+    } catch (error) {
+      console.warn(`PoliticalTrackingService: Error retrieving leadership history for settlement ${settlementId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get current leader for a settlement with fallback for missing data
+   * @param {string} settlementId - Settlement ID
+   * @returns {Object|null} Current leader information or null if no data
+   */
+  getCurrentLeader(settlementId) {
+    try {
+      if (!settlementId) {
+        console.warn('PoliticalTrackingService: No settlement ID provided for current leader');
+        return null;
+      }
+
+      const history = this.getSettlementLeadershipHistory(settlementId);
+      if (history.length === 0) {
+        return null;
+      }
+
+      // Get the most recent leadership change
+      const mostRecent = history.sort((a, b) => b.timestamp - a.timestamp)[0];
+      return {
+        leaderId: mostRecent.newLeaderId,
+        eventId: mostRecent.eventId,
+        timestamp: mostRecent.timestamp,
+        reason: mostRecent.reason
+      };
+    } catch (error) {
+      console.warn(`PoliticalTrackingService: Error retrieving current leader for settlement ${settlementId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if political tracking is available (graceful degradation check)
+   * @returns {boolean} True if political tracking is functional
+   */
+  isPoliticalTrackingAvailable() {
+    // Simple availability check - could be expanded to check dependencies
+    return true;
+  }
+
+  /**
+   * Safely record a political event with error handling
+   * @param {string} eventType - Type of political event
+   * @param {Object} settlement - Settlement involved
+   * @param {Object} data - Event data
+   * @returns {boolean} True if event was recorded successfully
+   */
+  safeRecordPoliticalEvent(eventType, settlement, data = {}) {
+    try {
+      if (!this.isPoliticalTrackingAvailable()) {
+        console.warn('PoliticalTrackingService: Political tracking not available, skipping event recording');
+        return false;
+      }
+
+      switch (eventType) {
+        case 'leadership_change':
+          if (data.oldLeader && data.newLeader) {
+            this.recordLeadershipChange(settlement, data.oldLeader, data.newLeader, data.reason, data.metadata);
+            return true;
+          }
+          break;
+        case 'policy_change':
+          if (data.policy && data.initiator) {
+            this.recordPolicyChange(settlement, data.policy, data.initiator, data.metadata);
+            return true;
+          }
+          break;
+        case 'diplomatic_change':
+          if (data.settlementA && data.settlementB) {
+            this.recordDiplomaticChange(data.settlementA, data.settlementB, data.newStatus, data.reason, data.metadata);
+            return true;
+          }
+          break;
+        default:
+          console.warn(`PoliticalTrackingService: Unknown event type '${eventType}', skipping`);
+          return false;
+      }
+
+      console.warn(`PoliticalTrackingService: Insufficient data for ${eventType} event, skipping`);
+      return false;
+    } catch (error) {
+      console.warn(`PoliticalTrackingService: Error recording ${eventType} event:`, error);
+      return false;
+    }
   }
 }

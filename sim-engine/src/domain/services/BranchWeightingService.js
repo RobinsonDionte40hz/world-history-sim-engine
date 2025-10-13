@@ -582,25 +582,110 @@ class BranchWeightingService extends BaseDomainService {
     }
 
     /**
-     * Handle selection errors
-     * @param {Error} error - The error that occurred
-     * @param {Object} context - Error context
-     * @returns {Object} Error handling result
+     * Select branch with default behavior when personality weighting is unavailable
+     * @param {Object} character - Character making the choice (may be null)
+     * @param {Array<Object>} branches - Array of branch objects
+     * @param {Object} context - Selection context
+     * @returns {Object} Selected branch result using default selection
      */
-    handleSelectionError(error, context) {
-        if (this.logger) {
-            this.logger.error(`BranchWeightingService selection error: ${error.message}`, context);
+    selectBranchWithFallback(character, branches, context = {}) {
+        try {
+            // First try personality-weighted selection
+            if (character && character.personality) {
+                return this.selectWeightedBranch(character, branches, context, 'personality_driven');
+            }
+        } catch (error) {
+            console.warn('BranchWeightingService: Personality weighting failed, using fallback:', error.message);
         }
 
-        if (this.errorHandler) {
-            return this.errorHandler.handleCalculationFailure(error, {
-                service: 'BranchWeightingService',
-                operation: 'selectWeightedBranch',
-                ...context
-            });
+        // Fallback: Use balanced selection if available
+        try {
+            return this.selectWeightedBranch(character, branches, context, 'balanced');
+        } catch (error) {
+            console.warn('BranchWeightingService: Balanced selection failed, using random fallback:', error.message);
         }
 
-        return { fallback: true, error: error.message };
+        // Final fallback: Pure random selection
+        return this._selectRandomBranch(branches, context);
+    }
+
+    /**
+     * Pure random branch selection as final fallback
+     * @param {Array<Object>} branches - Array of branch objects
+     * @param {Object} context - Selection context
+     * @returns {Object} Randomly selected branch result
+     * @private
+     */
+    _selectRandomBranch(branches, context = {}) {
+        if (!Array.isArray(branches) || branches.length === 0) {
+            throw new Error('No branches available for selection');
+        }
+
+        const randomIndex = Math.floor(Math.random() * branches.length);
+        const selectedBranch = branches[randomIndex];
+
+        return {
+            branch: selectedBranch,
+            weight: 1.0,
+            selectionMethod: 'fallback_random',
+            reason: 'Personality weighting unavailable, using random selection',
+            weightBreakdown: {
+                finalWeight: 1.0,
+                componentWeights: {
+                    personality: 1.0,
+                    alignment: 1.0,
+                    attributes: 1.0,
+                    consciousness: 1.0,
+                    memory: 1.0,
+                    prestige: 1.0,
+                    emotional: 1.0,
+                    consistency: 1.0
+                },
+                behavioralModifiers: {
+                    overallModifier: 1.0,
+                    personalityModifier: 1.0,
+                    consciousnessModifier: 1.0,
+                    memoryModifier: 1.0
+                },
+                detailedBreakdown: {
+                    fallback: true,
+                    reason: 'personality_weighting_unavailable'
+                }
+            }
+        };
+    }
+
+    /**
+     * Check if personality weighting is available for a character
+     * @param {Object} character - Character to check
+     * @returns {boolean} True if personality weighting can be used
+     */
+    isPersonalityWeightingAvailable(character) {
+        try {
+            return character &&
+                   character.personality &&
+                   typeof character.personality === 'object' &&
+                   Object.keys(character.personality).length > 0;
+        } catch (error) {
+            console.warn('BranchWeightingService: Error checking personality weighting availability:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get default branch selection method when personality weighting is unavailable
+     * @param {Object} character - Character making the choice
+     * @param {Array<Object>} branches - Available branches
+     * @returns {string} Default selection method name
+     */
+    getDefaultSelectionMethod(character, branches) {
+        // If personality weighting is available, use it
+        if (this.isPersonalityWeightingAvailable(character)) {
+            return 'personality_driven';
+        }
+
+        // Otherwise, use balanced selection as default
+        return 'balanced';
     }
 }
 

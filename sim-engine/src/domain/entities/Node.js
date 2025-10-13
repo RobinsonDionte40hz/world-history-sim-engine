@@ -247,10 +247,14 @@ class Node {
   }
 
   /**
-   * Get the node type profile
-   * @returns {NodeTypeProfile|null} The node's type profile
+   * Get the node type profile, with fallback for backward compatibility
+   * @returns {NodeTypeProfile|null} The node type profile
    */
   getTypeProfile() {
+    if (!this.typeProfile && this.nodeTypeService) {
+      // Try to get or create a fallback type profile
+      this.typeProfile = this.nodeTypeService.getNodeTypeWithFallback(this.type, this.type);
+    }
     return this.typeProfile;
   }
 
@@ -260,7 +264,15 @@ class Node {
    * @returns {boolean} True if the node has the capability
    */
   hasCapability(capability) {
-    return this.typeProfile ? this.typeProfile.hasCapability(capability) : false;
+    // If type profile exists, use it
+    if (this.typeProfile) {
+      return this.typeProfile.hasCapability(capability);
+    }
+
+    // Fallback behavior for nodes without type profiles (backward compatibility)
+    // Default to basic capabilities based on node type
+    const defaultCapabilities = this._getDefaultCapabilities();
+    return defaultCapabilities.includes(capability);
   }
 
   /**
@@ -268,7 +280,74 @@ class Node {
    * @returns {string[]} Array of capability names
    */
   getCapabilities() {
-    return this.typeProfile ? this.typeProfile.getCapabilities() : [];
+    if (this.typeProfile) {
+      return this.typeProfile.getCapabilities();
+    }
+
+    // Fallback behavior for backward compatibility
+    return this._getDefaultCapabilities();
+  }
+
+  /**
+   * Get default capabilities for nodes without type profiles
+   * @private
+   * @returns {string[]} Array of default capability names
+   */
+  _getDefaultCapabilities() {
+    // Provide backward-compatible default capabilities based on node type
+    const baseCapabilities = [
+      'canHaveContentInteractions',
+      'canHaveEnvironmentalEffects',
+      'canHostEvents'
+    ];
+
+    // Add type-specific capabilities for common node types
+    switch (this.type) {
+      case 'settlement':
+        return [
+          ...baseCapabilities,
+          'canHaveEconomy',
+          'canProduceResources',
+          'canConsumeResources',
+          'canHaveMarkets',
+          'canTrade',
+          'canHaveGovernment',
+          'canHaveLeadership',
+          'canHaveDiplomacy',
+          'canHavePopulation',
+          'canHaveCulture',
+          'canHaveBuildings',
+          'canHaveInfrastructure',
+          'canBeDeveloped'
+        ];
+
+      case 'resource':
+        return [
+          ...baseCapabilities,
+          'canProduceResources',
+          'canHaveInfrastructure',
+          'canBeDeveloped'
+        ];
+
+      case 'wilderness':
+        return [
+          ...baseCapabilities,
+          'canProduceResources'
+        ];
+
+      case 'landmark':
+      case 'sacred':
+        return [
+          ...baseCapabilities,
+          'canHaveSpecialMechanics',
+          'canInfluenceNeighbors',
+          'canHaveReligion'
+        ];
+
+      default:
+        // Generic location node - minimal capabilities
+        return baseCapabilities;
+    }
   }
 
   /**
@@ -277,8 +356,14 @@ class Node {
    * @returns {boolean} True if can produce this resource type
    */
   canProduceResource(resourceType) {
-    return this.resourceProduction.canProduce &&
-           this.resourceProduction.productionTypes.includes(resourceType);
+    // If type profile exists, use it
+    if (this.typeProfile) {
+      return this.resourceProduction.canProduce &&
+             this.resourceProduction.productionTypes.includes(resourceType);
+    }
+
+    // Fallback behavior for backward compatibility
+    return this._canProduceResourceByDefault(resourceType);
   }
 
   /**
@@ -287,8 +372,50 @@ class Node {
    * @returns {boolean} True if can consume this resource type
    */
   canConsumeResource(resourceType) {
-    return this.resourceConsumption.canConsume &&
-           this.resourceConsumption.consumptionTypes.includes(resourceType);
+    // If type profile exists, use it
+    if (this.typeProfile) {
+      return this.resourceConsumption.canConsume &&
+             this.resourceConsumption.consumptionTypes.includes(resourceType);
+    }
+
+    // Fallback behavior for backward compatibility
+    return this._canConsumeResourceByDefault(resourceType);
+  }
+
+  /**
+   * Default resource production capability for nodes without type profiles
+   * @private
+   * @param {string} resourceType - Type of resource
+   * @returns {boolean} True if can produce by default
+   */
+  _canProduceResourceByDefault(resourceType) {
+    // Provide backward-compatible defaults based on node type
+    switch (this.type) {
+      case 'settlement':
+        return ['food', 'water', 'materials', 'goods', 'services'].includes(resourceType);
+      case 'resource':
+        return ['food', 'water', 'materials', 'minerals', 'energy'].includes(resourceType);
+      case 'wilderness':
+        return ['food', 'water', 'materials'].includes(resourceType);
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Default resource consumption capability for nodes without type profiles
+   * @private
+   * @param {string} resourceType - Type of resource
+   * @returns {boolean} True if can consume by default
+   */
+  _canConsumeResourceByDefault(resourceType) {
+    // Provide backward-compatible defaults based on node type
+    switch (this.type) {
+      case 'settlement':
+        return ['food', 'water', 'materials', 'goods', 'services'].includes(resourceType);
+      default:
+        return false;
+    }
   }
 
   /**
@@ -296,7 +423,13 @@ class Node {
    * @returns {string} Economic complexity ('none', 'minimal', 'moderate', 'full')
    */
   getEconomicComplexity() {
-    return this.economicCapabilities.economicComplexity || 'none';
+    // If type profile exists, use it
+    if (this.typeProfile) {
+      return this.economicCapabilities.economicComplexity || 'none';
+    }
+
+    // Fallback behavior for backward compatibility
+    return this._getDefaultEconomicComplexity();
   }
 
   /**
@@ -304,7 +437,44 @@ class Node {
    * @returns {string} Political complexity ('none', 'minimal', 'moderate', 'full')
    */
   getPoliticalComplexity() {
-    return this.politicalCapabilities.politicalComplexity || 'none';
+    // If type profile exists, use it
+    if (this.typeProfile) {
+      return this.politicalCapabilities.politicalComplexity || 'none';
+    }
+
+    // Fallback behavior for backward compatibility
+    return this._getDefaultPoliticalComplexity();
+  }
+
+  /**
+   * Get default economic complexity for nodes without type profiles
+   * @private
+   * @returns {string} Default economic complexity
+   */
+  _getDefaultEconomicComplexity() {
+    switch (this.type) {
+      case 'settlement':
+        return 'full';
+      case 'resource':
+      case 'wilderness':
+        return 'minimal';
+      default:
+        return 'none';
+    }
+  }
+
+  /**
+   * Get default political complexity for nodes without type profiles
+   * @private
+   * @returns {string} Default political complexity
+   */
+  _getDefaultPoliticalComplexity() {
+    switch (this.type) {
+      case 'settlement':
+        return 'full';
+      default:
+        return 'none';
+    }
   }
 
   /**
@@ -328,16 +498,26 @@ class Node {
    * @param {Object} production - Production amounts by resource type
    */
   updateResourceProduction(production) {
-    if (!this.resourceProduction.canProduce) {
+    // Check if production is allowed (with fallback for backward compatibility)
+    const canProduce = this.typeProfile ?
+      this.resourceProduction.canProduce :
+      this._canProduceByDefault();
+
+    if (!canProduce) {
       return;
     }
 
     this.resourceProduction.currentProduction = { ...production };
 
+    // Get production capacity (with fallback)
+    const capacity = this.typeProfile ?
+      this.resourceProduction.productionCapacity :
+      this._getDefaultProductionCapacity();
+
     // Cap production at capacity
     const totalProduction = Object.values(production).reduce((sum, amount) => sum + amount, 0);
-    if (totalProduction > this.resourceProduction.productionCapacity) {
-      const scaleFactor = this.resourceProduction.productionCapacity / totalProduction;
+    if (totalProduction > capacity) {
+      const scaleFactor = capacity / totalProduction;
       for (const resourceType in this.resourceProduction.currentProduction) {
         this.resourceProduction.currentProduction[resourceType] *= scaleFactor;
       }
@@ -349,19 +529,86 @@ class Node {
    * @param {Object} consumption - Consumption amounts by resource type
    */
   updateResourceConsumption(consumption) {
-    if (!this.resourceConsumption.canConsume) {
+    // Check if consumption is allowed (with fallback for backward compatibility)
+    const canConsume = this.typeProfile ?
+      this.resourceConsumption.canConsume :
+      this._canConsumeByDefault();
+
+    if (!canConsume) {
       return;
     }
 
     this.resourceConsumption.currentConsumption = { ...consumption };
 
+    // Get consumption capacity (with fallback)
+    const capacity = this.typeProfile ?
+      this.resourceConsumption.consumptionCapacity :
+      this._getDefaultConsumptionCapacity();
+
     // Cap consumption at capacity
     const totalConsumption = Object.values(consumption).reduce((sum, amount) => sum + amount, 0);
-    if (totalConsumption > this.resourceConsumption.consumptionCapacity) {
-      const scaleFactor = this.resourceConsumption.consumptionCapacity / totalConsumption;
+    if (totalConsumption > capacity) {
+      const scaleFactor = capacity / totalConsumption;
       for (const resourceType in this.resourceConsumption.currentConsumption) {
         this.resourceConsumption.currentConsumption[resourceType] *= scaleFactor;
       }
+    }
+  }
+
+  /**
+   * Check if this node can produce resources by default (fallback)
+   * @private
+   * @returns {boolean} True if can produce by default
+   */
+  _canProduceByDefault() {
+    switch (this.type) {
+      case 'settlement':
+      case 'resource':
+      case 'wilderness':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Check if this node can consume resources by default (fallback)
+   * @private
+   * @returns {boolean} True if can consume by default
+   */
+  _canConsumeByDefault() {
+    return this.type === 'settlement';
+  }
+
+  /**
+   * Get default production capacity for nodes without type profiles
+   * @private
+   * @returns {number} Default production capacity
+   */
+  _getDefaultProductionCapacity() {
+    switch (this.type) {
+      case 'settlement':
+        return 100;
+      case 'resource':
+        return 50;
+      case 'wilderness':
+        return 10;
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Get default consumption capacity for nodes without type profiles
+   * @private
+   * @returns {number} Default consumption capacity
+   */
+  _getDefaultConsumptionCapacity() {
+    switch (this.type) {
+      case 'settlement':
+        return 100;
+      default:
+        return 0;
     }
   }
 

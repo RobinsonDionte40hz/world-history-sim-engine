@@ -282,12 +282,303 @@ class NodeTypeService {
   }
 
   /**
-   * Get a node type profile by ID
+   * Get a node type profile by ID with fallback for backward compatibility
    * @param {string} typeId - The node type ID
    * @returns {NodeTypeProfile|null} The node type profile or null if not found
    */
   getNodeType(typeId) {
     return this.nodeTypes.get(typeId) || null;
+  }
+
+  /**
+   * Get a node type profile by ID with automatic fallback creation for backward compatibility
+   * @param {string} typeId - The node type ID
+   * @param {string} nodeType - The legacy node type for fallback creation
+   * @returns {NodeTypeProfile} The node type profile (never null)
+   */
+  getNodeTypeWithFallback(typeId, nodeType = 'location') {
+    // Try to get existing type profile
+    let typeProfile = this.getNodeType(typeId);
+    if (typeProfile) {
+      return typeProfile;
+    }
+
+    // Create fallback type profile for backward compatibility
+    return this._createFallbackTypeProfile(typeId, nodeType);
+  }
+
+  /**
+   * Create a fallback type profile for backward compatibility
+   * @private
+   * @param {string} typeId - The type ID to create
+   * @param {string} nodeType - The legacy node type
+   * @returns {NodeTypeProfile} The created fallback type profile
+   */
+  _createFallbackTypeProfile(typeId, nodeType) {
+    // Create a basic fallback profile based on legacy node type
+    const fallbackConfig = this._getFallbackConfigForNodeType(nodeType);
+
+    try {
+      const fallbackProfile = new NodeTypeProfile({
+        id: typeId,
+        name: fallbackConfig.name,
+        description: fallbackConfig.description,
+        type: nodeType,
+        capabilities: fallbackConfig.capabilities,
+        resourceProfile: fallbackConfig.resourceProfile,
+        economicCapabilities: fallbackConfig.economicCapabilities,
+        politicalCapabilities: fallbackConfig.politicalCapabilities,
+        socialCapabilities: fallbackConfig.socialCapabilities
+      });
+
+      // Register the fallback profile for future use
+      this.registerNodeType(fallbackProfile);
+
+      console.warn(`NodeTypeService: Created fallback type profile for '${typeId}' based on legacy node type '${nodeType}'. Consider defining a proper type profile.`);
+
+      return fallbackProfile;
+    } catch (error) {
+      console.error(`NodeTypeService: Failed to create fallback type profile for '${typeId}':`, error);
+      // Return a minimal fallback that won't break functionality
+      return this._getMinimalFallbackProfile(typeId);
+    }
+  }
+
+  /**
+   * Get fallback configuration for a legacy node type
+   * @private
+   * @param {string} nodeType - The legacy node type
+   * @returns {Object} Fallback configuration
+   */
+  _getFallbackConfigForNodeType(nodeType) {
+    switch (nodeType) {
+      case 'settlement':
+        return {
+          name: 'Legacy Settlement',
+          description: 'Automatically created fallback profile for legacy settlement nodes',
+          capabilities: new NodeTypeCapabilities({
+            canHaveEconomy: true,
+            canProduceResources: true,
+            canConsumeResources: true,
+            canHaveMarkets: true,
+            canTrade: true,
+            canHaveGovernment: true,
+            canHaveLeadership: true,
+            canHaveDiplomacy: true,
+            canHavePopulation: true,
+            canHaveCulture: true,
+            canHaveBuildings: true,
+            canHaveInfrastructure: true,
+            canBeDeveloped: true,
+            canHaveContentInteractions: true,
+            canHaveEnvironmentalEffects: true,
+            canHostEvents: true
+          }),
+          resourceProfile: {
+            canProduce: true,
+            canConsume: true,
+            productionTypes: ['food', 'water', 'materials', 'goods', 'services'],
+            consumptionTypes: ['food', 'water', 'materials', 'goods', 'services'],
+            productionCapacity: 100,
+            consumptionCapacity: 100
+          },
+          economicCapabilities: {
+            hasMarkets: true,
+            hasTrade: true,
+            hasTaxation: true,
+            hasBanking: true,
+            economicComplexity: 'full'
+          },
+          politicalCapabilities: {
+            hasGovernment: true,
+            hasLeadership: true,
+            hasDiplomacy: true,
+            hasLaws: true,
+            politicalComplexity: 'full'
+          },
+          socialCapabilities: {
+            hasPopulation: true,
+            hasCulture: true,
+            hasEducation: true,
+            hasReligion: true,
+            socialComplexity: 'full'
+          }
+        };
+
+      case 'resource':
+        return {
+          name: 'Legacy Resource Node',
+          description: 'Automatically created fallback profile for legacy resource nodes',
+          capabilities: new NodeTypeCapabilities({
+            canProduceResources: true,
+            canHaveInfrastructure: true,
+            canBeDeveloped: true,
+            canHaveContentInteractions: true,
+            canHaveEnvironmentalEffects: true,
+            canHostEvents: false
+          }),
+          resourceProfile: {
+            canProduce: true,
+            canConsume: false,
+            productionTypes: ['food', 'water', 'materials', 'minerals', 'energy'],
+            consumptionTypes: [],
+            productionCapacity: 50,
+            consumptionCapacity: 0
+          },
+          economicCapabilities: {
+            hasMarkets: false,
+            hasTrade: false,
+            hasTaxation: false,
+            hasBanking: false,
+            economicComplexity: 'minimal'
+          },
+          politicalCapabilities: {
+            hasGovernment: false,
+            hasLeadership: false,
+            hasDiplomacy: false,
+            hasLaws: false,
+            politicalComplexity: 'none'
+          },
+          socialCapabilities: {
+            hasPopulation: false,
+            hasCulture: false,
+            hasEducation: false,
+            hasReligion: false,
+            socialComplexity: 'none'
+          }
+        };
+
+      case 'wilderness':
+        return {
+          name: 'Legacy Wilderness',
+          description: 'Automatically created fallback profile for legacy wilderness nodes',
+          capabilities: new NodeTypeCapabilities({
+            canProduceResources: true,
+            canHaveEnvironmentalEffects: true,
+            canHaveContentInteractions: true,
+            canHostEvents: true
+          }),
+          resourceProfile: {
+            canProduce: true,
+            canConsume: false,
+            productionTypes: ['food', 'water', 'materials'],
+            consumptionTypes: [],
+            productionCapacity: 10,
+            consumptionCapacity: 0
+          },
+          economicCapabilities: {
+            hasMarkets: false,
+            hasTrade: false,
+            hasTaxation: false,
+            hasBanking: false,
+            economicComplexity: 'minimal'
+          },
+          politicalCapabilities: {
+            hasGovernment: false,
+            hasLeadership: false,
+            hasDiplomacy: false,
+            hasLaws: false,
+            politicalComplexity: 'none'
+          },
+          socialCapabilities: {
+            hasPopulation: false,
+            hasCulture: false,
+            hasEducation: false,
+            hasReligion: false,
+            socialComplexity: 'minimal'
+          }
+        };
+
+      default:
+        // Generic location fallback
+        return {
+          name: 'Legacy Location',
+          description: 'Automatically created fallback profile for legacy location nodes',
+          capabilities: new NodeTypeCapabilities({
+            canHaveContentInteractions: true,
+            canHaveEnvironmentalEffects: true,
+            canHostEvents: true
+          }),
+          resourceProfile: {
+            canProduce: false,
+            canConsume: false,
+            productionTypes: [],
+            consumptionTypes: [],
+            productionCapacity: 0,
+            consumptionCapacity: 0
+          },
+          economicCapabilities: {
+            hasMarkets: false,
+            hasTrade: false,
+            hasTaxation: false,
+            hasBanking: false,
+            economicComplexity: 'none'
+          },
+          politicalCapabilities: {
+            hasGovernment: false,
+            hasLeadership: false,
+            hasDiplomacy: false,
+            hasLaws: false,
+            politicalComplexity: 'none'
+          },
+          socialCapabilities: {
+            hasPopulation: false,
+            hasCulture: false,
+            hasEducation: false,
+            hasReligion: false,
+            socialComplexity: 'none'
+          }
+        };
+    }
+  }
+
+  /**
+   * Get a minimal fallback profile when creation fails
+   * @private
+   * @param {string} typeId - The type ID
+   * @returns {NodeTypeProfile} Minimal fallback profile
+   */
+  _getMinimalFallbackProfile(typeId) {
+    return new NodeTypeProfile({
+      id: typeId,
+      name: 'Minimal Fallback',
+      description: 'Minimal fallback profile for compatibility',
+      type: 'location',
+      capabilities: new NodeTypeCapabilities({
+        canHaveContentInteractions: true,
+        canHaveEnvironmentalEffects: true,
+        canHostEvents: true
+      }),
+      resourceProfile: {
+        canProduce: false,
+        canConsume: false,
+        productionTypes: [],
+        consumptionTypes: [],
+        productionCapacity: 0,
+        consumptionCapacity: 0
+      },
+      economicCapabilities: {
+        hasMarkets: false,
+        hasTrade: false,
+        hasTaxation: false,
+        hasBanking: false,
+        economicComplexity: 'none'
+      },
+      politicalCapabilities: {
+        hasGovernment: false,
+        hasLeadership: false,
+        hasDiplomacy: false,
+        hasLaws: false,
+        politicalComplexity: 'none'
+      },
+      socialCapabilities: {
+        hasPopulation: false,
+        hasCulture: false,
+        hasEducation: false,
+        hasReligion: false,
+        socialComplexity: 'none'
+      }
+    });
   }
 
   /**

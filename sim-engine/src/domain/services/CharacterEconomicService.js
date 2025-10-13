@@ -886,4 +886,292 @@ export default class CharacterEconomicService extends BaseDomainService {
 
     return effects;
   }
+
+  /**
+   * Check if economic service is available (graceful degradation check)
+   * @returns {boolean} True if economic service is functional
+   */
+  static isEconomicServiceAvailable() {
+    // Simple availability check - could be expanded to check dependencies
+    return true;
+  }
+
+  /**
+   * Safely get available investments with fallback for missing economic data
+   * @param {Object} character - Character object
+   * @returns {Array} Array of available investment types (fallback to basic if no data)
+   */
+  static safeGetAvailableInvestments(character) {
+    try {
+      if (!character) {
+        console.warn('CharacterEconomicService: No character provided for available investments');
+        return this._getBasicFallbackInvestments();
+      }
+
+      // Try to use existing method
+      const result = this.getAvailableInvestments(character);
+      if (result && result.data) {
+        return result.data;
+      }
+
+      // Fallback to basic investments
+      console.warn('CharacterEconomicService: Existing method failed, using fallback');
+      return this._getBasicFallbackInvestments();
+    } catch (error) {
+      console.warn('CharacterEconomicService: Error getting available investments, using fallback:', error);
+      return this._getBasicFallbackInvestments();
+    }
+  }
+
+  /**
+   * Safely analyze portfolio with fallback for missing data
+   * @param {Object} character - Character object
+   * @returns {Object} Portfolio analysis (fallback object if no data)
+   */
+  static safeAnalyzePortfolio(character) {
+    try {
+      if (!character) {
+        console.warn('CharacterEconomicService: No character provided for portfolio analysis');
+        return this._getEmptyPortfolioAnalysis();
+      }
+
+      // Try to use existing method
+      const result = this.analyzePortfolio(character);
+      if (result && result.data) {
+        return result.data;
+      }
+
+      // Fallback analysis
+      console.warn('CharacterEconomicService: Existing analysis failed, using fallback');
+      return this._getEmptyPortfolioAnalysis();
+    } catch (error) {
+      console.warn('CharacterEconomicService: Error analyzing portfolio, using fallback:', error);
+      return this._getEmptyPortfolioAnalysis();
+    }
+  }
+
+  /**
+   * Safely calculate affordable amount with fallback
+   * @param {Object} character - Character object
+   * @param {string} investmentType - Type of investment
+   * @returns {number} Affordable amount (0 if no data)
+   */
+  static safeCalculateAffordableAmount(character, investmentType) {
+    try {
+      if (!character) {
+        console.warn('CharacterEconomicService: No character provided for affordable amount calculation');
+        return 0;
+      }
+
+      // Try to use existing method
+      const result = this.calculateAffordableAmount(character, investmentType);
+      if (typeof result === 'number' && result >= 0) {
+        return result;
+      }
+
+      // Fallback calculation
+      console.warn('CharacterEconomicService: Existing calculation failed, using fallback');
+      return this._calculateFallbackAffordableAmount(character, investmentType);
+    } catch (error) {
+      console.warn('CharacterEconomicService: Error calculating affordable amount, using fallback:', error);
+      return this._calculateFallbackAffordableAmount(character, investmentType);
+    }
+  }
+
+  /**
+   * Safely create investment with comprehensive error handling
+   * @param {Object} character - Character object
+   * @param {string} investmentType - Type of investment
+   * @param {number} amount - Investment amount
+   * @returns {Object} Investment result or error object
+   */
+  static safeCreateInvestment(character, investmentType, amount) {
+    try {
+      if (!character) {
+        return {
+          success: false,
+          error: 'No character provided',
+          message: 'Cannot create investment without character data'
+        };
+      }
+
+      // Try to use existing method
+      const result = this.createInvestment(character, investmentType, amount);
+      if (result && result.isValid !== false) {
+        return result;
+      }
+
+      // Fallback creation logic
+      console.warn('CharacterEconomicService: Existing creation failed, using fallback');
+      return this._createFallbackInvestment(character, investmentType, amount);
+    } catch (error) {
+      console.warn('CharacterEconomicService: Error creating investment, using fallback:', error);
+      return this._createFallbackInvestment(character, investmentType, amount);
+    }
+  }
+
+  /**
+   * Safely liquidate investment with error handling
+   * @param {Object} character - Character object
+   * @param {string} investmentId - Investment ID
+   * @returns {Object} Liquidation result or error object
+   */
+  static safeLiquidateInvestment(character, investmentId) {
+    try {
+      if (!character) {
+        return {
+          success: false,
+          error: 'No character provided',
+          message: 'Cannot liquidate investment without character data'
+        };
+      }
+
+      // Try to use existing method
+      const result = this.liquidateInvestment(character, investmentId);
+      if (result && result.isValid !== false) {
+        return result;
+      }
+
+      // Fallback liquidation logic
+      console.warn('CharacterEconomicService: Existing liquidation failed, using fallback');
+      return this._liquidateFallbackInvestment(character, investmentId);
+    } catch (error) {
+      console.warn('CharacterEconomicService: Error liquidating investment, using fallback:', error);
+      return this._liquidateFallbackInvestment(character, investmentId);
+    }
+  }
+
+  /**
+   * Get basic fallback investments when economic data is missing
+   * @returns {Array} Basic investment types
+   * @private
+   */
+  static _getBasicFallbackInvestments() {
+    return [
+      this.INVESTMENT_TYPES.savings
+    ].filter(Boolean);
+  }
+
+  /**
+   * Get empty portfolio analysis for fallback
+   * @returns {Object} Empty portfolio analysis
+   * @private
+   */
+  static _getEmptyPortfolioAnalysis() {
+    return {
+      totalValue: 0,
+      totalReturn: 0,
+      investments: [],
+      recommendations: ['Consider basic savings account for wealth preservation']
+    };
+  }
+
+  /**
+   * Calculate fallback affordable amount
+   * @param {Object} character - Character object
+   * @param {string} investmentType - Type of investment
+   * @returns {number} Affordable amount
+   * @private
+   */
+  static _calculateFallbackAffordableAmount(character, investmentType) {
+    const investment = this.INVESTMENT_TYPES[investmentType];
+    if (!investment) return 0;
+
+    const wealth = character.wealth || 0;
+    return Math.min(
+      investment.maxInvestment,
+      Math.max(investment.minInvestment, wealth * 0.1) // 10% of wealth
+    );
+  }
+
+  /**
+   * Create fallback investment
+   * @param {Object} character - Character object
+   * @param {string} investmentType - Type of investment
+   * @param {number} amount - Investment amount
+   * @returns {Object} Investment result
+   * @private
+   */
+  static _createFallbackInvestment(character, investmentType, amount) {
+    const investment = this.INVESTMENT_TYPES[investmentType];
+    if (!investment) {
+      return {
+        success: false,
+        error: 'Invalid investment type',
+        message: `Unknown investment type: ${investmentType}`
+      };
+    }
+
+    if (!character.wealth || character.wealth < amount) {
+      return {
+        success: false,
+        error: 'Insufficient funds',
+        message: 'Character does not have enough wealth for this investment'
+      };
+    }
+
+    // Create basic investment record
+    const newInvestment = {
+      id: `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: investmentType,
+      amount: amount,
+      purchaseDate: new Date(),
+      expectedReturn: investment.expectedReturn,
+      riskLevel: investment.riskLevel
+    };
+
+    // Update character
+    if (!character.investments) {
+      character.investments = [];
+    }
+    character.investments.push(newInvestment);
+    character.wealth -= amount;
+
+    return {
+      success: true,
+      investment: newInvestment,
+      newWealth: character.wealth,
+      message: `Successfully created ${investment.name} investment`
+    };
+  }
+
+  /**
+   * Liquidate fallback investment
+   * @param {Object} character - Character object
+   * @param {string} investmentId - Investment ID
+   * @returns {Object} Liquidation result
+   * @private
+   */
+  static _liquidateFallbackInvestment(character, investmentId) {
+    if (!character.investments) {
+      return {
+        success: false,
+        error: 'No investments found',
+        message: 'Character has no investments to liquidate'
+      };
+    }
+
+    const investment = character.investments.find(inv => inv.id === investmentId);
+    if (!investment) {
+      return {
+        success: false,
+        error: 'Investment not found',
+        message: `Investment with ID ${investmentId} not found`
+      };
+    }
+
+    // Calculate liquidation value (95% of amount)
+    const liquidationValue = investment.amount * 0.95;
+
+    // Update character
+    character.investments = character.investments.filter(inv => inv.id !== investmentId);
+    character.wealth = (character.wealth || 0) + liquidationValue;
+
+    return {
+      success: true,
+      liquidationValue: liquidationValue,
+      newWealth: character.wealth,
+      message: `Successfully liquidated ${investment.type} investment`
+    };
+  }
 }

@@ -1,6 +1,7 @@
 {
   "name": "interaction-manager",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",

@@ -73,15 +73,15 @@
     - Implement relationship context retrieval from interaction history
     - _Requirements: 4.4, 4.5_
 
-- [ ] 5. Personality-Weighted Choice Selection System
-  - [ ] 5.1 Create BranchWeight calculation infrastructure
+- [x] 5. Personality-Weighted Choice Selection System
+  - [x] 5.1 Create BranchWeight calculation infrastructure
     - Implement BranchWeight value object with personality, alignment, attribute, consciousness, memory, prestige, and emotional multipliers
     - Create weight calculation methods with bounded results (0.1x to 3.0x range)
     - Add weight breakdown tracking for debugging and analysis
     - Implement consistency bonus calculation based on character choice history
     - _Requirements: 5.1, 5.2, 5.9, 5.10, 5.12_
 
-  - [ ] 5.2 Implement BranchWeightingService with comprehensive factor integration
+  - [x] 5.2 Implement BranchWeightingService with comprehensive factor integration
     - Create calculateBranchWeights() method integrating all character factors
     - Implement selectWeightedBranch() with weighted random selection algorithm
     - Add personality affinity processing for trait-based branch preferences
@@ -89,44 +89,44 @@
     - Integrate D&D attribute preferences for intelligence, charisma, wisdom-based choices
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ] 5.3 Enhance ContentInteraction with personality-weighted branch selection
+  - [x] 5.3 Enhance ContentInteraction with personality-weighted branch selection
     - Update selectBranch() method to use BranchWeightingService when available
     - Add branch metadata support for personalityAffinities, alignmentLean, and attributePreference
     - Implement fallback to original selection logic for backward compatibility
     - Create choice recording system for consistency bonus calculations
     - _Requirements: 5.1, 5.9, 5.11_
 
-  - [ ] 5.4 Integrate consciousness and memory systems with branch weighting
+  - [x] 5.4 Integrate consciousness and memory systems with branch weighting
     - Connect BranchWeightingService with existing BehavioralStateService for consciousness factors
     - Integrate SignificantMemoryService for memory-based choice influence
     - Add emotional state processing from consciousness system
     - Implement recency weighting for memory influence on current decisions
     - _Requirements: 5.6, 5.7, 5.8_
 
-- [ ] 6. Turn Processing Integration and Coordination
-  - [ ] 6.1 Integrate new services with SimulationService turn processing
+- [x] 6. Turn Processing Integration and Coordination
+  - [x] 6.1 Integrate new services with SimulationService turn processing
     - Update processTurn() to include resource flow calculations via ResourceFlowService
     - Add political event generation during character interactions and settlement changes
     - Integrate economic centralization processing for all settlement-type nodes
     - Include memory indexing updates and political tracking in turn resolution
     - _Requirements: 2.1, 2.2, 3.1, 3.2, 4.1, 6.1, 6.2_
 
-  - [ ] 6.2 Enhance EfficientTurnProcessor with new behavioral systems
+  - [x] 6.2 Enhance EfficientTurnProcessor with new behavioral systems
     - Update NPC behavior generation to use personality-weighted choice selection
     - Integrate political career progression tracking during character actions
     - Add resource flow validation and processing to turn efficiency calculations
     - Include memory query optimization for large-scale simulations
     - _Requirements: 5.1, 5.11, 6.1, 6.2, 6.5_
 
-- [ ] 7. User Interface Enhancements
-  - [ ] 7.1 Update node creation and editing interfaces
+- [x] 7. User Interface Enhancements
+  - [x] 7.1 Update node creation and editing interfaces
     - Enhance NodeEditor component to display type-specific capabilities and restrictions
     - Add visual indicators for economic, political, and social system availability
     - Create resource production/consumption configuration UI for different node types
     - Implement node type change validation with clear error messaging
     - _Requirements: 1.6, 6.5_
 
-  - [ ] 7.2 Create historical data browsing interfaces
+  - [x] 7.2 Create historical data browsing interfaces
     - Implement HistoricalEventBrowser component with filtering and search capabilities
     - Add timeline visualization for settlement political history and leadership changes
     - Create character biography generator using memory and political career data
