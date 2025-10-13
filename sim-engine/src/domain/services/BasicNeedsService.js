@@ -80,35 +80,95 @@ class BasicNeedsService extends BaseDomainService {
    * Calculate satisfaction levels for all basic needs
    * @param {Object} settlement - Settlement to analyze
    * @param {Object} investmentEffects - Optional investment effects to apply
+   * @param {Object} resourceFlows - Optional resource flows from production nodes
    * @returns {Object} Need satisfaction analysis
    */
-  calculateSatisfactionLevel(settlement, investmentEffects = null) {
+  calculateSatisfactionLevel(settlement, investmentEffects = null, resourceFlows = null) {
     try {
       this._validateSettlement(settlement);
-      
+
+      // Check if this node type supports economic calculations
+      if (!this._hasEconomicCapabilities(settlement)) {
+        return this._getNonEconomicNodeResult(settlement);
+      }
+
       const needs = {
-        food: this.calculateFoodSatisfaction(settlement, investmentEffects),
-        water: this.calculateWaterSatisfaction(settlement, investmentEffects),
+        food: this.calculateFoodSatisfaction(settlement, investmentEffects, resourceFlows),
+        water: this.calculateWaterSatisfaction(settlement, investmentEffects, resourceFlows),
         shelter: this.calculateShelterSatisfaction(settlement, investmentEffects),
         goods: this.calculateGoodsSatisfaction(settlement, investmentEffects),
         services: this.calculateServicesSatisfaction(settlement, investmentEffects)
       };
 
       const cascadingEffects = this._calculateCascadingEffects(needs);
-      const overall = this._calculateOverallSatisfaction(needs, cascadingEffects);
-      const consequences = this._generateConsequences(needs, settlement, investmentEffects);
+      const productionNodeEffects = this._calculateProductionNodeFailureEffects(settlement, resourceFlows);
+      const overall = this._calculateOverallSatisfaction(needs, cascadingEffects, productionNodeEffects);
+      const consequences = this._generateConsequences(needs, settlement, investmentEffects, productionNodeEffects);
 
       return {
         needs: this._clampNeedValues(needs),
         overall: BaseDomainService.clamp(overall, 0.0, 1.0),
         consequences: consequences,
         cascadingEffects: cascadingEffects,
-        investmentEffects: investmentEffects || {}
+        productionNodeEffects: productionNodeEffects,
+        investmentEffects: investmentEffects || {},
+        resourceFlows: resourceFlows || [],
+        economicCapabilities: true
       };
     } catch (error) {
       console.error('Need satisfaction calculation failed:', error);
       return this._getDefaultSatisfactionResult();
     }
+  }
+
+  /**
+   * Check if a node has economic capabilities for need satisfaction calculations
+   * @param {Object} node - Node to check
+   * @returns {boolean} True if node supports economic calculations
+   * @private
+   */
+  _hasEconomicCapabilities(node) {
+    // Check if node has typeProfile with economic capabilities
+    if (node.typeProfile && node.typeProfile.capabilities) {
+      return node.typeProfile.capabilities.hasCapability('economy');
+    }
+
+    // Fallback: check node type directly (settlement nodes have economic capabilities)
+    return node.type === 'settlement';
+  }
+
+  /**
+   * Get result for nodes that don't support economic calculations
+   * @param {Object} node - Node that doesn't support economics
+   * @returns {Object} Default result for non-economic nodes
+   * @private
+   */
+  _getNonEconomicNodeResult(node) {
+    return {
+      needs: {
+        food: 1.0, // No needs for non-economic nodes
+        water: 1.0,
+        shelter: 1.0,
+        goods: 1.0,
+        services: 1.0
+      },
+      overall: 1.0,
+      consequences: [],
+      cascadingEffects: {
+        multiplier: 1.0,
+        affectedNeeds: [],
+        secondaryEffects: []
+      },
+      productionNodeEffects: {
+        failedNodes: [],
+        resourceShortages: [],
+        cascadingImpact: 0.0
+      },
+      investmentEffects: {},
+      resourceFlows: [],
+      nodeType: node.type || 'unknown',
+      economicCapabilities: false
+    };
   }
 
   /**
@@ -166,28 +226,178 @@ class BasicNeedsService extends BaseDomainService {
   }
 
   /**
+   * Calculate cascading effects from production node failures
+   * @param {Object} settlement - Settlement to analyze
+   * @param {Array} resourceFlows - Resource flows from production nodes
+   * @returns {Object} Production node failure effects
+   * @private
+   */
+  _calculateProductionNodeFailureEffects(settlement, resourceFlows = null) {
+    const effects = {
+      failedNodes: [],
+      resourceShortages: [],
+      cascadingImpact: 0.0
+    };
+
+    if (!resourceFlows || !Array.isArray(resourceFlows)) {
+      return effects;
+    }
+
+    let totalImpact = 0.0;
+    const resourceShortages = new Map();
+
+    // Analyze each resource flow for failures
+    resourceFlows.forEach(flow => {
+      if (flow.status === 'failed' || flow.status === 'partial') {
+        effects.failedNodes.push({
+          nodeId: flow.sourceNodeId,
+          resourceType: flow.resourceType,
+          expectedAmount: flow.amount,
+          actualAmount: flow.status === 'failed' ? 0 : flow.amount * 0.5,
+          failureReason: flow.failureReason || 'unknown'
+        });
+
+        // Track resource shortages
+        const currentShortage = resourceShortages.get(flow.resourceType) || 0;
+        const shortageAmount = flow.status === 'failed' ? flow.amount : flow.amount * 0.5;
+        resourceShortages.set(flow.resourceType, currentShortage + shortageAmount);
+
+        // Calculate impact based on resource type importance
+        const impactMultiplier = this._getResourceImpactMultiplier(flow.resourceType);
+        totalImpact += (shortageAmount / this._getExpectedResourceAmount(settlement, flow.resourceType)) * impactMultiplier;
+      }
+    });
+
+    // Convert resource shortages map to array
+    resourceShortages.forEach((amount, resourceType) => {
+      effects.resourceShortages.push({
+        resourceType,
+        shortageAmount: amount,
+        severity: this._calculateShortageSeverity(amount, settlement, resourceType)
+      });
+    });
+
+    effects.cascadingImpact = BaseDomainService.clamp(totalImpact, 0.0, 1.0);
+
+    return effects;
+  }
+
+  /**
+   * Get impact multiplier for different resource types
+   * @param {string} resourceType - Type of resource
+   * @returns {number} Impact multiplier
+   * @private
+   */
+  _getResourceImpactMultiplier(resourceType) {
+    const multipliers = {
+      'food': 1.5,    // Food shortages have highest impact
+      'water': 1.4,   // Water is critical
+      'materials': 0.8, // Materials less critical
+      'goods': 0.6,   // Goods can be substituted
+      'services': 0.5  // Services have least immediate impact
+    };
+    return multipliers[resourceType] || 0.7;
+  }
+
+  /**
+   * Get expected resource amount for a settlement
+   * @param {Object} settlement - Settlement to analyze
+   * @param {string} resourceType - Type of resource
+   * @returns {number} Expected amount
+   * @private
+   */
+  _getExpectedResourceAmount(settlement, resourceType) {
+    const population = settlement.population?.total || 100;
+    const baseRates = BasicNeedsService.CONSUMPTION_RATES;
+
+    switch (resourceType) {
+      case 'food': return population * baseRates.FOOD_PER_PERSON;
+      case 'water': return population * baseRates.WATER_PER_PERSON;
+      case 'goods': return population * baseRates.GOODS_PER_PERSON;
+      case 'services': return population * baseRates.SERVICES_PER_PERSON;
+      default: return population * 0.5; // Default fallback
+    }
+  }
+
+  /**
+   * Calculate severity of a resource shortage
+   * @param {number} shortageAmount - Amount of shortage
+   * @param {Object} settlement - Settlement affected
+   * @param {string} resourceType - Type of resource
+   * @returns {string} Severity level
+   * @private
+   */
+  _calculateShortageSeverity(shortageAmount, settlement, resourceType) {
+    const expectedAmount = this._getExpectedResourceAmount(settlement, resourceType);
+    const shortageRatio = shortageAmount / expectedAmount;
+
+    if (shortageRatio >= 0.8) return 'critical';
+    if (shortageRatio >= 0.6) return 'severe';
+    if (shortageRatio >= 0.4) return 'moderate';
+    if (shortageRatio >= 0.2) return 'mild';
+    return 'minimal';
+  }
+
+  /**
+   * Get severity multiplier for consequence calculations
+   * @param {string} severity - Severity level
+   * @returns {number} Severity multiplier
+   * @private
+   */
+  _getSeverityMultiplier(severity) {
+    const multipliers = {
+      'critical': 1.0,
+      'severe': 0.8,
+      'moderate': 0.6,
+      'mild': 0.4,
+      'minimal': 0.2
+    };
+    return multipliers[severity] || 0.5;
+  }
+
+  /**
    * Calculate overall satisfaction from individual needs
    * @param {Object} needs - Individual need satisfaction levels
    * @param {Object} cascadingEffects - Cascading effects information
    * @returns {number} Overall satisfaction level
    */
-  _calculateOverallSatisfaction(needs, cascadingEffects) {
-    return (needs.food + needs.water + needs.shelter + needs.goods + needs.services) / 5;
+  _calculateOverallSatisfaction(needs, cascadingEffects, productionNodeEffects = null) {
+    let baseSatisfaction = (needs.food + needs.water + needs.shelter + needs.goods + needs.services) / 5;
+
+    // Apply production node failure impact
+    if (productionNodeEffects && productionNodeEffects.cascadingImpact > 0) {
+      baseSatisfaction *= (1.0 - productionNodeEffects.cascadingImpact);
+    }
+
+    return BaseDomainService.clamp(baseSatisfaction, 0.0, 1.0);
   }
 
   /**
    * Calculate food satisfaction based on settlement resources and infrastructure
    * @param {Object} settlement - Settlement to analyze
    * @param {Object} investmentEffects - Optional investment effects to apply
+   * @param {Array} resourceFlows - Optional resource flows from production nodes
    * @returns {number} Food satisfaction level (0.0 - 1.0)
    */
-  calculateFoodSatisfaction(settlement, investmentEffects = null) {
+  calculateFoodSatisfaction(settlement, investmentEffects = null, resourceFlows = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const foodProduction = this._calculateFoodProduction(settlement, investmentEffects);
+    let foodProduction = this._calculateFoodProduction(settlement, investmentEffects);
     const foodStorage = this._calculateFoodStorage(settlement, investmentEffects);
     const tradeAccess = this._calculateFoodTradeAccess(settlement, investmentEffects);
+
+    // Add food from successful resource flows
+    if (resourceFlows && Array.isArray(resourceFlows)) {
+      const foodFlows = resourceFlows.filter(flow =>
+        flow.resourceType === 'food' &&
+        (flow.status === 'completed' || flow.status === 'partial')
+      );
+      const flowFoodAmount = foodFlows.reduce((total, flow) =>
+        total + (flow.status === 'completed' ? flow.amount : flow.amount * 0.5), 0
+      );
+      foodProduction += flowFoodAmount;
+    }
 
     const totalFoodAvailability = foodProduction + foodStorage + tradeAccess;
     const foodDemand = population * BasicNeedsService.CONSUMPTION_RATES.FOOD_PER_PERSON;
@@ -203,15 +413,28 @@ class BasicNeedsService extends BaseDomainService {
    * Calculate water satisfaction based on water sources and infrastructure
    * @param {Object} settlement - Settlement to analyze
    * @param {Object} investmentEffects - Optional investment effects to apply
+   * @param {Array} resourceFlows - Optional resource flows from production nodes
    * @returns {number} Water satisfaction level (0.0 - 1.0)
    */
-  calculateWaterSatisfaction(settlement, investmentEffects = null) {
+  calculateWaterSatisfaction(settlement, investmentEffects = null, resourceFlows = null) {
     const population = settlement.population.total;
     if (population === 0) return 1.0; // No people, no needs
 
-    const waterSources = this._calculateWaterSources(settlement, investmentEffects);
+    let waterSources = this._calculateWaterSources(settlement, investmentEffects);
     const waterInfrastructure = this._calculateWaterInfrastructure(settlement, investmentEffects);
     const waterStorage = this._calculateWaterStorage(settlement, investmentEffects);
+
+    // Add water from successful resource flows
+    if (resourceFlows && Array.isArray(resourceFlows)) {
+      const waterFlows = resourceFlows.filter(flow =>
+        flow.resourceType === 'water' &&
+        (flow.status === 'completed' || flow.status === 'partial')
+      );
+      const flowWaterAmount = waterFlows.reduce((total, flow) =>
+        total + (flow.status === 'completed' ? flow.amount : flow.amount * 0.5), 0
+      );
+      waterSources += flowWaterAmount;
+    }
 
     const totalWaterAvailability = waterSources + waterInfrastructure + waterStorage;
     const waterDemand = population * BasicNeedsService.CONSUMPTION_RATES.WATER_PER_PERSON;
@@ -1574,8 +1797,28 @@ class BasicNeedsService extends BaseDomainService {
    * @returns {Array} Array of consequences
    * @private
    */
-  _generateConsequences(needs, settlement, investmentEffects = null) {
+  _generateConsequences(needs, settlement, investmentEffects = null, productionNodeEffects = null) {
     const consequences = [];
+
+    // Add production node failure consequences
+    if (productionNodeEffects && productionNodeEffects.resourceShortages.length > 0) {
+      productionNodeEffects.resourceShortages.forEach(shortage => {
+        const severity = this._getSeverityMultiplier(shortage.severity);
+        consequences.push({
+          type: `${shortage.resourceType}_supply_disruption`,
+          severity: severity,
+          description: `${shortage.resourceType.charAt(0).toUpperCase() + shortage.resourceType.slice(1)} supply disrupted by production node failures`,
+          effects: {
+            economy: -severity * 0.2,
+            productivity: -severity * 0.15,
+            population: shortage.resourceType === 'food' || shortage.resourceType === 'water' ? -severity * 0.1 : 0
+          },
+          duration: Math.ceil(severity * 14), // Days based on severity
+          timestamp: Date.now(),
+          source: 'production_node_failure'
+        });
+      });
+    }
 
     // Food consequences
     if (needs.food < 0.5) {
@@ -1701,7 +1944,14 @@ class BasicNeedsService extends BaseDomainService {
           services: 0.5
         }
       },
-      investmentEffects: {}
+      productionNodeEffects: {
+        failedNodes: [],
+        resourceShortages: [],
+        cascadingImpact: 0.0
+      },
+      investmentEffects: {},
+      resourceFlows: [],
+      economicCapabilities: false
     };
   }
 

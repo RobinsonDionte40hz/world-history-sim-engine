@@ -8,6 +8,7 @@ export { Alignment } from './Alignment';
 export { CharacterType } from './CharacterType';
 export { DevelopmentTree } from './DevelopmentTree';
 export { LODTier } from './LODTier';
+export { PoliticalRelationship } from './PoliticalRelationship';
 export { SettlementGovernance } from './SettlementGovernance';
 export { default as EconomicProfile } from './EconomicProfile';
 export { default as Environment } from './Environment';

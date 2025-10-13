@@ -12,6 +12,7 @@ export { default as PerformanceMonitoringService } from './PerformanceMonitoring
 export { default as MemoryManagementService } from './MemoryManagementService.js';
 export { default as BatchProcessingService } from './BatchProcessingService.js';
 export { default as ConsciousnessErrorHandlingService } from './ConsciousnessErrorHandlingService.js';
+export { PoliticalTrackingService } from './PoliticalTrackingService.js';
 
 // Export consciousness presets
 export * from '../../configs/consciousness/ConsciousnessPresets.js';
