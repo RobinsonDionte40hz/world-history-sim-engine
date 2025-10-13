@@ -331,3 +331,7 @@ class ContentInteraction extends InteractionBase {
 // CommonJS export
 module.exports = ContentInteraction;
 module.exports.ContentInteraction = ContentInteraction;
+
+// ES6 default export
+export default ContentInteraction;
+export { ContentInteraction };
