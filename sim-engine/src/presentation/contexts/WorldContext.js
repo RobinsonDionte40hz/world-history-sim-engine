@@ -3,10 +3,14 @@
  * 
  * Provides world state management, world switching, and persistence
  * across the application. Supports multiple worlds with unique identifiers.
+ * 
+ * Now includes WorldBuilder for building-phase operations (character/node/interaction management)
+ * This allows editor pages to build worlds without initializing simulation services.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import TemplateManager from '../../template/TemplateManager';
+import WorldBuilder from '../../domain/services/WorldBuilder';
 import StorageCleanupService from '../../application/services/StorageCleanupService.js';
 
 // Helper functions for data compression and selective storage
@@ -63,6 +67,11 @@ const WorldContext = createContext();
 export const WorldProvider = ({ children }) => {
     // Initialize template manager
     const [templateManager] = useState(() => new TemplateManager());
+    
+    // Initialize WorldBuilder for building-phase operations
+    // This allows editors to add/update/delete characters, nodes, interactions
+    // without initializing full simulation context
+    const [worldBuilder] = useState(() => new WorldBuilder());
 
     // World management state
     const [currentWorldId, setCurrentWorldId] = useState(null);
@@ -405,6 +414,10 @@ export const WorldProvider = ({ children }) => {
 
         // Template management
         templateManager,
+        
+        // WorldBuilder for building-phase operations
+        // Allows editors to manage characters, nodes, interactions
+        worldBuilder,
 
         // Computed properties
         hasWorlds: worlds.size > 0,
@@ -422,6 +435,7 @@ export const WorldProvider = ({ children }) => {
         importDemoWorld,
         getWorldById,
         templateManager,
+        worldBuilder,
         worlds.size
     ]);
 

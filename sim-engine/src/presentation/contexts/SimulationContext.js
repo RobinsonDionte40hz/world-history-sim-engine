@@ -21,6 +21,9 @@ import LocalStorageWorldRepository from '../../infrastructure/Persistance/LocalS
 
 const SimulationContext = createContext();
 
+// Export the context itself for conditional usage (e.g., useContext(SimulationContext))
+export { SimulationContext };
+
 export const SimulationProvider = ({ children }) => {
   // Push context on mount, pop on unmount
   useEffect(() => {

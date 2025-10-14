@@ -12,12 +12,12 @@ import Navigation from '../UI/Navigation';
 import CharacterManager from '../components/CharacterManager';
 import CharacterEditor from '../components/CharacterEditor';
 import Modal from '../components/Modal';
-import { useSimulationContext } from '../contexts/SimulationContext';
+import { useWorldContext } from '../contexts/WorldContext';
 import { saveCharacter } from '../../shared/utils/characterSaveUtils';
 
 const CharacterManagerPage = () => {
   const navigate = useNavigate();
-  const { worldBuilder } = useSimulationContext();
+  const { worldBuilder } = useWorldContext();
   
   // State for character editing modal
   const [showCharacterEditor, setShowCharacterEditor] = useState(false);
@@ -255,6 +255,7 @@ const CharacterManagerPage = () => {
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6">
             <CharacterManager
               key={refreshKey}
+              worldBuilder={worldBuilder}
               onEditCharacter={handleEditCharacter}
               onCreateCharacter={handleCreateCharacter}
               onViewCharacter={handleViewCharacter}

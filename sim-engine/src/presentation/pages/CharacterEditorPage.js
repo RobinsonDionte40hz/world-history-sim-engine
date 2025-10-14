@@ -27,7 +27,6 @@ import Navigation from '../UI/Navigation';
 import CharacterEditor from '../components/CharacterEditor';
 import WorldDropdown from '../UI/WorldDropdown';
 import { useWorldContext } from '../contexts/WorldContext';
-import { useSimulationContext } from '../contexts/SimulationContext';
 import Character from '../../domain/entities/Character';
 import { saveCharacter } from '../../shared/utils/characterSaveUtils';
 
@@ -42,16 +41,14 @@ const CharacterEditorPage = () => {
   const initialData = routeState.initialData || null;
   const fromTemplate = routeState.fromTemplate || false;
   
-  // WorldContext integration
+  // WorldContext integration for both world data and WorldBuilder
   const { 
     currentWorldId,
     currentWorld,
     updateWorldConfig,
+    worldBuilder,
     error: worldError
   } = useWorldContext();
-  
-  // SimulationContext integration for WorldBuilder
-  const { worldBuilder } = useSimulationContext();
   
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);

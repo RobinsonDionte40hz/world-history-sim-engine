@@ -37,7 +37,7 @@ function initializeConsciousnessServices() {
     consciousnessCheckpointService: new ConsciousnessCheckpointService(logger, errorHandler),
     batchProcessingService: new BatchProcessingService(logger, errorHandler),
     configurationService: new ConsciousnessConfigurationService(),
-    memoryManagementService: new MemoryManagementService(logger, errorHandler),
+    memoryManagementService: new MemoryManagementService(logger, errorHandler, { autoStartMonitoring: true }),
     errorHandler,
     logger
   };

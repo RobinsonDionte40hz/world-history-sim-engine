@@ -18,14 +18,18 @@ import ConsciousnessErrorHandlingService from './ConsciousnessErrorHandlingServi
 import MemoryMonitoringService from './MemoryMonitoringService.js';
 
 class MemoryManagementService extends BaseDomainService {
-    constructor(logger = null, errorHandler = null) {
+    constructor(logger = null, errorHandler = null, options = {}) {
         super();
         this.logger = logger;
         this.errorHandler = errorHandler || new ConsciousnessErrorHandlingService(logger);
 
         // Initialize memory monitoring
         this.memoryMonitor = new MemoryMonitoringService(logger, this);
-        this.memoryMonitor.startMonitoring();
+        
+        // Only start monitoring if explicitly enabled (default: false to prevent global monitoring)
+        if (options.autoStartMonitoring === true) {
+            this.memoryMonitor.startMonitoring();
+        }
 
         // Memory limits and thresholds
         this.MEMORY_LIMITS = {
@@ -64,8 +68,31 @@ class MemoryManagementService extends BaseDomainService {
         this.cleanupQueue = new Set(); // Characters needing cleanup
         this.priorityQueue = new Map(); // Priority-based processing
 
-        // Initialize cleanup timer
-        this.startPeriodicCleanup();
+        // Initialize cleanup timer only if monitoring is enabled
+        if (options.autoStartMonitoring === true) {
+            this.startPeriodicCleanup();
+        }
+    }
+
+    /**
+     * Manually start memory monitoring and periodic cleanup
+     * Call this method when simulation actually starts to enable monitoring
+     */
+    startMonitoring() {
+        if (!this.memoryMonitor.monitoringState.isActive) {
+            this.memoryMonitor.startMonitoring();
+            this.startPeriodicCleanup();
+        }
+    }
+
+    /**
+     * Stop memory monitoring and cleanup timers
+     */
+    stopMonitoring() {
+        if (this.memoryMonitor.monitoringState.isActive) {
+            this.memoryMonitor.stopMonitoring();
+            this.stopPeriodicCleanup();
+        }
     }
 
     /**
@@ -785,20 +812,37 @@ class MemoryManagementService extends BaseDomainService {
      * Start periodic cleanup timer
      */
     startPeriodicCleanup() {
+        // Don't start if already running
+        if (this.cleanupIntervals) {
+            return;
+        }
+
+        this.cleanupIntervals = [];
+
         // Regular cleanup every minute
-        setInterval(() => {
+        this.cleanupIntervals.push(setInterval(() => {
             this.performPeriodicCleanup();
-        }, this.PERFORMANCE_SETTINGS.CLEANUP_INTERVAL);
+        }, this.PERFORMANCE_SETTINGS.CLEANUP_INTERVAL));
 
         // Deep cleanup every hour
-        setInterval(() => {
+        this.cleanupIntervals.push(setInterval(() => {
             this.performDeepCleanup();
-        }, this.PERFORMANCE_SETTINGS.DEEP_CLEANUP_INTERVAL);
+        }, this.PERFORMANCE_SETTINGS.DEEP_CLEANUP_INTERVAL));
 
         // Memory monitoring every 30 seconds
-        setInterval(() => {
+        this.cleanupIntervals.push(setInterval(() => {
             this.checkMemoryUsage();
-        }, this.PERFORMANCE_SETTINGS.MEMORY_CHECK_INTERVAL);
+        }, this.PERFORMANCE_SETTINGS.MEMORY_CHECK_INTERVAL));
+    }
+
+    /**
+     * Stop periodic cleanup timers
+     */
+    stopPeriodicCleanup() {
+        if (this.cleanupIntervals) {
+            this.cleanupIntervals.forEach(interval => clearInterval(interval));
+            this.cleanupIntervals = null;
+        }
     }
 
     /**

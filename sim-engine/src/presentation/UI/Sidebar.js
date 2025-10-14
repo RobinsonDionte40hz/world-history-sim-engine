@@ -7,14 +7,16 @@
  * Enhanced with unified navigation system including EditorNavigation and WorldSelector.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Globe, X, Users, MapPin, Zap } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import WorldSelector from '../components/WorldSelector';
 import { useWorldContext } from '../hooks/useWorldContext';
 import { useWorldSave } from '../hooks/useWorldSave';
-import { useSimulationContext } from '../contexts/SimulationContext';
+import * as SimulationContextModule from '../contexts/SimulationContext';
 import editorStateManager from '../../application/services/EditorStateManager';
+
+const { SimulationContext } = SimulationContextModule;
 
 const Sidebar = ({
   isOpen,
@@ -39,11 +41,12 @@ const Sidebar = ({
     refreshWorldContext // Add this
   } = useWorldContext();
   
-  // Simulation context integration
-  const { 
-    isSimulationReady,
-    hasPreparedWorld 
-  } = useSimulationContext();
+  // Simulation context integration - CONDITIONAL for route isolation
+  // Only available when on /simulation route (has SimulationProvider)
+  // Returns null on other pages (landing, editors)
+  const simulationContext = useContext(SimulationContext) || null;
+  const isSimulationReady = simulationContext?.isSimulationReady ?? false;
+  const hasPreparedWorld = simulationContext?.hasPreparedWorld ?? false;
   
   const { 
     navigateToEditor, 

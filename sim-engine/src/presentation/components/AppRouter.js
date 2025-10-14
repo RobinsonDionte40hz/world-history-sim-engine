@@ -8,6 +8,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { NavigationProvider } from '../contexts/NavigationContext';
+import { SimulationProvider } from '../contexts/SimulationContext';
 
 // Existing pages
 import HistoryPage from '../pages/HistoryPage';
@@ -67,9 +68,25 @@ const AppRouter = () => {
             <Route path="/template-library" element={<TemplatePage />} />
             <Route path="/template-customization" element={<TemplatePage />} />
             
-            {/* Simulation route - Optional, with prerequisites */}
-            <Route path="/simulation" element={<SimulationPage />} />
-            <Route path="/history" element={<HistoryPage />} />
+            {/* Simulation-related routes - wrapped with SimulationProvider */}
+            <Route 
+              path="/simulation" 
+              element={
+                <SimulationProvider>
+                  <SimulationPage />
+                </SimulationProvider>
+              } 
+            />
+            
+            {/* History page requires simulation context for turn processing and history analysis */}
+            <Route 
+              path="/history" 
+              element={
+                <SimulationProvider>
+                  <HistoryPage />
+                </SimulationProvider>
+              } 
+            />
             
             {/* Fallback route */}
             <Route path="*" element={<WorldBuilderLandingPage />} />

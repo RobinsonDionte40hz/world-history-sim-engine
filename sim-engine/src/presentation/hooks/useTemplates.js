@@ -31,26 +31,31 @@ export const useTemplates = () => {
       const compositeTemplates = templateManager.getAllTemplates('composite') || [];
       const archetypeTemplates = templateManager.getAllTemplates('archetypes') || [];
 
-      setTemplates({
+      const loadedTemplates = {
         characters: characterTemplates,
         nodes: nodeTemplates,
         interactions: interactionTemplates,
         worlds: worldTemplates,
         composite: compositeTemplates,
         archetypes: archetypeTemplates
-      });
+      };
+
+      setTemplates(loadedTemplates);
+      return loadedTemplates; // Return the templates object
     } catch (err) {
       setError(err.message);
       console.error('Failed to load templates:', err);
       // Set empty arrays on error to prevent undefined values
-      setTemplates({
+      const emptyTemplates = {
         characters: [],
         nodes: [],
         interactions: [],
         worlds: [],
         composite: [],
         archetypes: []
-      });
+      };
+      setTemplates(emptyTemplates);
+      return emptyTemplates; // Return empty templates on error
     } finally {
       setLoading(false);
     }

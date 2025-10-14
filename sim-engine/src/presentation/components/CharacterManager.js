@@ -7,7 +7,7 @@
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.7, 4.1, 4.7, 10.1, 10.2
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { 
   Users, 
   Search, 
@@ -25,16 +25,34 @@ import {
   SortDesc,
   RefreshCw
 } from 'lucide-react';
-import { useSimulationContext } from '../contexts/SimulationContext';
+import * as SimulationContextModule from '../contexts/SimulationContext';
 import Modal from './Modal';
+
+const { SimulationContext } = SimulationContextModule;
+
+/**
+ * ⚠️ NOTE: CharacterManager requires WorldBuilder
+ * 
+ * This component uses worldBuilder.getAllCharacters(), deleteCharacter(), etc.
+ * WorldBuilder can be provided in two ways:
+ * 
+ * 1. As a prop: <CharacterManager worldBuilder={worldBuilder} />
+ * 2. From SimulationContext (if used within /simulation route)
+ * 
+ * Prop takes precedence over context. This allows use in both building and simulation phases.
+ */
 
 const CharacterManager = ({ 
   onEditCharacter, 
   onCreateCharacter,
   onViewCharacter,
+  worldBuilder: worldBuilderProp, // WorldBuilder can be passed as prop
   className = '' 
 }) => {
-  const { worldBuilder } = useSimulationContext();
+  // Try to get WorldBuilder from prop first, then from SimulationContext (if available)
+  // This makes the component flexible for use in both building and simulation phases
+  const simulationContext = useContext(SimulationContext);
+  const worldBuilder = worldBuilderProp || simulationContext?.worldBuilder;
   
   // State management
   const [characters, setCharacters] = useState([]);
@@ -344,6 +362,33 @@ const CharacterManager = ({
     
     return assignments;
   }, [worldBuilder]);
+
+  // Safeguard: Show error if worldBuilder is not available
+  if (!worldBuilder) {
+    return (
+      <div className={`p-6 ${className}`}>
+        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <h3 className="text-red-400 font-medium text-lg">SimulationContext Required</h3>
+          </div>
+          <p className="text-red-300 mb-3">
+            CharacterManager requires WorldBuilder from SimulationContext to function.
+          </p>
+          <p className="text-red-200 text-sm">
+            This component should only be used:
+          </p>
+          <ul className="list-disc list-inside text-red-200 text-sm mt-2 space-y-1 ml-4">
+            <li>Within the /simulation route</li>
+            <li>Inside a SimulationProvider wrapper</li>
+          </ul>
+          <p className="text-red-200 text-sm mt-3">
+            See <code className="bg-black/30 px-2 py-1 rounded">docs/URGENT_SIMULATION_ISOLATION.md</code> for details.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
