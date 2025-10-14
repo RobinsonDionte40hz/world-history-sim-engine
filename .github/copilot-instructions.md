@@ -67,7 +67,7 @@ React UI and state management:
 
 #### Text Templating (Editor Integration)
 - **Syntax**: `{{placeholder}}` for dynamic content
-- **Conditionals**: `{{#if character.reputation > 10}}...{{/if}}`
+- **Conditionals**: `{{ character.reputation > 10}}...{{/if}}`
 - **Random Selection**: `{{random:option1,option2,option3}}`
 - **Real-Time Preview**: See resolved content as you type
 - **Contextual Suggestions**: Smart placeholder recommendations
