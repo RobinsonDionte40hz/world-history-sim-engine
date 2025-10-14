@@ -3,13 +3,26 @@
 import InteractionBase from './InteractionBase.js';
 
 // Import BranchWeightingService for personality-weighted selection
-let BranchWeightingService;
-try {
-  const module = await import('../../services/BranchWeightingService.js');
-  BranchWeightingService = module.default;
-} catch (error) {
-  // BranchWeightingService not available, will use fallback selection
-  BranchWeightingService = null;
+// Lazy loaded on first use to avoid module loading issues
+let BranchWeightingService = null;
+let branchWeightingServiceLoaded = false;
+
+async function loadBranchWeightingService() {
+  if (branchWeightingServiceLoaded) {
+    return BranchWeightingService;
+  }
+  
+  try {
+    const module = await import('../../services/BranchWeightingService.js');
+    BranchWeightingService = module.default;
+  } catch (error) {
+    // BranchWeightingService not available, will use fallback selection
+    console.warn('BranchWeightingService not available, using fallback selection');
+    BranchWeightingService = null;
+  }
+  
+  branchWeightingServiceLoaded = true;
+  return BranchWeightingService;
 }
 
 /**
@@ -232,7 +245,7 @@ class ContentInteraction extends InteractionBase {
    * @param {Object} context - Additional context for selection (optional)
    * @returns {Object|null} Selected branch or null if none available
    */
-  selectBranch(character, context = {}) {
+  async selectBranch(character, context = {}) {
     if (!this.branches.length) return null;
 
     const validBranches = this.branches.filter(branch =>
@@ -242,9 +255,10 @@ class ContentInteraction extends InteractionBase {
     if (!validBranches.length) return null;
 
     // Try personality-weighted selection if BranchWeightingService is available
-    if (BranchWeightingService && character) {
+    const WeightingService = await loadBranchWeightingService();
+    if (WeightingService && character) {
       try {
-        const weightingService = new BranchWeightingService();
+        const weightingService = new WeightingService();
         const selectionResult = weightingService.selectWeightedBranch(
           character,
           validBranches,

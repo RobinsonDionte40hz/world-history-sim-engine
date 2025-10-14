@@ -148,8 +148,8 @@
     - Add validation warnings for incomplete data without blocking functionality
     - _Requirements: 6.3, 6.4, 6.5_
 
-- [ ]* 9. Testing and Validation
-  - [ ]* 9.1 Create comprehensive unit tests for new domain services
+- [x] 9. Testing and Validation
+  - [x] 9.1 Create comprehensive unit tests for new domain services
     - Test NodeTypeService capability validation and system enablement logic
     - Validate ResourceFlowService calculations and transfer mechanisms
     - Test PoliticalTrackingService event recording and history retrieval
@@ -157,7 +157,7 @@
     - Test BranchWeightingService weight calculations and selection algorithms
     - _Requirements: 6.6_
 
-  - [ ]* 9.2 Implement integration tests for turn processing and system coordination
+  - [x] 9.2 Implement integration tests for turn processing and system coordination
     - Test resource flow processing during turn execution with multiple settlements
     - Validate political event generation and tracking during character interactions
     - Test memory querying performance with large datasets (1000+ memories, 100+ NPCs)

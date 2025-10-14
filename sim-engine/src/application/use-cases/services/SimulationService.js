@@ -1561,3 +1561,4 @@ class SimulationService {
 
 const simulationService = new SimulationService();
 export default simulationService;  // Singleton instance for global access
+export { SimulationService };  // Export class for testing
