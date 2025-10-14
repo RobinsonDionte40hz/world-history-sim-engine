@@ -5,7 +5,7 @@
  * commerce, and commuting. These sit between system interactions and content interactions.
  */
 
-const { ContentInteraction } = require('../entities/interactions/ContentInteraction.js');
+import { ContentInteraction } from '../entities/interactions/ContentInteraction.js';
 
 class RoutineInteractionManager {
   constructor() {
@@ -529,4 +529,4 @@ class RoutineInteractionManager {
   }
 }
 
-module.exports = RoutineInteractionManager;
+export default RoutineInteractionManager;

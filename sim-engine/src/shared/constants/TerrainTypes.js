@@ -54,7 +54,7 @@ const getTerrainDescription = (terrainType) => {
   return TERRAIN_DESCRIPTIONS[terrainType] || '';
 };
 
-module.exports = {
+export {
   TerrainTypes,
   TERRAIN_TYPE_VALUES,
   TERRAIN_DESCRIPTIONS,

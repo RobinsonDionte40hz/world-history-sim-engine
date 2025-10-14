@@ -82,7 +82,7 @@ const getLightingIntensity = (lightingType) => {
   return LIGHTING_INTENSITY[lightingType] || 0.7;
 };
 
-module.exports = {
+export {
   LightingTypes,
   LIGHTING_TYPE_VALUES,
   LIGHTING_DESCRIPTIONS,

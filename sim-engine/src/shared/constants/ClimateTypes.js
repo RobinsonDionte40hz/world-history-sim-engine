@@ -68,7 +68,7 @@ const getDefaultTemperature = (climateType) => {
   return range ? range.average : 15;
 };
 
-module.exports = {
+export {
   ClimateTypes,
   CLIMATE_TYPE_VALUES,
   CLIMATE_DESCRIPTIONS,

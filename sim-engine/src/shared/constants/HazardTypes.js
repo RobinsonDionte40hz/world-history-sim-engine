@@ -131,7 +131,7 @@ const getHazardCategory = (hazardType) => {
   return 'unknown';
 };
 
-module.exports = {
+export {
   HazardTypes,
   HAZARD_TYPE_VALUES,
   HAZARD_DESCRIPTIONS,

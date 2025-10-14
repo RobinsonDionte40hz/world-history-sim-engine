@@ -296,4 +296,4 @@ class DailyScheduleService {
   }
 }
 
-module.exports = DailyScheduleService;
+export default DailyScheduleService;

@@ -329,7 +329,7 @@ const Sidebar = ({
           hoverBorder: 'rgba(59, 130, 246, 0.3)'
         },
         {
-          id: 'template-library',
+          id: 'interaction-template-library',
           label: '📚 Template Library',
           onClick: () => navigate('/templates'),
           hoverColor: 'rgba(129, 140, 248, 0.1)',

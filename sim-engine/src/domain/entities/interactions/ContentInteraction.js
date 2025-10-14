@@ -1,11 +1,12 @@
 // src/domain/entities/interactions/ContentInteraction.js
 
-const InteractionBase = require('./InteractionBase.js');
+import InteractionBase from './InteractionBase.js';
 
 // Import BranchWeightingService for personality-weighted selection
 let BranchWeightingService;
 try {
-  BranchWeightingService = require('../../services/BranchWeightingService.js').default;
+  const module = await import('../../services/BranchWeightingService.js');
+  BranchWeightingService = module.default;
 } catch (error) {
   // BranchWeightingService not available, will use fallback selection
   BranchWeightingService = null;
@@ -328,10 +329,5 @@ class ContentInteraction extends InteractionBase {
   }
 }
 
-// CommonJS export
-module.exports = ContentInteraction;
-module.exports.ContentInteraction = ContentInteraction;
-
-// ES6 default export
 export default ContentInteraction;
 export { ContentInteraction };
