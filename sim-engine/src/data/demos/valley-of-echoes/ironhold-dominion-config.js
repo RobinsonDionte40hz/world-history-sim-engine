@@ -513,4 +513,4 @@ const ironholdDominionConfig = {
   }
 };
 
-module.exports = ironholdDominionConfig;
+export default ironholdDominionConfig;

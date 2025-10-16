@@ -5,7 +5,7 @@
  * maintenance, and error handling scenarios.
  */
 
-const ConsciousnessCheckpointService = require('../ConsciousnessCheckpointService');
+import ConsciousnessCheckpointService from '../ConsciousnessCheckpointService.js';
 
 describe('ConsciousnessCheckpointService', () => {
   // Test data setup

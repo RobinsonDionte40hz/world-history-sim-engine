@@ -407,4 +407,4 @@ const oakwoodFederationConfig = {
   }
 };
 
-module.exports = oakwoodFederationConfig;
+export default oakwoodFederationConfig;

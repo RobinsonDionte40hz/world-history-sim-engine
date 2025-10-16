@@ -4,7 +4,7 @@
  * Tests integration with other consciousness system services
  */
 
-const ConsciousnessCheckpointService = require('../ConsciousnessCheckpointService');
+import ConsciousnessCheckpointService from '../ConsciousnessCheckpointService.js';
 
 describe('ConsciousnessCheckpointService Integration', () => {
   const createIntegratedNPC = (id) => ({

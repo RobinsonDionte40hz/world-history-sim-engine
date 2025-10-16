@@ -450,4 +450,4 @@ class DirectInteractionAssignment {
   }
 }
 
-module.exports = DirectInteractionAssignment;
+export default DirectInteractionAssignment;

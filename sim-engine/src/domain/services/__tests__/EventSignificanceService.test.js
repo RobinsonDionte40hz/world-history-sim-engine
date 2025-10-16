@@ -3,7 +3,7 @@
  * Tests significance calculation, event classification, and edge cases
  */
 
-const EventSignificanceService = require('../EventSignificanceService');
+import EventSignificanceService from '../EventSignificanceService.js';
 
 describe('EventSignificanceService', () => {
   let service;

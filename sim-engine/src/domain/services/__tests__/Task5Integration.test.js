@@ -353,9 +353,9 @@ describe('Task 5.3: Personality-Weighted Choice Selection System - ContentIntera
   });
 
   describe('Integration with Interaction Entity', () => {
-    test('should work with Interaction class that extends ContentInteraction', () => {
+    test('should work with Interaction class that extends ContentInteraction', async () => {
       // Import the Interaction class
-      const Interaction = require('../../entities/Interaction.js').default;
+      const { default: Interaction } = await import('../../entities/Interaction.js');
 
       const interaction = new Interaction({
         id: 'test-interaction',
@@ -369,12 +369,13 @@ describe('Task 5.3: Personality-Weighted Choice Selection System - ContentIntera
       expect(testBranches).toContain(selectedBranch);
     });
 
-    test('should fall back to original weighted selection when BranchWeightingService fails', () => {
+    test('should fall back to original weighted selection when BranchWeightingService fails', async () => {
       // Import the Interaction class
-      const Interaction = require('../../entities/Interaction.js').default;
+      const { default: Interaction } = await import('../../entities/Interaction.js');
 
       // Mock BranchWeightingService to throw an error
-      const mockService = jest.spyOn(require('../../services/BranchWeightingService.js'), 'default');
+      const BranchWeightingServiceModule = await import('../../services/BranchWeightingService.js');
+      const mockService = jest.spyOn(BranchWeightingServiceModule, 'default');
       mockService.mockImplementation(() => ({
         selectWeightedBranch: () => {
           throw new Error('Service unavailable');
