@@ -1,10 +1,10 @@
 // src/application/use-cases/services/SimulationService.js
 
 // Removed import of generateWorld - now using processMapplessWorldState
-const runTick = require('../simulation/RunTick.js');
-const analyzeHistory = require('../history/AnalyzeHistory.js');
-const Character = require('../../../domain/entities/Character.js');
-const Node = require('../../../domain/entities/Node.js');
+import runTick from '../simulation/RunTick.js';
+import analyzeHistory from '../history/AnalyzeHistory.js';
+import Character from '../../../domain/entities/Character.js';
+import Node from '../../../domain/entities/Node.js';
 
 class SimulationService {
   constructor() {
@@ -783,4 +783,4 @@ class SimulationService {
 }
 
 const simulationService = new SimulationService();
-module.exports = simulationService;  // Singleton instance for global access
+export default simulationService;  // Singleton instance for global access

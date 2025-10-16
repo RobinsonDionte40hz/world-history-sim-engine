@@ -1,8 +1,8 @@
 // src/application/use-cases/ManageSettlementDevelopment.js
 
-const SettlementDevelopmentService = require('../../../domain/services/SettlementDevelopmentService.js');
-const DevelopmentTree = require('../../../domain/value-objects/DevelopmentTree.js');
-const SettlementGovernance = require('../../../domain/value-objects/SettlementGovernance.js');
+import SettlementDevelopmentService from '../../../domain/services/SettlementDevelopmentService.js';
+import DevelopmentTree from '../../../domain/value-objects/DevelopmentTree.js';
+import SettlementGovernance from '../../../domain/value-objects/SettlementGovernance.js';
 
 /**
  * Manage Settlement Development Use Case

@@ -1,10 +1,10 @@
 // src/application/services/DemoOrchestrationService.js
 
-const WorldBuilder = require('../../../domain/services/WorldBuilder.js');
-const LODManager = require('../../../domain/services/LODManager.js');
-const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js');
-const ProcessTurnWithLOD = require('../use-cases/simulation/ProcessTurnWithLOD.js');
-const ManageSettlementDevelopment = require('../use-cases/ManageSettlementDevelopment.js');
+import WorldBuilder from '../../../domain/services/WorldBuilder.js';
+import LODManager from '../../../domain/services/LODManager.js';
+import HistoryGenerator from '../../../domain/services/HistoryGenerator.js';
+import ProcessTurnWithLOD from '../use-cases/simulation/ProcessTurnWithLOD.js';
+import ManageSettlementDevelopment from '../use-cases/ManageSettlementDevelopment.js';
 
 /**
  * Demo Orchestration Service
@@ -478,4 +478,4 @@ class DemoOrchestrationService {
   }
 }
 
-module.exports = DemoOrchestrationService;
+export default DemoOrchestrationService;

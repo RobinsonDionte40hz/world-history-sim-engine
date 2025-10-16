@@ -16,9 +16,9 @@ import Character from '../../domain/entities/Character.js';
 // Note: This is used within the _generateValleyOfEchoes method for role-based assignment
 
 // Valley of Echoes demo dependencies - moved to top level for HMR compatibility
-const oakwoodConfig = require('../../data/demos/valley-of-echoes/oakwood-federation-config.js');
-const ironholdConfig = require('../../data/demos/valley-of-echoes/ironhold-dominion-config.js');
-const DirectInteractionAssignment = require('./DirectInteractionAssignment.js');
+import oakwoodConfig from '../../data/demos/valley-of-echoes/oakwood-federation-config.js';
+import ironholdConfig from '../../data/demos/valley-of-echoes/ironhold-dominion-config.js';
+import DirectInteractionAssignment from './DirectInteractionAssignment.js';
 
 // Static reference to economic profiles to avoid module import issues
 const ECONOMIC_PROFILES = {

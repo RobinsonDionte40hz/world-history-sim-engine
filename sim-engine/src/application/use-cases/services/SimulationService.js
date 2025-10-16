@@ -902,9 +902,9 @@ class SimulationService {
   }
 
   // Get historical events from the HistoryGenerator
-  getHistoricalEvents(filters = {}) {
+  async getHistoricalEvents(filters = {}) {
     try {
-      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const { default: HistoryGenerator } = await import('../../../domain/services/HistoryGenerator.js');
       const historyGenerator = new HistoryGenerator();
       return historyGenerator.getEvents(filters);
     } catch (error) {
@@ -914,9 +914,9 @@ class SimulationService {
   }
 
   // Get need satisfaction events for a specific settlement
-  getNeedSatisfactionEvents(settlementId) {
+  async getNeedSatisfactionEvents(settlementId) {
     try {
-      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const { default: HistoryGenerator } = await import('../../../domain/services/HistoryGenerator.js');
       const historyGenerator = new HistoryGenerator();
       return historyGenerator.getNeedSatisfactionEvents(settlementId);
     } catch (error) {
@@ -926,9 +926,9 @@ class SimulationService {
   }
 
   // Get consequence events for a specific settlement
-  getConsequenceEvents(settlementId) {
+  async getConsequenceEvents(settlementId) {
     try {
-      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const { default: HistoryGenerator } = await import('../../../domain/services/HistoryGenerator.js');
       const historyGenerator = new HistoryGenerator();
       return historyGenerator.getConsequenceEvents(settlementId);
     } catch (error) {
@@ -938,9 +938,9 @@ class SimulationService {
   }
 
   // Get prosperity/decline events for a specific settlement
-  getSettlementProsperityEvents(settlementId) {
+  async getSettlementProsperityEvents(settlementId) {
     try {
-      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const { default: HistoryGenerator } = await import('../../../domain/services/HistoryGenerator.js');
       const historyGenerator = new HistoryGenerator();
       return historyGenerator.getSettlementProsperityEvents(settlementId);
     } catch (error) {
@@ -950,9 +950,9 @@ class SimulationService {
   }
 
   // Get historical event statistics
-  getHistoricalEventStatistics() {
+  async getHistoricalEventStatistics() {
     try {
-      const HistoryGenerator = require('../../../domain/services/HistoryGenerator.js').default;
+      const { default: HistoryGenerator } = await import('../../../domain/services/HistoryGenerator.js');
       const historyGenerator = new HistoryGenerator();
       return historyGenerator.getEventStatistics();
     } catch (error) {
