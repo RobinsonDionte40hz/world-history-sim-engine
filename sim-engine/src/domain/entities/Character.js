@@ -16,7 +16,7 @@ import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 import MemoryService from '../services/MemoryService.js';
 
 class Character {
-  constructor(config = {}) {
+  constructor(config = {}, dependencies = {}) {
     // Basic character properties
     this.id = config.id || this._generateId();
     this.name = config.name || 'Unnamed Character';

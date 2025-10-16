@@ -65,7 +65,11 @@ class DataStructureUtils {
         if (!(character instanceof Character)) {
           try {
             characterInstance = Character.fromJSON(character);
-            console.log(`DataStructureUtils: Converted Map character ${character.name} to Character instance`);
+            // Only log individual conversions for small datasets or development
+            const shouldLog = data.characters.size <= 10 || process.env.NODE_ENV === 'development';
+            if (shouldLog) {
+              console.log(`DataStructureUtils: Converted Map character ${character.name} to Character instance`);
+            }
           } catch (error) {
             console.warn(`DataStructureUtils: Failed to convert Map character ${character.name || id} to Character instance:`, error);
             // Fall back to the original object if conversion fails
@@ -132,7 +136,11 @@ class DataStructureUtils {
         if (!(character instanceof Character)) {
           try {
             const characterInstance = Character.fromJSON(character);
-            console.log(`DataStructureUtils: Converted ${character.name} to Character instance during array conversion`);
+            // Only log individual conversions for small datasets or development
+            const shouldLog = data.characters.size <= 10 || process.env.NODE_ENV === 'development';
+            if (shouldLog) {
+              console.log(`DataStructureUtils: Converted ${character.name} to Character instance during array conversion`);
+            }
             return characterInstance;
           } catch (error) {
             console.warn(`DataStructureUtils: Failed to convert ${character.name || character.id} to Character instance:`, error);

@@ -1,7 +1,7 @@
 // src/domain/entities/__tests__/Character.enhanced.test.js
 
 import Character from '../Character.js';
-import { CharacterType } from '../../value-objects/CharacterType.js';
+import CharacterType from '../../value-objects/CharacterType.js';
 import { ValidationError } from '../../../shared/types/ValueObjectTypes.js';
 
 describe('Enhanced Character Entity', () => {

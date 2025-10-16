@@ -192,7 +192,10 @@ class SimulationService {
         // Fallback: assign to first available node
         if (!character.currentNodeId && nodeArray.length > 0) {
           character.currentNodeId = nodeArray[0].id;
-          console.log(`Assigned character ${character.name} to first available node ${character.currentNodeId}`);
+          // Only log individual assignments in development/debug mode, not in scalability tests
+          if (process.env.NODE_ENV === 'development' || (this.worldState && this.worldState.characters && this.worldState.characters.length < 100)) {
+            console.log(`Assigned character ${character.name} to first available node ${character.currentNodeId}`);
+          }
         }
       }
     });
@@ -463,19 +466,21 @@ class SimulationService {
         : this.worldState.characters || this.worldState.npcs || [];
       
       // Debug: Check if characters are Character instances before passing to runTick
-      console.log('🔧 [SimulationService] CHARACTER DEBUG - Characters before runTick:');
-      charactersArray.slice(0, 3).forEach((c, index) => {
-        console.log(`  Character ${index}:`, {
-          name: c.name,
-          isCharacterInstance: c instanceof Character,
-          constructor: c.constructor.name,
-          hasAttributes: !!c.attributes,
-          attributesConstructor: c.attributes ? c.attributes.constructor.name : 'none',
-          attributesHasGetTotalModifier: c.attributes ? typeof c.attributes.getTotalModifier === 'function' : false,
-          lodTier: c.lodTier,
-          rawAttributes: c.attributes
+      if (process.env.NODE_ENV === 'development' || charactersArray.length < 50) {
+        console.log('🔧 [SimulationService] CHARACTER DEBUG - Characters before runTick:');
+        charactersArray.slice(0, 3).forEach((c, index) => {
+          console.log(`  Character ${index}:`, {
+            name: c.name,
+            isCharacterInstance: c instanceof Character,
+            constructor: c.constructor.name,
+            hasAttributes: !!c.attributes,
+            attributesConstructor: c.attributes ? c.attributes.constructor.name : 'none',
+            attributesHasGetTotalModifier: c.attributes ? typeof c.attributes.getTotalModifier === 'function' : false,
+            lodTier: c.lodTier,
+            rawAttributes: c.attributes
+          });
         });
-      });
+      }
       
       // Count LOD tiers before turn
       const lodTiersBefore = {
