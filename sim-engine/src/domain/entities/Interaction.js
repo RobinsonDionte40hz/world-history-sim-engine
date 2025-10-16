@@ -1,15 +1,7 @@
 // src/domain/entities/Interaction.js
 
 import ContentInteraction from './interactions/ContentInteraction.js';
-
-// Import BranchWeightingService for personality-weighted selection
-let BranchWeightingService;
-try {
-  BranchWeightingService = require('../services/BranchWeightingService.js').default;
-} catch (error) {
-  // BranchWeightingService not available, will use fallback selection
-  BranchWeightingService = null;
-}
+import BranchWeightingService from '../services/BranchWeightingService.js';
 
 class Interaction extends ContentInteraction {
   constructor(config = {}) {
@@ -39,7 +31,7 @@ class Interaction extends ContentInteraction {
     if (!validBranches.length) return null;
 
     // Try personality-weighted selection if BranchWeightingService is available
-    if (typeof BranchWeightingService !== 'undefined' && BranchWeightingService && character) {
+    if (BranchWeightingService && character) {
       try {
         const weightingService = new BranchWeightingService();
         const selectionResult = weightingService.selectWeightedBranch(

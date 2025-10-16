@@ -1,6 +1,6 @@
 // src/domain/services/AlignmentService.js
 
-const { Alignment } = require('../value-objects/Alignment.js');
+import { Alignment } from '../value-objects/Alignment.js';
 
 /**
  * Domain service for handling alignment evolution and moral choice processing

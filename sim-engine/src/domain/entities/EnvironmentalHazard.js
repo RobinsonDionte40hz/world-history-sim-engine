@@ -1,13 +1,13 @@
 // src/domain/entities/EnvironmentalHazard.js
 
-const {
+import {
   isValidHazardType,
   getHazardDescription,
   getHazardBaseDanger,
   getHazardCategory,
   HAZARD_ATTRIBUTE_MODIFIERS
-} = require('../../shared/constants/HazardTypes.js');
-const { ValidationError } = require('../../shared/types/ValueObjectTypes.js');
+} from '../../shared/constants/HazardTypes.js';
+import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 /**
  * EnvironmentalHazard entity represents environmental dangers that can affect characters
