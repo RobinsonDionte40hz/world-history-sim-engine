@@ -6,22 +6,22 @@
 
 import React, { useState } from 'react';
 import { Search, MapPin, Users, Zap } from 'lucide-react';
-import { useSimulationContext } from '../contexts/SimulationContext';
+import { useWorldContext } from '../contexts/WorldContext';
 
 const WorldStateViewer = () => {
-  const { worldBuilder } = useSimulationContext();
+  const { currentWorld } = useWorldContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('nodes');
 
-  if (!worldBuilder) {
+  if (!currentWorld) {
     return (
       <div className="p-6 text-center">
-        <p className="text-gray-400">World builder not available</p>
+        <p className="text-gray-400">No world selected</p>
       </div>
     );
   }
 
-  const { worldConfig } = worldBuilder;
+  const worldConfig = currentWorld.worldConfig || {};
 
   // Search functionality
   const searchNodes = (query) => {
