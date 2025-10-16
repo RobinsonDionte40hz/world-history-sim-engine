@@ -16,9 +16,9 @@ describe('Consciousness Template Integration', () => {
         templateService = new CharacterTemplateService();
     });
 
-    test('should create warrior character with consciousness template', () => {
+    test('should create warrior character with consciousness template', async () => {
         // Create a warrior character using the predefined template
-        const warrior = Character.fromTemplate('warrior', {
+        const warrior = await Character.fromTemplate('warrior', {
             name: 'Thrain Ironfist',
             age: 32
         });
@@ -41,9 +41,9 @@ describe('Consciousness Template Integration', () => {
         expect(warrior.templateApplied.appliedAt).toBeDefined();
     });
 
-    test('should create scholar character with custom consciousness overrides', () => {
+    test('should create scholar character with custom consciousness overrides', async () => {
         // Create a scholar character with custom consciousness settings
-        const scholar = Character.fromTemplate('scholar', {
+        const scholar = await Character.fromTemplate('scholar', {
             name: 'Elara Mindweaver',
             age: 28,
             consciousness: {

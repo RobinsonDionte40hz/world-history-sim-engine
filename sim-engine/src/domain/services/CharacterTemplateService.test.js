@@ -372,8 +372,8 @@ describe('CharacterTemplateService', () => {
 });
 
 describe('Character.fromTemplate Integration', () => {
-    test('should create character from predefined template name', () => {
-        const character = Character.fromTemplate('warrior', {
+    test('should create character from predefined template name', async () => {
+        const character = await Character.fromTemplate('warrior', {
             name: 'Sir Galen',
             age: 35
         });
@@ -386,7 +386,7 @@ describe('Character.fromTemplate Integration', () => {
         expect(character.consciousness.behavioralState.energy).toBe(0.9);
     });
 
-    test('should create character from template object', () => {
+    test('should create character from template object', async () => {
         const template = {
             name: 'Custom Mage',
             consciousness: {
@@ -401,7 +401,7 @@ describe('Character.fromTemplate Integration', () => {
             }
         };
 
-        const character = Character.fromTemplate(template, {
+        const character = await Character.fromTemplate(template, {
             name: 'Elara the Wise',
             age: 28
         });
@@ -412,20 +412,20 @@ describe('Character.fromTemplate Integration', () => {
         expect(character.consciousness.coherence).toBe(0.8);
     });
 
-    test('should throw error for non-existent template name', () => {
-        expect(() => {
-            Character.fromTemplate('nonexistent_template');
-        }).toThrow("Predefined template 'nonexistent_template' not found");
+    test('should throw error for non-existent template name', async () => {
+        await expect(async () => {
+            await Character.fromTemplate('nonexistent_template');
+        }).rejects.toThrow("Predefined template 'nonexistent_template' not found");
     });
 
-    test('should throw error for invalid template config', () => {
-        expect(() => {
-            Character.fromTemplate(null);
-        }).toThrow('Template configuration is required');
+    test('should throw error for invalid template config', async () => {
+        await expect(async () => {
+            await Character.fromTemplate(null);
+        }).rejects.toThrow('Template configuration is required');
     });
 
-    test('should merge custom consciousness with template', () => {
-        const character = Character.fromTemplate('scholar', {
+    test('should merge custom consciousness with template', async () => {
+        const character = await Character.fromTemplate('scholar', {
             name: 'Professor Elm',
             consciousness: {
                 frequency: 11.0, // Override template frequency
@@ -455,7 +455,7 @@ describe('Consciousness Parameter Bounds', () => {
         expect(bounds.behavioralState.energy.max).toBe(1);
     });
 
-    test('should validate frequency bounds in character creation', () => {
+    test('should validate frequency bounds in character creation', async () => {
         const template = {
             name: 'Test Character',
             consciousness: {
@@ -465,12 +465,12 @@ describe('Consciousness Parameter Bounds', () => {
         };
 
         // The Character constructor should clamp invalid values rather than throw
-        const character = Character.fromTemplate(template);
+        const character = await Character.fromTemplate(template);
         expect(character.consciousness.frequency).toBe(3.0); // Should be clamped to minimum
         expect(character.consciousness.coherence).toBe(0.5);
     });
 
-    test('should validate coherence bounds in character creation', () => {
+    test('should validate coherence bounds in character creation', async () => {
         const template = {
             name: 'Test Character',
             consciousness: {
@@ -480,7 +480,7 @@ describe('Consciousness Parameter Bounds', () => {
         };
 
         // The Character constructor should clamp invalid values rather than throw
-        const character = Character.fromTemplate(template);
+        const character = await Character.fromTemplate(template);
         expect(character.consciousness.frequency).toBe(8.0);
         expect(character.consciousness.coherence).toBe(1.0); // Should be clamped to maximum
     });

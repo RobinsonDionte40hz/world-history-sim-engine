@@ -1752,19 +1752,27 @@ class Character {
    * Create a Character from a template configuration
    * @param {Object|string} templateConfig - Template configuration or template name
    * @param {Object} customizations - Customizations to apply to the template
-   * @returns {Character} New Character instance
+   * @param {Object} dependencies - Optional dependencies (for DI)
+   * @param {Object} dependencies.templateService - CharacterTemplateService instance
+   * @returns {Character|Promise<Character>} Character instance (Promise if templateConfig is string and service not injected)
    * @static
    */
-  static fromTemplate(templateConfig, customizations = {}) {
+  static async fromTemplate(templateConfig, customizations = {}, dependencies = {}) {
     if (!templateConfig) {
       throw new Error('Template configuration is required');
     }
 
     // If templateConfig is a string, treat it as a template name and try to get it from CharacterTemplateService
     if (typeof templateConfig === 'string') {
-      // Import CharacterTemplateService dynamically to avoid circular dependencies
-      const CharacterTemplateService = require('../services/CharacterTemplateService.js').default;
-      const templateService = new CharacterTemplateService();
+      // Use injected service or dynamically import CharacterTemplateService
+      let templateService = dependencies.templateService;
+      
+      if (!templateService) {
+        // Dynamic ES6 import to avoid circular dependencies
+        const CharacterTemplateServiceModule = await import('../services/CharacterTemplateService.js');
+        const CharacterTemplateService = CharacterTemplateServiceModule.default;
+        templateService = new CharacterTemplateService();
+      }
 
       const template = templateService.getPredefinedTemplate(templateConfig);
       if (!template) {
@@ -1789,7 +1797,7 @@ class Character {
         consciousnessCustomizations
       );
 
-      return new Character(characterData);
+      return new Character(characterData, dependencies);
     }
 
     // Handle object template configuration
