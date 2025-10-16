@@ -12,7 +12,7 @@ import WorldHistorySimInterface from '../presentation/components/WorldHistorySim
 
 // Mock SimulationContext first
 jest.mock('../presentation/contexts/SimulationContext.js', () => {
-  const React = require('react');
+  // React is already imported at top
   const SimulationContext = React.createContext();
   
   // Shared state for all mocks
@@ -145,7 +145,7 @@ jest.mock('../presentation/contexts/SimulationContext.js', () => {
 });
 
 // Now import the mocked components
-const { SimulationProvider, useSimulationContext, getSharedCurrentTurn, setSharedCurrentTurn, setSharedCanProcessTurn, getMockSaveState } = require('../presentation/contexts/SimulationContext.js');
+import { SimulationProvider, useSimulationContext, getSharedCurrentTurn, setSharedCurrentTurn, setSharedCanProcessTurn, getMockSaveState } from '../presentation/contexts/SimulationContext.js';
 
 // Mock SimulationService for turn-based testing
 jest.mock('../application/use-cases/services/SimulationService.js');

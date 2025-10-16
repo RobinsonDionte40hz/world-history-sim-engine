@@ -135,13 +135,13 @@ describe('GenerateBehavior Integration', () => {
     expect(result.interaction.name.toLowerCase()).toContain('rest');
   });
 
-  test('should handle characters with no available interactions', () => {
-    // Mock node with no interactions and disable system interactions
+  test('should return null when no interactions are available', async () => {
     mockNode.getAvailableInteractions = jest.fn(() => []);
     
     // Temporarily disable system interactions by mocking InteractionManager
-    const originalGetAvailableInteractions = require('../../domain/services/InteractionManager.js').default.prototype.getAvailableInteractions;
-    require('../../domain/services/InteractionManager.js').default.prototype.getAvailableInteractions = jest.fn(() => ({
+    const InteractionManagerModule = await import('../../domain/services/InteractionManager.js');
+    const originalGetAvailableInteractions = InteractionManagerModule.default.prototype.getAvailableInteractions;
+    InteractionManagerModule.default.prototype.getAvailableInteractions = jest.fn(() => ({
       systemInteractions: [],
       contentInteractions: [],
       allInteractions: []
@@ -150,7 +150,7 @@ describe('GenerateBehavior Integration', () => {
     const result = generateBehavior(mockCharacter, mockWorldState);
     
     // Restore original method
-    require('../../domain/services/InteractionManager.js').default.prototype.getAvailableInteractions = originalGetAvailableInteractions;
+    InteractionManagerModule.default.prototype.getAvailableInteractions = originalGetAvailableInteractions;
     
     // Should return null when no interactions are available
     expect(result).toBeNull();

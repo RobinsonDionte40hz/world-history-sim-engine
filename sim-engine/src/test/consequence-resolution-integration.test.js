@@ -14,14 +14,19 @@ jest.mock('../application/use-cases/services/SimulationService.js', () => {
       return worldData;
     }
 
-    processTurn() {
+    async processTurn() {
       if (!this.worldState) return { success: false };
 
       // Import required services
-      const BasicNeedsService = require('../domain/services/BasicNeedsService.js').default;
-      const NeedConsequenceService = require('../domain/services/NeedConsequenceService.js').default;
-      const ConsequenceLifecycleManager = require('../domain/services/ConsequenceLifecycleManager.js').default;
-      const SettlementService = require('../domain/services/SettlementService.js').default;
+      const BasicNeedsServiceModule = await import('../domain/services/BasicNeedsService.js');
+      const NeedConsequenceServiceModule = await import('../domain/services/NeedConsequenceService.js');
+      const ConsequenceLifecycleManagerModule = await import('../domain/services/ConsequenceLifecycleManager.js');
+      const SettlementServiceModule = await import('../domain/services/SettlementService.js');
+      
+      const BasicNeedsService = BasicNeedsServiceModule.default;
+      const NeedConsequenceService = NeedConsequenceServiceModule.default;
+      const ConsequenceLifecycleManager = ConsequenceLifecycleManagerModule.default;
+      const SettlementService = SettlementServiceModule.default;
 
       const basicNeedsService = new BasicNeedsService();
       const needConsequenceService = new NeedConsequenceService();
@@ -110,14 +115,18 @@ describe('Consequence Resolution Integration Tests', () => {
   });
 
   describe('End-to-End Consequence Lifecycle', () => {
-    it('should process complete consequence lifecycle in simulation', () => {
+    it('should process complete consequence lifecycle in simulation', async () => {
       // Create a test settlement with low need satisfaction
       const testSettlement = createTestSettlementWithLowNeeds();
 
       // Import required services directly
-      const BasicNeedsService = require('../domain/services/BasicNeedsService.js').default;
-      const NeedConsequenceService = require('../domain/services/NeedConsequenceService.js').default;
-      const SettlementService = require('../domain/services/SettlementService.js').default;
+      const BasicNeedsServiceModule = await import('../domain/services/BasicNeedsService.js');
+      const NeedConsequenceServiceModule = await import('../domain/services/NeedConsequenceService.js');
+      const SettlementServiceModule = await import('../domain/services/SettlementService.js');
+      
+      const BasicNeedsService = BasicNeedsServiceModule.default;
+      const NeedConsequenceService = NeedConsequenceServiceModule.default;
+      const SettlementService = SettlementServiceModule.default;
 
       const basicNeedsService = new BasicNeedsService();
       const needConsequenceService = new NeedConsequenceService();
