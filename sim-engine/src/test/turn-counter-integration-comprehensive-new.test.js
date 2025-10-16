@@ -12,7 +12,8 @@ import WorldHistorySimInterface from '../presentation/components/WorldHistorySim
 
 // Mock SimulationContext first
 jest.mock('../presentation/contexts/SimulationContext.js', () => {
-  // React is already imported at top
+  // Must use require inside jest.mock factory
+  const React = require('react');
   const SimulationContext = React.createContext();
   
   // Shared state for all mocks
