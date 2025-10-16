@@ -346,14 +346,14 @@ describe('ExamineInteraction', () => {
     });
 
     test('should be available when character has sufficient energy', () => {
-      const available = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = interaction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(true);
     });
 
     test('should not be available when character lacks energy', () => {
       mockCharacter.energy = 3; // Below required 5
 
-      const available = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = interaction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(false);
     });
 
@@ -363,7 +363,7 @@ describe('ExamineInteraction', () => {
         targetId: 'char-999' // Non-existent
       });
 
-      const available = invalidInteraction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = invalidInteraction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(false);
     });
 
@@ -373,7 +373,7 @@ describe('ExamineInteraction', () => {
         targetId: 'char-123'
       });
 
-      const available = selfInteraction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = selfInteraction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(false);
     });
   });
@@ -424,7 +424,7 @@ describe('ExamineInteraction', () => {
     });
 
     test('should execute successfully and consume energy', () => {
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.energyConsumed).toBe(5);
@@ -435,7 +435,7 @@ describe('ExamineInteraction', () => {
     });
 
     test('should examine character with basic information', () => {
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.details.examinationResult.success).toBe(true);
       expect(result.details.examinationResult.information.name).toBe('Target Character');
@@ -447,7 +447,7 @@ describe('ExamineInteraction', () => {
       mockCharacter.attributes.intelligence = 18;
       mockCharacter.attributes.wisdom = 16;
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.details.examinationResult.information.health).toBeDefined();
       expect(result.details.examinationResult.information.equipment).toBeDefined();
@@ -462,7 +462,7 @@ describe('ExamineInteraction', () => {
         targetId: 'item-123'
       });
 
-      const result = itemInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = itemInteraction.execute(mockCharacter, mockWorld);
 
       expect(result.details.examinationResult.success).toBe(true);
       expect(result.details.examinationResult.information.name).toBe('Magic Sword');
@@ -475,7 +475,7 @@ describe('ExamineInteraction', () => {
         targetId: 'feat-123'
       });
 
-      const result = featureInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = featureInteraction.execute(mockCharacter, mockWorld);
 
       expect(result.details.examinationResult.success).toBe(true);
       expect(result.details.examinationResult.information.name).toBe('Feature feat-123');
@@ -489,11 +489,11 @@ describe('ExamineInteraction', () => {
       });
 
       // First check that canExecute returns false
-      const canExecute = invalidInteraction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = invalidInteraction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
 
       // Then check that execute also fails
-      const result = invalidInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = invalidInteraction.execute(mockCharacter, mockWorld);
       expect(result.success).toBe(false);
     });
   });
@@ -517,9 +517,6 @@ describe('ExamineInteraction', () => {
         name: 'Test Examine',
         description: 'A test examination interaction',
         type: 'ExamineInteraction',
-        isSystemInteraction: true,
-        priority: 'normal',
-        baseEnergyCost: 5,
         targetType: 'character',
         targetId: 'char-456',
         range: 10,
@@ -634,7 +631,7 @@ describe('ExamineInteraction', () => {
       const mockCharacter = { attributes: { intelligence: 10, wisdom: 10 } };
       const mockWorld = {}; // Empty world
 
-      const available = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = interaction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(false);
     });
   });

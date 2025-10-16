@@ -244,15 +244,14 @@ class ExamineInteraction extends SystemInteraction {
 
   /**
    * Executes the examination interaction
-   * @param {Object} context - Execution context
-   * @param {Character} context.character - The character examining
-   * @param {World} context.world - The current world state
+   * @param {Character} character - The character examining
+   * @param {World} worldState - The current world state
    * @returns {Object} Execution result
    * @override
    */
-  execute({ character, world }) {
+  execute(character, worldState) {
     // Check if execution is allowed before proceeding
-    if (!this.canExecute({ character, world })) {
+    if (!this.canExecute(character, worldState)) {
       return {
         success: false,
         interaction: this,
@@ -261,19 +260,20 @@ class ExamineInteraction extends SystemInteraction {
       };
     }
 
-    // Create worldState object for SystemInteraction compatibility
-    const worldState = {
-      getCurrentEnvironment: () => this.environment || {}
+    // Create worldState wrapper for SystemInteraction compatibility
+    const worldStateWrapper = {
+      getCurrentEnvironment: () => this.environment || {},
+      ...worldState // Preserve other worldState properties
     };
 
-    const baseResult = super.execute(character, worldState);
+    const baseResult = super.execute(character, worldStateWrapper);
 
     if (!baseResult.success) {
       return baseResult;
     }
 
     const effectiveness = this.getExaminationEffectiveness(character, this.environment);
-    const examinationResult = this._performExamination({ character, world }, effectiveness);
+    const examinationResult = this._performExamination(character, worldState, effectiveness);
 
     return {
       ...baseResult,
@@ -290,19 +290,20 @@ class ExamineInteraction extends SystemInteraction {
 
   /**
    * Performs the actual examination based on target type
-   * @param {Object} context - Execution context
+   * @param {Character} character - The examining character
+   * @param {World} worldState - The world state
    * @param {number} effectiveness - Examination effectiveness (0.0 to 1.0)
    * @returns {Object} Examination result data
    * @private
    */
-  _performExamination({ character, world }, effectiveness) {
+  _performExamination(character, worldState, effectiveness) {
     switch (this.targetType) {
       case 'character':
-        return this._examineCharacter(character, world, effectiveness);
+        return this._examineCharacter(character, worldState, effectiveness);
       case 'item':
-        return this._examineItem(character, world, effectiveness);
+        return this._examineItem(character, worldState, effectiveness);
       case 'feature':
-        return this._examineFeature(world, effectiveness);
+        return this._examineFeature(worldState, effectiveness);
       default:
         return { success: false, reason: 'Unknown target type' };
     }

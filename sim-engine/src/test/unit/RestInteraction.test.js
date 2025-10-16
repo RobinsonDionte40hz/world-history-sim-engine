@@ -217,7 +217,7 @@ describe('RestInteraction', () => {
     });
 
     test('should be available when character needs rest', () => {
-      const available = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = interaction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(true);
     });
 
@@ -225,7 +225,7 @@ describe('RestInteraction', () => {
       mockCharacter.energy = 100;
       mockCharacter.health = 100;
 
-      const available = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = interaction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(false);
     });
 
@@ -237,7 +237,7 @@ describe('RestInteraction', () => {
         environment: dangerousEnv
       });
 
-      const available = dangerousInteraction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = dangerousInteraction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(false);
     });
 
@@ -249,7 +249,7 @@ describe('RestInteraction', () => {
         environment: dangerousEnv
       });
 
-      const available = safeInteraction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = safeInteraction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(true);
     });
 
@@ -261,7 +261,7 @@ describe('RestInteraction', () => {
         environment: safeEnv
       });
 
-      const available = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = interaction.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(true);
     });
   });
@@ -363,12 +363,13 @@ describe('RestInteraction', () => {
     });
 
     test('should execute successfully and restore energy and health', () => {
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
-      expect(result.character.energy).toBe(100); // 50 + 50 (capped at 100)
-      expect(result.character.health).toBe(100); // 80 + 20 (capped at 100)
-      expect(result.character.lastRestTime).toBe(1000);
+      // Check character was mutated directly
+      expect(mockCharacter.energy).toBe(100); // 50 + 50 (capped at 100)
+      expect(mockCharacter.health).toBe(100); // 80 + 20 (capped at 100)
+      expect(mockCharacter.lastRestTime).toBe(1000);
       expect(result.details.energyRestored).toBe(50);
       expect(result.details.healthRestored).toBe(20);
       expect(result.details.environmentalModifier).toBe(1.0);
@@ -380,10 +381,11 @@ describe('RestInteraction', () => {
       mockCharacter.energy = 95;
       mockCharacter.health = 98;
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
-      expect(result.character.energy).toBe(100);
-      expect(result.character.health).toBe(100);
+      // Check character was mutated directly
+      expect(mockCharacter.energy).toBe(100);
+      expect(mockCharacter.health).toBe(100);
       expect(result.details.energyRestored).toBe(5);
       expect(result.details.healthRestored).toBe(2);
     });
@@ -396,7 +398,7 @@ describe('RestInteraction', () => {
         environment: comfortableEnv
       });
 
-      const result = comfortableInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = comfortableInteraction.execute(mockCharacter, mockWorld);
 
       expect(result.details.energyRestored).toBe(50); // Character starts at 50, can only gain 50
       expect(result.details.healthRestored).toBe(20); // Character starts at 80, can only gain 20
@@ -411,7 +413,7 @@ describe('RestInteraction', () => {
         environment: dangerousEnv
       });
 
-      const result = safeInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = safeInteraction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.details.energyRestored).toBe(50); // Character starts at 50, can only gain 50
@@ -426,7 +428,7 @@ describe('RestInteraction', () => {
         environment: dangerousEnv
       });
 
-      const result = dangerousInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = dangerousInteraction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(false);
     });
@@ -437,7 +439,7 @@ describe('RestInteraction', () => {
         isSafe: false
       });
 
-      const result = noEnvInteraction.execute({ character: mockCharacter, world: mockWorld });
+      const result = noEnvInteraction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.details.environmentalModifier).toBe(1.0);
@@ -518,10 +520,10 @@ describe('RestInteraction', () => {
       const mockCharacter = { energy: 50, health: 80 };
       const mockWorld = { currentTime: 1000, getCurrentEnvironment: jest.fn(() => dangerousEnv) };
 
-      const available = safeRest.canExecute({ character: mockCharacter, world: mockWorld });
+      const available = safeRest.canExecute(mockCharacter, mockWorld);
       expect(available).toBe(true);
 
-      const result = safeRest.execute({ character: mockCharacter, world: mockWorld });
+      const result = safeRest.execute(mockCharacter, mockWorld);
       expect(result.success).toBe(true);
     });
   });
@@ -544,9 +546,6 @@ describe('RestInteraction', () => {
         name: 'Test Rest',
         description: 'A test rest interaction',
         type: 'RestInteraction',
-        isSystemInteraction: true,
-        priority: 'normal',
-        baseEnergyCost: 0,
         duration: 6,
         environment: Environment.createDefault().toJSON(),
         isSafe: true,

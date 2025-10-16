@@ -199,7 +199,7 @@ describe('MovementInteraction', () => {
         nodes: [{ id: 'node-1', x: 0, y: 0 }]
       };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
 
@@ -213,7 +213,7 @@ describe('MovementInteraction', () => {
         nodes: [{ id: 'node-1', x: 0, y: 0 }]
       };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
 
@@ -230,7 +230,7 @@ describe('MovementInteraction', () => {
         ]
       };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(true);
     });
 
@@ -247,7 +247,7 @@ describe('MovementInteraction', () => {
         ]
       };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
 
@@ -264,7 +264,7 @@ describe('MovementInteraction', () => {
         ]
       };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
   });
@@ -287,7 +287,7 @@ describe('MovementInteraction', () => {
         ]
       };
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.energyConsumed).toBe(10);
@@ -307,7 +307,7 @@ describe('MovementInteraction', () => {
         nodes: [{ id: 'node-1', x: 0, y: 0 }]
       };
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(false);
       expect(result.energyConsumed).toBe(0);
@@ -327,7 +327,7 @@ describe('MovementInteraction', () => {
       expect(json.type).toBe('MovementInteraction');
       expect(json.targetNodeId).toBe('node-123');
       expect(json.movementType).toBe('run');
-      expect(json.isSystemInteraction).toBe(true);
+      // isSystemInteraction removed - it's an internal flag
     });
 
     test('should deserialize from JSON', () => {

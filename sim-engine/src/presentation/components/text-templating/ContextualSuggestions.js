@@ -55,7 +55,7 @@ const ContextualSuggestions = ({
     }
 
     // Get unique categories
-    const categorySet = new Set((suggestions || []).map(s => s.category));
+    const categorySet = new Set((suggestions || []).map(s => s?.category).filter(Boolean));
     const categoryList = Array.from(categorySet).sort((a, b) => {
       const order = { character: 0, node: 1, world: 2, system: 3 };
       return (order[a] || 4) - (order[b] || 4);
@@ -143,12 +143,12 @@ const ContextualSuggestions = ({
 
   // Get availability stats
   const availabilityStats = useMemo(() => {
-    const total = suggestions.length;
-    const available = suggestions.filter(s => s.available).length;
+    const total = (suggestions || []).length;
+    const available = (suggestions || []).filter(s => s.available).length;
     return { total, available, unavailable: total - available };
   }, [suggestions]);
 
-  if (!suggestions.length) {
+  if (!(suggestions || []).length) {
     return (
       <div className={`text-center py-4 text-gray-500 ${className}`}>
         <Lightbulb className="w-8 h-8 mx-auto mb-2 opacity-50" />

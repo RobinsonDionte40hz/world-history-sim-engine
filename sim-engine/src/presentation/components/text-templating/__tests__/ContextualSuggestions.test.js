@@ -555,6 +555,7 @@ describe('ContextualSuggestions Component', () => {
         <ContextualSuggestions
           suggestions={incompleteSuggestions}
           onInsert={mockOnInsert}
+          showCategories={false}
         />
       );
 
@@ -585,6 +586,7 @@ describe('ContextualSuggestions Component', () => {
         <ContextualSuggestions
           suggestions={longSuggestions}
           onInsert={mockOnInsert}
+          showCategories={false}
         />
       );
 

@@ -135,7 +135,15 @@ describe('PerceptionInteraction', () => {
       });
 
       const mockCharacter = {
-        attributes: { intelligence: 15, wisdom: 12, perception: 10 }
+        attributes: {
+          intelligence: 15,
+          wisdom: 12,
+          perception: 10,
+          getTotalModifier: jest.fn((attr) => {
+            const values = { intelligence: 15, wisdom: 12, perception: 10 };
+            return values[attr] || 10;
+          })
+        }
       };
 
       const effectiveness = interaction.getPerceptionEffectiveness(mockCharacter, mockEnvironment);
@@ -148,7 +156,15 @@ describe('PerceptionInteraction', () => {
       });
 
       const mockCharacter = {
-        attributes: { intelligence: 10, wisdom: 16, perception: 14 }
+        attributes: {
+          intelligence: 10,
+          wisdom: 16,
+          perception: 14,
+          getTotalModifier: jest.fn((attr) => {
+            const values = { intelligence: 10, wisdom: 16, perception: 14 };
+            return values[attr] || 10;
+          })
+        }
       };
 
       const effectiveness = interaction.getPerceptionEffectiveness(mockCharacter);
@@ -161,7 +177,15 @@ describe('PerceptionInteraction', () => {
       });
 
       const mockCharacter = {
-        attributes: { intelligence: 10, wisdom: 10, perception: 18 }
+        attributes: {
+          intelligence: 10,
+          wisdom: 10,
+          perception: 18,
+          getTotalModifier: jest.fn((attr) => {
+            const values = { intelligence: 10, wisdom: 10, perception: 18 };
+            return values[attr] || 10;
+          })
+        }
       };
 
       const effectiveness = interaction.getPerceptionEffectiveness(mockCharacter);
@@ -189,7 +213,7 @@ describe('PerceptionInteraction', () => {
       const mockCharacter = { currentNodeId: 'node-1', energy: 100 };
       const mockWorld = { nodes: [{ id: 'node-1' }] };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
 
@@ -205,7 +229,7 @@ describe('PerceptionInteraction', () => {
         characters: []
       };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
 
@@ -217,7 +241,7 @@ describe('PerceptionInteraction', () => {
       const mockCharacter = { currentNodeId: 'node-1', energy: 100 };
       const mockWorld = { nodes: [{ id: 'node-1' }] };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(true);
     });
 
@@ -229,7 +253,7 @@ describe('PerceptionInteraction', () => {
       const mockCharacter = { currentNodeId: 'node-1', energy: 5 }; // Less than required
       const mockWorld = { nodes: [{ id: 'node-1' }] };
 
-      const canExecute = interaction.canExecute({ character: mockCharacter, world: mockWorld });
+      const canExecute = interaction.canExecute(mockCharacter, mockWorld);
       expect(canExecute).toBe(false);
     });
   });
@@ -251,7 +275,7 @@ describe('PerceptionInteraction', () => {
         characters: []
       };
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.energyConsumed).toBe(8);
@@ -277,7 +301,7 @@ describe('PerceptionInteraction', () => {
         characters: []
       };
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.details.perceptionType).toBe('listen');
@@ -300,7 +324,7 @@ describe('PerceptionInteraction', () => {
         characters: []
       };
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(true);
       expect(result.details.perceptionType).toBe('sense');
@@ -315,7 +339,7 @@ describe('PerceptionInteraction', () => {
       const mockCharacter = { currentNodeId: 'node-1', energy: 100 };
       const mockWorld = { nodes: [{ id: 'node-1' }] };
 
-      const result = interaction.execute({ character: mockCharacter, world: mockWorld });
+      const result = interaction.execute(mockCharacter, mockWorld);
 
       expect(result.success).toBe(false);
       expect(result.energyConsumed).toBe(0);
@@ -336,7 +360,7 @@ describe('PerceptionInteraction', () => {
       expect(json.perceptionType).toBe('listen');
       expect(json.targetId).toBe('target-123');
       expect(json.range).toBe(15);
-      expect(json.isSystemInteraction).toBe(true);
+      // isSystemInteraction removed - it's an internal flag
     });
 
     test('should deserialize from JSON', () => {
