@@ -14,9 +14,9 @@
  * - Performance requirements for LOD-aware turns
  */
 
-const processTurnWithLOD = require('../../application/use-cases/simulation/ProcessTurnWithLOD.js');
-const LODManager = require('../../domain/services/LODManager.js');
-const HistoryGenerator = require('../../domain/services/HistoryGenerator.js');
+import processTurnWithLOD from '../../application/use-cases/simulation/ProcessTurnWithLOD.js';
+import LODManager from '../../domain/services/LODManager.js';
+import HistoryGenerator from '../../domain/services/HistoryGenerator.js';
 
 describe('ProcessTurnWithLOD Use Case - Contract Tests', () => {
   let lodManager;

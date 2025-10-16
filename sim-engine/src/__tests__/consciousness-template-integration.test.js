@@ -9,8 +9,8 @@
  * - Template instantiation and validation
  */
 
-const TemplateManager = require('../template/TemplateManager').default;
-const Character = require('../domain/entities/Character').default;
+import TemplateManager from '../template/TemplateManager.js';
+import Character from '../domain/entities/Character.js';
 
 describe('Consciousness Template Integration', () => {
   let templateManager;

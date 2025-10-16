@@ -262,15 +262,16 @@ describe('UnifiedPersistenceService', () => {
       };
 
       // Mock persistStore to return our mock persistor
-      const originalPersistStore = require('redux-persist').persistStore;
-      require('redux-persist').persistStore = jest.fn(() => mockPersistor);
+      const reduxPersistModule = await import('redux-persist');
+      const originalPersistStore = reduxPersistModule.persistStore;
+      reduxPersistModule.persistStore = jest.fn(() => mockPersistor);
 
       try {
         // The initialize method should timeout and reject
         await expect(timeoutService.initialize()).rejects.toThrow('Persistence initialization timeout');
       } finally {
         // Restore original persistStore
-        require('redux-persist').persistStore = originalPersistStore;
+        reduxPersistModule.persistStore = originalPersistStore;
       }
     });
   });

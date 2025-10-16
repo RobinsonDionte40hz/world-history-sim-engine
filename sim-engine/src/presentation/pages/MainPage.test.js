@@ -161,7 +161,7 @@ describe('MainPage', () => {
   });
 
   describe('Context Integration', () => {
-    it('should pass correct props from context to ConditionalSimulationInterface', () => {
+    it('should pass correct props from context to ConditionalSimulationInterface', async () => {
       const mockContext = {
         templateManager: { id: 'template-manager' },
         worldBuilder: { id: 'world-builder', currentStep: 3 },
@@ -170,7 +170,8 @@ describe('MainPage', () => {
         canStartSimulation: false
       };
 
-      const { useSimulationContext } = require('../contexts/SimulationContext.js');
+      const SimulationContextModule = await import('../contexts/SimulationContext.js');
+      const { useSimulationContext } = SimulationContextModule;
       useSimulationContext.mockReturnValue(mockContext);
 
       render(<MainPage />);
@@ -181,8 +182,9 @@ describe('MainPage', () => {
       expect(screen.getByTestId('template-manager')).toHaveTextContent('Template Manager: Available');
     });
 
-    it('should handle missing context values gracefully', () => {
-      const { useSimulationContext } = require('../contexts/SimulationContext.js');
+    it('should handle missing context values gracefully', async () => {
+      const SimulationContextModule = await import('../contexts/SimulationContext.js');
+      const { useSimulationContext } = SimulationContextModule;
       useSimulationContext.mockReturnValue({
         templateManager: null,
         worldBuilder: null,
@@ -200,7 +202,7 @@ describe('MainPage', () => {
   });
 
   describe('No Automatic Simulation Startup', () => {
-    it('should not automatically start simulation on mount', () => {
+    it('should not automatically start simulation on mount', async () => {
       const mockSimulation = {
         worldState: null,
         isRunning: false,
@@ -209,7 +211,8 @@ describe('MainPage', () => {
         startSimulation: jest.fn()
       };
 
-      const { useSimulationContext } = require('../contexts/SimulationContext.js');
+      const SimulationContextModule = await import('../contexts/SimulationContext.js');
+      const { useSimulationContext } = SimulationContextModule;
       useSimulationContext.mockReturnValue({
         templateManager: {},
         worldBuilder: { isWorldComplete: false },
@@ -224,7 +227,7 @@ describe('MainPage', () => {
       expect(mockSimulation.startSimulation).not.toHaveBeenCalled();
     });
 
-    it('should not start simulation even when world is complete', () => {
+    it('should not start simulation even when world is complete', async () => {
       const mockSimulation = {
         worldState: null,
         isRunning: false,
@@ -233,7 +236,8 @@ describe('MainPage', () => {
         startSimulation: jest.fn()
       };
 
-      const { useSimulationContext } = require('../contexts/SimulationContext.js');
+      const SimulationContextModule = await import('../contexts/SimulationContext.js');
+      const { useSimulationContext } = SimulationContextModule;
       useSimulationContext.mockReturnValue({
         templateManager: {},
         worldBuilder: { isWorldComplete: true },
