@@ -1,0 +1,12 @@
+C:\Users\diont_o0bewg8\Desktop\projects\world-history-sim-engine\rust-wasm\target\debug\deps\serde-2fdcb6863b927219.d: C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\diont_o0bewg8\Desktop\projects\world-history-sim-engine\rust-wasm\target\debug\build\serde-a9c69f4a8c724b9e\out/private.rs
+
+C:\Users\diont_o0bewg8\Desktop\projects\world-history-sim-engine\rust-wasm\target\debug\deps\libserde-2fdcb6863b927219.rmeta: C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\diont_o0bewg8\Desktop\projects\world-history-sim-engine\rust-wasm\target\debug\build\serde-a9c69f4a8c724b9e\out/private.rs
+
+C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\diont_o0bewg8\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+C:\Users\diont_o0bewg8\Desktop\projects\world-history-sim-engine\rust-wasm\target\debug\build\serde-a9c69f4a8c724b9e\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\diont_o0bewg8\\Desktop\\projects\\world-history-sim-engine\\rust-wasm\\target\\debug\\build\\serde-a9c69f4a8c724b9e\\out

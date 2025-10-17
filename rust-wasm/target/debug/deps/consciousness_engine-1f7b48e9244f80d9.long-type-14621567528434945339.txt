@@ -1,0 +1,1 @@
+types::consciousness::ConsciousnessState: std::marker::Copy

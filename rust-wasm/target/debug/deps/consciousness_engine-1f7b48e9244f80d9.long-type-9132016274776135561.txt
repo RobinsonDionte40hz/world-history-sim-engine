@@ -1,0 +1,1 @@
+std::result::Result<f64, types::error::ConsciousnessError>

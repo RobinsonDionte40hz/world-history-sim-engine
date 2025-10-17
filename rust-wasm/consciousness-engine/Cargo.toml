@@ -1,0 +1,33 @@
+[package]
+name = "consciousness-engine"
+version = "0.1.0"
+edition = "2024"
+description = "High-performance NPC consciousness engine for WebAssembly"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/RobinsonDionte40hz/world-history-sim-engine"
+homepage = "https://github.com/RobinsonDionte40hz/world-history-sim-engine"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
+web-sys = { workspace = true, features = [
+  "console",
+  "Performance",
+  "Window",
+] }
+serde = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+serde_json = "1.0"
+console_error_panic_hook = { workspace = true }
+wee_alloc = { workspace = true }
+thiserror = { workspace = true }
+getrandom = { workspace = true }
+wasm-logger = "0.2"
+
+[dev-dependencies]
+wasm-bindgen-test = { workspace = true }
+criterion = { workspace = true }
+quickcheck = { workspace = true }

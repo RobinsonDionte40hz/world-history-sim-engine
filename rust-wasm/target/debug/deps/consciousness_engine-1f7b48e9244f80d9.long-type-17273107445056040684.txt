@@ -1,0 +1,1 @@
+Vec<types::consciousness::SignificantEvent>: std::marker::Copy
