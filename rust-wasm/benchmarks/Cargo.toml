@@ -1,0 +1,14 @@
+[workspace]
+
+[package]
+name = "quantum-benchmarks"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+criterion = "0.4"
+consciousness-engine = { path = "../consciousness-engine" }
+
+[[bench]]
+name = "quantum_benchmarks"
+harness = false

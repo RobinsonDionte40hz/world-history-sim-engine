@@ -12,13 +12,16 @@
 ## 1. Executive Summary
 
 ### 1.1 Business Case
-The current JavaScript-based NPC consciousness engine processes 10,000 NPCs in approximately 42 seconds, creating a performance bottleneck for large-scale world simulations. Porting the core consciousness algorithms to Rust/WebAssembly will deliver a 40-90x performance improvement, enabling real-time simulation of 10,000+ NPCs and positioning the engine as a standalone SDK for game developers.
+The current JavaScript-based NPC consciousness engine processes 10,000 NPCs in approximately 42 seconds, creating a performance bottleneck for large-scale world simulations. Porting the core consciousness algorithms to Rust/WebAssembly will deliver a **5-10x performance improvement** through compiled code efficiency, SIMD optimizations, and better memory management, enabling faster simulation of 10,000+ NPCs and positioning the engine as a standalone SDK for game developers.
+
+**IMPORTANT**: The algorithms are **NOT quantum computing algorithms** - they are simple range-based if/else mappings inspired by quantum concepts in naming only. Performance gains come from Rust's compiled efficiency, not algorithmic complexity.
 
 ### 1.2 Expected ROI
-- **Performance**: Target processing time <1 second for 10,000 NPCs
+- **Performance**: Target processing time **4-8 seconds** for 10,000 NPCs (5-10x improvement)
 - **Market Opportunity**: Standalone SDK for Unity, Godot, Unreal Engine
-- **Scalability**: Support for massive multiplayer simulations
+- **Scalability**: Support for large-scale multiplayer simulations
 - **Developer Experience**: Near-native performance in web browsers
+- **Algorithm Parity**: 100% identical behavior to JavaScript implementation
 
 ### 1.3 Risk Assessment
 - **High Risk**: Floating-point determinism across platforms

@@ -391,39 +391,38 @@ pub struct ConsciousnessImpact {
 
 ### 4.1 Consciousness Frequency Mapping
 
-**Algorithm**: Map consciousness frequency to energy level
+**Algorithm**: Simple range-based mapping (matches JavaScript exactly)
 
-**Pseudocode**:
-```
-function mapFrequencyToEnergy(frequency: f64) -> EnergyLevel:
-    if frequency < 4.0:
-        return VeryLow
-    elif frequency < 7.0:
-        return Low
-    elif frequency < 10.0:
-        return Moderate
-    elif frequency < 13.0:
-        return High
-    else:
-        return VeryHigh
+**JavaScript Reference** (from EnhancedConsciousnessState.js):
+```javascript
+mapFrequencyToEnergy(frequency) {
+    if (frequency < 5) return 'low';
+    if (frequency < 10) return 'moderate';
+    return 'high';
+}
 ```
 
-**Time Complexity**: O(1)
-**Space Complexity**: O(1)
-
-**Rust Implementation**:
+**Rust Implementation** (MUST match JavaScript exactly):
 ```rust
-impl ConsciousnessState {
-    pub fn map_frequency_to_energy(frequency: f64) -> EnergyLevel {
-        match frequency {
-            f if f < 4.0 => EnergyLevel::VeryLow,
-            f if f < 7.0 => EnergyLevel::Low,
-            f if f < 10.0 => EnergyLevel::Moderate,
-            f if f < 13.0 => EnergyLevel::High,
-            _ => EnergyLevel::VeryHigh,
-        }
+pub fn map_frequency_to_energy(frequency: f64) -> EnergyLevel {
+    if frequency < 5.0 {
+        EnergyLevel::Low
+    } else if frequency < 10.0 {
+        EnergyLevel::Moderate
+    } else {
+        EnergyLevel::High
     }
 }
+```
+
+**Time Complexity**: O(1) - simple if/else chain
+**Space Complexity**: O(1) - no allocations
+
+**Performance Notes**:
+- No power functions, no sine/cosine calculations
+- No quantum amplitude calculations
+- Just simple comparisons and returns
+- Performance gain comes from compiled Rust, not algorithm
 ```### 
 4.2 Interaction Weight Calculation
 
