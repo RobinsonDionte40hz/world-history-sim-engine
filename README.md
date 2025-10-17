@@ -180,16 +180,87 @@ The system supports two types of templates:
 ## 🛠️ Development
 
 ### Running Tests
+
+The project uses Jest for comprehensive testing. All test commands should be run from the `sim-engine` directory.
+
+#### Basic Test Commands
 ```bash
+# Navigate to sim-engine directory first
+cd sim-engine
+
 # Run all tests
 npm test
 
-# Run with coverage
+# Run with coverage report
 npm test -- --coverage
 
-# Run specific test file
-npm test -- --testPathPattern=SimulationService
+# Run tests without watch mode (CI/CD)
+npm test -- --watchAll=false
 ```
+
+#### Targeted Test Execution
+```bash
+# Run specific test file by path pattern
+npm test -- --testPathPattern=SimulationService
+
+# Run specific test by name pattern
+npm test -- --testNamePattern="should process turn"
+
+# Combine path and name patterns
+npm test -- --testPathPattern=npc-scalability --testNamePattern="should handle 10000 NPCs"
+```
+
+#### Specialized Test Suites
+```bash
+# Turn-based functionality validation (RECOMMENDED for core system validation)
+node run-turn-based-tests.js
+
+# Integration tests (complex workflows)
+npm test -- --testPathPattern=integration
+
+# Performance/Scalability tests
+npm test -- --testPathPattern=npc-scalability
+
+# Quick validation of core systems
+node validate-fixes.js
+```
+
+#### Debug Test Utilities
+```bash
+# Character system debugging
+node debug-character-creation.js
+
+# Economic system validation
+node debug-investment-effects.js
+
+# Family/relationship debugging
+node debug-procreation.js
+
+# Turn processing analysis
+node debug-turn-processing.js
+```
+
+#### PowerShell Notes (Windows)
+When running commands in PowerShell, use semicolon (`;`) instead of `&&` for command chaining:
+```powershell
+# Correct for PowerShell
+cd sim-engine ; npm test -- --testPathPattern=npc-scalability
+
+# Incorrect (Bash syntax)
+cd sim-engine && npm test
+```
+
+#### Test Organization
+- **Unit Tests**: Domain entities, value objects, services (`src/domain/`, `src/application/`)
+- **Integration Tests**: Multi-service workflows, turn processing (`src/test/integration/`)
+- **UI Tests**: Component rendering and interactions (`src/presentation/`)
+- **Performance Tests**: Large-scale simulations, LOD transitions (`src/test/npc-scalability.test.js`)
+
+#### Understanding Test Output
+- **Pass Rate**: Percentage of passing tests (aim for 90%+)
+- **Coverage**: Code coverage metrics (use `--coverage` flag)
+- **Performance Metrics**: Processing time, memory usage (see scalability tests)
+- **LOD Tiers**: Character distribution (hero/group/background) in performance logs
 
 ### Building for Production
 ```bash
