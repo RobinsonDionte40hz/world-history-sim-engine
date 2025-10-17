@@ -16,13 +16,35 @@ pub struct Memory {
     pub decay_factor: f64,          // Memory strength over time
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MemoryContext {
+    pub node_id: String,
     pub location: Option<String>,
     pub goal_relevance: f64,        // How relevant to current goals
     pub novelty_factor: f64,        // How unusual the event was
     pub social_importance: f64,     // Social significance
     pub survival_relevance: f64,    // Survival importance
+}
+
+impl std::hash::Hash for MemoryContext {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+        self.location.hash(state);
+        // Convert f64 to u64 for hashing (lossy but deterministic)
+        (self.goal_relevance.to_bits()).hash(state);
+        (self.novelty_factor.to_bits()).hash(state);
+        (self.social_importance.to_bits()).hash(state);
+        (self.survival_relevance.to_bits()).hash(state);
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MemoryType {
+    ShortTerm,
+    LongTerm,
+    Episodic,
+    Semantic,
+    Procedural,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +59,7 @@ pub struct InteractionEvent {
 impl Default for MemoryContext {
     fn default() -> Self {
         Self {
+            node_id: String::new(),
             location: None,
             goal_relevance: 0.0,
             novelty_factor: 0.0,

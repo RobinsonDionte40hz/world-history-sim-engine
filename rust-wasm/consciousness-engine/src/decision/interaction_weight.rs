@@ -59,7 +59,7 @@ impl InteractionWeightCalculator {
         Ok(weight.clamp(0.0, 10.0))
     }
 
-    fn calculate_goal_alignment(goals: &[Goal], _goal_alignment: &std::collections::HashMap<String, f64>) -> Result<f64> {
+    fn calculate_goal_alignment(_goals: &[Goal], _goal_alignment: &std::collections::HashMap<String, f64>) -> Result<f64> {
         // Placeholder implementation - would need GoalType enum
         Ok(1.0)
     }

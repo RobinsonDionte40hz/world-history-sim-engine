@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 // WASM-compatible version (no Vec, simpler types)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub struct ConsciousnessState {
     pub base_frequency: f64,        // 3.0 - 15.0 Hz
@@ -27,7 +27,7 @@ pub struct BehavioralState {
     pub cached_timestamp: u64, // When this state was calculated
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub enum EnergyLevel {
     VeryLow,
@@ -37,7 +37,7 @@ pub enum EnergyLevel {
     VeryHigh,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub enum FocusLevel {
     Scattered,
@@ -45,7 +45,7 @@ pub enum FocusLevel {
     Focused,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub enum MoodLevel {
     Depressed,
@@ -54,9 +54,10 @@ pub enum MoodLevel {
     Excited,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub enum EmotionalState {
+    #[default]
     Content,
     Excited,
     Anxious,
@@ -68,7 +69,7 @@ pub enum EmotionalState {
 }
 
 // Internal version with Vec (not WASM-compatible)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConsciousnessStateInternal {
     pub base_frequency: f64,
     pub base_coherence: f64,
@@ -134,16 +135,23 @@ impl Default for BehavioralState {
     }
 }
 
-impl Default for ConsciousnessStateInternal {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsciousnessUpdate {
+    pub new_state: ConsciousnessState,
+    pub confidence: f64,
+    pub coherence_change: f64,
+    pub adaptation_strength: f64,
+    pub reasoning: String,
+}
+
+impl Default for ConsciousnessUpdate {
     fn default() -> Self {
         Self {
-            base_frequency: 7.5,
-            base_coherence: 0.8,
-            current_frequency: 7.5,
-            emotional_coherence: 0.8,
-            emotional_state: EmotionalState::Content,
-            last_update: 0,
-            significant_events: Vec::new(),
+            new_state: ConsciousnessState::default(),
+            confidence: 0.5,
+            coherence_change: 0.0,
+            adaptation_strength: 0.0,
+            reasoning: "Default update".to_string(),
         }
     }
 }

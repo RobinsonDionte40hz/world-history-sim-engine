@@ -10,13 +10,13 @@ pub fn calculate_interaction_weight(
     interaction: &JsValue,
     context: &JsValue
 ) -> Result<f64, JsValue> {
-    let character: Character = serde_wasm_bindgen::from_value(character.clone())
+    let _character: Character = serde_wasm_bindgen::from_value(character.clone())
         .map_err(|e| JsValue::from_str(&format!("Deserialization error: {}", e)))?;
 
-    let interaction: Interaction = serde_wasm_bindgen::from_value(interaction.clone())
+    let _interaction: Interaction = serde_wasm_bindgen::from_value(interaction.clone())
         .map_err(|e| JsValue::from_str(&format!("Deserialization error: {}", e)))?;
 
-    let context: InteractionContext = serde_wasm_bindgen::from_value(context.clone())
+    let _context: InteractionContext = serde_wasm_bindgen::from_value(context.clone())
         .map_err(|e| JsValue::from_str(&format!("Deserialization error: {}", e)))?;
 
     // For now, return a simple calculation
@@ -31,13 +31,13 @@ pub fn generate_behavior(
     available_interactions: &JsValue,
     context: &JsValue
 ) -> Result<JsValue, JsValue> {
-    let character: Character = serde_wasm_bindgen::from_value(character.clone())
+    let _character: Character = serde_wasm_bindgen::from_value(character.clone())
         .map_err(|e| JsValue::from_str(&format!("Deserialization error: {}", e)))?;
 
-    let interactions: Vec<Interaction> = serde_wasm_bindgen::from_value(available_interactions.clone())
+    let _interactions: Vec<Interaction> = serde_wasm_bindgen::from_value(available_interactions.clone())
         .map_err(|e| JsValue::from_str(&format!("Deserialization error: {}", e)))?;
 
-    let context: InteractionContext = serde_wasm_bindgen::from_value(context.clone())
+    let _context: InteractionContext = serde_wasm_bindgen::from_value(context.clone())
         .map_err(|e| JsValue::from_str(&format!("Deserialization error: {}", e)))?;
 
     // For now, return a simple result
