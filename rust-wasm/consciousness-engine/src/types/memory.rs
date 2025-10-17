@@ -14,6 +14,12 @@ pub struct Memory {
     pub participants: Vec<String>,
     pub context: MemoryContext,
     pub decay_factor: f64,          // Memory strength over time
+    // Additional fields for comprehensive memory tracking
+    pub interaction_id: String,
+    pub outcome: String,
+    pub location: String,
+    pub context_tags: Vec<String>,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -24,6 +30,7 @@ pub struct MemoryContext {
     pub novelty_factor: f64,        // How unusual the event was
     pub social_importance: f64,     // Social significance
     pub survival_relevance: f64,    // Survival importance
+    pub participants: Vec<String>,  // Participants in the interaction
 }
 
 impl std::hash::Hash for MemoryContext {
@@ -35,6 +42,21 @@ impl std::hash::Hash for MemoryContext {
         (self.novelty_factor.to_bits()).hash(state);
         (self.social_importance.to_bits()).hash(state);
         (self.survival_relevance.to_bits()).hash(state);
+        self.participants.hash(state);
+    }
+}
+
+impl Default for MemoryContext {
+    fn default() -> Self {
+        Self {
+            node_id: String::new(),
+            location: None,
+            goal_relevance: 0.0,
+            novelty_factor: 0.0,
+            social_importance: 0.0,
+            survival_relevance: 0.0,
+            participants: Vec::new(),
+        }
     }
 }
 
@@ -54,17 +76,5 @@ pub struct InteractionEvent {
     pub emotional_impact: f64,
     pub participants: Vec<String>,
     pub context: MemoryContext,
-}
-
-impl Default for MemoryContext {
-    fn default() -> Self {
-        Self {
-            node_id: String::new(),
-            location: None,
-            goal_relevance: 0.0,
-            novelty_factor: 0.0,
-            social_importance: 0.0,
-            survival_relevance: 0.0,
-        }
-    }
+    pub interaction_type: InteractionType,
 }

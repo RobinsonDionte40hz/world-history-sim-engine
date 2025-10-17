@@ -172,10 +172,15 @@ impl QuantumMemoryConsolidator {
             timestamp: most_recent.timestamp,
             significance: avg_significance,
             emotional_impact: avg_emotional_impact,
-            interaction_type: most_recent.interaction_type.clone(),
+            interaction_type: most_recent.interaction_type,
             participants: most_recent.participants.clone(),
             context: most_recent.context.clone(),
             decay_factor: avg_decay,
+            interaction_id: format!("interaction_{}", most_recent.timestamp),
+            outcome: "consolidated".to_string(),
+            location: most_recent.context.location.clone().unwrap_or_else(|| "unknown".to_string()),
+            context_tags: vec!["consolidated".to_string()],
+            description: format!("Consolidated memory from {} events", memories.len()),
         })
     }
 

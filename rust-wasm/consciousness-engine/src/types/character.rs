@@ -46,8 +46,10 @@ pub struct Character {
     pub attributes: Attributes,
     pub personality: Personality,
     pub memories: Vec<crate::Memory>,
+    pub significant_memories: Option<Vec<crate::Memory>>, // For SignificantMemoryService compatibility
     pub goals: Vec<Goal>,
     pub behavioral_state: Option<crate::BehavioralState>,
+    pub current_node_id: String, // Current location node ID
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,8 +68,10 @@ impl Default for Character {
             attributes: Attributes::default(),
             personality: Personality::default(),
             memories: Vec::new(),
+            significant_memories: Some(Vec::new()),
             goals: Vec::new(),
             behavioral_state: None,
+            current_node_id: "default_node".to_string(),
         }
     }
 }

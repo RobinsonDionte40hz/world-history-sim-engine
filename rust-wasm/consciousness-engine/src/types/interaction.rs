@@ -7,7 +7,7 @@ use crate::types::consciousness::EmotionalState;
 use crate::types::character::Attributes;
 
 // WASM-compatible types
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[wasm_bindgen]
 pub enum InteractionType {
     Social,
