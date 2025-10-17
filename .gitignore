@@ -41,4 +41,10 @@ env/
 venv/
 ENV/
 env.bak/
-venv.bak/ 
+venv.bak/
+
+# Rust
+rust-wasm/target/
+rust-wasm/Cargo.lock
+rust-wasm/rustup-init.exe
+**/*.rs.bk 

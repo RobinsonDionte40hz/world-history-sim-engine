@@ -1,0 +1,124 @@
+name: Rust/WebAssembly CI
+
+on:
+  push:
+    branches: [ main, es6-module-conversion ]
+    paths:
+      - 'rust-wasm/**'
+      - '.github/workflows/rust-wasm-ci.yml'
+  pull_request:
+    branches: [ main, es6-module-conversion ]
+    paths:
+      - 'rust-wasm/**'
+      - '.github/workflows/rust-wasm-ci.yml'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache Cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-git-
+
+    - name: Cache target directory
+      uses: actions/cache@v3
+      with:
+        path: rust-wasm/target
+        key: ${{ runner.os }}-rust-wasm-target-${{ hashFiles('rust-wasm/**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-rust-wasm-target-
+
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Check code formatting
+      working-directory: rust-wasm
+      run: cargo fmt --all -- --check
+
+    - name: Run clippy
+      working-directory: rust-wasm
+      run: cargo clippy -- -D warnings
+
+    - name: Check compilation
+      working-directory: rust-wasm
+      run: cargo check --target wasm32-unknown-unknown
+
+    - name: Run tests
+      working-directory: rust-wasm
+      run: cargo test
+
+    - name: Build WASM package
+      working-directory: rust-wasm
+      run: wasm-pack build --target web --out-dir pkg
+
+    - name: Upload WASM artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: wasm-package
+        path: rust-wasm/pkg/
+        retention-days: 30
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache target directory
+      uses: actions/cache@v3
+      with:
+        path: rust-wasm/target
+        key: ${{ runner.os }}-rust-wasm-target-${{ hashFiles('rust-wasm/**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-rust-wasm-target-
+
+    - name: Install criterion
+      working-directory: rust-wasm
+      run: cargo install cargo-criterion
+
+    - name: Run benchmarks
+      working-directory: rust-wasm
+      run: cargo criterion --message-format=json > benchmark-results.json
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: rust-wasm/benchmark-results.json
+        retention-days: 30
