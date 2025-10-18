@@ -10,6 +10,7 @@ use crate::Result;
 
 /// Generate behavioral state from consciousness parameters
 /// Matches JavaScript: generateBehavioralState() in EnhancedConsciousnessState.js
+#[inline(always)]
 pub fn generate_behavioral_state(frequency: f64, coherence: f64) -> BehavioralState {
     BehavioralState {
         energy: map_frequency_to_energy(frequency),
@@ -27,6 +28,7 @@ pub fn generate_behavioral_state(frequency: f64, coherence: f64) -> BehavioralSt
 /// if (frequency < 5) return 'low';
 /// if (frequency < 10) return 'moderate';
 /// return 'high';
+#[inline(always)]
 pub fn map_frequency_to_energy(frequency: f64) -> EnergyLevel {
     if frequency < 5.0 {
         EnergyLevel::Low
@@ -42,6 +44,7 @@ pub fn map_frequency_to_energy(frequency: f64) -> EnergyLevel {
 /// if (coherence < 0.4) return 'scattered';
 /// if (coherence < 0.8) return 'balanced';
 /// return 'focused';
+#[inline(always)]
 pub fn map_coherence_to_focus(coherence: f64) -> FocusLevel {
     if coherence < 0.4 {
         FocusLevel::Scattered
@@ -55,6 +58,7 @@ pub fn map_coherence_to_focus(coherence: f64) -> FocusLevel {
 /// Calculate mood from frequency and coherence
 /// JavaScript: calculateMoodFromState(freq, coherence) in EnhancedConsciousnessState.js
 /// Formula: moodScore = (frequency / 15) * 0.7 + coherence * 0.3
+#[inline(always)]
 pub fn calculate_mood_from_state(frequency: f64, coherence: f64) -> MoodLevel {
     // Calculate mood score using JavaScript formula
     let mood_score = (frequency / 15.0) * 0.7 + coherence * 0.3;
@@ -72,18 +76,21 @@ pub fn calculate_mood_from_state(frequency: f64, coherence: f64) -> MoodLevel {
 
 /// Calculate social drive
 /// JavaScript: socialDrive: Math.max(0, Math.min(1, (freq - 4) / 8))
+#[inline(always)]
 pub fn calculate_social_drive(frequency: f64) -> f64 {
     ((frequency - 4.0) / 8.0).clamp(0.0, 1.0)
 }
 
 /// Calculate risk tolerance
 /// JavaScript: riskTolerance: Math.max(0, Math.min(1, (freq - 6) / 6))
+#[inline(always)]
 pub fn calculate_risk_tolerance(frequency: f64) -> f64 {
     ((frequency - 6.0) / 6.0).clamp(0.0, 1.0)
 }
 
 /// Calculate ambition
 /// JavaScript: ambition: Math.max(0, Math.min(1, coherence * (freq / 10)))
+#[inline(always)]
 pub fn calculate_ambition(frequency: f64, coherence: f64) -> f64 {
     (coherence * (frequency / 10.0)).clamp(0.0, 1.0)
 }

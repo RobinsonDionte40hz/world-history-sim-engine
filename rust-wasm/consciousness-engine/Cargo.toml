@@ -36,3 +36,7 @@ quickcheck = { workspace = true }
 [[bench]]
 name = "behavioral_state_bench"
 harness = false
+
+[[bench]]
+name = "serialization_bench"
+harness = false

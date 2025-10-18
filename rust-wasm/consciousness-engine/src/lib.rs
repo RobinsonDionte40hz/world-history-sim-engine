@@ -11,6 +11,9 @@ pub mod inspection;
 pub mod migration;
 pub mod types;
 pub mod wasm;
+pub mod fast_serialization;
+pub mod object_pool;
+pub mod zero_copy_batch;
 
 pub use consciousness_module::*;
 pub use memory_module::*;
@@ -37,6 +40,9 @@ pub use migration::{
 };
 pub use types::*;
 pub use wasm::*;
+pub use fast_serialization::*;
+pub use object_pool::*;
+pub use zero_copy_batch::*;
 
 // Re-export commonly used types
 pub use types::{Character, ConsciousnessState, Interaction};
