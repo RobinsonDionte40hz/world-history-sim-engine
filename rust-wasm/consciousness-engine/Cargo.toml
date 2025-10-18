@@ -40,3 +40,26 @@ harness = false
 [[bench]]
 name = "serialization_bench"
 harness = false
+
+[profile.release]
+opt-level = 3              # Maximum optimization
+lto = true                 # Enable link-time optimization
+codegen-units = 1          # Better optimization, slower compile
+panic = 'abort'            # Reduce binary size
+strip = true               # Strip debug symbols
+
+[profile.release-small]
+inherits = "release"
+opt-level = "z"            # Optimize for size
+lto = "fat"                # Aggressive LTO
+
+[profile.release-perf]
+inherits = "release"
+opt-level = 3              # Maximum speed
+lto = "thin"               # Fast LTO
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O4", "--enable-simd"]  # Maximum optimization with SIMD
+
+[package.metadata.wasm-pack.profile.release-small]
+wasm-opt = ["-Oz", "--enable-bulk-memory"]  # Optimize for size

@@ -1,6 +1,63 @@
 {
-  "name": "consciousness-engine-tests",
+  "name": "@world-history-sim/consciousness-engine-wasm",
   "version": "0.1.0",
   "type": "module",
-  "description": "Test suite for consciousness engine WASM bindings"
+  "description": "High-performance NPC consciousness engine for WebAssembly - 272x faster than JavaScript",
+  "main": "pkg/consciousness_engine.js",
+  "types": "pkg/consciousness_engine.d.ts",
+  "files": [
+    "pkg/**/*",
+    "src/wrapper/ConsciousnessEngineWasm.js",
+    "README.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target nodejs --release",
+    "build:small": "wasm-pack build --target nodejs --release-small",
+    "build:perf": "wasm-pack build --target nodejs --release-perf",
+    "build:web": "wasm-pack build --target bundler --release",
+    "test": "cargo test --release && node test-wrapper.js",
+    "test:integration": "node test-epic9-integration.js",
+    "bench": "cargo bench",
+    "clean": "cargo clean && rmdir /s /q pkg",
+    "prepublishOnly": "npm run build && npm test",
+    "version": "node scripts/sync-version.js && git add Cargo.toml package.json",
+    "postversion": "git push && git push --tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RobinsonDionte40hz/world-history-sim-engine.git",
+    "directory": "rust-wasm/consciousness-engine"
+  },
+  "keywords": [
+    "wasm",
+    "webassembly",
+    "rust",
+    "consciousness",
+    "npc",
+    "ai",
+    "game-engine",
+    "simulation",
+    "performance",
+    "behavioral-ai",
+    "decision-making"
+  ],
+  "author": "Robinson Dionte <robinson@40hz.dev>",
+  "license": "(MIT OR Apache-2.0)",
+  "bugs": {
+    "url": "https://github.com/RobinsonDionte40hz/world-history-sim-engine/issues"
+  },
+  "homepage": "https://github.com/RobinsonDionte40hz/world-history-sim-engine/tree/main/rust-wasm/consciousness-engine#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "wasm-pack": "^0.12.0"
+  },
+  "peerDependencies": {},
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
