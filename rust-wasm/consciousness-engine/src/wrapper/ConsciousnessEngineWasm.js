@@ -13,15 +13,21 @@
  */
 
 export class ConsciousnessEngineWasm {
-    constructor() {
+    constructor(options = {}) {
         this.wasmModule = null;
         this.isReady = false;
-        this.useFallback = false;
+        this.useFallback = options.forceJavaScriptFallback || false;
         this.performanceStats = {
             wasmCalls: 0,
             fallbackCalls: 0,
             totalTime: 0,
             averageTime: 0
+        };
+        this.configuration = {
+            minFrequency: 0.5,
+            maxFrequency: 100,
+            minCoherence: 0,
+            maxCoherence: 1
         };
     }
 
@@ -30,6 +36,13 @@ export class ConsciousnessEngineWasm {
      * @returns {Promise<boolean>} True if initialization successful
      */
     async initialize() {
+        // If forced to use fallback, skip WASM initialization
+        if (this.useFallback) {
+            this.isReady = true;
+            console.log('⚠️  Using JavaScript fallback (forced)');
+            return false;
+        }
+        
         try {
             // Dynamic import of WASM module (relative to project root)
             const wasmModule = await import('../../pkg/consciousness_engine.js');
@@ -294,16 +307,48 @@ export class ConsciousnessEngineWasm {
      * @private
      */
     _toWasmConsciousnessState(jsState) {
+        // Clamp and validate values to prevent extreme inputs
+        const baseFrequency = this._clampFrequency(
+            jsState.baseFrequency || jsState.base_frequency || 7.5
+        );
+        const baseCoherence = this._clampCoherence(
+            jsState.baseCoherence || jsState.base_coherence || 0.7
+        );
+        
         return {
-            base_frequency: jsState.baseFrequency || jsState.base_frequency || 7.5,
-            base_coherence: jsState.baseCoherence || jsState.base_coherence || 0.7,
-            current_frequency: jsState.currentFrequency || jsState.current_frequency || 
-                             jsState.baseFrequency || jsState.base_frequency || 7.5,
-            emotional_coherence: jsState.emotionalCoherence || jsState.emotional_coherence || 
-                               jsState.baseCoherence || jsState.base_coherence || 0.7,
+            base_frequency: baseFrequency,
+            base_coherence: baseCoherence,
+            current_frequency: this._clampFrequency(
+                jsState.currentFrequency || jsState.current_frequency || baseFrequency
+            ),
+            emotional_coherence: this._clampCoherence(
+                jsState.emotionalCoherence || jsState.emotional_coherence || baseCoherence
+            ),
             emotional_state: this._toWasmEmotionalState(jsState.emotionalState || jsState.emotional_state),
             last_update: jsState.lastUpdate || jsState.last_update || Date.now()
         };
+    }
+
+    /**
+     * Clamp frequency to valid range
+     * @private
+     */
+    _clampFrequency(value) {
+        if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
+            return 7.5; // Default
+        }
+        return Math.max(0.5, Math.min(100, value));
+    }
+
+    /**
+     * Clamp coherence to valid range (0-1)
+     * @private
+     */
+    _clampCoherence(value) {
+        if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
+            return 0.7; // Default
+        }
+        return Math.max(0, Math.min(1, value));
     }
 
     /**
@@ -327,13 +372,31 @@ export class ConsciousnessEngineWasm {
      * @private
      */
     _fromWasmBehavioralState(wasmState) {
+        // Ensure all values are finite and valid
+        const ensureFinite = (val, defaultVal = 0.5) => {
+            if (typeof val !== 'number' || !isFinite(val)) {
+                return defaultVal;
+            }
+            return val;
+        };
+
+        // Clamp to 0-1 range
+        const clamp01 = (val) => {
+            const finite = ensureFinite(val, 0.5);
+            return Math.max(0, Math.min(1, finite));
+        };
+
         return {
-            energy: wasmState.energy,
-            focus: wasmState.focus,
-            mood: wasmState.mood,
-            socialDrive: wasmState.social_drive,
-            riskTolerance: wasmState.risk_tolerance,
-            ambition: wasmState.ambition,
+            // Support both naming conventions
+            energy: ensureFinite(wasmState.energy, 0.5),
+            energyLevel: ensureFinite(wasmState.energy, 0.5),
+            focus: clamp01(wasmState.focus),
+            focusLevel: clamp01(wasmState.focus),
+            mood: wasmState.mood || 'Content',
+            emotionalState: wasmState.mood || 'Content',
+            socialDrive: ensureFinite(wasmState.social_drive, 0.5),
+            riskTolerance: ensureFinite(wasmState.risk_tolerance, 0.5),
+            ambition: ensureFinite(wasmState.ambition, 0.5),
             cachedTimestamp: wasmState.cached_timestamp || 0
         };
     }
@@ -370,10 +433,18 @@ export class ConsciousnessEngineWasm {
         const coherence = consciousnessState.baseCoherence || 
                          consciousnessState.emotionalCoherence || 0.7;
 
+        const energyValue = this._mapFrequencyToEnergy(frequency);
+        const focusValue = this._mapCoherenceToFocus(coherence);
+        const moodValue = this._calculateMoodFromState(frequency, coherence);
+
         const result = {
-            energy: this._mapFrequencyToEnergy(frequency),
-            focus: this._mapCoherenceToFocus(coherence),
-            mood: this._calculateMoodFromState(frequency, coherence),
+            // Support both naming conventions
+            energy: energyValue,
+            energyLevel: energyValue,
+            focus: focusValue,
+            focusLevel: focusValue,
+            mood: moodValue,
+            emotionalState: moodValue,
             socialDrive: Math.max(0, Math.min(1, (frequency - 4) / 8)),
             riskTolerance: Math.max(0, Math.min(1, (frequency - 6) / 6)),
             ambition: Math.max(0, Math.min(1, coherence * (frequency / 10))),
@@ -477,6 +548,92 @@ export class ConsciousnessEngineWasm {
                coherence &&
                coherence.min >= 0.2 &&
                coherence.max <= 1.0;
+    }
+
+    /**
+     * Check if engine is initialized
+     * @returns {boolean} True if initialized
+     */
+    isInitialized() {
+        return this.isReady;
+    }
+
+    /**
+     * Check if using WASM backend
+     * @returns {boolean} True if using WASM, false if using fallback
+     */
+    isUsingWasm() {
+        return !this.useFallback && this.wasmModule !== null;
+    }
+
+    /**
+     * Apply emotional impact to current state
+     * @param {Object} state - Current emotional state
+     * @param {Object} impact - Emotional impact to apply
+     * @returns {Object} Updated emotional state
+     */
+    applyEmotionalImpact(state, impact) {
+        const startTime = performance.now();
+
+        try {
+            if (this.useFallback || !this.wasmModule) {
+                return this._applyEmotionalImpactFallback(state, impact);
+            }
+
+            // Use WASM function
+            const result = this.wasmModule.apply_emotional_impact(state, impact);
+            
+            this._recordPerformance(startTime, false);
+            return result;
+        } catch (error) {
+            console.warn('WASM emotional impact failed:', error);
+            return this._applyEmotionalImpactFallback(state, impact);
+        }
+    }
+
+    /**
+     * Set engine configuration
+     * @param {Object} config - Configuration object
+     */
+    setConfiguration(config) {
+        this.configuration = { ...this.configuration, ...config };
+    }
+
+    /**
+     * Get current configuration
+     * @returns {Object} Configuration object
+     */
+    getConfiguration() {
+        // Return the stored configuration (user-set or defaults)
+        return { ...this.configuration };
+    }
+
+    /**
+     * Fallback: Apply emotional impact using JavaScript
+     * @private
+     */
+    _applyEmotionalImpactFallback(state, impact) {
+        const newState = { ...state };
+        
+        // Simple impact logic
+        if (impact.type === 'positive') {
+            newState.coherence = Math.min(1.0, state.coherence + impact.intensity * 0.1);
+        } else if (impact.type === 'negative') {
+            newState.coherence = Math.max(0.0, state.coherence - impact.intensity * 0.1);
+        }
+        
+        // Update emotional state based on new coherence
+        if (newState.coherence > 0.8) {
+            newState.emotionalState = 'Excited';
+        } else if (newState.coherence > 0.6) {
+            newState.emotionalState = 'Content';
+        } else if (newState.coherence > 0.4) {
+            newState.emotionalState = 'Calm';
+        } else {
+            newState.emotionalState = 'Subdued';
+        }
+        
+        return newState;
     }
 }
 
