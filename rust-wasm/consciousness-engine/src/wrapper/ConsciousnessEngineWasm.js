@@ -32,18 +32,43 @@ export class ConsciousnessEngineWasm {
     async initialize() {
         try {
             // Dynamic import of WASM module (relative to project root)
-            const wasm = await import('../../pkg/consciousness_engine.js');
-            this.wasmModule = wasm;
+            const wasmModule = await import('../../pkg/consciousness_engine.js');
+            
+            // For Node.js, we need to load the .wasm file manually
+            // Check if we're in Node.js environment
+            if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+                // Node.js environment
+                const fs = await import('fs/promises');
+                const path = await import('path');
+                const { fileURLToPath } = await import('url');
+                
+                // Get the directory of this module
+                const __filename = fileURLToPath(import.meta.url);
+                const __dirname = path.dirname(__filename);
+                
+                // Load the WASM file
+                const wasmPath = path.join(__dirname, '../../pkg/consciousness_engine_bg.wasm');
+                const wasmBuffer = await fs.readFile(wasmPath);
+                
+                // Initialize with the buffer
+                await wasmModule.default(wasmBuffer);
+            } else {
+                // Browser environment - let it fetch automatically
+                await wasmModule.default();
+            }
+            
+            this.wasmModule = wasmModule;
             this.isReady = true;
             this.useFallback = false;
             
             console.log('✅ WASM Consciousness Engine initialized');
-            console.log(`   Version: ${wasm.get_version()}`);
-            console.log(`   Build: ${wasm.get_build_info()}`);
+            console.log(`   Version: ${wasmModule.get_version()}`);
+            console.log(`   Build: ${wasmModule.get_build_info()}`);
             
             return true;
         } catch (error) {
             console.warn('⚠️  WASM initialization failed, using JavaScript fallback:', error.message);
+            console.warn('   Error details:', error);
             this.useFallback = true;
             this.isReady = true;
             return false;
@@ -81,7 +106,7 @@ export class ConsciousnessEngineWasm {
     }
 
     /**
-     * Calculate batch behavioral states (optimized for multiple characters)
+     * Calculate batch behavioral states (optimized with zero-copy)
      * @param {Array<Object>} consciousnessStates - Array of consciousness states
      * @returns {Array<Object>} Array of behavioral states
      */
@@ -95,27 +120,85 @@ export class ConsciousnessEngineWasm {
                 );
             }
 
-            // Convert to WASM format
-            const wasmInputs = consciousnessStates.map(state => 
-                this._toWasmConsciousnessState(state)
-            );
+            // Transform JavaScript objects to TypedArrays for zero-copy processing
+            const count = consciousnessStates.length;
+            const frequencies = new Float64Array(count);
+            const coherences = new Float64Array(count);
             
-            // Call WASM batch function
-            const results = this.wasmModule.calculate_batch_behavioral_states(wasmInputs);
+            for (let i = 0; i < count; i++) {
+                const state = consciousnessStates[i];
+                // Use currentFrequency if available, otherwise baseFrequency
+                frequencies[i] = state.currentFrequency ?? state.baseFrequency ?? 7.5;
+                // Use emotionalCoherence if available, otherwise baseCoherence
+                coherences[i] = state.emotionalCoherence ?? state.baseCoherence ?? 0.5;
+            }
             
-            // Convert results back to JavaScript
-            const jsResults = results.map(result => 
-                this._fromWasmBehavioralState(result)
-            );
+            // Call zero-copy WASM function
+            const binaryResult = this.wasmModule.calculate_batch_zero_copy(frequencies, coherences);
+            
+            // Parse binary result back to JavaScript object with arrays
+            const parsedResult = this.wasmModule.parse_batch_result(binaryResult);
+            
+            // Transform arrays back to individual objects for API compatibility
+            const results = [];
+            for (let i = 0; i < count; i++) {
+                results.push({
+                    energy: this._u8ToEnergyString(parsedResult.energies[i]),
+                    focus: this._u8ToFocusString(parsedResult.focuses[i]),
+                    mood: this._u8ToMoodString(parsedResult.moods[i]),
+                    socialDrive: parsedResult.socialDrives[i],
+                    riskTolerance: parsedResult.riskTolerances[i],
+                    ambition: parsedResult.ambitions[i]
+                });
+            }
             
             this._recordPerformance(startTime, false);
-            return jsResults;
+            return results;
         } catch (error) {
-            console.error('WASM batch calculation failed:', error);
-            return consciousnessStates.map(state => 
-                this._calculateBehavioralStateFallback(state)
-            );
+            console.error('WASM zero-copy batch failed, trying regular batch:', error);
+            try {
+                // Fallback to regular batch processing
+                const wasmInputs = consciousnessStates.map(state => 
+                    this._toWasmConsciousnessState(state)
+                );
+                const results = this.wasmModule.calculate_batch_behavioral_states(wasmInputs);
+                const jsResults = results.map(result => 
+                    this._fromWasmBehavioralState(result)
+                );
+                this._recordPerformance(startTime, false);
+                return jsResults;
+            } catch (fallbackError) {
+                console.error('WASM batch completely failed, using JavaScript:', fallbackError);
+                this._recordPerformance(startTime, true);
+                return consciousnessStates.map(state => 
+                    this._calculateBehavioralStateFallback(state)
+                );
+            }
         }
+    }
+
+    /**
+     * Convert u8 energy enum to string
+     */
+    _u8ToEnergyString(value) {
+        const energyMap = ['VeryLow', 'Low', 'Moderate', 'High', 'VeryHigh'];
+        return energyMap[value] || 'Moderate';
+    }
+
+    /**
+     * Convert u8 focus enum to string
+     */
+    _u8ToFocusString(value) {
+        const focusMap = ['Scattered', 'Balanced', 'Focused'];
+        return focusMap[value] || 'Balanced';
+    }
+
+    /**
+     * Convert u8 mood enum to string
+     */
+    _u8ToMoodString(value) {
+        const moodMap = ['Depressed', 'Content', 'Optimistic', 'Excited'];
+        return moodMap[value] || 'Content';
     }
 
     /**
