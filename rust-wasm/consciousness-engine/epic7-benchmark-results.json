@@ -1,0 +1,431 @@
+{
+  "timestamp": "2025-10-18T04:39:55.461Z",
+  "environment": {
+    "nodeVersion": "v20.15.1",
+    "platform": "win32",
+    "arch": "x64",
+    "memory": {
+      "rss": 38092800,
+      "heapTotal": 4673536,
+      "heapUsed": 4245936,
+      "external": 1634765,
+      "arrayBuffers": 54972
+    }
+  },
+  "benchmarks": [
+    {
+      "name": "Single Character Calculation",
+      "category": "single-op",
+      "iterations": 10000,
+      "times": {
+        "min": 2.0999999999844476,
+        "max": 12767.399999999981,
+        "mean": 7.519480000000003,
+        "median": 4.300000000000637,
+        "p95": 10.300000000000864,
+        "p99": 24.500000000003297,
+        "total": 79705.3
+      },
+      "throughput": {
+        "opsPerSecond": 132987,
+        "totalOpsPerSecond": 125462
+      },
+      "memory": {
+        "heapDelta": 1583008,
+        "externalDelta": 131072
+      }
+    },
+    {
+      "name": "Emotional Coherence Calculation",
+      "category": "single-op",
+      "iterations": 10000,
+      "times": {
+        "min": 0.10000000000331966,
+        "max": 1074.6000000000038,
+        "mean": 0.4995499999999967,
+        "median": 0.30000000000995897,
+        "p95": 0.49999999998817657,
+        "p99": 0.5999999999914962,
+        "total": 6787.900000000008
+      },
+      "throughput": {
+        "opsPerSecond": 2001801,
+        "totalOpsPerSecond": 1473209
+      },
+      "memory": {
+        "heapDelta": -432192,
+        "externalDelta": 0
+      }
+    },
+    {
+      "name": "Emotional State Determination",
+      "category": "single-op",
+      "iterations": 10000,
+      "times": {
+        "min": 0.7999999999981355,
+        "max": 11581.099999999991,
+        "mean": 3.125070000000048,
+        "median": 1.299999999986312,
+        "p95": 1.599999999996271,
+        "p99": 3.0999999999892225,
+        "total": 33085.399999999994
+      },
+      "throughput": {
+        "opsPerSecond": 319992,
+        "totalOpsPerSecond": 302248
+      },
+      "memory": {
+        "heapDelta": -732600,
+        "externalDelta": 0
+      }
+    },
+    {
+      "name": "Batch Processing (10 characters)",
+      "category": "batch",
+      "iterations": 1000,
+      "times": {
+        "min": 16.600000000039472,
+        "max": 9289.099999999991,
+        "mean": 47.89960000000037,
+        "median": 21.299999999996544,
+        "p95": 38.79999999998063,
+        "p99": 338.0999999999972,
+        "total": 48024.29999999998
+      },
+      "throughput": {
+        "opsPerSecond": 20877,
+        "totalOpsPerSecond": 20822
+      },
+      "memory": {
+        "heapDelta": 475712,
+        "externalDelta": 273680
+      }
+    },
+    {
+      "name": "Batch Processing (50 characters)",
+      "category": "batch",
+      "iterations": 1000,
+      "times": {
+        "min": 10.199999999997544,
+        "max": 6710.40000000005,
+        "mean": 30.015500000001065,
+        "median": 17.499999999984084,
+        "p95": 44.2000000000462,
+        "p99": 164.0000000000441,
+        "total": 30089.699999999993
+      },
+      "throughput": {
+        "opsPerSecond": 33316,
+        "totalOpsPerSecond": 33233
+      },
+      "memory": {
+        "heapDelta": 1114368,
+        "externalDelta": 740992
+      }
+    },
+    {
+      "name": "Batch Processing (100 characters)",
+      "category": "batch",
+      "iterations": 1000,
+      "times": {
+        "min": 12.90000000000191,
+        "max": 891.5000000000077,
+        "mean": 24.176099999999426,
+        "median": 14.299999999991542,
+        "p95": 46.70000000004393,
+        "p99": 182.90000000001783,
+        "total": 24377.900000000012
+      },
+      "throughput": {
+        "opsPerSecond": 41363,
+        "totalOpsPerSecond": 41020
+      },
+      "memory": {
+        "heapDelta": -3462376,
+        "externalDelta": 514036
+      }
+    },
+    {
+      "name": "Batch Processing (500 characters)",
+      "category": "batch",
+      "iterations": 100,
+      "times": {
+        "min": 31.40000000001919,
+        "max": 2214.29999999998,
+        "mean": 95.5519999999956,
+        "median": 51.60000000000764,
+        "p95": 300.3999999999678,
+        "p99": 2214.29999999998,
+        "total": 9564.50000000001
+      },
+      "throughput": {
+        "opsPerSecond": 10465,
+        "totalOpsPerSecond": 10455
+      },
+      "memory": {
+        "heapDelta": 1892360,
+        "externalDelta": 769620
+      }
+    },
+    {
+      "name": "Batch Processing (1000 characters)",
+      "category": "batch",
+      "iterations": 100,
+      "times": {
+        "min": 55.10000000003856,
+        "max": 803.2999999999788,
+        "mean": 165.61600000000223,
+        "median": 103.59999999997171,
+        "p95": 624.5000000000118,
+        "p99": 803.2999999999788,
+        "total": 16573.89999999998
+      },
+      "throughput": {
+        "opsPerSecond": 6038,
+        "totalOpsPerSecond": 6033
+      },
+      "memory": {
+        "heapDelta": 1360280,
+        "externalDelta": 820216
+      }
+    },
+    {
+      "name": "10K NPC Processing",
+      "npcCount": 10000,
+      "batchProcessing": {
+        "totalTime": 4.411999999999978,
+        "perNPC": 0.00044119999999999777,
+        "throughput": 2266545,
+        "targetMet": true,
+        "speedupVsJS": 271.98549410698234
+      },
+      "sequentialProcessing": {
+        "sampleSize": 1000,
+        "totalTime": 34.615099999999984,
+        "perNPC": 0.03461509999999998,
+        "extrapolatedTotal": 346.15099999999984
+      },
+      "memory": {
+        "before": {
+          "label": "10K NPCs - Start",
+          "timestamp": 1760762395835,
+          "heapUsed": 9308960,
+          "heapTotal": 16470016,
+          "external": 8205199,
+          "rss": 61550592,
+          "arrayBuffers": 478454
+        },
+        "after": {
+          "label": "10K NPCs - After Batch",
+          "timestamp": 1760762395840,
+          "heapUsed": 11716680,
+          "heapTotal": 16470016,
+          "external": 9142383,
+          "rss": 63336448,
+          "arrayBuffers": 1388454
+        }
+      }
+    }
+  ],
+  "memorySnapshots": [
+    {
+      "label": "Single Character Calculation - Before",
+      "timestamp": 1760762395523,
+      "heapUsed": 6687144,
+      "heapTotal": 10702848,
+      "external": 4955583,
+      "rss": 50167808,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Single Character Calculation - After",
+      "timestamp": 1760762395605,
+      "heapUsed": 8270152,
+      "heapTotal": 11489280,
+      "external": 5086655,
+      "rss": 53895168,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Emotional Coherence Calculation - Before",
+      "timestamp": 1760762395609,
+      "heapUsed": 8462544,
+      "heapTotal": 11489280,
+      "external": 5086655,
+      "rss": 53968896,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Emotional Coherence Calculation - After",
+      "timestamp": 1760762395616,
+      "heapUsed": 8030352,
+      "heapTotal": 11751424,
+      "external": 5086655,
+      "rss": 55783424,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Emotional State Determination - Before",
+      "timestamp": 1760762395632,
+      "heapUsed": 8250152,
+      "heapTotal": 11751424,
+      "external": 5086655,
+      "rss": 54108160,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Emotional State Determination - After",
+      "timestamp": 1760762395665,
+      "heapUsed": 7517552,
+      "heapTotal": 15945728,
+      "external": 5086655,
+      "rss": 58253312,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Batch Processing (10 characters) - Before",
+      "timestamp": 1760762395674,
+      "heapUsed": 9102808,
+      "heapTotal": 15945728,
+      "external": 5086655,
+      "rss": 57470976,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "Batch Processing (10 characters) - After",
+      "timestamp": 1760762395724,
+      "heapUsed": 9578520,
+      "heapTotal": 16207872,
+      "external": 5360335,
+      "rss": 61001728,
+      "arrayBuffers": 752134
+    },
+    {
+      "label": "Batch Processing (50 characters) - Before",
+      "timestamp": 1760762395736,
+      "heapUsed": 9808384,
+      "heapTotal": 16207872,
+      "external": 5360335,
+      "rss": 61554688,
+      "arrayBuffers": 752134
+    },
+    {
+      "label": "Batch Processing (50 characters) - After",
+      "timestamp": 1760762395767,
+      "heapUsed": 10922752,
+      "heapTotal": 16470016,
+      "external": 6101327,
+      "rss": 59772928,
+      "arrayBuffers": 1362054
+    },
+    {
+      "label": "Batch Processing (100 characters) - Before",
+      "timestamp": 1760762395772,
+      "heapUsed": 11150392,
+      "heapTotal": 16470016,
+      "external": 6101327,
+      "rss": 59772928,
+      "arrayBuffers": 1362054
+    },
+    {
+      "label": "Batch Processing (100 characters) - After",
+      "timestamp": 1760762395797,
+      "heapUsed": 7688016,
+      "heapTotal": 16470016,
+      "external": 6615363,
+      "rss": 60178432,
+      "arrayBuffers": 1024454
+    },
+    {
+      "label": "Batch Processing (500 characters) - Before",
+      "timestamp": 1760762395798,
+      "heapUsed": 7979088,
+      "heapTotal": 16470016,
+      "external": 6615363,
+      "rss": 59838464,
+      "arrayBuffers": 527454
+    },
+    {
+      "label": "Batch Processing (500 characters) - After",
+      "timestamp": 1760762395808,
+      "heapUsed": 9871448,
+      "heapTotal": 16470016,
+      "external": 7384983,
+      "rss": 61304832,
+      "arrayBuffers": 1269454
+    },
+    {
+      "label": "Batch Processing (1000 characters) - Before",
+      "timestamp": 1760762395810,
+      "heapUsed": 10046592,
+      "heapTotal": 16470016,
+      "external": 7384983,
+      "rss": 61304832,
+      "arrayBuffers": 1269454
+    },
+    {
+      "label": "Batch Processing (1000 characters) - After",
+      "timestamp": 1760762395829,
+      "heapUsed": 11406872,
+      "heapTotal": 16470016,
+      "external": 8205199,
+      "rss": 61788160,
+      "arrayBuffers": 1696454
+    },
+    {
+      "label": "10K NPCs - Start",
+      "timestamp": 1760762395835,
+      "heapUsed": 9308960,
+      "heapTotal": 16470016,
+      "external": 8205199,
+      "rss": 61550592,
+      "arrayBuffers": 478454
+    },
+    {
+      "label": "10K NPCs - After Batch",
+      "timestamp": 1760762395840,
+      "heapUsed": 11716680,
+      "heapTotal": 16470016,
+      "external": 9142383,
+      "rss": 63336448,
+      "arrayBuffers": 1388454
+    },
+    {
+      "label": "Memory Stress - Start",
+      "timestamp": 1760762395957,
+      "heapUsed": 7048816,
+      "heapTotal": 26693632,
+      "external": 8228637,
+      "rss": 63463424,
+      "arrayBuffers": 72485
+    },
+    {
+      "label": "Memory Stress - After GC",
+      "timestamp": 1760762396030,
+      "heapUsed": 14249840,
+      "heapTotal": 26693632,
+      "external": 12772468,
+      "rss": 76648448,
+      "arrayBuffers": 1745485
+    }
+  ],
+  "determinismResults": [
+    {
+      "deterministic": true,
+      "testCases": 10,
+      "iterations": 100,
+      "totalTests": 1000,
+      "inconsistencies": 0,
+      "successRate": "100.00"
+    }
+  ],
+  "completedAt": "2025-10-18T04:39:56.034Z",
+  "engineStats": {
+    "wasmCalls": 15361,
+    "fallbackCalls": 0,
+    "totalTime": 318.61309999999816,
+    "averageTime": 0.020741689994140885,
+    "wasmEnabled": true,
+    "module": "WASM"
+  }
+}
