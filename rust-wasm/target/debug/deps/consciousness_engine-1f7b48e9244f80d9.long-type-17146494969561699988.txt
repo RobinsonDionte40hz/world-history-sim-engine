@@ -1,1 +1,0 @@
-std::result::Result<wasm_bindgen::JsValue, types::error::ConsciousnessError>
