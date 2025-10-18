@@ -1,0 +1,11 @@
+WASM Binary Size Analysis Report
+=================================
+Generated: Fri 10/17/2025 22:26:33.25
+File: ..\pkg\consciousness_engine_bg.wasm
+Size:  KB ( bytes)
+
+Top 50 Functions by Size:
+=========================
+
+Top 20 Dominators:
+==================
