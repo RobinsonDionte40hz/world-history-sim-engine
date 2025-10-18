@@ -1,0 +1,219 @@
+{
+  "timestamp": "2025-10-18T12:33:44.056Z",
+  "platform": {
+    "os": "win32",
+    "arch": "x64",
+    "nodeVersion": "v20.15.1"
+  },
+  "tests": [
+    {
+      "name": "Single-run determinism (100 iterations)",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.109Z",
+      "iterations": 100,
+      "uniqueResults": 1,
+      "expectedUnique": 1,
+      "reason": null
+    },
+    {
+      "name": "Multi-run determinism (1000 iterations)",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.133Z",
+      "iterations": 1000,
+      "uniqueResults": 1,
+      "expectedUnique": 1,
+      "reason": null
+    },
+    {
+      "name": "Cross-session determinism (3 engines)",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.139Z",
+      "engines": 3,
+      "allMatch": true,
+      "hash1": "e1e944b0d11abff3",
+      "hash2": "e1e944b0d11abff3",
+      "hash3": "e1e944b0d11abff3",
+      "reason": null
+    },
+    {
+      "name": "Floating-point: Standard values",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.141Z",
+      "frequency": 40,
+      "coherence": 0.8,
+      "iterations": 100,
+      "uniqueValues": 1,
+      "sampleResult": 0.8,
+      "reason": null
+    },
+    {
+      "name": "Floating-point: Minimum values",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.142Z",
+      "frequency": 3,
+      "coherence": 0.2,
+      "iterations": 100,
+      "uniqueValues": 1,
+      "sampleResult": 0.2,
+      "reason": null
+    },
+    {
+      "name": "Floating-point: Maximum values",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.142Z",
+      "frequency": 14,
+      "coherence": 1,
+      "iterations": 100,
+      "uniqueValues": 1,
+      "sampleResult": 0.9333333333333333,
+      "reason": null
+    },
+    {
+      "name": "Floating-point: Fractional values",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.142Z",
+      "frequency": 7.5,
+      "coherence": 0.333333,
+      "iterations": 100,
+      "uniqueValues": 1,
+      "sampleResult": 0.2,
+      "reason": null
+    },
+    {
+      "name": "Floating-point: Irrational values",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.142Z",
+      "frequency": 10,
+      "coherence": 0.707107,
+      "iterations": 100,
+      "uniqueValues": 1,
+      "sampleResult": 0.4714046666666667,
+      "reason": null
+    },
+    {
+      "name": "Batch vs individual equivalence",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.145Z",
+      "itemsProcessed": 10,
+      "mismatches": 0,
+      "mismatchIndices": [],
+      "reason": null
+    },
+    {
+      "name": "Seed reproducibility: seed=1",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.146Z",
+      "seed": 1,
+      "sequenceLength": 10,
+      "allMatch": true,
+      "reason": null
+    },
+    {
+      "name": "Seed reproducibility: seed=42",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.146Z",
+      "seed": 42,
+      "sequenceLength": 10,
+      "allMatch": true,
+      "reason": null
+    },
+    {
+      "name": "Seed reproducibility: seed=1337",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.147Z",
+      "seed": 1337,
+      "sequenceLength": 10,
+      "allMatch": true,
+      "reason": null
+    },
+    {
+      "name": "Seed reproducibility: seed=9999",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.148Z",
+      "seed": 9999,
+      "sequenceLength": 10,
+      "allMatch": true,
+      "reason": null
+    },
+    {
+      "name": "Seed reproducibility: seed=123456",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.148Z",
+      "seed": 123456,
+      "sequenceLength": 10,
+      "allMatch": true,
+      "reason": null
+    },
+    {
+      "name": "Zero coherence",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.149Z",
+      "frequency": 40,
+      "coherence": 0,
+      "iterations": 50,
+      "uniqueValues": 1,
+      "sampleResult": 0.2,
+      "reason": null
+    },
+    {
+      "name": "Maximum coherence",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.149Z",
+      "frequency": 40,
+      "coherence": 1,
+      "iterations": 50,
+      "uniqueValues": 1,
+      "sampleResult": 1,
+      "reason": null
+    },
+    {
+      "name": "Minimum frequency",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.150Z",
+      "frequency": 3,
+      "coherence": 0.5,
+      "iterations": 50,
+      "uniqueValues": 1,
+      "sampleResult": 0.2,
+      "reason": null
+    },
+    {
+      "name": "Maximum frequency",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.150Z",
+      "frequency": 14,
+      "coherence": 0.5,
+      "iterations": 50,
+      "uniqueValues": 1,
+      "sampleResult": 0.4666666666666667,
+      "reason": null
+    },
+    {
+      "name": "Very small coherence",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.150Z",
+      "frequency": 40,
+      "coherence": 0.001,
+      "iterations": 50,
+      "uniqueValues": 1,
+      "sampleResult": 0.2,
+      "reason": null
+    },
+    {
+      "name": "Very large coherence",
+      "passed": true,
+      "timestamp": "2025-10-18T12:33:44.150Z",
+      "frequency": 40,
+      "coherence": 0.999,
+      "iterations": 50,
+      "uniqueValues": 1,
+      "sampleResult": 0.999,
+      "reason": null
+    }
+  ],
+  "summary": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0
+  }
+}

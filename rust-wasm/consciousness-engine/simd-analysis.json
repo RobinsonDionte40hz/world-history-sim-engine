@@ -1,0 +1,133 @@
+{
+  "hotPaths": [
+    {
+      "operation": "calculateBehavioralState",
+      "totalTime": "44.54",
+      "avgTime": "4.45",
+      "opsPerSec": "224,516",
+      "percentage": "80.8"
+    },
+    {
+      "operation": "determineEmotionalState",
+      "totalTime": "8.86",
+      "avgTime": "0.89",
+      "opsPerSec": "1,128,872",
+      "percentage": "16.1"
+    },
+    {
+      "operation": "calculateEmotionalCoherence",
+      "totalTime": "1.75",
+      "avgTime": "0.17",
+      "opsPerSec": "5,728,689",
+      "percentage": "3.2"
+    }
+  ],
+  "vectorizableOperations": [
+    {
+      "name": "Attribute Calculations",
+      "description": "D&D attributes (6 parallel values: STR, DEX, CON, INT, WIS, CHA)",
+      "operations": [
+        "Modifier calculations (-4 to +4)",
+        "Attribute influence on consciousness",
+        "Weighted attribute sums"
+      ],
+      "vectorSize": 6,
+      "currentApproach": "Sequential scalar operations",
+      "simdApproach": "SIMD vector operations (process all 6 simultaneously)",
+      "estimatedSpeedup": "2-4x for attribute operations",
+      "overallImpact": "Low-Medium",
+      "reason": "Only 6 values - SIMD overhead may exceed gains"
+    },
+    {
+      "name": "Personality Trait Processing",
+      "description": "Array of personality traits (typically 5-20 traits)",
+      "operations": [
+        "Trait intensity weighted sums",
+        "Trait influence calculations",
+        "Trait similarity comparisons"
+      ],
+      "vectorSize": "5-20",
+      "currentApproach": "Iterative trait processing",
+      "simdApproach": "Vectorized trait array operations",
+      "estimatedSpeedup": "2-3x for trait operations",
+      "overallImpact": "Medium",
+      "reason": "Moderate array size, frequent operations"
+    },
+    {
+      "name": "Emotional State Calculations",
+      "description": "Multiple emotional dimensions (4+ values)",
+      "operations": [
+        "Emotional vector distance",
+        "Weighted emotional influence",
+        "Emotional state updates"
+      ],
+      "vectorSize": 4,
+      "currentApproach": "Sequential emotion calculations",
+      "simdApproach": "Vector operations on emotional state",
+      "estimatedSpeedup": "1.5-2x for emotion operations",
+      "overallImpact": "Low",
+      "reason": "Only 4 dimensions - limited SIMD benefit"
+    },
+    {
+      "name": "Memory Significance Arrays",
+      "description": "Batch memory significance calculations",
+      "operations": [
+        "Significance scoring (0.0-1.0)",
+        "Threshold filtering (≥0.3)",
+        "Memory decay calculations"
+      ],
+      "vectorSize": "10-50",
+      "currentApproach": "Sequential memory iteration",
+      "simdApproach": "Vectorized significance scoring",
+      "estimatedSpeedup": "3-5x for memory operations",
+      "overallImpact": "Medium-High",
+      "reason": "Larger arrays, repeated calculations",
+      "bestCandidate": true
+    },
+    {
+      "name": "Influence Factor Calculations",
+      "description": "Multiple influence factors (relationships, goals, memories)",
+      "operations": [
+        "Weighted sum of influences",
+        "Influence decay over time",
+        "Combined influence scoring"
+      ],
+      "vectorSize": "8-15",
+      "currentApproach": "Sequential influence accumulation",
+      "simdApproach": "Vectorized influence aggregation",
+      "estimatedSpeedup": "2-3x for influence calculations",
+      "overallImpact": "Medium",
+      "reason": "Moderate size, critical path operation"
+    }
+  ],
+  "estimatedGains": {
+    "Attributes (6 values)": {
+      "scalarTime": "8.22",
+      "simdTime": "3.66",
+      "speedup": "2.25",
+      "improvement": "124.6"
+    },
+    "Personality Traits (10 values)": {
+      "scalarTime": "9.93",
+      "simdTime": "2.44",
+      "speedup": "4.08",
+      "improvement": "307.5"
+    },
+    "Memory Significance (50 values)": {
+      "scalarTime": "36.60",
+      "simdTime": "10.67",
+      "speedup": "3.43",
+      "improvement": "243.2"
+    }
+  },
+  "recommendation": {
+    "decision": "✅ IMPLEMENT SIMD",
+    "reasoning": "Expected 30% improvement exceeds 10% threshold. ROI is acceptable.",
+    "expectedImprovement": "30%",
+    "threshold": "10%",
+    "currentSpeedup": "272x",
+    "effort": "10 hours",
+    "roi": "3.00% per hour"
+  },
+  "timestamp": "2025-10-18T12:20:31.976Z"
+}

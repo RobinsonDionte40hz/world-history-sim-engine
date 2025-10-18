@@ -1,0 +1,163 @@
+{
+  "timestamp": "2025-10-18T12:45:04.614Z",
+  "platform": {
+    "os": "win32",
+    "arch": "x64",
+    "nodeVersion": "v20.15.1"
+  },
+  "baseline": {
+    "version": "0.1.0",
+    "date": "2025-10-18",
+    "platform": "win32-x64",
+    "metrics": {
+      "singleOperation": {
+        "critical": 0.6,
+        "warning": 0.8,
+        "target": 1
+      },
+      "batch10K": {
+        "critical": 6,
+        "warning": 8,
+        "target": 10
+      },
+      "throughput": {
+        "target": 1000000,
+        "warning": 1500000,
+        "critical": 1800000
+      },
+      "memoryPerOp": {
+        "critical": 0.5,
+        "warning": 0.75,
+        "target": 1
+      },
+      "wasmMemoryGrowth": {
+        "critical": 0.05,
+        "warning": 0.075,
+        "target": 0.1
+      },
+      "determinism": {
+        "target": 100,
+        "warning": 100,
+        "critical": 100
+      }
+    }
+  },
+  "tests": [
+    {
+      "name": "Single operation latency",
+      "metric": "avgTime",
+      "value": 19.090300000000013,
+      "baseline": {
+        "target": 1,
+        "warning": 0.8,
+        "critical": 0.6
+      },
+      "status": "FAIL",
+      "message": "Exceeds target: 19.0903 > 1"
+    },
+    {
+      "name": "10K NPC batch processing",
+      "metric": "batchTime",
+      "value": 13.509500000000003,
+      "baseline": {
+        "target": 10,
+        "warning": 8,
+        "critical": 6
+      },
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "name": "Operations per second",
+      "metric": "throughput",
+      "value": 282873,
+      "baseline": {
+        "target": 1000000,
+        "warning": 1500000,
+        "critical": 1800000
+      },
+      "status": "FAIL",
+      "message": "Below target: 282873.00 < 1000000"
+    },
+    {
+      "name": "Memory per operation (permanent)",
+      "metric": "memoryPerOp",
+      "value": 28.43296,
+      "baseline": {
+        "target": 1,
+        "warning": 0.75,
+        "critical": 0.5
+      },
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "name": "WASM memory growth (50K ops)",
+      "metric": "wasmGrowth",
+      "value": 4.500624656677246,
+      "baseline": {
+        "target": 0.1,
+        "warning": 0.075,
+        "critical": 0.05
+      },
+      "status": "FAIL",
+      "message": "Exceeds target: 4.5006 > 0.1"
+    },
+    {
+      "name": "Determinism rate",
+      "metric": "determinism",
+      "value": 100,
+      "baseline": {
+        "target": 100,
+        "warning": 100,
+        "critical": 100
+      },
+      "status": "PASS",
+      "message": null
+    }
+  ],
+  "regressions": [
+    {
+      "name": "Single operation latency",
+      "metric": "avgTime",
+      "value": 19.090300000000013,
+      "baseline": {
+        "target": 1,
+        "warning": 0.8,
+        "critical": 0.6
+      },
+      "status": "FAIL",
+      "message": "Exceeds target: 19.0903 > 1"
+    },
+    {
+      "name": "Operations per second",
+      "metric": "throughput",
+      "value": 282873,
+      "baseline": {
+        "target": 1000000,
+        "warning": 1500000,
+        "critical": 1800000
+      },
+      "status": "FAIL",
+      "message": "Below target: 282873.00 < 1000000"
+    },
+    {
+      "name": "WASM memory growth (50K ops)",
+      "metric": "wasmGrowth",
+      "value": 4.500624656677246,
+      "baseline": {
+        "target": 0.1,
+        "warning": 0.075,
+        "critical": 0.05
+      },
+      "status": "FAIL",
+      "message": "Exceeds target: 4.5006 > 0.1"
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 3,
+    "warnings": 0,
+    "failed": 3
+  }
+}

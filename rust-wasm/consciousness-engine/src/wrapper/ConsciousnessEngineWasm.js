@@ -148,7 +148,8 @@ export class ConsciousnessEngineWasm {
                     mood: this._u8ToMoodString(parsedResult.moods[i]),
                     socialDrive: parsedResult.socialDrives[i],
                     riskTolerance: parsedResult.riskTolerances[i],
-                    ambition: parsedResult.ambitions[i]
+                    ambition: parsedResult.ambitions[i],
+                    cachedTimestamp: 0  // Match individual processing API
                 });
             }
             

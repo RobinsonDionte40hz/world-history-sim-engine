@@ -1,0 +1,347 @@
+{
+  "timestamp": "2025-10-18T12:01:23.670Z",
+  "tests": [
+    {
+      "name": "Baseline (1K ops)",
+      "operations": 1000,
+      "memoryDelta": 1366032,
+      "perOpCost": 1366.032
+    },
+    {
+      "name": "Batch 10",
+      "operations": 100,
+      "batchSize": 10,
+      "memoryDelta": 118144,
+      "perOpCost": 1181.44
+    },
+    {
+      "name": "Batch 100",
+      "operations": 1000,
+      "batchSize": 100,
+      "memoryDelta": 691792,
+      "perOpCost": 691.792
+    },
+    {
+      "name": "Batch 1000",
+      "operations": 10000,
+      "batchSize": 1000,
+      "memoryDelta": 1009384,
+      "perOpCost": 100.9384
+    },
+    {
+      "name": "Stress test (100K ops)",
+      "operations": 100000,
+      "memoryDeltaBeforeGC": 2969888,
+      "memoryDeltaAfterGC": 30688,
+      "gcReclaimed": 2939200,
+      "perOpCost": 0.30688
+    },
+    {
+      "name": "WASM memory (50K ops)",
+      "operations": 50000,
+      "wasmGrowth": 0,
+      "externalDelta": 0,
+      "arrayBufferDelta": 0
+    }
+  ],
+  "recommendations": [
+    "Memory growth is minimal and acceptable"
+  ],
+  "snapshots": [
+    {
+      "label": "Before baseline test",
+      "timestamp": 1760788883900,
+      "heapUsed": 5651488,
+      "heapTotal": 11227136,
+      "external": 4935981,
+      "rss": 52985856,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "After 1,000 operations",
+      "timestamp": 1760788883911,
+      "heapUsed": 7017520,
+      "heapTotal": 11227136,
+      "external": 4661124,
+      "rss": 54460416,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Before batch test",
+      "timestamp": 1760788884022,
+      "heapUsed": 5849096,
+      "heapTotal": 11227136,
+      "external": 4661124,
+      "rss": 53710848,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Before batch 10",
+      "timestamp": 1760788884023,
+      "heapUsed": 5860056,
+      "heapTotal": 11227136,
+      "external": 4661124,
+      "rss": 53710848,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "After batch 10",
+      "timestamp": 1760788884024,
+      "heapUsed": 5978200,
+      "heapTotal": 11227136,
+      "external": 4669924,
+      "rss": 53874688,
+      "arrayBuffers": 81285,
+      "metadata": {}
+    },
+    {
+      "label": "Before batch 100",
+      "timestamp": 1760788884025,
+      "heapUsed": 5986360,
+      "heapTotal": 11227136,
+      "external": 4669924,
+      "rss": 53874688,
+      "arrayBuffers": 81285,
+      "metadata": {}
+    },
+    {
+      "label": "After batch 100",
+      "timestamp": 1760788884026,
+      "heapUsed": 6678152,
+      "heapTotal": 11227136,
+      "external": 4826460,
+      "rss": 54382592,
+      "arrayBuffers": 172285,
+      "metadata": {}
+    },
+    {
+      "label": "Before batch 1000",
+      "timestamp": 1760788884026,
+      "heapUsed": 6683920,
+      "heapTotal": 11227136,
+      "external": 4826460,
+      "rss": 54554624,
+      "arrayBuffers": 172285,
+      "metadata": {}
+    },
+    {
+      "label": "After batch 1000",
+      "timestamp": 1760788884033,
+      "heapUsed": 7693304,
+      "heapTotal": 11227136,
+      "external": 5640412,
+      "rss": 58191872,
+      "arrayBuffers": 527485,
+      "metadata": {}
+    },
+    {
+      "label": "After all batch tests",
+      "timestamp": 1760788884033,
+      "heapUsed": 7697856,
+      "heapTotal": 11227136,
+      "external": 5640412,
+      "rss": 58273792,
+      "arrayBuffers": 527485,
+      "metadata": {}
+    },
+    {
+      "label": "Stress test start",
+      "timestamp": 1760788884146,
+      "heapUsed": 5867888,
+      "heapTotal": 11227136,
+      "external": 5640412,
+      "rss": 56320000,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Checkpoint 10/100",
+      "timestamp": 1760788884165,
+      "heapUsed": 6177264,
+      "heapTotal": 11227136,
+      "external": 5640412,
+      "rss": 59596800,
+      "arrayBuffers": 107485,
+      "metadata": {
+        "iteration": 10,
+        "operations": 10000
+      }
+    },
+    {
+      "label": "Checkpoint 25/100",
+      "timestamp": 1760788884169,
+      "heapUsed": 6630424,
+      "heapTotal": 15421440,
+      "external": 5311412,
+      "rss": 59760640,
+      "arrayBuffers": 198485,
+      "metadata": {
+        "iteration": 25,
+        "operations": 25000
+      }
+    },
+    {
+      "label": "Checkpoint 50/100",
+      "timestamp": 1760788884177,
+      "heapUsed": 8622496,
+      "heapTotal": 15421440,
+      "external": 5766412,
+      "rss": 63746048,
+      "arrayBuffers": 653485,
+      "metadata": {
+        "iteration": 50,
+        "operations": 50000
+      }
+    },
+    {
+      "label": "Checkpoint 75/100",
+      "timestamp": 1760788884184,
+      "heapUsed": 6634432,
+      "heapTotal": 15421440,
+      "external": 5311412,
+      "rss": 63688704,
+      "arrayBuffers": 198485,
+      "metadata": {
+        "iteration": 75,
+        "operations": 75000
+      }
+    },
+    {
+      "label": "Checkpoint 100/100",
+      "timestamp": 1760788884190,
+      "heapUsed": 8832264,
+      "heapTotal": 15421440,
+      "external": 5822412,
+      "rss": 64184320,
+      "arrayBuffers": 709485,
+      "metadata": {
+        "iteration": 100,
+        "operations": 100000
+      }
+    },
+    {
+      "label": "Before GC",
+      "timestamp": 1760788884694,
+      "heapUsed": 8837776,
+      "heapTotal": 15421440,
+      "external": 5822412,
+      "rss": 64192512,
+      "arrayBuffers": 709485,
+      "metadata": {}
+    },
+    {
+      "label": "After GC",
+      "timestamp": 1760788884803,
+      "heapUsed": 5898576,
+      "heapTotal": 15421440,
+      "external": 5822412,
+      "rss": 63692800,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Before WASM test",
+      "timestamp": 1760788884911,
+      "heapUsed": 5762408,
+      "heapTotal": 15421440,
+      "external": 5185412,
+      "rss": 63840256,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "WASM checkpoint 10000",
+      "timestamp": 1760788884952,
+      "heapUsed": 6168832,
+      "heapTotal": 15421440,
+      "external": 5185412,
+      "rss": 64397312,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "WASM checkpoint 25000",
+      "timestamp": 1760788885002,
+      "heapUsed": 6469344,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64204800,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "WASM checkpoint 50000",
+      "timestamp": 1760788885072,
+      "heapUsed": 6866472,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64262144,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "After WASM test",
+      "timestamp": 1760788885072,
+      "heapUsed": 6867880,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64262144,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Test5.1 - Before create/discard",
+      "timestamp": 1760788885179,
+      "heapUsed": 5906216,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64290816,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Test5.1 - After create/discard + GC",
+      "timestamp": 1760788885319,
+      "heapUsed": 5910112,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64294912,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Test5.2 - Before accumulate",
+      "timestamp": 1760788885320,
+      "heapUsed": 5914808,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64294912,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Test5.2 - After accumulate",
+      "timestamp": 1760788885343,
+      "heapUsed": 8101000,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64454656,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    },
+    {
+      "label": "Test5.2 - After clear + GC",
+      "timestamp": 1760788885459,
+      "heapUsed": 5908328,
+      "heapTotal": 15683584,
+      "external": 5185412,
+      "rss": 64454656,
+      "arrayBuffers": 72485,
+      "metadata": {}
+    }
+  ]
+}
