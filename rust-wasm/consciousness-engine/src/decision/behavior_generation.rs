@@ -19,11 +19,12 @@ impl BehaviorGenerationService {
             return Ok(None);
         }
 
+        let calculator = InteractionWeightCalculator::new();
         let mut best_interaction = None;
         let mut best_weight = 0.0;
 
         for interaction in available_interactions {
-            let weight = InteractionWeightCalculator::calculate_interaction_weight(
+            let weight = calculator.calculate_interaction_weight(
                 character,
                 interaction,
                 context,

@@ -26,6 +26,7 @@ wee_alloc = { workspace = true }
 thiserror = { workspace = true }
 getrandom = { workspace = true }
 wasm-logger = "0.2"
+rand = { version = "0.8", features = ["getrandom"] }
 
 [dev-dependencies]
 wasm-bindgen-test = { workspace = true }
