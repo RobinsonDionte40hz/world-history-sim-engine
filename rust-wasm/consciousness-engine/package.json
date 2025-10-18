@@ -1,0 +1,6 @@
+{
+  "name": "consciousness-engine-tests",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Test suite for consciousness engine WASM bindings"
+}

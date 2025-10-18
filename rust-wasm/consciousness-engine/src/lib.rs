@@ -7,13 +7,34 @@ pub mod consciousness_module;
 pub mod memory_module;
 pub mod decision;
 pub mod emotion;
+pub mod inspection;
+pub mod migration;
 pub mod types;
 pub mod wasm;
 
 pub use consciousness_module::*;
 pub use memory_module::*;
 pub use decision::*;
-pub use emotion::*;
+// Don't re-export emotion::* to avoid InteractionContext conflict
+pub use emotion::{
+    EmotionalComponent, ComplexEmotionalState, EmotionalReaction,
+    get_emotional_modifier, calculate_emotional_valence,
+    resolve_emotional_conflicts, calculate_emotional_contagion,
+    get_complex_emotional_modifier, get_emotional_reaction,
+    create_emotional_memory, retrieve_emotional_memories,
+    enhance_memory_with_emotion,
+};
+// Export inspection service
+pub use inspection::{
+    ConsciousnessInspectionService,
+    BehavioralStateInspection, DecisionFactorTrace, EventsHistoryDisplay, DiagnosticReport,
+};
+// Don't re-export migration::* to avoid BehavioralState conflict
+pub use migration::{
+    MigrationVersion, ConsciousnessMigrationService,
+    MigrationResult, ValidationResult, RepairResult, BatchMigrationResult,
+    RollbackData, MigrationStatistics,
+};
 pub use types::*;
 pub use wasm::*;
 

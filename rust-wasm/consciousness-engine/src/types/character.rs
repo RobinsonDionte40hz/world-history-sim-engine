@@ -48,7 +48,7 @@ pub struct Character {
     pub memories: Vec<crate::Memory>,
     pub significant_memories: Option<Vec<crate::Memory>>, // For SignificantMemoryService compatibility
     pub goals: Vec<Goal>,
-    pub behavioral_state: Option<crate::BehavioralState>,
+    pub behavioral_state: Option<crate::types::consciousness::BehavioralState>,
     pub current_node_id: String, // Current location node ID
 }
 

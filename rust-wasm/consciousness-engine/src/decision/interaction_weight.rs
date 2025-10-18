@@ -22,16 +22,15 @@ use crate::memory_module::significant_memory::SignificantMemoryService;
 use rand::Rng;
 
 /// Interaction weight calculator service
-pub struct InteractionWeightCalculator {
-    memory_service: SignificantMemoryService,
-}
+/// 
+/// This is a stateless service that calculates interaction priorities.
+/// SignificantMemoryService is imported for its static methods only.
+pub struct InteractionWeightCalculator;
 
 impl InteractionWeightCalculator {
     /// Create a new interaction weight calculator
     pub fn new() -> Self {
-        Self {
-            memory_service: SignificantMemoryService,
-        }
+        Self
     }
 
     /// Calculate comprehensive interaction weight using all 13 factors
