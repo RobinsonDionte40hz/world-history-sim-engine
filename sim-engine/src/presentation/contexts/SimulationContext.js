@@ -9,7 +9,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import TemplateManager from '../../template/TemplateManager.js';
 import pipelineValidationService from '../../application/services/PipelineValidationService.js';
 import simulationService from '../../application/use-cases/services/SimulationService.js';
@@ -18,6 +18,7 @@ import { LODTier } from '../../domain/value-objects/LODTier.js';
 import StorageCleanupService from '../../application/services/StorageCleanupService.js';
 import DataStructureUtils from '../../shared/utils/DataStructureUtils.js';
 import LocalStorageWorldRepository from '../../infrastructure/Persistance/LocalStorageWorldRepository.js';
+const { ConsciousnessEngineWasm } = require('@world-history-sim/consciousness-engine-wasm');
 
 const SimulationContext = createContext();
 
@@ -63,6 +64,64 @@ export const SimulationProvider = ({ children }) => {
   const [lodTierTransitions, setLodTierTransitions] = useState([]);
   const [isLODInitialized, setIsLODInitialized] = useState(false);
   const [isLODProcessing, setIsLODProcessing] = useState(false);
+  
+  // WASM Consciousness Engine State
+  const [wasmStatus, setWasmStatus] = useState({
+    status: 'uninitialized', // 'uninitialized' | 'initializing' | 'initialized' | 'enabled' | 'error'
+    error: null,
+    isEnabled: false,
+    initializationTime: null
+  });
+  
+  // Create WASM engine singleton using useMemo to ensure single instance
+  const consciousnessEngine = useMemo(() => {
+    console.log('🧠 Creating WASM Consciousness Engine singleton');
+    return new ConsciousnessEngineWasm();
+  }, []);
+  
+  // Initialize WASM engine on mount
+  useEffect(() => {
+    const initializeWASM = async () => {
+      setWasmStatus(prev => ({ ...prev, status: 'initializing' }));
+      const startTime = performance.now();
+      
+      try {
+        console.log('🚀 Initializing WASM Consciousness Engine...');
+        const success = await consciousnessEngine.initialize();
+        const initTime = performance.now() - startTime;
+        
+        if (success) {
+          setWasmStatus({
+            status: 'enabled',
+            error: null,
+            isEnabled: true,
+            initializationTime: initTime
+          });
+          console.log(`✅ WASM Consciousness Engine initialized successfully in ${initTime.toFixed(2)}ms`);
+        } else {
+          // Initialization returned false (fallback mode)
+          setWasmStatus({
+            status: 'initialized',
+            error: 'WASM unavailable, using JavaScript fallback',
+            isEnabled: false,
+            initializationTime: initTime
+          });
+          console.log(`⚠️  WASM Consciousness Engine using JavaScript fallback (${initTime.toFixed(2)}ms)`);
+        }
+      } catch (error) {
+        const initTime = performance.now() - startTime;
+        setWasmStatus({
+          status: 'error',
+          error: error.message,
+          isEnabled: false,
+          initializationTime: initTime
+        });
+        console.error('❌ WASM Consciousness Engine initialization failed:', error);
+      }
+    };
+    
+    initializeWASM();
+  }, [consciousnessEngine]);
   
   // Helper function to convert world state for dashboard consumption
   const formatWorldStateForDashboard = useCallback((rawWorldState) => {
@@ -801,6 +860,11 @@ export const SimulationProvider = ({ children }) => {
   const contextValue = {
     // Template manager (read-only access for simulation)
     templateManager,
+    
+    // WASM Consciousness Engine
+    consciousnessEngine,
+    wasmStatus,
+    isWasmEnabled: wasmStatus.isEnabled,
     
     // Prepared world data and validation
     preparedWorldData,

@@ -13,12 +13,23 @@ import MemoryManagementService from './MemoryManagementService.js';
 import MemoryQueryService from './MemoryQueryService.js';
 
 class BehavioralStateService extends BaseDomainService {
-    constructor(memoryService, logger = null, errorHandler = null) {
+    /**
+     * Behavioral State Service Constructor
+     * @param {Object} memoryService - Memory service instance (optional, defaults to SignificantMemoryService)
+     * @param {Object} logger - Logger instance (optional)
+     * @param {Object} errorHandler - Error handler instance (optional)
+     * @param {Object} consciousnessEngine - WASM consciousness engine instance (optional, for high-performance calculations)
+     */
+    constructor(memoryService, logger = null, errorHandler = null, consciousnessEngine = null) {
         super(); // BaseDomainService doesn't accept parameters
         // Only create default memory service if memoryService is undefined (not explicitly null)
         this.memoryService = memoryService === undefined ? new SignificantMemoryService() : memoryService;
         this.logger = logger;
         this.errorHandler = errorHandler || new ConsciousnessErrorHandlingService(logger);
+        
+        // WASM Consciousness Engine integration (Task 3)
+        this.consciousnessEngine = consciousnessEngine;
+        this.useWasm = consciousnessEngine !== null && consciousnessEngine !== undefined;
 
         // Memory management service for automatic memory optimization
         this.memoryManager = new MemoryManagementService(logger, errorHandler);
@@ -1456,10 +1467,122 @@ class BehavioralStateService extends BaseDomainService {
 
     /**
      * Generate behavioral state for a character (compatible with existing interface)
+     * Uses WASM engine if available for high-performance calculations, falls back to JavaScript
      * @param {Object} character - Character with consciousness data
      * @returns {Object} Behavioral state object
      */
     generateBehavioralState(character) {
+        // If WASM is available, try using it for better performance
+        if (this.useWasm && this.consciousnessEngine) {
+            try {
+                const startTime = performance.now();
+                
+                // Validate character has required consciousness data
+                if (!character || !character.consciousness) {
+                    if (this.logger) {
+                        this.logger.warn('Character missing consciousness data, using JS fallback');
+                    }
+                    const fallbackResult = this._generateBehavioralStateJS(character);
+                    fallbackResult._module = 'JavaScript';
+                    return fallbackResult;
+                }
+                
+                // Extract consciousness parameters for WASM
+                const consciousness = character.consciousness;
+                const frequency = consciousness.frequency || consciousness.baseFrequency || 7.5;
+                const coherence = consciousness.coherence || consciousness.baseCoherence || 0.7;
+                
+                // Sanitize emotional state to valid WASM enum values
+                // Valid values: Content, Excited, Anxious, Depressed, Angry, Joyful, Fearful, Surprised
+                const sanitizeEmotionalState = (state) => {
+                    if (!state) return 'Content';
+                    const normalized = state.charAt(0).toUpperCase() + state.slice(1).toLowerCase();
+                    const validStates = ['Content', 'Excited', 'Anxious', 'Depressed', 'Angry', 'Joyful', 'Fearful', 'Surprised'];
+                    
+                    // Map common aliases to valid states
+                    const stateMap = {
+                        'Optimistic': 'Joyful',
+                        'Happy': 'Joyful',
+                        'Sad': 'Depressed',
+                        'Calm': 'Content',
+                        'Neutral': 'Content'
+                    };
+                    
+                    const mapped = stateMap[normalized] || normalized;
+                    return validStates.includes(mapped) ? mapped : 'Content';
+                };
+                
+                // Create consciousness state object for WASM
+                const consciousnessState = {
+                    baseFrequency: frequency,
+                    currentFrequency: consciousness.currentFrequency || frequency,
+                    baseCoherence: coherence,
+                    emotionalCoherence: consciousness.emotionalCoherence || coherence,
+                    emotionalState: sanitizeEmotionalState(consciousness.emotionalState)
+                };
+                
+                // Call WASM engine
+                const wasmResult = this.consciousnessEngine.calculateBehavioralState(consciousnessState);
+                
+                const calculationTime = performance.now() - startTime;
+                
+                if (this.logger) {
+                    this.logger.debug(`WASM behavioral state calculation: ${calculationTime.toFixed(2)}ms`);
+                }
+                
+                // Convert WASM result to expected format
+                // WASM returns numeric or string values, normalize to strings for consistency
+                const normalizeEnergy = (val) => {
+                    if (typeof val === 'number') {
+                        if (val < 0.3) return 'low';
+                        if (val < 0.7) return 'moderate';
+                        return 'high';
+                    }
+                    return val.toLowerCase();
+                };
+                
+                const normalizeFocus = (val) => {
+                    if (typeof val === 'number') {
+                        if (val < 0.4) return 'scattered';
+                        if (val < 0.8) return 'balanced';
+                        return 'focused';
+                    }
+                    return val.toLowerCase();
+                };
+                
+                return {
+                    energy: normalizeEnergy(wasmResult.energy || wasmResult.energyLevel || 0.5),
+                    focus: normalizeFocus(wasmResult.focus || wasmResult.focusLevel || 0.5),
+                    mood: (wasmResult.mood || 'content').toLowerCase(),
+                    socialDrive: wasmResult.socialDrive || 0.5,
+                    riskTolerance: wasmResult.riskTolerance || 0.5,
+                    ambition: wasmResult.ambition || 0.5,
+                    _calculationTime: calculationTime,
+                    _module: 'WASM'
+                };
+                
+            } catch (error) {
+                // Log error and fall back to JavaScript
+                if (this.logger) {
+                    this.logger.warn(`WASM calculation failed, falling back to JS: ${error.message}`);
+                }
+                // Don't throw - gracefully fall through to JS implementation
+            }
+        }
+        
+        // Use JavaScript fallback (either WASM unavailable or error occurred)
+        const jsResult = this._generateBehavioralStateJS(character);
+        jsResult._module = 'JavaScript';
+        return jsResult;
+    }
+
+    /**
+     * Generate behavioral state for a character using JavaScript implementation (fallback)
+     * @private
+     * @param {Object} character - Character with consciousness data
+     * @returns {Object} Behavioral state object
+     */
+    _generateBehavioralStateJS(character) {
         if (!character || !character.consciousness) {
             // Return default behavioral state for characters without consciousness
             return {
