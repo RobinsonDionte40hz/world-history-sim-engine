@@ -12,7 +12,7 @@
  * - Error handling with graceful degradation
  */
 
-export class ConsciousnessEngineWasm {
+class ConsciousnessEngineWasm {
     constructor(options = {}) {
         this.wasmModule = null;
         this.isReady = false;
@@ -44,31 +44,8 @@ export class ConsciousnessEngineWasm {
         }
         
         try {
-            // Dynamic import of WASM module (relative to project root)
-            const wasmModule = await import('../../pkg/consciousness_engine.js');
-            
-            // For Node.js, we need to load the .wasm file manually
-            // Check if we're in Node.js environment
-            if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-                // Node.js environment
-                const fs = await import('fs/promises');
-                const path = await import('path');
-                const { fileURLToPath } = await import('url');
-                
-                // Get the directory of this module
-                const __filename = fileURLToPath(import.meta.url);
-                const __dirname = path.dirname(__filename);
-                
-                // Load the WASM file
-                const wasmPath = path.join(__dirname, '../../pkg/consciousness_engine_bg.wasm');
-                const wasmBuffer = await fs.readFile(wasmPath);
-                
-                // Initialize with the buffer
-                await wasmModule.default(wasmBuffer);
-            } else {
-                // Browser environment - let it fetch automatically
-                await wasmModule.default();
-            }
+            // Use require for CommonJS - the WASM module is already initialized by wasm-pack
+            const wasmModule = require('../../pkg/consciousness_engine.js');
             
             this.wasmModule = wasmModule;
             this.isReady = true;
@@ -637,5 +614,8 @@ export class ConsciousnessEngineWasm {
     }
 }
 
-// Export singleton instance
-export const consciousnessEngine = new ConsciousnessEngineWasm();
+// CommonJS exports
+module.exports = {
+    ConsciousnessEngineWasm,
+    consciousnessEngine: new ConsciousnessEngineWasm()
+};
