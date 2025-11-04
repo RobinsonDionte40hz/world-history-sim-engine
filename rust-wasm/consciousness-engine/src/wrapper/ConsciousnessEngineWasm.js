@@ -44,8 +44,22 @@ class ConsciousnessEngineWasm {
         }
         
         try {
-            // Use require for CommonJS - the WASM module is already initialized by wasm-pack
-            const wasmModule = require('../../pkg/consciousness_engine.js');
+            // Dynamic import for web/bundler targets
+            let wasmModule;
+            
+            // Try to import the WASM module
+            if (typeof window !== 'undefined') {
+                // Browser environment - use dynamic import
+                wasmModule = await import('../../pkg/consciousness_engine.js');
+                
+                // For web target, we need to call the init function
+                if (wasmModule.default && typeof wasmModule.default === 'function') {
+                    await wasmModule.default();
+                }
+            } else {
+                // Node environment - use require
+                wasmModule = require('../../pkg/consciousness_engine.js');
+            }
             
             this.wasmModule = wasmModule;
             this.isReady = true;

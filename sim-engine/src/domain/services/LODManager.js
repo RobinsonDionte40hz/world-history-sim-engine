@@ -19,7 +19,11 @@ import { LODTier } from '../value-objects/LODTier.js';
 import PrestigeService from './PrestigeService.js';
 
 class LODManager {
-  constructor() {
+  /**
+   * LOD Manager Constructor
+   * @param {Object} consciousnessEngine - WASM consciousness engine instance (optional, for batch processing)
+   */
+  constructor(consciousnessEngine = null) {
     this.processingMetrics = {
       totalProcessed: 0,
       averageProcessingTime: 0,
@@ -32,6 +36,10 @@ class LODManager {
     };
 
     this.performanceHistory = [];
+
+    // WASM Consciousness Engine integration (Task 4)
+    this.consciousnessEngine = consciousnessEngine;
+    this.useWasmBatch = consciousnessEngine !== null && consciousnessEngine !== undefined;
 
     // MEMORY OPTIMIZATION: Object pools for frequently created objects
     this._eventPool = [];
@@ -105,15 +113,43 @@ class LODManager {
         processedCount: 0,
         averageProcessingTime: 0,
         results: [],
-        byTier: { hero: 0, group: 0, background: 0 }
+        byTier: { hero: 0, group: 0, background: 0 },
+        wasmBatchUsed: false
       };
+    }
+
+    // WASM BATCH OPTIMIZATION: Use WASM batch processing for group tier with 10+ characters
+    const useWasmBatch = this.useWasmBatch && tier === 'group' && characters.length >= 10;
+    let behavioralStates = null;
+
+    if (useWasmBatch) {
+      behavioralStates = this._processBatchWithWASM(characters);
+      
+      // If batch processing failed, behavioralStates will be null and we fall back to standard processing
+      if (!behavioralStates) {
+        console.warn(`WASM batch processing failed for ${characters.length} characters, falling back to standard processing`);
+      }
     }
 
     // PERFORMANCE OPTIMIZATION: Pre-allocate results array
     const results = new Array(characters.length);
 
     for (let i = 0; i < characters.length; i++) {
+      // If we have WASM behavioral states, inject them into the character before processing
+      if (behavioralStates && behavioralStates[i]) {
+        // Inject WASM-calculated behavioral state
+        if (characters[i].consciousness) {
+          characters[i].consciousness.behavioralState = behavioralStates[i];
+          characters[i].consciousness._wasmCalculated = true;
+        }
+      }
+      
       results[i] = this.processCharacter(characters[i], world, turnContext);
+      
+      // Track if WASM was used for this character
+      if (behavioralStates && behavioralStates[i]) {
+        results[i].wasmBatchUsed = true;
+      }
     }
 
     const endTime = performance.now();
@@ -128,8 +164,49 @@ class LODManager {
         hero: { processedCount: characters.filter(c => c.lodTier === 'hero').length },
         group: { processedCount: characters.filter(c => c.lodTier === 'group').length },
         background: { processedCount: characters.filter(c => c.lodTier === 'background').length }
-      }
+      },
+      wasmBatchUsed: useWasmBatch && behavioralStates !== null
     };
+  }
+
+  /**
+   * Process characters in batch using WASM for high performance
+   * @private
+   * @param {Array} characters - Array of characters to process
+   * @returns {Array} Array of behavioral states corresponding to characters
+   */
+  _processBatchWithWASM(characters) {
+    try {
+      // Collect consciousness states from all characters
+      const consciousnessStates = characters.map(character => {
+        const consciousness = character.consciousness || {};
+        return {
+          baseFrequency: consciousness.frequency || consciousness.baseFrequency || 7.5,
+          currentFrequency: consciousness.currentFrequency || consciousness.frequency || consciousness.baseFrequency || 7.5,
+          baseCoherence: consciousness.coherence || consciousness.baseCoherence || 0.7,
+          emotionalCoherence: consciousness.emotionalCoherence || consciousness.coherence || consciousness.baseCoherence || 0.7,
+          emotionalState: consciousness.emotionalState || 'Content'
+        };
+      });
+
+      // Call WASM batch processing
+      const batchStart = performance.now();
+      const behavioralStates = this.consciousnessEngine.calculateBatchBehavioralStates(consciousnessStates);
+      const batchTime = performance.now() - batchStart;
+
+      // Log batch processing performance
+      if (console && console.debug) {
+        console.debug(`WASM batch processed ${characters.length} characters in ${batchTime.toFixed(2)}ms (${(batchTime / characters.length).toFixed(3)}ms per character)`);
+      }
+
+      return behavioralStates;
+    } catch (error) {
+      // Log error and return null to trigger fallback
+      if (console && console.error) {
+        console.error('WASM batch processing failed:', error.message);
+      }
+      return null;
+    }
   }
 
   /**
@@ -861,6 +938,26 @@ class LODManager {
         return 1; // Standard priority for promotion
       default:
         return 0; // Unknown tiers get lowest priority
+    }
+  }
+
+  /**
+   * CITIZEN TIER INTEGRATION: Get processing multiplier for citizen tier
+   * Used to scale consciousness evolution and behavior calculation intensity
+   * @private
+   */
+  _getCitizenTierMultiplier(citizenTier) {
+    if (!citizenTier) return 1.0; // Default multiplier
+
+    switch (citizenTier) {
+      case 'LEADER':
+        return 1.5; // Leaders get 50% more processing intensity
+      case 'SPECIALIST':
+        return 1.2; // Specialists get 20% more processing intensity
+      case 'CITIZEN':
+        return 1.0; // Standard processing intensity
+      default:
+        return 1.0; // Unknown tiers get standard processing
     }
   }
 

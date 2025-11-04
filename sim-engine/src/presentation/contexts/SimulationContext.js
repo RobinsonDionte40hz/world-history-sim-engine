@@ -9,7 +9,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import TemplateManager from '../../template/TemplateManager.js';
 import pipelineValidationService from '../../application/services/PipelineValidationService.js';
 import simulationService from '../../application/use-cases/services/SimulationService.js';
@@ -18,7 +18,6 @@ import { LODTier } from '../../domain/value-objects/LODTier.js';
 import StorageCleanupService from '../../application/services/StorageCleanupService.js';
 import DataStructureUtils from '../../shared/utils/DataStructureUtils.js';
 import LocalStorageWorldRepository from '../../infrastructure/Persistance/LocalStorageWorldRepository.js';
-const { ConsciousnessEngineWasm } = require('@world-history-sim/consciousness-engine-wasm');
 
 const SimulationContext = createContext();
 
@@ -73,21 +72,28 @@ export const SimulationProvider = ({ children }) => {
     initializationTime: null
   });
   
-  // Create WASM engine singleton using useMemo to ensure single instance
-  const consciousnessEngine = useMemo(() => {
-    console.log('🧠 Creating WASM Consciousness Engine singleton');
-    return new ConsciousnessEngineWasm();
-  }, []);
+  // WASM engine reference (will be set after dynamic import)
+  const [consciousnessEngine, setConsciousnessEngine] = useState(null);
   
-  // Initialize WASM engine on mount
+  // Initialize WASM engine on mount with dynamic import
   useEffect(() => {
     const initializeWASM = async () => {
       setWasmStatus(prev => ({ ...prev, status: 'initializing' }));
       const startTime = performance.now();
       
       try {
-        console.log('🚀 Initializing WASM Consciousness Engine...');
-        const success = await consciousnessEngine.initialize();
+        console.log('🚀 Loading WASM Consciousness Engine module...');
+        
+        // Dynamic import for bundler-target WASM
+        const wasmModule = await import('@world-history-sim/consciousness-engine-wasm');
+        const { ConsciousnessEngineWasm } = wasmModule;
+        
+        console.log('📦 WASM module loaded, creating engine instance...');
+        const engine = new ConsciousnessEngineWasm();
+        setConsciousnessEngine(engine);
+        
+        console.log('🔧 Initializing WASM engine...');
+        const success = await engine.initialize();
         const initTime = performance.now() - startTime;
         
         if (success) {
@@ -97,6 +103,14 @@ export const SimulationProvider = ({ children }) => {
             isEnabled: true,
             initializationTime: initTime
           });
+          
+          // Inject WASM engine into LODManager for batch processing
+          if (lodManager.consciousnessEngine !== engine) {
+            lodManager.consciousnessEngine = engine;
+            lodManager.useWasmBatch = true;
+            console.log('✅ LODManager configured with WASM batch processing');
+          }
+          
           console.log(`✅ WASM Consciousness Engine initialized successfully in ${initTime.toFixed(2)}ms`);
         } else {
           // Initialization returned false (fallback mode)
@@ -121,7 +135,7 @@ export const SimulationProvider = ({ children }) => {
     };
     
     initializeWASM();
-  }, [consciousnessEngine]);
+  }, [lodManager]); // Run once on mount, lodManager is stable from useState
   
   // Helper function to convert world state for dashboard consumption
   const formatWorldStateForDashboard = useCallback((rawWorldState) => {
