@@ -221,34 +221,34 @@ const WorldBuilderLandingPage = () => {
   }, []);
   const features = [
     {
-      title: "Flexible Design",
+      title: "Turn-Based & Mapless",
       icon: <Layers className="w-8 h-8 mb-4 text-indigo-400" />,
       points: [
-        "Customizable templates for any world",
-        "Procedural generation with rich variety",
-        "Environmental modifiers & conditions"
+        "Manual turn progression - you control time",
+        "Abstract nodes instead of spatial maps",
+        "Environmental properties & node connections"
       ],
-      description: "Create unique worlds with our flexible template system. From fantasy realms to historical simulations, design environments that evolve dynamically."
+      description: "Build worlds with abstract nodes (contexts/locations) connected by relationships, not coordinates. Process turns manually to watch your world evolve at your own pace."
     },
     {
-      title: "Rich Characters",
+      title: "Consciousness-Driven NPCs",
       icon: <Users className="w-8 h-8 mb-4 text-emerald-400" />,
       points: [
-        "Advanced consciousness simulation",
-        "D&D-style attributes & progression",
-        "Emergent personalities & relationships"
+        "Quantum-inspired consciousness (frequency/coherence)",
+        "D&D attributes with modifiers",
+        "Emergent behavior from goals & personality"
       ],
-      description: "Bring your world to life with NPCs that think, feel, and act autonomously. Watch as they form families, build nations, and create history."
+      description: "Characters with consciousness states that affect behavior. Watch NPCs autonomously choose actions based on their frequency, coherence, attributes, and goals."
     },
     {
-      title: "Template System",
+      title: "Template Everything",
       icon: <Sparkles className="w-8 h-8 mb-4 text-amber-400" />,
       points: [
-        "Pre-built world templates",
-        "Character & interaction templates",
-        "Easy customization & extension"
+        "Save any component as reusable template",
+        "Text templating with dynamic placeholders",
+        "Build in any order - no prescribed workflow"
       ],
-      description: "Start quickly with our comprehensive template library. Mix and match elements to create exactly the world you envision."
+      description: "Complete creative freedom. Start with characters, nodes, or interactions - any order works. Template and reuse everything you create."
     }
   ];
 

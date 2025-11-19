@@ -249,37 +249,37 @@ const WorldNodeEditorPageNew = () => {
 
     if (isSaved) {
       steps.push({
-        title: "Create Nodes",
-        description: "Define locations and contexts within your world",
-        action: "Use the 'Create Nodes' button below or navigate to Node Editor",
+        title: "Create Nodes (Locations/Contexts)",
+        description: "Define abstract nodes with environmental properties, resources, and node connections (mapless architecture)",
+        action: "Navigate to Node Editor and create at least one node",
         completed: false
       });
 
       steps.push({
-        title: "Design Characters",
-        description: "Create NPCs with personalities and attributes",
-        action: "Use the 'Create Characters' button below or navigate to Character Editor",
+        title: "Design Characters (NPCs)",
+        description: "Create characters with consciousness states (frequency/coherence), D&D attributes, personalities, and behavioral goals",
+        action: "Navigate to Character Editor and create characters with assignments to nodes",
         completed: false
       });
 
       steps.push({
-        title: "Define Interactions",
-        description: "Create actions and capabilities for your world",
-        action: "Use the 'Create Interactions' button below or navigate to Interaction Editor",
+        title: "Define Interactions (Actions)",
+        description: "Create interactions with prerequisites, effects, text templating, and consciousness impacts",
+        action: "Navigate to Interaction Editor and define available actions for characters",
         completed: false
       });
 
       steps.push({
-        title: "Create Encounters",
-        description: "Design dynamic encounters with turn-based mechanics",
-        action: "Navigate to Encounter Editor to create engaging encounters",
+        title: "Create Encounters (Optional)",
+        description: "Design turn-based encounters with phases, participants, conditions, and dynamic outcomes",
+        action: "Navigate to Encounter Editor for advanced turn-based interactions",
         completed: false
       });
 
       steps.push({
-        title: "Start Simulation",
-        description: "Run the turn-based simulation to see your world come alive",
-        action: "Once you have nodes, characters, and interactions, start the simulation",
+        title: "Start Turn-Based Simulation",
+        description: "Process turns manually to progress time and resolve character actions based on consciousness and goals",
+        action: "Navigate to Simulation page and use 'Process Turn' to advance the world state",
         completed: false
       });
     }
@@ -335,8 +335,19 @@ const WorldNodeEditorPageNew = () => {
               </h1>
             </div>
             <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Define the core rules and context for your world simulation
+              Define the core properties, rules, and initial conditions for your turn-based, mapless world simulation
             </p>
+            <div className="mt-4 flex items-center justify-center gap-4 text-sm text-gray-400">
+              <span className="flex items-center gap-1">
+                ✓ Turn-based time progression
+              </span>
+              <span className="flex items-center gap-1">
+                ✓ Mapless (node-based) architecture
+              </span>
+              <span className="flex items-center gap-1">
+                ✓ Template everything
+              </span>
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -597,7 +608,7 @@ const WorldNodeEditorPageNew = () => {
                   <h3 className="text-lg font-semibold text-white">Create Nodes</h3>
                 </div>
                 <p className="text-gray-300 text-sm text-left">
-                  Define locations and contexts within your world
+                  Define abstract nodes (locations/contexts) with environmental properties, resources, and connections
                 </p>
               </button>
 
@@ -612,7 +623,7 @@ const WorldNodeEditorPageNew = () => {
                   <h3 className="text-lg font-semibold text-white">Create Characters</h3>
                 </div>
                 <p className="text-gray-300 text-sm text-left">
-                  Design NPCs with personalities and attributes
+                  Design NPCs with consciousness (frequency/coherence), D&D attributes, personalities, and goals
                 </p>
               </button>
 
@@ -627,7 +638,7 @@ const WorldNodeEditorPageNew = () => {
                   <h3 className="text-lg font-semibold text-white">Create Interactions</h3>
                 </div>
                 <p className="text-gray-300 text-sm text-left">
-                  Define actions and capabilities for your world
+                  Define actions/capabilities with prerequisites, effects, and text templating
                 </p>
               </button>
 
@@ -642,7 +653,7 @@ const WorldNodeEditorPageNew = () => {
                   <h3 className="text-lg font-semibold text-white">Create Encounters</h3>
                 </div>
                 <p className="text-gray-300 text-sm text-left">
-                  Design dynamic encounters with turn-based mechanics
+                  Design turn-based encounters with phases, conditions, and dynamic outcomes
                 </p>
               </button>
             </div>

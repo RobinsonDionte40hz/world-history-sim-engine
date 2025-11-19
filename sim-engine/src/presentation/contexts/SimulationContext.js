@@ -85,7 +85,7 @@ export const SimulationProvider = ({ children }) => {
         console.log('🚀 Loading WASM Consciousness Engine module...');
         
         // Dynamic import for bundler-target WASM
-        const wasmModule = await import('@world-history-sim/consciousness-engine-wasm');
+        const wasmModule = await import('../../wasm/ConsciousnessEngineWasm.js');
         const { ConsciousnessEngineWasm } = wasmModule;
         
         console.log('📦 WASM module loaded, creating engine instance...');

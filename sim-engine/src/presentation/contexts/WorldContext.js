@@ -94,9 +94,20 @@ export const WorldProvider = ({ children }) => {
                     const worldsMap = new Map();
 
                     Object.entries(worldsData).forEach(([id, worldData]) => {
+                        // Ensure worldConfig arrays are always arrays (defensive initialization)
+                        const worldConfig = worldData.worldConfig || {};
+                        const sanitizedWorldConfig = {
+                            ...worldConfig,
+                            nodes: Array.isArray(worldConfig.nodes) ? worldConfig.nodes : [],
+                            characters: Array.isArray(worldConfig.characters) ? worldConfig.characters : [],
+                            interactions: Array.isArray(worldConfig.interactions) ? worldConfig.interactions : [],
+                            nodePopulations: worldConfig.nodePopulations || {}
+                        };
+                        
                         worldsMap.set(id, {
                             id,
                             ...worldData,
+                            worldConfig: sanitizedWorldConfig,
                             lastModified: new Date(worldData.lastModified || Date.now())
                         });
                     });
