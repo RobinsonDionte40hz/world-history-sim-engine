@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, X, Settings, Dice6, Clock, Target, Gift, AlertTriangle, Info, MapPin, Route } from 'lucide-react';
+import { Plus, X, Settings, Dice6, Clock, Target, Gift, AlertTriangle, Info, MapPin, Route, Skull } from 'lucide-react';
 import PlaceholderEditor from './text-templating/PlaceholderEditor';
 import EditorContextService from '../../application/services/EditorContextService';
 import QuestTextTemplatingService from '../../application/services/QuestTextTemplatingService';
@@ -48,6 +48,14 @@ const EncounterEditor = ({
       cooldown: 0,
       nodeRestrictions: [],
       connectionRestrictions: [],
+      // Enemy relationship requirements
+      enemyRelationships: {
+        requiresEnemies: false,
+        minEnemyCount: 1,
+        specificEnemies: [],
+        severityThreshold: 0.3,
+        allowNonEnemies: true
+      },
       // Quest integration fields
       questObjectives: [],
       completionMessage: '',
@@ -59,6 +67,13 @@ const EncounterEditor = ({
       ...baseEncounter,
       nodeRestrictions: baseEncounter.nodeRestrictions || [],
       connectionRestrictions: baseEncounter.connectionRestrictions || [],
+      enemyRelationships: baseEncounter.enemyRelationships || {
+        requiresEnemies: false,
+        minEnemyCount: 1,
+        specificEnemies: [],
+        severityThreshold: 0.3,
+        allowNonEnemies: true
+      },
       triggers: baseEncounter.triggers || [],
       outcomes: baseEncounter.outcomes || [],
       prerequisites: baseEncounter.prerequisites || [],
@@ -1078,6 +1093,232 @@ const EncounterEditor = ({
     </div>
   );
 
+  const renderEnemiesTab = () => {
+    // Get available characters from current world for enemy selection
+    const availableCharacters = currentWorld?.worldConfig?.characters || [];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Enemy Relationship Requirements</h3>
+            <p className="text-sm text-gray-400">Configure encounters that trigger based on enemy relationships</p>
+          </div>
+        </div>
+
+        {/* Require Enemies Toggle */}
+        <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={encounter.enemyRelationships.requiresEnemies}
+              onChange={(e) => updateEncounter({
+                enemyRelationships: {
+                  ...encounter.enemyRelationships,
+                  requiresEnemies: e.target.checked
+                }
+              })}
+              className="w-5 h-5 rounded border-gray-600 bg-slate-700 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+            />
+            <div className="flex-1">
+              <span className="text-white font-medium">Require Enemy Relationships</span>
+              <p className="text-sm text-gray-400 mt-1">
+                Only trigger this encounter when the character has enemies
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {encounter.enemyRelationships.requiresEnemies && (
+          <div className="space-y-6">
+            {/* Configuration Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Minimum Enemy Count */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Minimum Enemy Count
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={encounter.enemyRelationships.minEnemyCount}
+                  onChange={(e) => updateEncounter({
+                    enemyRelationships: {
+                      ...encounter.enemyRelationships,
+                      minEnemyCount: parseInt(e.target.value) || 1
+                    }
+                  })}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Character must have at least this many enemies
+                </p>
+              </div>
+
+              {/* Severity Threshold */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Severity Threshold: {(encounter.enemyRelationships.severityThreshold * 100).toFixed(0)}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={encounter.enemyRelationships.severityThreshold}
+                  onChange={(e) => updateEncounter({
+                    enemyRelationships: {
+                      ...encounter.enemyRelationships,
+                      severityThreshold: parseFloat(e.target.value)
+                    }
+                  })}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>Dislike</span>
+                  <span>Enemy</span>
+                  <span>Hostile</span>
+                  <span>Mortal</span>
+                </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  How severe the enemy relationship must be to trigger
+                </p>
+              </div>
+            </div>
+
+            {/* Allow Non-Enemies Toggle */}
+            <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={encounter.enemyRelationships.allowNonEnemies}
+                  onChange={(e) => updateEncounter({
+                    enemyRelationships: {
+                      ...encounter.enemyRelationships,
+                      allowNonEnemies: e.target.checked
+                    }
+                  })}
+                  className="w-5 h-5 rounded border-gray-600 bg-slate-700 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="flex-1">
+                  <span className="text-white font-medium">Allow Non-Enemy Participants</span>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Encounter can include characters who aren't enemies (e.g., allies caught in crossfire)
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Specific Enemies Selection */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-md font-medium text-gray-300">Specific Enemies (Optional)</h4>
+                  <p className="text-sm text-gray-400">Require one of these specific characters to be an enemy</p>
+                </div>
+              </div>
+
+              {/* Selected Specific Enemies */}
+              {encounter.enemyRelationships.specificEnemies.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-300 mb-2">Required Enemies ({encounter.enemyRelationships.specificEnemies.length}):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {encounter.enemyRelationships.specificEnemies.map(enemyId => {
+                      const character = availableCharacters.find(c => c.id === enemyId);
+                      return (
+                        <div
+                          key={enemyId}
+                          className="bg-red-600/20 border border-red-600/30 rounded-lg px-3 py-2 flex items-center gap-2"
+                        >
+                          <Skull className="w-4 h-4 text-red-400" />
+                          <span className="text-sm text-white">
+                            {character?.name || 'Unknown Character'}
+                          </span>
+                          <button
+                            onClick={() => updateEncounter({
+                              enemyRelationships: {
+                                ...encounter.enemyRelationships,
+                                specificEnemies: encounter.enemyRelationships.specificEnemies.filter(id => id !== enemyId)
+                              }
+                            })}
+                            className="text-red-400 hover:text-red-300 transition-colors ml-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Available Characters */}
+              <div>
+                <p className="text-sm text-gray-300 mb-2">Available Characters:</p>
+                {availableCharacters.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <Skull className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No characters available in the current world.</p>
+                    <p className="text-sm">Create characters first to specify enemy requirements.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+                    {availableCharacters
+                      .filter(char => !encounter.enemyRelationships.specificEnemies.includes(char.id))
+                      .map(character => (
+                        <div
+                          key={character.id}
+                          className="bg-white/5 border border-white/20 hover:bg-white/10 rounded-lg p-3 cursor-pointer transition-all"
+                          onClick={() => updateEncounter({
+                            enemyRelationships: {
+                              ...encounter.enemyRelationships,
+                              specificEnemies: [...encounter.enemyRelationships.specificEnemies, character.id]
+                            }
+                          })}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-white">{character.name}</span>
+                            <Plus className="w-4 h-4 text-indigo-400" />
+                          </div>
+                          {character.role && (
+                            <div className="text-xs text-gray-400 mt-1">{character.role}</div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Help Text */}
+            <div className="p-3 bg-blue-600/10 border border-blue-600/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-400 mt-0.5" />
+                <div className="text-sm text-blue-300">
+                  <strong>Enemy-Based Encounters:</strong> These encounters will only trigger when the character has active enemy relationships.
+                  Perfect for ambushes, vendettas, confrontations, and hostile scenarios. The severity threshold determines how hostile the relationship must be.
+                </div>
+              </div>
+            </div>
+
+            {/* Example Use Cases */}
+            <div className="p-3 bg-purple-600/10 border border-purple-600/30 rounded-lg">
+              <div className="text-sm text-purple-300">
+                <strong>Example Use Cases:</strong>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Ambush by enemies (minEnemyCount: 1, severity: 0.5+)</li>
+                  <li>Vendetta confrontation (specificEnemies: [nemesis], severity: 0.7+)</li>
+                  <li>Gang warfare (minEnemyCount: 3+, allowNonEnemies: true)</li>
+                  <li>Assassination attempt (specificEnemies: [target], severity: 0.9+)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderLocationsTab = () => {
     // Get available nodes from current world
     const availableNodes = currentWorld?.worldConfig?.nodes || [];
@@ -1424,6 +1665,7 @@ const EncounterEditor = ({
     { id: 'triggers', label: 'Triggers', icon: Target },
     { id: 'outcomes', label: 'Outcomes', icon: Dice6 },
     { id: 'prerequisites', label: 'Prerequisites', icon: AlertTriangle },
+    { id: 'enemies', label: 'Enemy Relations', icon: Skull },
     { id: 'locations', label: 'Locations', icon: MapPin },
     { id: 'connections', label: 'Travel Routes', icon: Route },
     { id: 'rewards', label: 'Rewards', icon: Gift }
@@ -1461,6 +1703,7 @@ const EncounterEditor = ({
         {activeTab === 'triggers' && renderTriggersTab()}
         {activeTab === 'outcomes' && renderOutcomesTab()}
         {activeTab === 'prerequisites' && renderPrerequisitesTab()}
+        {activeTab === 'enemies' && renderEnemiesTab()}
         {activeTab === 'locations' && renderLocationsTab()}
         {activeTab === 'connections' && renderConnectionsTab()}
         {activeTab === 'rewards' && renderRewardsTab()}

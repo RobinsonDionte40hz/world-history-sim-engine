@@ -12,12 +12,14 @@ import NodeMigrationService from './NodeMigrationService.js';
 import LODManager from './LODManager.js';
 import SettlementNodeManager from './SettlementNodeManager.js';
 import SettlementDevelopmentService from './SettlementDevelopmentService.js';
+import RaceManager from './RaceManager.js';
 import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 
 class WorldBuilder {
   constructor(templateManager = null) {
     this.templateManager = templateManager;
     this.lodManager = new LODManager();
+    this.raceManager = new RaceManager(templateManager);
 
     // Initialize settlement services
     this.settlementNodeManager = new SettlementNodeManager();
@@ -39,6 +41,9 @@ class WorldBuilder {
 
       // Phase 4: Actors
       characters: [],
+
+      // Custom races for this world
+      customRaces: [],
 
       // Phase 5: Actor Assignments
       nodePopulations: {},
@@ -1223,6 +1228,164 @@ class WorldBuilder {
     }
   }
 
+  // Race management
+
+  /**
+   * Register a custom race for this world
+   * @param {Object} raceDefinition - Race configuration
+   * @returns {string} Race ID
+   */
+  registerCustomRace(raceDefinition) {
+    const raceId = this.raceManager.registerCustomRace(raceDefinition);
+    
+    // Associate with this world (using world name as ID)
+    const worldId = this.worldConfig.name || 'default';
+    this.raceManager.addRaceToWorld(worldId, raceId);
+    
+    // Add to world config
+    if (!this.worldConfig.customRaces) {
+      this.worldConfig.customRaces = [];
+    }
+    this.worldConfig.customRaces.push(raceId);
+    
+    return raceId;
+  }
+
+  /**
+   * Get all available races for this world (built-in + custom)
+   * @returns {Array} Array of available races
+   */
+  getAvailableRaces() {
+    const worldId = this.worldConfig.name || 'default';
+    return this.raceManager.getWorldRaces(worldId);
+  }
+
+  /**
+   * Get a specific race by ID
+   * @param {string} raceId - Race ID
+   * @returns {Object|null} Race data
+   */
+  getRace(raceId) {
+    return this.raceManager.getRace(raceId);
+  }
+
+  /**
+   * Remove a custom race from this world
+   * @param {string} raceId - Race ID
+   * @returns {boolean} Success status
+   */
+  removeCustomRace(raceId) {
+    const worldId = this.worldConfig.name || 'default';
+    this.raceManager.removeRaceFromWorld(worldId, raceId);
+    
+    // Remove from world config
+    if (this.worldConfig.customRaces) {
+      this.worldConfig.customRaces = this.worldConfig.customRaces.filter(id => id !== raceId);
+    }
+    
+    return true;
+  }
+
+  /**
+   * Update a custom race
+   * @param {string} raceId - Race ID
+   * @param {Object} updates - Updates to apply
+   * @returns {Object} Updated race
+   */
+  updateCustomRace(raceId, updates) {
+    return this.raceManager.updateCustomRace(raceId, updates);
+  }
+
+  /**
+   * Create a race variant from a base race
+   * @param {string} baseRaceId - Base race ID
+   * @param {string} newName - Name for the variant
+   * @param {Object} modifications - Modifications to apply
+   * @returns {string} New race ID
+   */
+  createRaceVariant(baseRaceId, newName, modifications = {}) {
+    const raceId = this.raceManager.createVariant(baseRaceId, newName, modifications);
+    
+    // Associate with this world
+    const worldId = this.worldConfig.name || 'default';
+    this.raceManager.addRaceToWorld(worldId, raceId);
+    
+    // Add to world config
+    if (!this.worldConfig.customRaces) {
+      this.worldConfig.customRaces = [];
+    }
+    this.worldConfig.customRaces.push(raceId);
+    
+    return raceId;
+  }
+
+  /**
+   * Save a race as a template
+   * @param {string} raceId - Race ID
+   * @param {string} templateName - Template name
+   * @param {string} templateDescription - Template description
+   * @returns {Object} Created template
+   */
+  saveRaceAsTemplate(raceId, templateName, templateDescription) {
+    return this.raceManager.saveAsTemplate(raceId, templateName, templateDescription);
+  }
+
+  /**
+   * Load a race from a template
+   * @param {string} templateId - Template ID
+   * @returns {string} Created race ID
+   */
+  loadRaceFromTemplate(templateId) {
+    const raceId = this.raceManager.loadFromTemplate(templateId);
+    
+    // Associate with this world
+    const worldId = this.worldConfig.name || 'default';
+    this.raceManager.addRaceToWorld(worldId, raceId);
+    
+    // Add to world config
+    if (!this.worldConfig.customRaces) {
+      this.worldConfig.customRaces = [];
+    }
+    this.worldConfig.customRaces.push(raceId);
+    
+    return raceId;
+  }
+
+  /**
+   * Get race templates
+   * @returns {Array} Array of race templates
+   */
+  getRaceTemplates() {
+    return this.raceManager.getRaceTemplates();
+  }
+
+  /**
+   * Export custom races for this world
+   * @returns {Object} Exported races
+   */
+  exportWorldRaces() {
+    const worldId = this.worldConfig.name || 'default';
+    return this.raceManager.exportRaces(worldId);
+  }
+
+  /**
+   * Import races into this world
+   * @param {Object} exportData - Exported race data
+   * @returns {Array} Array of imported race IDs
+   */
+  importWorldRaces(exportData) {
+    const worldId = this.worldConfig.name || 'default';
+    const raceIds = this.raceManager.importRaces(exportData, worldId);
+    
+    // Add to world config
+    if (!this.worldConfig.customRaces) {
+      this.worldConfig.customRaces = [];
+    }
+    this.worldConfig.customRaces.push(...raceIds);
+    
+    return raceIds;
+  }
+
   // Template management
 
   /**
@@ -2047,6 +2210,428 @@ class WorldBuilder {
     }
 
     return false;
+  }
+
+  // ===== ENTITY MANAGEMENT =====
+
+  /**
+   * Adds an entity (hostile NPC/creature) to the world
+   * @param {Object|Entity} entityConfig - Entity configuration or Entity instance
+   * @returns {string} Entity ID
+   */
+  addEntity(entityConfig) {
+    if (!this.worldConfig.entities) {
+      this.worldConfig.entities = [];
+    }
+
+    // Import Entity class dynamically to avoid circular dependencies
+    const Entity = require('../entities/Entity.js').default;
+
+    let entity;
+    if (entityConfig instanceof Entity) {
+      entity = entityConfig;
+    } else {
+      // Ensure entity has an ID
+      const enhancedConfig = {
+        ...entityConfig,
+        id: entityConfig.id || this._generateId('entity')
+      };
+      entity = new Entity(enhancedConfig);
+    }
+
+    // Check for duplicates
+    if (this.getEntity(entity.id)) {
+      throw new Error(`Entity with ID '${entity.id}' already exists`);
+    }
+
+    // Store as plain object
+    this.worldConfig.entities.push(entity.toJSON());
+    return entity.id;
+  }
+
+  /**
+   * Removes an entity from the world
+   * @param {string} entityId - Entity ID
+   * @returns {boolean} True if removed
+   */
+  removeEntity(entityId) {
+    if (!this.worldConfig.entities) {
+      return false;
+    }
+
+    const initialLength = this.worldConfig.entities.length;
+    this.worldConfig.entities = this.worldConfig.entities.filter(e => e.id !== entityId);
+
+    // Also remove from any groups
+    if (this.worldConfig.entityGroups) {
+      this.worldConfig.entityGroups.forEach(group => {
+        if (group.members && group.members.includes(entityId)) {
+          group.members = group.members.filter(id => id !== entityId);
+          // If removed entity was the leader, clear leadership
+          if (group.leadership && group.leadership.leaderId === entityId) {
+            group.leadership.leaderId = null;
+            group.leadership.hasLeader = false;
+          }
+        }
+      });
+    }
+
+    return this.worldConfig.entities.length < initialLength;
+  }
+
+  /**
+   * Gets an entity by ID
+   * @param {string} entityId - Entity ID
+   * @returns {Object|null} Entity or null if not found
+   */
+  getEntity(entityId) {
+    if (!this.worldConfig.entities) {
+      return null;
+    }
+    return this.worldConfig.entities.find(e => e.id === entityId) || null;
+  }
+
+  /**
+   * Gets all entities
+   * @returns {Array} Array of entities
+   */
+  getAllEntities() {
+    return this.worldConfig.entities || [];
+  }
+
+  /**
+   * Gets entities by type
+   * @param {string} type - Entity type (humanoid, beast, undead, etc.)
+   * @returns {Array} Entities of the specified type
+   */
+  getEntitiesByType(type) {
+    if (!this.worldConfig.entities) {
+      return [];
+    }
+    return this.worldConfig.entities.filter(e => e.type === type);
+  }
+
+  /**
+   * Gets entities assigned to a specific location
+   * @param {string} nodeId - Node ID
+   * @returns {Array} Entities at the location
+   */
+  getEntitiesAtNode(nodeId) {
+    if (!this.worldConfig.entities) {
+      return [];
+    }
+    return this.worldConfig.entities.filter(e =>
+      e.assignedNodes && e.assignedNodes.includes(nodeId)
+    );
+  }
+
+  /**
+   * Gets entities by CR range
+   * @param {number} minCR - Minimum CR
+   * @param {number} maxCR - Maximum CR
+   * @returns {Array} Entities within CR range
+   */
+  getEntitiesByCR(minCR, maxCR) {
+    if (!this.worldConfig.entities) {
+      return [];
+    }
+    return this.worldConfig.entities.filter(e =>
+      e.challengeRating >= minCR && e.challengeRating <= maxCR
+    );
+  }
+
+  /**
+   * Updates an entity
+   * @param {string} entityId - Entity ID
+   * @param {Object} updates - Fields to update
+   * @returns {boolean} True if updated
+   */
+  updateEntity(entityId, updates) {
+    if (!this.worldConfig.entities) {
+      return false;
+    }
+
+    const index = this.worldConfig.entities.findIndex(e => e.id === entityId);
+    if (index === -1) {
+      return false;
+    }
+
+    this.worldConfig.entities[index] = {
+      ...this.worldConfig.entities[index],
+      ...updates,
+      id: entityId // Preserve ID
+    };
+
+    return true;
+  }
+
+  /**
+   * Adds an entity from a template
+   * @param {string} category - Template category (humanoid, beast, etc.)
+   * @param {string} key - Template key (orc_warrior, gray_wolf, etc.)
+   * @param {Object} customizations - Optional customizations
+   * @returns {string} Entity ID
+   */
+  addEntityFromTemplate(category, key, customizations = {}) {
+    const templates = require('../../configs/entity-templates.js');
+    const template = templates.getTemplate(category, key);
+
+    if (!template) {
+      throw new Error(`Entity template not found: ${category}.${key}`);
+    }
+
+    const entityConfig = {
+      ...template,
+      ...customizations,
+      id: customizations.id || this._generateId('entity')
+    };
+
+    return this.addEntity(entityConfig);
+  }
+
+  // ===== ENTITY GROUP MANAGEMENT =====
+
+  /**
+   * Adds an entity group to the world
+   * @param {Object|EntityGroup} groupConfig - Group configuration or EntityGroup instance
+   * @returns {string} Group ID
+   */
+  addEntityGroup(groupConfig) {
+    if (!this.worldConfig.entityGroups) {
+      this.worldConfig.entityGroups = [];
+    }
+
+    // Import EntityGroup class dynamically
+    const EntityGroup = require('../entities/EntityGroup.js').default;
+
+    let group;
+    if (groupConfig instanceof EntityGroup) {
+      group = groupConfig;
+    } else {
+      const enhancedConfig = {
+        ...groupConfig,
+        id: groupConfig.id || this._generateId('entity_group')
+      };
+      group = new EntityGroup(enhancedConfig);
+    }
+
+    // Check for duplicates
+    if (this.getEntityGroup(group.id)) {
+      throw new Error(`Entity group with ID '${group.id}' already exists`);
+    }
+
+    // Validate that all members exist
+    if (group.members && group.members.length > 0) {
+      const entityIds = new Set(this.getAllEntities().map(e => e.id));
+      for (const memberId of group.members) {
+        if (!entityIds.has(memberId)) {
+          throw new Error(`Entity '${memberId}' does not exist`);
+        }
+      }
+    }
+
+    this.worldConfig.entityGroups.push(group.toJSON());
+    return group.id;
+  }
+
+  /**
+   * Removes an entity group
+   * @param {string} groupId - Group ID
+   * @returns {boolean} True if removed
+   */
+  removeEntityGroup(groupId) {
+    if (!this.worldConfig.entityGroups) {
+      return false;
+    }
+
+    const initialLength = this.worldConfig.entityGroups.length;
+    this.worldConfig.entityGroups = this.worldConfig.entityGroups.filter(g => g.id !== groupId);
+
+    // Remove group assignment from entities
+    if (this.worldConfig.entities) {
+      this.worldConfig.entities.forEach(entity => {
+        if (entity.groupId === groupId) {
+          entity.groupId = null;
+          entity.role = 'member';
+        }
+      });
+    }
+
+    return this.worldConfig.entityGroups.length < initialLength;
+  }
+
+  /**
+   * Gets an entity group by ID
+   * @param {string} groupId - Group ID
+   * @returns {Object|null} Group or null
+   */
+  getEntityGroup(groupId) {
+    if (!this.worldConfig.entityGroups) {
+      return null;
+    }
+    return this.worldConfig.entityGroups.find(g => g.id === groupId) || null;
+  }
+
+  /**
+   * Gets all entity groups
+   * @returns {Array} Array of groups
+   */
+  getAllEntityGroups() {
+    return this.worldConfig.entityGroups || [];
+  }
+
+  /**
+   * Gets entity groups by type
+   * @param {string} type - Group type (warband, pack, patrol, etc.)
+   * @returns {Array} Groups of the specified type
+   */
+  getEntityGroupsByType(type) {
+    if (!this.worldConfig.entityGroups) {
+      return [];
+    }
+    return this.worldConfig.entityGroups.filter(g => g.type === type);
+  }
+
+  /**
+   * Gets entity groups controlling a node
+   * @param {string} nodeId - Node ID
+   * @returns {Array} Groups controlling the node
+   */
+  getEntityGroupsAtNode(nodeId) {
+    if (!this.worldConfig.entityGroups) {
+      return [];
+    }
+    return this.worldConfig.entityGroups.filter(g =>
+      (g.territory && g.territory.homeNodeId === nodeId) ||
+      (g.territory && g.territory.controlledNodes && g.territory.controlledNodes.includes(nodeId))
+    );
+  }
+
+  /**
+   * Adds a member to an entity group
+   * @param {string} groupId - Group ID
+   * @param {string} entityId - Entity ID
+   * @returns {boolean} True if added
+   */
+  addEntityToGroup(groupId, entityId) {
+    const group = this.getEntityGroup(groupId);
+    if (!group) {
+      throw new Error(`Entity group '${groupId}' not found`);
+    }
+
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      throw new Error(`Entity '${entityId}' not found`);
+    }
+
+    if (group.members && group.members.includes(entityId)) {
+      return false; // Already a member
+    }
+
+    if (!group.members) {
+      group.members = [];
+    }
+
+    if (group.members.length >= group.maxMembers) {
+      throw new Error(`Group '${group.name}' is at maximum capacity`);
+    }
+
+    group.members.push(entityId);
+    this.updateEntityGroup(groupId, { members: group.members });
+
+    // Update entity's group assignment
+    this.updateEntity(entityId, { groupId: groupId, role: 'member' });
+
+    return true;
+  }
+
+  /**
+   * Removes a member from an entity group
+   * @param {string} groupId - Group ID
+   * @param {string} entityId - Entity ID
+   * @returns {boolean} True if removed
+   */
+  removeEntityFromGroup(groupId, entityId) {
+    const group = this.getEntityGroup(groupId);
+    if (!group || !group.members) {
+      return false;
+    }
+
+    if (!group.members.includes(entityId)) {
+      return false; // Not a member
+    }
+
+    group.members = group.members.filter(id => id !== entityId);
+    this.updateEntityGroup(groupId, { members: group.members });
+
+    // Clear entity's group assignment
+    this.updateEntity(entityId, { groupId: null, role: 'member' });
+
+    // If removed entity was the leader, clear leadership
+    if (group.leadership && group.leadership.leaderId === entityId) {
+      group.leadership.leaderId = null;
+      group.leadership.hasLeader = false;
+      this.updateEntityGroup(groupId, { leadership: group.leadership });
+    }
+
+    return true;
+  }
+
+  /**
+   * Updates an entity group
+   * @param {string} groupId - Group ID
+   * @param {Object} updates - Fields to update
+   * @returns {boolean} True if updated
+   */
+  updateEntityGroup(groupId, updates) {
+    if (!this.worldConfig.entityGroups) {
+      return false;
+    }
+
+    const index = this.worldConfig.entityGroups.findIndex(g => g.id === groupId);
+    if (index === -1) {
+      return false;
+    }
+
+    this.worldConfig.entityGroups[index] = {
+      ...this.worldConfig.entityGroups[index],
+      ...updates,
+      id: groupId // Preserve ID
+    };
+
+    return true;
+  }
+
+  /**
+   * Sets the leader of an entity group
+   * @param {string} groupId - Group ID
+   * @param {string} entityId - Entity ID to make leader
+   * @returns {boolean} True if updated
+   */
+  setEntityGroupLeader(groupId, entityId) {
+    const group = this.getEntityGroup(groupId);
+    if (!group) {
+      throw new Error(`Entity group '${groupId}' not found`);
+    }
+
+    if (!group.members || !group.members.includes(entityId)) {
+      throw new Error(`Entity '${entityId}' is not a member of group '${group.name}'`);
+    }
+
+    const updates = {
+      leadership: {
+        ...group.leadership,
+        leaderId: entityId,
+        hasLeader: true
+      }
+    };
+
+    this.updateEntityGroup(groupId, updates);
+
+    // Update entity's role
+    this.updateEntity(entityId, { role: 'leader' });
+
+    return true;
   }
 }
 

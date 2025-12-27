@@ -2,16 +2,21 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import InvestmentEditor from './InvestmentEditor.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
-import { Users, User, Save, Upload, BookOpen } from 'lucide-react';
+import { Users, User, Save, Upload, BookOpen, Swords } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
 import Origin from '../../domain/entities/Origin';
 import OriginTemplates from '../../domain/services/OriginTemplates';
+import RacialTraits from '../../domain/value-objects/RacialTraits.js';
+import EnemyRelationshipManager from './EnemyRelationshipManager.js';
+import EntityEditor from './EntityEditor.js';
+import Entity from '../../domain/entities/Entity.js';
 
 // Character creation modes
 const CHARACTER_CREATION_MODES = {
   TEMPLATE: 'template',    // Quick NPC template creation
-  DETAILED: 'detailed'     // Full character creation
+  DETAILED: 'detailed',    // Full character creation
+  ENTITY: 'entity'         // Entity (hostile NPC/creature) template creation
 };
 
 // Character archetypes
@@ -2148,6 +2153,8 @@ const CharacterEditor = ({
     name: initialCharacter?.name || '',
     description: initialCharacter?.description || '',
     archetype: initialCharacter?.archetype || 'warrior',
+    raceId: initialCharacter?.raceId || 'human',
+    subraceId: initialCharacter?.subraceId || null,
     attributes: initialCharacter?.attributes || {
       strength: 10,
       dexterity: 10,
@@ -2655,10 +2662,11 @@ const CharacterEditor = ({
         { id: 'skills', label: 'Skills', icon: '⭐' },
         { id: 'goals', label: 'Goals', icon: '🎯' },
         { id: 'interactions', label: 'Interactions', icon: '⚡' },
-        { id: 'interaction-templates', label: 'Interaction Templates', icon: '📋' }, // New tab for interaction templates
+        { id: 'interaction-templates', label: 'Interaction Templates', icon: '📋' },
         { id: 'investments', label: 'Investments', icon: '💰' },
         { id: 'equipment', label: 'Equipment', icon: '🎒' },
         { id: 'relationships', label: 'Relationships', icon: '🤝' },
+        { id: 'enemies', label: 'Enemies', icon: '⚔️' },
         { id: 'archetypes', label: 'Archetypes', icon: '🏷️' },
         { id: 'advanced', label: 'Advanced', icon: '⚙️' }
       ];
@@ -2680,7 +2688,7 @@ const CharacterEditor = ({
       </div>
 
       {/* Creation Mode Selector */}
-      <div className="flex gap-2 mb-6 p-1 bg-white/10 rounded-lg border border-white/20 w-fit">
+      <div className="flex gap-2 mb-6 p-1 bg-white/10 rounded-lg border border-white/20 w-fit flex-wrap">
         <button
           onClick={() => {
             setCreationMode(CHARACTER_CREATION_MODES.TEMPLATE);
@@ -2715,6 +2723,23 @@ const CharacterEditor = ({
           <User className="w-4 h-4" />
           Detailed Character Mode
         </button>
+        <button
+          onClick={() => {
+            setCreationMode(CHARACTER_CREATION_MODES.ENTITY);
+            // Reset to basic tab when switching modes
+            setActiveTab('basic');
+          }}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+            ${creationMode === CHARACTER_CREATION_MODES.ENTITY
+              ? 'bg-red-600 text-white shadow-lg'
+              : 'text-gray-300 hover:text-white hover:bg-white/10'
+            }
+          `}
+        >
+          <Swords className="w-4 h-4" />
+          Entity Template Mode
+        </button>
       </div>
 
       {/* Mode Description */}
@@ -2722,6 +2747,8 @@ const CharacterEditor = ({
         <p className="text-blue-200 text-sm">
           {creationMode === CHARACTER_CREATION_MODES.TEMPLATE
             ? '🚀 Quick mode for creating NPC templates with essential attributes, personality, and goals. Perfect for rapid world population.'
+            : creationMode === CHARACTER_CREATION_MODES.ENTITY
+            ? '⚔️ Create hostile NPCs and creatures (orcs, bandits, guards, wolves) with combat stats, loot tables, and territorial behavior.'
             : '🔧 Comprehensive mode with full character customization including skills, equipment, relationships, and advanced settings.'
           }
         </p>
@@ -2760,6 +2787,42 @@ const CharacterEditor = ({
             onBulkGenerate={handleBulkGenerate}
             errors={errors}
             customArchetypes={templates.archetypes || []}
+          />
+        )}
+
+        {/* Entity Template Mode - EntityEditor */}
+        {creationMode === CHARACTER_CREATION_MODES.ENTITY && (
+          <EntityEditor
+            initialEntity={initialCharacter instanceof Entity ? initialCharacter : null}
+            onSave={(entity) => {
+              // Save entity template
+              const templates = JSON.parse(localStorage.getItem('entity_templates') || '[]');
+              const entityData = entity.toJSON ? entity.toJSON() : entity;
+              entityData.isTemplate = true;
+              entityData.metadata = {
+                ...entityData.metadata,
+                isTemplate: true,
+                created: new Date().toISOString()
+              };
+              
+              const existingIndex = templates.findIndex(t => t.id === entityData.id);
+              if (existingIndex >= 0) {
+                templates[existingIndex] = entityData;
+              } else {
+                templates.push(entityData);
+              }
+              
+              localStorage.setItem('entity_templates', JSON.stringify(templates));
+              
+              // Call the onSave callback if provided
+              if (onSave) {
+                onSave(entity);
+              }
+            }}
+            onCancel={onCancel}
+            mode={initialCharacter && initialCharacter instanceof Entity ? 'edit' : 'create'}
+            availableNodes={availableInteractions}
+            availableGroups={[]}
           />
         )}
 
@@ -2841,6 +2904,145 @@ const CharacterEditor = ({
               {errors.description && (
                 <p className="text-red-500 text-sm mt-1">{errors.description}</p>
               )}
+            </div>
+
+            {/* Race Selection */}
+            <div className="space-y-4 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🧬</span>
+                <h3 className="text-lg font-semibold text-white">Race & Heritage</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Race Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Race <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={characterData.raceId || 'human'}
+                    onChange={(e) => {
+                      const newRaceId = e.target.value;
+                      const subraces = RacialTraits.getSubraces(newRaceId);
+                      setCharacterData({
+                        ...characterData,
+                        raceId: newRaceId,
+                        subraceId: subraces.length > 0 ? subraces[0].name : null
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-400"
+                  >
+                    {RacialTraits.getAllRaces().map(race => (
+                      <option key={race.id} value={race.id} className="bg-gray-800">
+                        {race.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Subrace Selector */}
+                {characterData.raceId && RacialTraits.getSubraces(characterData.raceId).length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Subrace
+                    </label>
+                    <select
+                      value={characterData.subraceId || ''}
+                      onChange={(e) => setCharacterData({...characterData, subraceId: e.target.value})}
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-400"
+                    >
+                      {RacialTraits.getSubraces(characterData.raceId).map(subrace => (
+                        <option key={subrace.name} value={subrace.name} className="bg-gray-800">
+                          {subrace.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Racial Bonuses Preview */}
+              {characterData.raceId && (() => {
+                const racialTraits = new RacialTraits(characterData.raceId, characterData.subraceId);
+                const attributeMods = racialTraits.getAttributeModifiers();
+                const skillMods = racialTraits.getSkillModifiers();
+                const features = racialTraits.getFeatures();
+                const race = racialTraits.race;
+                
+                return (
+                  <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <h4 className="text-sm font-semibold text-purple-300 mb-3">Racial Traits & Bonuses</h4>
+                    
+                    {/* Description */}
+                    {race.description && (
+                      <p className="text-xs text-gray-300 mb-3">{race.description}</p>
+                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Attribute Modifiers */}
+                      {attributeMods.size > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-blue-300 mb-2">Attribute Bonuses</div>
+                          <div className="space-y-1">
+                            {Array.from(attributeMods.entries()).map(([attr, value]) => (
+                              <div key={attr} className="flex items-center justify-between text-xs">
+                                <span className="text-gray-300 capitalize">{attr}</span>
+                                <span className={`font-mono ${value > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {value > 0 ? '+' : ''}{value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Skill Modifiers */}
+                      {skillMods.size > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-green-300 mb-2">Skill Bonuses</div>
+                          <div className="space-y-1">
+                            {Array.from(skillMods.entries()).map(([skill, value]) => (
+                              <div key={skill} className="flex items-center justify-between text-xs">
+                                <span className="text-gray-300 capitalize">{skill}</span>
+                                <span className={`font-mono ${value > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {value > 0 ? '+' : ''}{value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Racial Features */}
+                      {features.length > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-yellow-300 mb-2">Special Features</div>
+                          <div className="space-y-1">
+                            {features.map((feature, idx) => (
+                              <div key={idx} className="text-xs text-gray-300">
+                                • {feature}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Lifespan Info */}
+                    {racialTraits.getLifespan() && (
+                      <div className="mt-3 pt-3 border-t border-white/10">
+                        <div className="text-xs text-gray-400">
+                          <span className="font-medium text-gray-300">Lifespan:</span>{' '}
+                          Average {racialTraits.getLifespan().average} years
+                          {racialTraits.getLifespan().maximum && (
+                            <span> (max {racialTraits.getLifespan().maximum})</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div>
@@ -3432,6 +3634,23 @@ const CharacterEditor = ({
             <RelationshipTemplateEditor
               relationshipTemplates={characterData.relationshipTemplates}
               onChange={(relationshipTemplates) => setCharacterData({...characterData, relationshipTemplates})}
+            />
+          </div>
+        )}
+
+        {/* Enemies Tab - Only in Detailed Mode */}
+        {activeTab === 'enemies' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <div>
+            <EnemyRelationshipManager
+              character={characterData}
+              allCharacters={[]} // Will be populated when integrated with world context
+              onRelationshipUpdate={(updatedCharacter) => {
+                setCharacterData({
+                  ...characterData,
+                  relationships: updatedCharacter.relationships
+                });
+              }}
+              readonly={mode === 'view'}
             />
           </div>
         )}

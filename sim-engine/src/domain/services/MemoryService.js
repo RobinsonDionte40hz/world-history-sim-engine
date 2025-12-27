@@ -322,6 +322,127 @@ class MemoryService {
     if (value > -60) return 'enemy';
     return 'hostile';
   }
+
+  /**
+   * Mark a character as an enemy with a specified reason
+   * @param {Object} character - Character marking the enemy
+   * @param {string} targetCharacterId - Target character to mark as enemy
+   * @param {string} reason - Reason for enmity
+   * @param {number} severity - Severity of enmity (0-1, default 0.65 for 'enemy' level)
+   * @returns {Object} Updated relationship bond
+   */
+  markAsEnemy(character, targetCharacterId, reason = 'Declared enemy', severity = 0.65) {
+    if (!character || !character.relationships) {
+      character.relationships = new Map();
+    }
+
+    const currentBond = character.relationships.get(targetCharacterId) || {
+      value: 0,
+      type: 'neutral',
+      history: [],
+      firstInteraction: Date.now(),
+      lastInteraction: Date.now()
+    };
+
+    // Convert severity (0-1) to enemy range (-30 to -100)
+    // severity 0.5 = -50 (enemy), 0.65 = -65 (enemy), 1.0 = -100 (hostile)
+    const targetValue = -30 - (severity * 70);
+    const change = targetValue - currentBond.value;
+
+    currentBond.value = targetValue;
+    currentBond.lastInteraction = Date.now();
+    currentBond.history.push({
+      timestamp: Date.now(),
+      change: change,
+      reason: reason,
+      interactionType: 'hostile',
+      severity: severity >= 0.8 ? 'extreme' : severity >= 0.6 ? 'major' : 'moderate'
+    });
+
+    // Recalculate relationship type
+    currentBond.type = this.calculateRelationshipType(currentBond.value, currentBond.history);
+
+    character.relationships.set(targetCharacterId, currentBond);
+    return currentBond;
+  }
+
+  /**
+   * Check if a character considers another as an enemy
+   * @param {Object} character - Character to check
+   * @param {string} targetCharacterId - Target character ID
+   * @returns {boolean} True if target is considered an enemy or hostile
+   */
+  isEnemy(character, targetCharacterId) {
+    if (!character || !character.relationships) return false;
+    
+    const relationship = character.relationships.get(targetCharacterId);
+    if (!relationship) return false;
+
+    return relationship.value <= -30 || 
+           relationship.type === 'enemy' || 
+           relationship.type === 'hostile';
+  }
+
+  /**
+   * Get all enemies of a character
+   * @param {Object} character - Character to get enemies for
+   * @returns {Array<Object>} Array of enemy relationships with character IDs and details
+   */
+  getEnemies(character) {
+    if (!character || !character.relationships) return [];
+
+    const enemies = [];
+    character.relationships.forEach((relationship, targetId) => {
+      if (relationship.value <= -30) {
+        enemies.push({
+          characterId: targetId,
+          relationshipValue: relationship.value,
+          relationshipType: relationship.type,
+          history: relationship.history,
+          lastInteraction: relationship.lastInteraction
+        });
+      }
+    });
+
+    // Sort by hostility level (most hostile first)
+    return enemies.sort((a, b) => a.relationshipValue - b.relationshipValue);
+  }
+
+  /**
+   * Create or escalate a vendetta between characters
+   * @param {Object} character - Character initiating vendetta
+   * @param {string} targetCharacterId - Target of vendetta
+   * @param {string} reason - Reason for vendetta
+   * @param {Object} metadata - Additional vendetta metadata
+   * @returns {Object} Updated relationship with vendetta status
+   */
+  createVendetta(character, targetCharacterId, reason, metadata = {}) {
+    const relationship = this.markAsEnemy(character, targetCharacterId, reason, 0.9);
+    
+    // Add vendetta-specific metadata
+    relationship.isVendetta = true;
+    relationship.vendettaStartDate = Date.now();
+    relationship.vendettaReason = reason;
+    relationship.vendettaSeverity = metadata.severity || 'extreme';
+    relationship.vendettaWitnesses = metadata.witnesses || [];
+    relationship.vendettaConsequences = metadata.consequences || [];
+
+    character.relationships.set(targetCharacterId, relationship);
+    return relationship;
+  }
+
+  /**
+   * Check if there's an active vendetta
+   * @param {Object} character - Character to check
+   * @param {string} targetCharacterId - Target character ID
+   * @returns {boolean} True if active vendetta exists
+   */
+  hasVendetta(character, targetCharacterId) {
+    if (!character || !character.relationships) return false;
+    
+    const relationship = character.relationships.get(targetCharacterId);
+    return relationship?.isVendetta === true;
+  }
 }
 
 export default MemoryService;

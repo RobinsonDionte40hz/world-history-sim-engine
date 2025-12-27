@@ -34,6 +34,15 @@ class Encounter {
     // Participant requirements
     this.participants = config.participants || [];
     
+    // Enemy relationship requirements and tracking
+    this.enemyRelationships = {
+      requiresEnemies: config.enemyRelationships?.requiresEnemies || false,
+      minEnemyCount: config.enemyRelationships?.minEnemyCount || 1,
+      specificEnemies: config.enemyRelationships?.specificEnemies || [], // Array of character IDs
+      severityThreshold: config.enemyRelationships?.severityThreshold || 0.3, // 0-1 scale
+      allowNonEnemies: config.enemyRelationships?.allowNonEnemies !== false // Can include non-enemies too
+    };
+    
     // Encounter outcomes and their probabilities
     this.outcomes = config.outcomes || [];
     
@@ -92,6 +101,35 @@ class Encounter {
     if (this.cooldown > 0 && context.currentTurn !== undefined && this.lastTriggered !== -1) {
       const turnsSinceLastTrigger = context.currentTurn - this.lastTriggered;
       if (turnsSinceLastTrigger < this.cooldown) {
+        return false;
+      }
+    }
+    
+    // Check enemy relationship requirements
+    if (this.enemyRelationships.requiresEnemies && context.character && context.memoryService) {
+      const enemies = context.memoryService.getEnemies(context.character.id);
+      
+      // Check minimum enemy count
+      if (enemies.length < this.enemyRelationships.minEnemyCount) {
+        return false;
+      }
+      
+      // Check for specific enemies if required
+      if (this.enemyRelationships.specificEnemies.length > 0) {
+        const hasRequiredEnemy = this.enemyRelationships.specificEnemies.some(enemyId =>
+          enemies.some(enemy => enemy.targetId === enemyId)
+        );
+        if (!hasRequiredEnemy) {
+          return false;
+        }
+      }
+      
+      // Check severity threshold
+      const meetsThreshold = enemies.some(enemy => {
+        const severity = Math.abs(enemy.bond) / 100; // Convert -100 to -30 range to 0-1 scale
+        return severity >= this.enemyRelationships.severityThreshold;
+      });
+      if (!meetsThreshold) {
         return false;
       }
     }
@@ -369,6 +407,7 @@ class Encounter {
       turnBased: this.turnBased,
       triggers: this.triggers,
       participants: this.participants,
+      enemyRelationships: this.enemyRelationships,
       outcomes: this.outcomes,
       difficulty: this.difficulty,
       challengeRating: this.challengeRating,

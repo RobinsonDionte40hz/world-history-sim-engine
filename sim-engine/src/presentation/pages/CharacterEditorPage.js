@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { 
   Users, 
   AlertTriangle,
@@ -25,21 +25,31 @@ import {
 } from 'lucide-react';
 import Navigation from '../UI/Navigation';
 import CharacterEditor from '../components/CharacterEditor';
+import EntityEditor from '../components/EntityEditor';
 import WorldDropdown from '../UI/WorldDropdown';
 import { useWorldContext } from '../contexts/WorldContext';
 import Character from '../../domain/entities/Character';
+import Entity from '../../domain/entities/Entity';
 import { saveCharacter } from '../../shared/utils/characterSaveUtils';
+import { getAllTemplates } from '../../configs/entity-templates';
 
 const CharacterEditorPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   
-  // Extract template mode and initial data from route state
+  // Extract template mode from both route state AND query parameters
   const routeState = location.state || {};
-  const isTemplate = routeState.isTemplate || false;
+  const isTemplateFromQuery = searchParams.get('isTemplate') === 'true';
+  const isTemplate = routeState.isTemplate || isTemplateFromQuery;
   const templateMode = routeState.createMode || routeState.editMode || false;
   const initialData = routeState.initialData || null;
   const fromTemplate = routeState.fromTemplate || false;
+  
+  // Template type: 'character' or 'entity'
+  const [templateType, setTemplateType] = useState(routeState.templateType || 'character');
+  const [currentEntity, setCurrentEntity] = useState(null);
+  const [entityTemplates, setEntityTemplates] = useState([]);
   
   // WorldContext integration for both world data and WorldBuilder
   const { 
@@ -796,7 +806,7 @@ const CharacterEditorPage = () => {
             
             {/* Template Mode Indicator */}
             {isTemplate && (
-              <div className="mt-4 max-w-2xl mx-auto">
+              <div className="mt-4 max-w-2xl mx-auto space-y-3">
                 <div className="inline-flex items-center px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
                   <span className="text-blue-300 text-sm font-medium">
                     📚 Template Mode
@@ -804,6 +814,33 @@ const CharacterEditorPage = () => {
                     {templateMode && routeState.createMode && ' - Creating New'}
                     {templateMode && routeState.editMode && ' - Editing'}
                   </span>
+                </div>
+                
+                {/* Template Type Selector */}
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-gray-400 text-sm">Template Type:</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setTemplateType('character')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        templateType === 'character'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                      }`}
+                    >
+                      👥 Character Templates
+                    </button>
+                    <button
+                      onClick={() => setTemplateType('entity')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        templateType === 'entity'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                      }`}
+                    >
+                      ⚔️ Entity Templates
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1174,23 +1211,61 @@ const CharacterEditorPage = () => {
             ) : (
               /* Edit Mode */
               <div className="p-6 sm:p-8">
-                <h2 className="text-2xl font-semibold text-white mb-6">Character Configuration</h2>
+                <h2 className="text-2xl font-semibold text-white mb-6">
+                  {isTemplate 
+                    ? (templateType === 'entity' ? 'Entity Template Configuration' : 'Character Template Configuration')
+                    : 'Character Configuration'
+                  }
+                </h2>
                 
-                {/* Use existing CharacterEditor component */}
-                <CharacterEditor 
-                  initialCharacter={initialData || currentCharacter}
-                  onChange={handleChange}
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                  mode={currentCharacter || initialData ? 'edit' : 'create'}
-                  availableInteractions={availableInteractions}
-                  onCreateInteraction={handleCreateInteraction}
-                  onEditInteraction={handleEditInteraction}
-                  onBulkGenerate={handleBulkGenerate}
-                  onCreateTemplate={handleCreateTemplate}
-                  isTemplate={isTemplate}
-                  templateMode={templateMode}
-                />
+                {/* Conditional Editor Based on Template Type */}
+                {isTemplate && templateType === 'entity' ? (
+                  <EntityEditor
+                    initialEntity={initialData || currentEntity}
+                    onSave={(entity) => {
+                      // Save entity template
+                      const templates = JSON.parse(localStorage.getItem('entity_templates') || '[]');
+                      const entityData = entity.toJSON ? entity.toJSON() : entity;
+                      entityData.isTemplate = true;
+                      entityData.metadata = {
+                        ...entityData.metadata,
+                        isTemplate: true,
+                        created: new Date().toISOString()
+                      };
+                      
+                      const existingIndex = templates.findIndex(t => t.id === entityData.id);
+                      if (existingIndex >= 0) {
+                        templates[existingIndex] = entityData;
+                      } else {
+                        templates.push(entityData);
+                      }
+                      
+                      localStorage.setItem('entity_templates', JSON.stringify(templates));
+                      setTemplateSaveSuccess(true);
+                      setTimeout(() => setTemplateSaveSuccess(false), 3000);
+                      navigate('/editors/templates');
+                    }}
+                    onCancel={handleCancel}
+                    mode={currentEntity || initialData ? 'edit' : 'create'}
+                    availableNodes={currentWorld?.worldConfig?.nodes || []}
+                    availableGroups={currentWorld?.worldConfig?.entityGroups || []}
+                  />
+                ) : (
+                  <CharacterEditor 
+                    initialCharacter={initialData || currentCharacter}
+                    onChange={handleChange}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
+                    mode={currentCharacter || initialData ? 'edit' : 'create'}
+                    availableInteractions={availableInteractions}
+                    onCreateInteraction={handleCreateInteraction}
+                    onEditInteraction={handleEditInteraction}
+                    onBulkGenerate={handleBulkGenerate}
+                    onCreateTemplate={handleCreateTemplate}
+                    isTemplate={isTemplate}
+                    templateMode={templateMode}
+                  />
+                )}
               </div>
             )}
           </div>
