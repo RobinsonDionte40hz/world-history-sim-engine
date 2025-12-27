@@ -1,8 +1,11 @@
 // src/presentation/components/EntityEditor.js
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Save, X, Skull, Shield, Heart, Zap, Users, MapPin, Swords, Copy, Sparkles } from 'lucide-react';
+import { Save, X, Skull, Shield, Heart, Zap, Users, MapPin, Swords, Copy, Sparkles, Package, Zap as ZapIcon, BookOpen } from 'lucide-react';
 import Entity from '../../domain/entities/Entity.js';
+import ItemAssignmentPanel from './ItemAssignmentPanel.js';
+import AbilityAssignmentPanel from './AbilityAssignmentPanel.js';
+import SkillAssignmentPanel from './SkillAssignmentPanel.js';
 
 /**
  * EntityEditor - UI for creating and editing entities (hostile NPCs, creatures)
@@ -100,6 +103,105 @@ const EntityEditor = ({
     });
   }, []);
 
+  // Item management handlers
+  const handleAddItem = useCallback((item) => {
+    setEntity(prev => {
+      const items = Array.isArray(prev.items) ? [...prev.items] : [];
+      return { ...prev, items: [...items, item.toJSON()] };
+    });
+  }, []);
+
+  const handleRemoveItem = useCallback((itemId) => {
+    setEntity(prev => {
+      const items = (prev.items || []).filter(item => item.id !== itemId);
+      return { ...prev, items };
+    });
+  }, []);
+
+  const handleEquipItem = useCallback((itemId, slot) => {
+    setEntity(prev => {
+      const equippedItems = new Map(prev.equippedItems || new Map());
+      equippedItems.set(slot, itemId);
+      return { ...prev, equippedItems };
+    });
+  }, []);
+
+  const handleUnequipItem = useCallback((slot) => {
+    setEntity(prev => {
+      const equippedItems = new Map(prev.equippedItems || new Map());
+      equippedItems.delete(slot);
+      return { ...prev, equippedItems };
+    });
+  }, []);
+
+  // Ability management handlers
+  const handleAddAbility = useCallback((ability) => {
+    setEntity(prev => {
+      const abilities = Array.isArray(prev.abilities) ? [...prev.abilities] : [];
+      return { ...prev, abilities: [...abilities, ability.toJSON()] };
+    });
+  }, []);
+
+  const handleRemoveAbility = useCallback((abilityId) => {
+    setEntity(prev => {
+      const abilities = (prev.abilities || []).filter(ability => ability.id !== abilityId);
+      return { ...prev, abilities };
+    });
+  }, []);
+
+  const handleUpgradeAbility = useCallback((abilityId) => {
+    setEntity(prev => {
+      const abilities = (prev.abilities || []).map(ability => {
+        if (ability.id === abilityId && ability.level < ability.maxLevel) {
+          return { ...ability, level: ability.level + 1 };
+        }
+        return ability;
+      });
+      return { ...prev, abilities };
+    });
+  }, []);
+
+  // Skill management handlers
+  const handleAddSkill = useCallback((skill, level = 0, experience = 0) => {
+    setEntity(prev => {
+      const skillLevels = new Map(prev.skillLevels || new Map());
+      skillLevels.set(skill.id, { skill: skill.toJSON(), level, experience });
+      return { ...prev, skillLevels };
+    });
+  }, []);
+
+  const handleRemoveSkill = useCallback((skillId) => {
+    setEntity(prev => {
+      const skillLevels = new Map(prev.skillLevels || new Map());
+      skillLevels.delete(skillId);
+      return { ...prev, skillLevels };
+    });
+  }, []);
+
+  const handleAddSkillExperience = useCallback((skillId, amount) => {
+    setEntity(prev => {
+      const skillLevels = new Map(prev.skillLevels || new Map());
+      const skillData = skillLevels.get(skillId);
+      if (skillData) {
+        const newExperience = skillData.experience + amount;
+        const nextLevel = (skillData.level + 1) * 100;
+        if (newExperience >= nextLevel) {
+          skillLevels.set(skillId, {
+            ...skillData,
+            level: skillData.level + 1,
+            experience: newExperience - nextLevel
+          });
+        } else {
+          skillLevels.set(skillId, {
+            ...skillData,
+            experience: newExperience
+          });
+        }
+      }
+      return { ...prev, skillLevels };
+    });
+  }, []);
+
   const handleSave = () => {
     if (!entity.name.trim()) {
       alert('Entity name is required');
@@ -119,6 +221,9 @@ const EntityEditor = ({
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: Skull },
     { id: 'combat', label: 'Combat Stats', icon: Swords },
+    { id: 'items', label: 'Items', icon: Package },
+    { id: 'abilities', label: 'Abilities', icon: ZapIcon },
+    { id: 'skills', label: 'Skills', icon: BookOpen },
     { id: 'behavior', label: 'Behavior', icon: Zap },
     { id: 'loot', label: 'Loot & Rewards', icon: Sparkles },
     { id: 'location', label: 'Location', icon: MapPin }
@@ -761,6 +866,41 @@ const EntityEditor = ({
       <div className="min-h-[400px]">
         {activeTab === 'basic' && renderBasicTab()}
         {activeTab === 'combat' && renderCombatTab()}
+        {activeTab === 'items' && (
+          <div className="space-y-6">
+            <ItemAssignmentPanel
+              character={entity}
+              items={entity.items || []}
+              equippedItems={entity.equippedItems || new Map()}
+              onAddItem={handleAddItem}
+              onRemoveItem={handleRemoveItem}
+              onEquipItem={handleEquipItem}
+              onUnequipItem={handleUnequipItem}
+            />
+          </div>
+        )}
+        {activeTab === 'abilities' && (
+          <div className="space-y-6">
+            <AbilityAssignmentPanel
+              character={entity}
+              abilities={entity.abilities || []}
+              onAddAbility={handleAddAbility}
+              onRemoveAbility={handleRemoveAbility}
+              onUpgradeAbility={handleUpgradeAbility}
+            />
+          </div>
+        )}
+        {activeTab === 'skills' && (
+          <div className="space-y-6">
+            <SkillAssignmentPanel
+              character={entity}
+              skillLevels={entity.skillLevels || new Map()}
+              onAddSkill={handleAddSkill}
+              onRemoveSkill={handleRemoveSkill}
+              onAddExperience={handleAddSkillExperience}
+            />
+          </div>
+        )}
         {activeTab === 'behavior' && renderBehaviorTab()}
         {activeTab === 'loot' && renderLootTab()}
         {activeTab === 'location' && renderLocationTab()}

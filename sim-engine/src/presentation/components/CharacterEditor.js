@@ -1,8 +1,11 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
+import ItemAssignmentPanel from './ItemAssignmentPanel.js';
+import AbilityAssignmentPanel from './AbilityAssignmentPanel.js';
+import SkillAssignmentPanel from './SkillAssignmentPanel.js';
 import InvestmentEditor from './InvestmentEditor.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
-import { Users, User, Save, Upload, BookOpen, Swords } from 'lucide-react';
+import { Users, User, Save, Upload, BookOpen, Swords, Package, Zap as ZapIcon, BookOpen as BookOpenIcon } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
 import Origin from '../../domain/entities/Origin';
@@ -2591,6 +2594,105 @@ const CharacterEditor = ({
     }
   }, [characterData, onBulkGenerate]);
 
+  // Item management handlers
+  const handleAddItem = useCallback((item) => {
+    setCharacterData(prev => {
+      const items = Array.isArray(prev.items) ? [...prev.items] : [];
+      return { ...prev, items: [...items, item.toJSON()] };
+    });
+  }, []);
+
+  const handleRemoveItem = useCallback((itemId) => {
+    setCharacterData(prev => {
+      const items = (prev.items || []).filter(item => item.id !== itemId);
+      return { ...prev, items };
+    });
+  }, []);
+
+  const handleEquipItem = useCallback((itemId, slot) => {
+    setCharacterData(prev => {
+      const equippedItems = new Map(prev.equippedItems || new Map());
+      equippedItems.set(slot, itemId);
+      return { ...prev, equippedItems };
+    });
+  }, []);
+
+  const handleUnequipItem = useCallback((slot) => {
+    setCharacterData(prev => {
+      const equippedItems = new Map(prev.equippedItems || new Map());
+      equippedItems.delete(slot);
+      return { ...prev, equippedItems };
+    });
+  }, []);
+
+  // Ability management handlers
+  const handleAddAbility = useCallback((ability) => {
+    setCharacterData(prev => {
+      const abilities = Array.isArray(prev.abilities) ? [...prev.abilities] : [];
+      return { ...prev, abilities: [...abilities, ability.toJSON()] };
+    });
+  }, []);
+
+  const handleRemoveAbility = useCallback((abilityId) => {
+    setCharacterData(prev => {
+      const abilities = (prev.abilities || []).filter(ability => ability.id !== abilityId);
+      return { ...prev, abilities };
+    });
+  }, []);
+
+  const handleUpgradeAbility = useCallback((abilityId) => {
+    setCharacterData(prev => {
+      const abilities = (prev.abilities || []).map(ability => {
+        if (ability.id === abilityId && ability.level < ability.maxLevel) {
+          return { ...ability, level: ability.level + 1 };
+        }
+        return ability;
+      });
+      return { ...prev, abilities };
+    });
+  }, []);
+
+  // Skill management handlers
+  const handleAddSkill = useCallback((skill, level = 0, experience = 0) => {
+    setCharacterData(prev => {
+      const skillLevels = new Map(prev.skillLevels || new Map());
+      skillLevels.set(skill.id, { skill: skill.toJSON(), level, experience });
+      return { ...prev, skillLevels };
+    });
+  }, []);
+
+  const handleRemoveSkill = useCallback((skillId) => {
+    setCharacterData(prev => {
+      const skillLevels = new Map(prev.skillLevels || new Map());
+      skillLevels.delete(skillId);
+      return { ...prev, skillLevels };
+    });
+  }, []);
+
+  const handleAddSkillExperience = useCallback((skillId, amount) => {
+    setCharacterData(prev => {
+      const skillLevels = new Map(prev.skillLevels || new Map());
+      const skillData = skillLevels.get(skillId);
+      if (skillData) {
+        const newExperience = skillData.experience + amount;
+        const nextLevel = (skillData.level + 1) * 100;
+        if (newExperience >= nextLevel) {
+          skillLevels.set(skillId, {
+            ...skillData,
+            level: skillData.level + 1,
+            experience: newExperience - nextLevel
+          });
+        } else {
+          skillLevels.set(skillId, {
+            ...skillData,
+            experience: newExperience
+          });
+        }
+      }
+      return { ...prev, skillLevels };
+    });
+  }, []);
+
   // Helper function to generate NPC from template
   const generateNPCFromTemplate = (template, index) => {
     const variation = template.templateSettings?.variation || {};
@@ -2660,6 +2762,9 @@ const CharacterEditor = ({
         { id: 'attributes', label: 'Attributes', icon: '💪' },
         { id: 'personality', label: 'Personality', icon: '🧠' },
         { id: 'skills', label: 'Skills', icon: '⭐' },
+        { id: 'items', label: 'Items', icon: '📦' },
+        { id: 'abilities', label: 'Abilities', icon: '⚡' },
+        { id: 'skill-progression', label: 'Skill Progression', icon: '📚' },
         { id: 'goals', label: 'Goals', icon: '🎯' },
         { id: 'interactions', label: 'Interactions', icon: '⚡' },
         { id: 'interaction-templates', label: 'Interaction Templates', icon: '📋' },
@@ -3531,6 +3636,47 @@ const CharacterEditor = ({
             <SkillEditor
               skills={characterData.skills}
               onChange={(skills) => setCharacterData({...characterData, skills})}
+            />
+          </div>
+        )}
+
+        {/* Items Tab - Only in Detailed Mode */}
+        {activeTab === 'items' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <div className="space-y-6">
+            <ItemAssignmentPanel
+              character={characterData}
+              items={characterData.items || []}
+              equippedItems={characterData.equippedItems || new Map()}
+              onAddItem={handleAddItem}
+              onRemoveItem={handleRemoveItem}
+              onEquipItem={handleEquipItem}
+              onUnequipItem={handleUnequipItem}
+            />
+          </div>
+        )}
+
+        {/* Abilities Tab - Only in Detailed Mode */}
+        {activeTab === 'abilities' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <div className="space-y-6">
+            <AbilityAssignmentPanel
+              character={characterData}
+              abilities={characterData.abilities || []}
+              onAddAbility={handleAddAbility}
+              onRemoveAbility={handleRemoveAbility}
+              onUpgradeAbility={handleUpgradeAbility}
+            />
+          </div>
+        )}
+
+        {/* Skill Progression Tab - Only in Detailed Mode */}
+        {activeTab === 'skill-progression' && creationMode === CHARACTER_CREATION_MODES.DETAILED && (
+          <div className="space-y-6">
+            <SkillAssignmentPanel
+              character={characterData}
+              skillLevels={characterData.skillLevels || new Map()}
+              onAddSkill={handleAddSkill}
+              onRemoveSkill={handleRemoveSkill}
+              onAddExperience={handleAddSkillExperience}
             />
           </div>
         )}

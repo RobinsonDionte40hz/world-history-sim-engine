@@ -1,5 +1,9 @@
 // src/domain/entities/Entity.js
 
+import Item from './Item.js';
+import Ability from './Ability.js';
+import Skill from './Skill.js';
+
 /**
  * Entity - Represents hostile NPCs, creatures, and other non-player entities
  * 
@@ -10,6 +14,7 @@
  * - Have territorial behaviors
  * - Participate in combat encounters
  * - Have simple AI behaviors
+ * - Use items, abilities, and skills
  */
 
 // Utility function to generate UUID
@@ -55,12 +60,17 @@ class Entity {
       initiative: config.combat?.initiative || 0
     };
     
-    // Skills and abilities
-    this.skills = config.skills || {}; // { perception: 3, stealth: 2, etc. }
-    this.abilities = config.abilities || []; // Special abilities
+    // Skills and abilities - enhanced with full Item/Ability/Skill system
+    this.skills = config.skills || {}; // Simple skill bonuses { perception: 3, stealth: 2, etc. }
+    this.skillLevels = config.skillLevels || new Map(); // Full skill system with Skill objects
+    this.abilities = config.abilities || []; // Ability objects with full functionality
     this.resistances = config.resistances || []; // Damage resistances
     this.immunities = config.immunities || []; // Damage immunities
     this.vulnerabilities = config.vulnerabilities || []; // Damage vulnerabilities
+    
+    // Item management
+    this.items = config.items || []; // Inventory of Item objects
+    this.equippedItems = config.equippedItems || new Map(); // slot -> itemId mapping
     
     // Behavioral traits
     this.behavior = {
@@ -401,6 +411,374 @@ class Entity {
     });
   }
 
+  // ===========================
+  // Item Management Methods
+  // ===========================
+
+  /**
+   * Add an item to the entity's inventory
+   * @param {Item|Object} item - Item to add (Item object or JSON)
+   * @returns {Entity} New entity instance with item added
+   */
+  addItem(item) {
+    const itemInstance = item instanceof Item ? item : Item.fromJSON(item);
+    return new Entity({
+      ...this.toJSON(),
+      items: [...this.items, itemInstance]
+    });
+  }
+
+  /**
+   * Remove an item from inventory
+   * @param {string} itemId - ID of item to remove
+   * @returns {Entity} New entity instance with item removed
+   */
+  removeItem(itemId) {
+    const updatedItems = this.items.filter(item => item.id !== itemId);
+    const updatedEquipped = new Map(this.equippedItems);
+    
+    // Unequip if equipped
+    for (const [slot, id] of updatedEquipped.entries()) {
+      if (id === itemId) {
+        updatedEquipped.delete(slot);
+      }
+    }
+    
+    return new Entity({
+      ...this.toJSON(),
+      items: updatedItems,
+      equippedItems: updatedEquipped
+    });
+  }
+
+  /**
+   * Equip an item to a specific slot
+   * @param {string} itemId - ID of item to equip
+   * @param {string} slot - Equipment slot (mainHand, offHand, armor, etc.)
+   * @returns {Entity} New entity instance with item equipped
+   */
+  equipItem(itemId, slot) {
+    const item = this.items.find(i => i.id === itemId);
+    if (!item) {
+      throw new Error(`Item ${itemId} not found in inventory`);
+    }
+    
+    if (!item.equipmentSlots || !item.equipmentSlots.includes(slot)) {
+      throw new Error(`Item ${item.name} cannot be equipped to slot ${slot}`);
+    }
+    
+    const updatedEquipped = new Map(this.equippedItems);
+    updatedEquipped.set(slot, itemId);
+    
+    return new Entity({
+      ...this.toJSON(),
+      equippedItems: updatedEquipped
+    });
+  }
+
+  /**
+   * Unequip an item from a slot
+   * @param {string} slot - Equipment slot to clear
+   * @returns {Entity} New entity instance with slot cleared
+   */
+  unequipItem(slot) {
+    const updatedEquipped = new Map(this.equippedItems);
+    updatedEquipped.delete(slot);
+    
+    return new Entity({
+      ...this.toJSON(),
+      equippedItems: updatedEquipped
+    });
+  }
+
+  /**
+   * Check if entity has a specific item
+   * @param {string} itemId - Item ID to check
+   * @returns {boolean} True if item is in inventory
+   */
+  hasItem(itemId) {
+    return this.items.some(item => item.id === itemId);
+  }
+
+  /**
+   * Get an item by ID
+   * @param {string} itemId - Item ID
+   * @returns {Item|null} Item if found, null otherwise
+   */
+  getItem(itemId) {
+    return this.items.find(item => item.id === itemId) || null;
+  }
+
+  /**
+   * Get all equipped items
+   * @returns {Array<{slot: string, item: Item}>} Array of equipped items with slots
+   */
+  getEquippedItems() {
+    const equipped = [];
+    for (const [slot, itemId] of this.equippedItems.entries()) {
+      const item = this.getItem(itemId);
+      if (item) {
+        equipped.push({ slot, item });
+      }
+    }
+    return equipped;
+  }
+
+  /**
+   * Check if an item is equipped
+   * @param {string} itemId - Item ID
+   * @returns {boolean} True if item is equipped
+   */
+  isItemEquipped(itemId) {
+    for (const id of this.equippedItems.values()) {
+      if (id === itemId) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get total armor class from equipped armor and bonuses
+   * @returns {number} Total AC
+   */
+  getTotalArmorClass() {
+    let totalAC = this.combat.armorClass || 10;
+    
+    for (const { item } of this.getEquippedItems()) {
+      if (item.category === 'armor' && item.armorClass) {
+        totalAC += item.armorClass;
+      }
+    }
+    
+    return totalAC;
+  }
+
+  // ===========================
+  // Ability Management Methods
+  // ===========================
+
+  /**
+   * Add an ability to the entity
+   * @param {Ability|Object} ability - Ability to add (Ability object or JSON)
+   * @returns {Entity} New entity instance with ability added
+   */
+  addAbility(ability) {
+    const abilityInstance = ability instanceof Ability ? ability : Ability.fromJSON(ability);
+    return new Entity({
+      ...this.toJSON(),
+      abilities: [...this.abilities, abilityInstance]
+    });
+  }
+
+  /**
+   * Remove an ability from the entity
+   * @param {string} abilityId - ID of ability to remove
+   * @returns {Entity} New entity instance with ability removed
+   */
+  removeAbility(abilityId) {
+    const updatedAbilities = this.abilities.filter(ability => ability.id !== abilityId);
+    return new Entity({
+      ...this.toJSON(),
+      abilities: updatedAbilities
+    });
+  }
+
+  /**
+   * Upgrade an ability to the next level
+   * @param {string} abilityId - ID of ability to upgrade
+   * @returns {Entity} New entity instance with upgraded ability
+   */
+  upgradeAbility(abilityId) {
+    const abilityIndex = this.abilities.findIndex(a => a.id === abilityId);
+    if (abilityIndex === -1) {
+      throw new Error(`Ability ${abilityId} not found`);
+    }
+    
+    const ability = this.abilities[abilityIndex];
+    const upgraded = ability.upgrade();
+    
+    const updatedAbilities = [...this.abilities];
+    updatedAbilities[abilityIndex] = upgraded;
+    
+    return new Entity({
+      ...this.toJSON(),
+      abilities: updatedAbilities
+    });
+  }
+
+  /**
+   * Check if entity has a specific ability
+   * @param {string} abilityId - Ability ID to check
+   * @returns {boolean} True if entity has the ability
+   */
+  hasAbility(abilityId) {
+    return this.abilities.some(ability => ability.id === abilityId);
+  }
+
+  /**
+   * Get an ability by ID
+   * @param {string} abilityId - Ability ID
+   * @returns {Ability|null} Ability if found, null otherwise
+   */
+  getAbility(abilityId) {
+    return this.abilities.find(ability => ability.id === abilityId) || null;
+  }
+
+  /**
+   * Get abilities by type
+   * @param {string} type - Ability type (active, passive, triggered, etc.)
+   * @returns {Array<Ability>} Abilities of specified type
+   */
+  getAbilitiesByType(type) {
+    return this.abilities.filter(ability => ability.type === type);
+  }
+
+  /**
+   * Get all abilities that can be used in current state
+   * @returns {Array<Ability>} Usable abilities
+   */
+  getUsableAbilities() {
+    return this.abilities.filter(ability => ability.canActivate());
+  }
+
+  // ===========================
+  // Skill Management Methods
+  // ===========================
+
+  /**
+   * Add a skill to the entity
+   * @param {Skill|Object} skill - Skill to add (Skill object or JSON)
+   * @param {number} initialLevel - Initial skill level (default: 0)
+   * @param {number} initialExperience - Initial experience (default: 0)
+   * @returns {Entity} New entity instance with skill added
+   */
+  addSkill(skill, initialLevel = 0, initialExperience = 0) {
+    const skillInstance = skill instanceof Skill ? skill : Skill.fromJSON(skill);
+    const updatedLevels = new Map(this.skillLevels);
+    
+    updatedLevels.set(skillInstance.id, {
+      level: initialLevel,
+      experience: initialExperience,
+      skill: skillInstance
+    });
+    
+    return new Entity({
+      ...this.toJSON(),
+      skillLevels: updatedLevels
+    });
+  }
+
+  /**
+   * Remove a skill from the entity
+   * @param {string} skillId - ID of skill to remove
+   * @returns {Entity} New entity instance with skill removed
+   */
+  removeSkill(skillId) {
+    const updatedLevels = new Map(this.skillLevels);
+    updatedLevels.delete(skillId);
+    
+    return new Entity({
+      ...this.toJSON(),
+      skillLevels: updatedLevels
+    });
+  }
+
+  /**
+   * Add experience to a skill
+   * @param {string} skillId - Skill ID
+   * @param {number} amount - Amount of experience to add
+   * @returns {Entity} New entity instance with updated skill
+   */
+  addSkillExperience(skillId, amount) {
+    const skillData = this.skillLevels.get(skillId);
+    if (!skillData) {
+      throw new Error(`Skill ${skillId} not found`);
+    }
+    
+    const updated = skillData.skill.addExperience(amount, skillData.level, skillData.experience);
+    const updatedLevels = new Map(this.skillLevels);
+    
+    updatedLevels.set(skillId, {
+      level: updated.level,
+      experience: updated.experience,
+      skill: skillData.skill
+    });
+    
+    return new Entity({
+      ...this.toJSON(),
+      skillLevels: updatedLevels
+    });
+  }
+
+  /**
+   * Perform a skill check
+   * @param {string} skillId - Skill ID
+   * @param {number} difficulty - Difficulty of the check
+   * @param {Object} modifiers - Additional modifiers
+   * @returns {Object} Check result { success: boolean, roll: number, total: number, margin: number }
+   */
+  performSkillCheck(skillId, difficulty = 10, modifiers = {}) {
+    const skillData = this.skillLevels.get(skillId);
+    if (!skillData) {
+      throw new Error(`Skill ${skillId} not found`);
+    }
+    
+    return skillData.skill.performCheck(skillData.level, difficulty, modifiers);
+  }
+
+  /**
+   * Check if entity has a specific skill
+   * @param {string} skillId - Skill ID to check
+   * @returns {boolean} True if entity has the skill
+   */
+  hasSkill(skillId) {
+    return this.skillLevels.has(skillId);
+  }
+
+  /**
+   * Get a skill by ID
+   * @param {string} skillId - Skill ID
+   * @returns {Object|null} Skill data { level, experience, skill } or null
+   */
+  getSkill(skillId) {
+    return this.skillLevels.get(skillId) || null;
+  }
+
+  /**
+   * Get skill level
+   * @param {string} skillId - Skill ID
+   * @returns {number} Skill level (0 if not found)
+   */
+  getSkillLevel(skillId) {
+    const skillData = this.skillLevels.get(skillId);
+    return skillData ? skillData.level : 0;
+  }
+
+  /**
+   * Get skill mastery level
+   * @param {string} skillId - Skill ID
+   * @returns {string} Mastery level (novice, apprentice, journeyman, expert, master, grandmaster)
+   */
+  getSkillMasteryLevel(skillId) {
+    const skillData = this.skillLevels.get(skillId);
+    if (!skillData) return 'novice';
+    return skillData.skill.getMasteryLevel(skillData.level);
+  }
+
+  /**
+   * Get skills by category
+   * @param {string} category - Skill category
+   * @returns {Array<Object>} Skills in category with their data
+   */
+  getSkillsByCategory(category) {
+    const skills = [];
+    for (const [skillId, skillData] of this.skillLevels.entries()) {
+      if (skillData.skill.category === category) {
+        skills.push({ skillId, ...skillData });
+      }
+    }
+    return skills;
+  }
+
   /**
    * Serialize entity to JSON
    * @returns {Object} JSON representation
@@ -417,7 +795,15 @@ class Entity {
       attributes: this.attributes,
       combat: this.combat,
       skills: this.skills,
-      abilities: this.abilities,
+      skillLevels: this.skillLevels ? Array.from(this.skillLevels.entries()).map(([id, data]) => ({
+        skillId: id,
+        level: data.level,
+        experience: data.experience,
+        skill: data.skill.toJSON()
+      })) : [],
+      abilities: this.abilities.map(ability => ability.toJSON ? ability.toJSON() : ability),
+      items: this.items.map(item => item.toJSON ? item.toJSON() : item),
+      equippedItems: this.equippedItems ? Array.from(this.equippedItems.entries()) : [],
       resistances: this.resistances,
       immunities: this.immunities,
       vulnerabilities: this.vulnerabilities,
@@ -440,7 +826,60 @@ class Entity {
    * @returns {Entity} New entity
    */
   static fromJSON(json) {
-    return new Entity(json);
+    const config = { ...json };
+    
+    // Deserialize items
+    if (config.items) {
+      config.items = config.items.map(item => 
+        item instanceof Item ? item : Item.fromJSON(item)
+      );
+    }
+    
+    // Deserialize abilities
+    if (config.abilities) {
+      config.abilities = config.abilities.map(ability =>
+        ability instanceof Ability ? ability : Ability.fromJSON(ability)
+      );
+    }
+    
+    // Deserialize equipped items Map
+    if (config.equippedItems) {
+      config.equippedItems = Array.isArray(config.equippedItems)
+        ? new Map(config.equippedItems)
+        : new Map(Object.entries(config.equippedItems));
+    }
+    
+    // Deserialize skill levels Map
+    if (config.skillLevels) {
+      config.skillLevels = Entity._deserializeSkillLevels(config.skillLevels);
+    }
+    
+    return new Entity(config);
+  }
+  
+  /**
+   * Helper to deserialize skill levels from JSON
+   * @param {Array|Map} skillLevels - Serialized skill levels
+   * @returns {Map} Deserialized Map
+   * @private
+   */
+  static _deserializeSkillLevels(skillLevels) {
+    if (skillLevels instanceof Map) {
+      return skillLevels;
+    }
+    
+    const map = new Map();
+    if (Array.isArray(skillLevels)) {
+      for (const entry of skillLevels) {
+        const skill = entry.skill instanceof Skill ? entry.skill : Skill.fromJSON(entry.skill);
+        map.set(entry.skillId, {
+          level: entry.level,
+          experience: entry.experience,
+          skill
+        });
+      }
+    }
+    return map;
   }
 
   /**

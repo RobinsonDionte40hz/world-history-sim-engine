@@ -27,6 +27,9 @@ import CharacterEditorPage from '../pages/CharacterEditorPage';
 import CharacterManagerPage from '../pages/CharacterManagerPage';
 import InteractionEditorPage from '../pages/InteractionEditorPage';
 import EncounterEditorPage from '../pages/EncounterEditorPage';
+import ItemEditorPage from '../pages/ItemEditorPage';
+import AbilityEditorPage from '../pages/AbilityEditorPage';
+import SkillEditorPage from '../pages/SkillEditorPage';
 import TemplatePage from '../pages/TemplatePage';
 
 // World foundation editor
@@ -65,6 +68,9 @@ const AppRouter = () => {
             <Route path="/editors/characters" element={<CharacterEditorPage />} />
             <Route path="/editors/character-manager" element={<CharacterManagerPage />} />
             <Route path="/editors/encounters" element={<EncounterEditorPage />} />
+            <Route path="/editors/items" element={<ItemEditorPage />} />
+            <Route path="/editors/abilities" element={<AbilityEditorPage />} />
+            <Route path="/editors/skills" element={<SkillEditorPage />} />
             <Route path="/origins/builder" element={<OriginBuilderPage />} />
             
             {/* Template Library */}

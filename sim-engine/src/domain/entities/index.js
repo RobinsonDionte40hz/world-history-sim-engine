@@ -12,3 +12,8 @@ export { default as PrerequisiteSystem } from './PrerequisiteSystem';
 export { default as WorldState } from './WorldState';
 export { default as Universe } from './Universe';
 export { default as Origin } from './Origin';
+
+// Item, Ability, and Skill System
+export { default as Item } from './Item';
+export { default as Ability } from './Ability';
+export { default as Skill } from './Skill';

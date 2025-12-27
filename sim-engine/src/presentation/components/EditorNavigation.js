@@ -16,6 +16,9 @@ import {
   Users, 
   MessageSquare, 
   Sword,
+  Package,
+  Zap,
+  BookOpen,
   ChevronRight,
   AlertTriangle,
   Lock
@@ -83,6 +86,36 @@ const EditorNavigation = ({ className = '' }) => {
       requiresWorld: false,
       color: 'text-pink-400',
       hoverColor: 'hover:bg-pink-500/10'
+    },
+    {
+      id: 'items',
+      name: 'Item Editor',
+      path: '/editors/items',
+      icon: Package,
+      description: 'Create items',
+      requiresWorld: false,
+      color: 'text-blue-400',
+      hoverColor: 'hover:bg-blue-500/10'
+    },
+    {
+      id: 'abilities',
+      name: 'Ability Editor',
+      path: '/editors/abilities',
+      icon: Zap,
+      description: 'Create abilities',
+      requiresWorld: false,
+      color: 'text-yellow-400',
+      hoverColor: 'hover:bg-yellow-500/10'
+    },
+    {
+      id: 'skills',
+      name: 'Skill Editor',
+      path: '/editors/skills',
+      icon: BookOpen,
+      description: 'Create skills',
+      requiresWorld: false,
+      color: 'text-cyan-400',
+      hoverColor: 'hover:bg-cyan-500/10'
     }
   ];
 
@@ -169,9 +202,9 @@ const EditorNavigation = ({ className = '' }) => {
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-300 mb-3">Editors</h3>
         
-        {/* Top row - 3 editors */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {editors.slice(0, 3).map((editor) => {
+        {/* Top row - 4 editors */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {editors.slice(0, 4).map((editor) => {
             const isActive = isEditorActive(editor);
             const isAvailable = isEditorAvailable(editor);
             const status = getEditorStatus(editor);
@@ -219,56 +252,54 @@ const EditorNavigation = ({ className = '' }) => {
           })}
         </div>
 
-        {/* Bottom row - 2 editors centered */}
-        <div className="flex justify-center">
-          <div className="grid grid-cols-2 gap-2 max-w-[180px]">
-            {editors.slice(3, 5).map((editor) => {
-              const isActive = isEditorActive(editor);
-              const isAvailable = isEditorAvailable(editor);
-              const status = getEditorStatus(editor);
-              const IconComponent = editor.icon;
+        {/* Bottom row - 4 editors */}
+        <div className="grid grid-cols-4 gap-2">
+          {editors.slice(4, 8).map((editor) => {
+            const isActive = isEditorActive(editor);
+            const isAvailable = isEditorAvailable(editor);
+            const status = getEditorStatus(editor);
+            const IconComponent = editor.icon;
 
-              return (
-                <button
-                  key={editor.id}
-                  onClick={() => handleEditorClick(editor)}
-                  disabled={!isAvailable}
-                  className={`
-                    flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-h-[60px] group
-                    ${isActive 
-                      ? `bg-slate-700/50 border border-slate-500 ${editor.color} shadow-md` 
-                      : isAvailable
-                        ? `bg-slate-800/40 border border-slate-700/40 text-slate-300 ${editor.hoverColor} hover:border-slate-600 hover:shadow-md hover:scale-105`
-                        : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed opacity-60'
-                    }
-                  `}
-                >
-                  <div className={`
-                    p-1.5 rounded-md mb-1 transition-all duration-200
-                    ${isActive 
-                      ? `bg-current/20 ${editor.color}` 
-                      : isAvailable
-                        ? 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50'
-                        : 'bg-slate-800/50 text-slate-600'
-                    }
-                  `}>
-                    <IconComponent className="w-4 h-4" />
-                  </div>
-                  
-                  <span className="font-medium text-xs text-center leading-tight">
-                    {editor.name.replace(' Editor', '')}
-                  </span>
+            return (
+              <button
+                key={editor.id}
+                onClick={() => handleEditorClick(editor)}
+                disabled={!isAvailable}
+                className={`
+                  flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-h-[60px] group
+                  ${isActive 
+                    ? `bg-slate-700/50 border border-slate-500 ${editor.color} shadow-md` 
+                    : isAvailable
+                      ? `bg-slate-800/40 border border-slate-700/40 text-slate-300 ${editor.hoverColor} hover:border-slate-600 hover:shadow-md hover:scale-105`
+                      : 'bg-slate-800/20 border border-slate-700/20 text-slate-500 cursor-not-allowed opacity-60'
+                  }
+                `}
+              >
+                <div className={`
+                  p-1.5 rounded-md mb-1 transition-all duration-200
+                  ${isActive 
+                    ? `bg-current/20 ${editor.color}` 
+                    : isAvailable
+                      ? 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50'
+                      : 'bg-slate-800/50 text-slate-600'
+                  }
+                `}>
+                  <IconComponent className="w-4 h-4" />
+                </div>
+                
+                <span className="font-medium text-xs text-center leading-tight">
+                  {editor.name.replace(' Editor', '')}
+                </span>
 
-                  {status === 'locked' && (
-                    <Lock className="w-3 h-3 text-slate-500 mt-1" />
-                  )}
-                  {isActive && (
-                    <div className="w-1 h-1 bg-current rounded-full animate-pulse mt-1" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                {status === 'locked' && (
+                  <Lock className="w-3 h-3 text-slate-500 mt-1" />
+                )}
+                {isActive && (
+                  <div className="w-1 h-1 bg-current rounded-full animate-pulse mt-1" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

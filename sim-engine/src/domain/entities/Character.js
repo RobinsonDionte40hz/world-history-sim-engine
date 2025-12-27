@@ -14,6 +14,9 @@ import PrestigeService from '../services/PrestigeService.js';
 import { PrerequisiteValidator } from '../services/PrerequisiteValidator.js';
 import { ValidationError } from '../../shared/types/ValueObjectTypes.js';
 import MemoryService from '../services/MemoryService.js';
+import Item from './Item.js';
+import Ability from './Ability.js';
+import Skill from './Skill.js';
 
 class Character {
   constructor(config = {}, dependencies = {}) {
@@ -168,6 +171,12 @@ class Character {
     this.relationships = config.relationships || new Map();
     this.memories = config.memories || [];
     this.location = config.location || null;
+
+    // Item, Ability, and Skill management
+    this.items = config.items || [];
+    this.equippedItems = config.equippedItems || new Map(); // slot -> itemId
+    this.abilities = config.abilities || [];
+    this.skillLevels = config.skillLevels || new Map(); // skillId -> { level, experience }
 
     // Add these default properties to prevent undefined errors
     this.energy = config.energy !== undefined ? config.energy : 50;
@@ -693,6 +702,414 @@ class Character {
   }
 
   /**
+   * ========================================
+   * ITEM MANAGEMENT METHODS
+   * ========================================
+   */
+
+  /**
+   * Add an item to the character's inventory
+   * @param {Item} item - The item to add
+   * @returns {Character} - New Character instance with the item
+   */
+  addItem(item) {
+    if (this.hasItem(item.id)) {
+      return this; // Already has item
+    }
+
+    const newItems = [...this.items, item];
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      items: newItems
+    });
+  }
+
+  /**
+   * Remove an item from the character's inventory
+   * @param {string} itemId - ID of the item to remove
+   * @returns {Character} - New Character instance without the item
+   */
+  removeItem(itemId) {
+    if (!this.hasItem(itemId)) {
+      return this; // Doesn't have item
+    }
+
+    // If item is equipped, unequip it first
+    const isEquipped = Array.from(this.equippedItems.values()).includes(itemId);
+    if (isEquipped) {
+      const slot = Array.from(this.equippedItems.entries())
+        .find(([_, id]) => id === itemId)?.[0];
+      if (slot) {
+        return this.unequipItem(slot).removeItem(itemId);
+      }
+    }
+
+    const newItems = this.items.filter(item => item.id !== itemId);
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      items: newItems
+    });
+  }
+
+  /**
+   * Equip an item to a slot
+   * @param {string} itemId - ID of the item to equip
+   * @param {string} slot - Equipment slot
+   * @returns {Character} - New Character instance with the equipped item
+   */
+  equipItem(itemId, slot) {
+    const item = this.getItem(itemId);
+    if (!item) {
+      throw new ValidationError('item', itemId, 'Item not found in inventory');
+    }
+
+    if (!item.canBeUsedBy(this)) {
+      throw new ValidationError('item', itemId, 'Character does not meet item requirements');
+    }
+
+    if (!item.equipmentSlots.includes(slot)) {
+      throw new ValidationError('item', slot, `Item cannot be equipped to ${slot} slot`);
+    }
+
+    const newEquippedItems = new Map(this.equippedItems);
+    
+    // If slot is already occupied, unequip the old item first
+    if (newEquippedItems.has(slot)) {
+      newEquippedItems.delete(slot);
+    }
+
+    newEquippedItems.set(slot, itemId);
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      equippedItems: newEquippedItems
+    });
+  }
+
+  /**
+   * Unequip an item from a slot
+   * @param {string} slot - Equipment slot to unequip
+   * @returns {Character} - New Character instance with the unequipped item
+   */
+  unequipItem(slot) {
+    if (!this.equippedItems.has(slot)) {
+      return this; // Nothing equipped in this slot
+    }
+
+    const newEquippedItems = new Map(this.equippedItems);
+    newEquippedItems.delete(slot);
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      equippedItems: newEquippedItems
+    });
+  }
+
+  /**
+   * Check if character has an item
+   * @param {string} itemId - ID of the item
+   * @returns {boolean}
+   */
+  hasItem(itemId) {
+    return this.items.some(item => item.id === itemId);
+  }
+
+  /**
+   * Get an item by ID
+   * @param {string} itemId - ID of the item
+   * @returns {Item|undefined}
+   */
+  getItem(itemId) {
+    return this.items.find(item => item.id === itemId);
+  }
+
+  /**
+   * Get all equipped items
+   * @returns {Array<{slot: string, item: Item}>}
+   */
+  getEquippedItems() {
+    return Array.from(this.equippedItems.entries()).map(([slot, itemId]) => ({
+      slot,
+      item: this.getItem(itemId)
+    })).filter(entry => entry.item !== undefined);
+  }
+
+  /**
+   * Check if an item is equipped
+   * @param {string} itemId - ID of the item
+   * @returns {boolean}
+   */
+  isItemEquipped(itemId) {
+    return Array.from(this.equippedItems.values()).includes(itemId);
+  }
+
+  /**
+   * Get total armor class from equipped items
+   * @returns {number}
+   */
+  getTotalArmorClass() {
+    let baseAC = 10;
+    const equippedItems = this.getEquippedItems();
+    
+    for (const { item } of equippedItems) {
+      if (item.armorClass) {
+        baseAC += item.armorClass;
+      }
+    }
+    
+    return baseAC;
+  }
+
+  /**
+   * ========================================
+   * ABILITY MANAGEMENT METHODS
+   * ========================================
+   */
+
+  /**
+   * Add an ability to the character
+   * @param {Ability} ability - The ability to add
+   * @returns {Character} - New Character instance with the ability
+   */
+  addAbility(ability) {
+    if (this.hasAbility(ability.id)) {
+      return this; // Already has ability
+    }
+
+    const newAbilities = [...this.abilities, ability];
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      abilities: newAbilities
+    });
+  }
+
+  /**
+   * Remove an ability from the character
+   * @param {string} abilityId - ID of the ability to remove
+   * @returns {Character} - New Character instance without the ability
+   */
+  removeAbility(abilityId) {
+    if (!this.hasAbility(abilityId)) {
+      return this; // Doesn't have ability
+    }
+
+    const newAbilities = this.abilities.filter(ability => ability.id !== abilityId);
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      abilities: newAbilities
+    });
+  }
+
+  /**
+   * Upgrade an ability to the next level
+   * @param {string} abilityId - ID of the ability to upgrade
+   * @returns {Character} - New Character instance with upgraded ability
+   */
+  upgradeAbility(abilityId) {
+    const ability = this.getAbility(abilityId);
+    if (!ability) {
+      throw new ValidationError('ability', abilityId, 'Ability not found');
+    }
+
+    if (ability.level >= ability.maxLevel) {
+      throw new ValidationError('ability', abilityId, 'Ability already at max level');
+    }
+
+    const upgradedAbility = ability.upgrade();
+    const newAbilities = this.abilities.map(a => 
+      a.id === abilityId ? upgradedAbility : a
+    );
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      abilities: newAbilities
+    });
+  }
+
+  /**
+   * Check if character has an ability
+   * @param {string} abilityId - ID of the ability
+   * @returns {boolean}
+   */
+  hasAbility(abilityId) {
+    return this.abilities.some(ability => ability.id === abilityId);
+  }
+
+  /**
+   * Get an ability by ID
+   * @param {string} abilityId - ID of the ability
+   * @returns {Ability|undefined}
+   */
+  getAbility(abilityId) {
+    return this.abilities.find(ability => ability.id === abilityId);
+  }
+
+  /**
+   * Get all abilities of a specific type
+   * @param {string} type - Ability type (active, passive, etc.)
+   * @returns {Array<Ability>}
+   */
+  getAbilitiesByType(type) {
+    return this.abilities.filter(ability => ability.type === type);
+  }
+
+  /**
+   * Get all usable abilities (not on cooldown, has resources)
+   * @param {object} context - Context for checking ability availability
+   * @returns {Array<Ability>}
+   */
+  getUsableAbilities(context = {}) {
+    return this.abilities.filter(ability => 
+      ability.canBeUsedBy(this) && ability.canActivate(this, context)
+    );
+  }
+
+  /**
+   * ========================================
+   * SKILL MANAGEMENT METHODS
+   * ========================================
+   */
+
+  /**
+   * Add a skill to the character
+   * @param {Skill} skill - The skill to add
+   * @returns {Character} - New Character instance with the skill
+   */
+  addSkill(skill) {
+    if (this.hasSkill(skill.id)) {
+      return this; // Already has skill
+    }
+
+    const newSkillLevels = new Map(this.skillLevels);
+    newSkillLevels.set(skill.id, {
+      level: skill.level,
+      experience: skill.experience,
+      skill: skill
+    });
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      skillLevels: newSkillLevels
+    });
+  }
+
+  /**
+   * Remove a skill from the character
+   * @param {string} skillId - ID of the skill to remove
+   * @returns {Character} - New Character instance without the skill
+   */
+  removeSkill(skillId) {
+    if (!this.hasSkill(skillId)) {
+      return this; // Doesn't have skill
+    }
+
+    const newSkillLevels = new Map(this.skillLevels);
+    newSkillLevels.delete(skillId);
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      skillLevels: newSkillLevels
+    });
+  }
+
+  /**
+   * Add experience to a skill
+   * @param {string} skillId - ID of the skill
+   * @param {number} amount - Amount of experience to add
+   * @param {object} context - Context for experience calculation
+   * @returns {Character} - New Character instance with updated skill
+   */
+  addSkillExperience(skillId, amount, context = {}) {
+    const skillData = this.skillLevels.get(skillId);
+    if (!skillData) {
+      throw new ValidationError('skill', skillId, 'Skill not found');
+    }
+
+    const updatedSkill = skillData.skill.addExperience(amount, context);
+    const newSkillLevels = new Map(this.skillLevels);
+    newSkillLevels.set(skillId, {
+      level: updatedSkill.level,
+      experience: updatedSkill.experience,
+      skill: updatedSkill
+    });
+    
+    return new Character({
+      ...this._getSerializableConfig(),
+      skillLevels: newSkillLevels
+    });
+  }
+
+  /**
+   * Perform a skill check
+   * @param {string} skillId - ID of the skill
+   * @param {number} difficulty - Difficulty of the check
+   * @returns {object} - Check result
+   */
+  performSkillCheck(skillId, difficulty) {
+    const skillData = this.skillLevels.get(skillId);
+    if (!skillData) {
+      throw new ValidationError('skill', skillId, 'Skill not found');
+    }
+
+    return skillData.skill.performCheck(difficulty, this);
+  }
+
+  /**
+   * Check if character has a skill
+   * @param {string} skillId - ID of the skill
+   * @returns {boolean}
+   */
+  hasSkill(skillId) {
+    return this.skillLevels.has(skillId);
+  }
+
+  /**
+   * Get a skill by ID
+   * @param {string} skillId - ID of the skill
+   * @returns {Skill|undefined}
+   */
+  getSkill(skillId) {
+    return this.skillLevels.get(skillId)?.skill;
+  }
+
+  /**
+   * Get skill level
+   * @param {string} skillId - ID of the skill
+   * @returns {number}
+   */
+  getSkillLevel(skillId) {
+    return this.skillLevels.get(skillId)?.level || 0;
+  }
+
+  /**
+   * Get all skills by category
+   * @param {string} category - Skill category
+   * @returns {Array<Skill>}
+   */
+  getSkillsByCategory(category) {
+    return Array.from(this.skillLevels.values())
+      .map(data => data.skill)
+      .filter(skill => skill.category === category);
+  }
+
+  /**
+   * Get mastery level for a skill
+   * @param {string} skillId - ID of the skill
+   * @returns {string} - Mastery tier (novice, apprentice, etc.)
+   */
+  getSkillMasteryLevel(skillId) {
+    const skillData = this.skillLevels.get(skillId);
+    if (!skillData) {
+      return 'novice';
+    }
+    return skillData.skill.getMasteryLevel();
+  }
+
+  /**
    * Update character type and revalidate
    * @param {CharacterType} newCharacterType - New character type
    * @returns {Character} - New Character instance with updated type
@@ -1177,6 +1594,17 @@ class Character {
       memories: [...(this.memories || [])],
       location: this.location,
 
+      // Item, Ability, and Skill management
+      items: this.items.map(item => item.toJSON ? item.toJSON() : item),
+      equippedItems: Array.from(this.equippedItems?.entries() || []),
+      abilities: this.abilities.map(ability => ability.toJSON ? ability.toJSON() : ability),
+      skillLevels: Array.from(this.skillLevels?.entries() || []).map(([id, data]) => ({
+        id,
+        level: data.level,
+        experience: data.experience,
+        skill: data.skill.toJSON ? data.skill.toJSON() : data.skill
+      })),
+
       // Add these properties to serialization
       energy: this.energy,
       maxEnergy: this.maxEnergy,
@@ -1261,6 +1689,12 @@ class Character {
       memories: data.memories,
       location: data.location,
 
+      // Item, Ability, and Skill management
+      items: data.items || [],
+      equippedItems: data.equippedItems ? new Map(data.equippedItems) : new Map(),
+      abilities: data.abilities || [],
+      skillLevels: data.skillLevels ? Character._deserializeSkillLevels(data.skillLevels) : new Map(),
+
       // Include these properties in deserialization
       energy: data.energy,
       maxEnergy: data.maxEnergy,
@@ -1316,6 +1750,10 @@ class Character {
       relationships: this.relationships,
       memories: this.memories,
       location: this.location,
+      items: this.items,
+      equippedItems: this.equippedItems,
+      abilities: this.abilities,
+      skillLevels: this.skillLevels,
       energy: this.energy,
       maxEnergy: this.maxEnergy,
       health: this.health,
@@ -1746,6 +2184,34 @@ class Character {
     }
 
     return relationships;
+  }
+
+  /**
+   * Deserialize skill levels from JSON data
+   * @param {Array} data - Skill levels data
+   * @returns {Map} - Deserialized skill levels map
+   * @static
+   */
+  static _deserializeSkillLevels(data) {
+    const skillLevels = new Map();
+
+    if (!data || !Array.isArray(data)) return skillLevels;
+
+    data.forEach(entry => {
+      const skill = entry.skill && entry.skill.id ? 
+        (Skill.fromJSON ? Skill.fromJSON(entry.skill) : entry.skill) : 
+        null;
+      
+      if (skill) {
+        skillLevels.set(entry.id, {
+          level: entry.level || 0,
+          experience: entry.experience || 0,
+          skill: skill
+        });
+      }
+    });
+
+    return skillLevels;
   }
 
   /**
