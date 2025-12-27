@@ -11,3 +11,4 @@ export { default as Settlement } from './Settlement';
 export { default as PrerequisiteSystem } from './PrerequisiteSystem';
 export { default as WorldState } from './WorldState';
 export { default as Universe } from './Universe';
+export { default as Origin } from './Origin';

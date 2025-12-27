@@ -2,9 +2,11 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import InteractionAssignmentPanel from './InteractionAssignmentPanel.js';
 import InvestmentEditor from './InvestmentEditor.js';
 import { validateCharacterForSave } from '../../shared/utils/characterSaveUtils';
-import { Users, User, Save, Upload } from 'lucide-react';
+import { Users, User, Save, Upload, BookOpen } from 'lucide-react';
 import useTemplates from '../hooks/useTemplates';
 import TemplateLibraryPanel from './TemplateLibraryPanel';
+import Origin from '../../domain/entities/Origin';
+import OriginTemplates from '../../domain/services/OriginTemplates';
 
 // Character creation modes
 const CHARACTER_CREATION_MODES = {
@@ -2192,6 +2194,9 @@ const CharacterEditor = ({
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showArchetypeSelector, setShowArchetypeSelector] = useState(false);
   const [showCreateArchetype, setShowCreateArchetype] = useState(false);
+  const [selectedOrigin, setSelectedOrigin] = useState(null);
+  const [originApplied, setOriginApplied] = useState(false);
+  const [customOrigins, setCustomOrigins] = useState([]);
   const [newArchetype, setNewArchetype] = useState({
     id: '',
     name: '',
@@ -2203,6 +2208,31 @@ const CharacterEditor = ({
   });
   
   const { templates, saveTemplate, loadTemplate, deleteTemplate } = useTemplates();
+
+  // Load custom origins from localStorage
+  useEffect(() => {
+    const loadCustomOrigins = () => {
+      const saved = localStorage.getItem('customOrigins');
+      if (saved) {
+        try {
+          const origins = JSON.parse(saved).map(o => Origin.fromJSON(o));
+          setCustomOrigins(origins);
+        } catch (error) {
+          console.error('Failed to load custom origins:', error);
+        }
+      }
+    };
+    
+    // Load on mount
+    loadCustomOrigins();
+    
+    // Reload when window gains focus (user returns from Origin Builder)
+    window.addEventListener('focus', loadCustomOrigins);
+    
+    return () => {
+      window.removeEventListener('focus', loadCustomOrigins);
+    };
+  }, []);
 
   // Event listeners for archetype modals
   useEffect(() => {
@@ -2619,6 +2649,7 @@ const CharacterEditor = ({
       // Full tabs for detailed character creation
       return [
         { id: 'basic', label: 'Basic Info', icon: '📝' },
+        { id: 'origin', label: 'Origin', icon: '📖' },
         { id: 'attributes', label: 'Attributes', icon: '💪' },
         { id: 'personality', label: 'Personality', icon: '🧠' },
         { id: 'skills', label: 'Skills', icon: '⭐' },
@@ -3035,6 +3066,173 @@ const CharacterEditor = ({
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400"
               />
             </div>
+          </div>
+        )}
+
+        {/* Origin Tab */}
+        {activeTab === 'origin' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+              <div className="flex items-start gap-3">
+                <BookOpen className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-blue-300 font-medium mb-1">Create Custom Origins</p>
+                  <p className="text-blue-200 text-sm mb-3">
+                    Origins are created independently in the Origin Builder. Create backstories, events, and starting conditions that can be reused across multiple characters.
+                  </p>
+                  <a
+                    href="/origins/builder"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Open Origin Builder
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-400">
+              Select an existing origin to apply to this character, or skip to create a character without an origin backstory.
+            </p>
+            
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Select Origin Template (Optional)
+              </label>
+              <select
+                value={selectedOrigin?.id || ''}
+                onChange={(e) => {
+                  const originId = e.target.value;
+                  if (originId) {
+                    // Check built-in templates first
+                    let origin = Object.values(OriginTemplates).find(o => o.id === originId);
+                    // Then check custom origins
+                    if (!origin) {
+                      origin = customOrigins.find(o => o.id === originId);
+                    }
+                    setSelectedOrigin(origin);
+                    setOriginApplied(false);
+                  } else {
+                    setSelectedOrigin(null);
+                    setOriginApplied(false);
+                  }
+                }}
+                className="w-full px-4 py-2 bg-slate-800 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400"
+                style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+              >
+                <option value="" style={{ backgroundColor: '#1e293b', color: '#ffffff' }}>None (Create from scratch)</option>
+                
+                {/* Built-in Templates */}
+                {Object.keys(OriginTemplates).length > 0 && (
+                  <optgroup label="Built-in Templates" style={{ backgroundColor: '#334155', color: '#ffffff' }}>
+                    {Object.values(OriginTemplates).map((origin) => (
+                      <option key={origin.id} value={origin.id} style={{ backgroundColor: '#1e293b', color: '#ffffff' }}>
+                        {origin.name} - {origin.category} (Age {origin.startAge}→{origin.playableAge})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                
+                {/* Custom Origins */}
+                {customOrigins.length > 0 && (
+                  <optgroup label="Custom Origins" style={{ backgroundColor: '#334155', color: '#ffffff' }}>
+                    {customOrigins.map((origin) => (
+                      <option key={origin.id} value={origin.id} style={{ backgroundColor: '#1e293b', color: '#ffffff' }}>
+                        {origin.name} - {origin.category} (Age {origin.startAge}→{origin.playableAge})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
+            {/* Origin Preview */}
+            {selectedOrigin && (
+              <div className="space-y-3">
+                <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                  <h4 className="text-purple-300 font-medium mb-2">{selectedOrigin.name}</h4>
+                  <p className="text-gray-300 text-sm mb-3">{selectedOrigin.description}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="text-gray-400">
+                      <span className="font-medium">Category:</span> {selectedOrigin.category}
+                    </div>
+                    <div className="text-gray-400">
+                      <span className="font-medium">Difficulty:</span> {selectedOrigin.difficulty}
+                    </div>
+                    <div className="text-gray-400">
+                      <span className="font-medium">Start Age:</span> {selectedOrigin.startAge}
+                    </div>
+                    <div className="text-gray-400">
+                      <span className="font-medium">Playable Age:</span> {selectedOrigin.playableAge}
+                    </div>
+                    <div className="text-gray-400 col-span-2">
+                      <span className="font-medium">Backstory Events:</span> {selectedOrigin.backstoryEvents.length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Apply Origin Button */}
+                <button
+                  onClick={() => {
+                    if (selectedOrigin) {
+                      // Create Character entity and apply origin
+                      const Character = require('../../domain/entities/Character').default;
+                      const tempChar = new Character(characterData);
+                      selectedOrigin.applyToCharacter(tempChar);
+                      
+                      // Update character data with applied changes
+                      setCharacterData({
+                        ...characterData,
+                        attributes: tempChar.attributes,
+                        skills: tempChar.skills,
+                        personality: tempChar.personality
+                      });
+                      setOriginApplied(true);
+                    }
+                  }}
+                  disabled={originApplied}
+                  className={`w-full py-2 rounded-lg font-medium transition-colors ${
+                    originApplied
+                      ? 'bg-green-600/50 text-green-200 cursor-not-allowed'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                >
+                  {originApplied ? '✓ Origin Applied' : 'Apply Origin to Character'}
+                </button>
+
+                {originApplied && (
+                  <p className="text-green-400 text-sm text-center">
+                    Character attributes and skills updated!
+                  </p>
+                )}
+
+                {/* Origin Details */}
+                <details className="mt-3">
+                  <summary className="text-purple-300 text-sm cursor-pointer hover:text-purple-200">
+                    View Backstory Events ({selectedOrigin.backstoryEvents.length})
+                  </summary>
+                  <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                    {selectedOrigin.backstoryEvents.map((event, idx) => (
+                      <div key={idx} className="p-2 bg-slate-700/50 rounded text-xs">
+                        <span className="text-purple-400 font-medium">Age {event.age}:</span>
+                        <span className="text-gray-300 ml-2">{event.description}</span>
+                        {event.isSignificant && (
+                          <span className="ml-2 text-yellow-400">⭐</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+
+                {/* Link to Origin Builder */}
+                <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                  <p className="text-blue-300 text-sm">
+                    <BookOpen className="w-4 h-4 inline mr-2" />
+                    Want to create custom origins? Visit the <a href="/origins/builder" className="text-blue-400 hover:text-blue-300 underline">Origin Builder</a>
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

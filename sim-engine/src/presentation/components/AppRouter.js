@@ -31,6 +31,7 @@ import TemplatePage from '../pages/TemplatePage';
 
 // World foundation editor
 import WorldNodeEditorPage from '../pages/WorldNodeEditorPage';
+import OriginBuilderPage from '../pages/OriginBuilderPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -64,6 +65,7 @@ const AppRouter = () => {
             <Route path="/editors/characters" element={<CharacterEditorPage />} />
             <Route path="/editors/character-manager" element={<CharacterManagerPage />} />
             <Route path="/editors/encounters" element={<EncounterEditorPage />} />
+            <Route path="/origins/builder" element={<OriginBuilderPage />} />
             
             {/* Template Library */}
             <Route path="/templates" element={<TemplatePage />} />

@@ -725,6 +725,18 @@ const Sidebar = ({
           description: 'Manage all characters',
           hoverColor: 'rgba(147, 51, 234, 0.15)',
           hoverBorder: 'rgba(147, 51, 234, 0.4)'
+        },
+        {
+          id: 'origin-builder',
+          label: '📖 Origin Builder',
+          path: '/origins/builder',
+          onClick: () => {
+            navigate('/origins/builder');
+            onClose();
+          },
+          description: 'Create character origins & backstories',
+          hoverColor: 'rgba(139, 92, 246, 0.15)',
+          hoverBorder: 'rgba(139, 92, 246, 0.4)'
         }
       ]
     },

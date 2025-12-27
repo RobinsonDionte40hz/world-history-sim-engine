@@ -72,6 +72,7 @@ const Navigation = ({
     { title: 'Node Editor', path: '/editors/nodes', description: 'Create and edit world nodes' },
     { title: 'Character Editor', path: '/editors/characters', description: 'Design characters and NPCs' },
     { title: 'Character Manager', path: '/editors/character-manager', description: 'Manage all characters (under Character Editor)' },
+    { title: 'Origin Builder', path: '/origins/builder', description: 'Create character origins and backstories' },
     { title: 'Interaction Editor', path: '/editors/interactions', description: 'Build character interactions' },
     { title: 'Encounter Editor', path: '/editors/encounters', description: 'Create dynamic encounters' },
     { title: 'Simulation', path: '/simulation', description: 'Run world history simulation' }
