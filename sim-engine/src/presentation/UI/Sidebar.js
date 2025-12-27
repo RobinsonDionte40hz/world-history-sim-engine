@@ -657,6 +657,23 @@ const Sidebar = ({
 
   const defaultMenuItems = [
     {
+      id: 'divider-universe',
+      type: 'divider',
+      label: '🌌 Universe Management'
+    },
+    {
+      id: 'universe-manager',
+      label: '🌌 Universe Manager',
+      path: '/universe',
+      onClick: () => {
+        navigate('/universe');
+        onClose();
+      },
+      description: 'Manage multiple worlds',
+      hoverColor: 'rgba(139, 92, 246, 0.15)',
+      hoverBorder: 'rgba(139, 92, 246, 0.4)'
+    },
+    {
       id: 'divider-builders',
       type: 'divider',
       label: '🌟 Create & Build'

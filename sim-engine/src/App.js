@@ -9,6 +9,7 @@
 import React from 'react';
 // SimulationProvider moved to AppRouter.js - only wraps /simulation route
 import { WorldProvider } from './presentation/contexts/WorldContext.js';
+import { UniverseProvider } from './presentation/contexts/UniverseContext.js';
 import AppRouter from './presentation/components/AppRouter.js';
 import './App.css';
 
@@ -53,10 +54,12 @@ function App() {
       
       {/* Content */}
       <div style={{ position: 'relative', zIndex: '1', minHeight: '100vh' }}>
-        <WorldProvider>
-          {/* SimulationProvider moved to route-level - only wraps /simulation route */}
-          <AppRouter />
-        </WorldProvider>
+        <UniverseProvider>
+          <WorldProvider>
+            {/* SimulationProvider moved to route-level - only wraps /simulation route */}
+            <AppRouter />
+          </WorldProvider>
+        </UniverseProvider>
       </div>
     </div>
   );

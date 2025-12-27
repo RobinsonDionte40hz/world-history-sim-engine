@@ -13,6 +13,7 @@ export { SettlementGovernance } from './SettlementGovernance';
 export { default as EconomicProfile } from './EconomicProfile';
 export { default as Environment } from './Environment';
 export { default as NodeConnection } from './NodeConnection';
+export { default as WorldConnection } from './WorldConnection';
 
 // Re-export existing value objects for compatibility
 export { default as PersonalitySystem } from './PersonalitySystem';

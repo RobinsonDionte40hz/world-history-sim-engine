@@ -5,6 +5,7 @@ import runTick from '../simulation/RunTick.js';
 import analyzeHistory from '../history/AnalyzeHistory.js';
 import Character from '../../../domain/entities/Character.js';
 import Node from '../../../domain/entities/Node.js';
+import Universe from '../../../domain/entities/Universe.js';
 import DataStructureUtils from '../../../shared/utils/DataStructureUtils.js';
 
 // Import new services for Task 6 integration
@@ -17,6 +18,7 @@ import SignificantMemoryService from '../../../domain/services/SignificantMemory
 class SimulationService {
   constructor() {
     this.worldState = null;
+    this.universeState = null; // Universe-level state
     this.isRunning = false;
     this.tickInterval = null;
     
@@ -1561,6 +1563,157 @@ class SimulationService {
     }
     
     return null;
+  }
+
+  // ==================== UNIVERSE-LEVEL SIMULATION ====================
+
+  /**
+   * Initialize universe simulation
+   * @param {Universe} universe - Universe to simulate
+   * @returns {Object} Initialized universe state
+   */
+  initializeUniverse(universe) {
+    if (!universe || !(universe instanceof Universe)) {
+      throw new Error('Universe must be a Universe instance');
+    }
+
+    // Validate universe
+    const validation = universe.validate();
+    if (!validation.isValid) {
+      throw new Error(`Universe validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    // Initialize universe state
+    this.universeState = {
+      universe: universe,
+      time: 0,
+      worldStates: new Map(), // Map of worldId -> worldState
+      crossWorldEvents: [],
+      sharedHistory: [],
+      isRunning: false
+    };
+
+    // Initialize each world
+    universe.worlds.forEach(world => {
+      // Prepare world for simulation (would need WorldBuilder integration)
+      console.log(`Initializing world: ${world.name}`);
+      // Note: Full world initialization would require proper pipeline
+    });
+
+    return this.universeState;
+  }
+
+  /**
+   * Process a universe-level turn (processes all worlds and cross-world effects)
+   * @returns {Object} Turn result with all world updates and cross-world events
+   */
+  async processUniverseTurn() {
+    if (!this.universeState) {
+      throw new Error('Universe simulation not initialized');
+    }
+
+    const { universe } = this.universeState;
+    const turnResults = {
+      time: this.universeState.time,
+      worldTurnResults: new Map(),
+      crossWorldEvents: [],
+      worldConnections: []
+    };
+
+    // Process each world in the universe
+    for (const world of universe.worlds) {
+      console.log(`Processing turn for world: ${world.name}`);
+      
+      // Note: This would require each world to have its own simulation state
+      // For now, this is a framework for the integration
+      const worldResult = {
+        worldId: world.id,
+        worldName: world.name,
+        events: [],
+        changes: {}
+      };
+
+      turnResults.worldTurnResults.set(world.id, worldResult);
+    }
+
+    // Process cross-world effects through connections
+    const connections = universe.worldConnections;
+    for (const connection of connections) {
+      if (!connection.isActive) continue;
+
+      // Process influence between worlds
+      const sourceWorld = universe.getWorld(connection.sourceWorldId);
+      const targetWorld = universe.getWorld(connection.targetWorldId);
+
+      if (sourceWorld && targetWorld) {
+        const crossWorldEvent = this._processCrossWorldInfluence(
+          sourceWorld,
+          targetWorld,
+          connection
+        );
+
+        if (crossWorldEvent) {
+          turnResults.crossWorldEvents.push(crossWorldEvent);
+        }
+      }
+    }
+
+    // Update universe time
+    this.universeState.time++;
+    turnResults.time = this.universeState.time;
+
+    // Add to shared history
+    this.universeState.sharedHistory.push({
+      turn: this.universeState.time,
+      results: turnResults,
+      timestamp: Date.now()
+    });
+
+    return turnResults;
+  }
+
+  /**
+   * Process cross-world influence through a connection
+   * @private
+   */
+  _processCrossWorldInfluence(sourceWorld, targetWorld, connection) {
+    const { influence } = connection;
+
+    if (!influence || Object.values(influence).every(v => v === 0)) {
+      return null;
+    }
+
+    return {
+      type: 'cross_world_influence',
+      sourceWorldId: sourceWorld.id,
+      targetWorldId: targetWorld.id,
+      connectionType: connection.connectionType,
+      influence: {
+        economic: influence.economic,
+        cultural: influence.cultural,
+        political: influence.political,
+        technological: influence.technological
+      },
+      timestamp: Date.now()
+    };
+  }
+
+  /**
+   * Gets universe statistics
+   * @returns {Object} Universe statistics
+   */
+  getUniverseStatistics() {
+    if (!this.universeState) {
+      return null;
+    }
+
+    return {
+      totalTime: this.universeState.time,
+      worldCount: this.universeState.universe.worlds.length,
+      connectionCount: this.universeState.universe.worldConnections.length,
+      crossWorldEventCount: this.universeState.crossWorldEvents.length,
+      sharedHistoryLength: this.universeState.sharedHistory.length
+    };
   }
 }
 

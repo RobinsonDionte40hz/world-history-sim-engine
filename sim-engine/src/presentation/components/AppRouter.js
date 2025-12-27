@@ -14,6 +14,7 @@ import { SimulationProvider } from '../contexts/SimulationContext';
 import HistoryPage from '../pages/HistoryPage';
 import SimulationPage from '../pages/SimulationPage';
 import WorldBuilderLandingPage from '../pages/WorldBuilderLandingPage';
+import UniverseLandingPage from '../pages/UniverseLandingPage';
 
 // New pages (will be created)
 import FeaturesPage from '../pages/FeaturesPage';
@@ -46,6 +47,7 @@ const AppRouter = () => {
           <Routes>
             {/* Main routes */}
             <Route path="/" element={<WorldBuilderLandingPage />} />
+            <Route path="/universe" element={<UniverseLandingPage />} />
             <Route path="/features" element={<FeaturesPage />} />
             <Route path="/docs/*" element={<DocumentationPage />} />
             <Route path="/examples" element={<ExamplesPage />} />

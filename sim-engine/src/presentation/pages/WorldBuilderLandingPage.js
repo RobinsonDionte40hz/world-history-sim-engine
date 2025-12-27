@@ -546,6 +546,41 @@ const WorldBuilderLandingPage = () => {
                 Try Demo
               </span>
             </button>
+
+            {/* Universe Manager Button (NEW) */}
+            <button 
+              onClick={() => navigate('/universe')}
+              className="group relative px-10 py-5 text-lg font-semibold transition-all duration-300"
+              style={{ 
+                background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: '1rem',
+                boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'linear-gradient(to right, #7c3aed, #db2777)';
+                e.target.style.boxShadow = '0 12px 30px rgba(139, 92, 246, 0.5)';
+                e.target.style.transform = 'scale(1.05)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'linear-gradient(to right, #8b5cf6, #ec4899)';
+                e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.3)';
+                e.target.style.transform = 'scale(1)';
+              }}
+              onMouseDown={(e) => {
+                e.target.style.transform = 'scale(1.08)';
+              }}
+              onMouseUp={(e) => {
+                e.target.style.transform = 'scale(1.05)';
+              }}
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Manage Universes
+              </span>
+            </button>
           </div>
 
           {/* Subtitle for buttons */}

@@ -20,6 +20,7 @@ import {
 import Navigation from '../UI/Navigation';
 import useWorldBuilder from '../hooks/useWorldBuilder';
 import { useWorldContext } from '../contexts/WorldContext';
+import { useUniverse } from '../contexts/UniverseContext';
 
 // Time progression presets
 const TIME_PROGRESSION_PRESETS = {
@@ -104,6 +105,15 @@ const WorldNodeEditorPageNew = () => {
     currentWorld 
   } = useWorldContext();
 
+  // Add UniverseContext integration
+  const {
+    currentUniverse,
+    universeList,
+    loadUniverse,
+    addWorld,
+    getAllUniverses
+  } = useUniverse();
+
   // Form state
   const [worldData, setWorldData] = useState({
     name: '',
@@ -128,6 +138,13 @@ const WorldNodeEditorPageNew = () => {
   const [previewMode, setPreviewMode] = useState(false);
   const [showNextSteps, setShowNextSteps] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [selectedUniverseId, setSelectedUniverseId] = useState(null);
+  const [showUniverseSelector, setShowUniverseSelector] = useState(false);
+
+  // Load universe list on mount
+  React.useEffect(() => {
+    getAllUniverses().catch(err => console.error('Failed to load universes:', err));
+  }, [getAllUniverses]);
 
   // Validation
   const validateWorld = useCallback(() => {
@@ -185,6 +202,18 @@ const WorldNodeEditorPageNew = () => {
         worldBuilder.setWorldProperties(worldData.name, worldData.description);
         worldBuilder.setRules(worldData.rules);
         worldBuilder.setInitialConditions(worldData.initialConditions);
+      }
+
+      // If a universe is selected, add this world to it
+      if (selectedUniverseId && worldId) {
+        try {
+          await loadUniverse(selectedUniverseId);
+          await addWorld(worldId);
+          console.log(`Added world ${worldId} to universe ${selectedUniverseId}`);
+        } catch (error) {
+          console.error('Failed to add world to universe:', error);
+          // Don't fail the save, just log the error
+        }
       }
 
       setHasUnsavedChanges(false);
@@ -473,6 +502,43 @@ const WorldNodeEditorPageNew = () => {
                             {getFieldError('description')}
                           </p>
                         )}
+                      </div>
+
+                      {/* Universe Assignment */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Assign to Universe (Optional)
+                        </label>
+                        <div className="space-y-3">
+                          <select
+                            value={selectedUniverseId || ''}
+                            onChange={(e) => setSelectedUniverseId(e.target.value || null)}
+                            className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          >
+                            <option value="" className="bg-gray-800">Standalone World (No Universe)</option>
+                            {universeList.map((universe) => (
+                              <option key={universe.id} value={universe.id} className="bg-gray-800">
+                                {universe.name}
+                              </option>
+                            ))}
+                          </select>
+                          {currentUniverse && selectedUniverseId === currentUniverse.id && (
+                            <div className="flex items-center gap-2 text-sm text-purple-300 bg-purple-500/10 px-3 py-2 rounded-lg">
+                              <CheckCircle className="w-4 h-4" />
+                              World will be added to: {currentUniverse.name}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => navigate('/universe')}
+                            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                          >
+                            → Create new universe
+                          </button>
+                        </div>
+                        <p className="mt-2 text-xs text-gray-400">
+                          Assign this world to a universe to manage multiple interconnected worlds
+                        </p>
                       </div>
                     </div>
                   )}

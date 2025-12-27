@@ -63,6 +63,7 @@ const Navigation = ({
 
   // Search functionality
   const searchablePages = [
+    { title: 'Universe Manager', path: '/universe', description: 'Manage multiple worlds in universes' },
     { title: 'Features', path: '/features', description: 'Explore system capabilities' },
     { title: 'Documentation', path: '/docs', description: 'Comprehensive guides and API reference' },
     { title: 'Examples', path: '/examples', description: 'Sample worlds and scenarios' },
