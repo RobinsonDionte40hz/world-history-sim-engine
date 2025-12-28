@@ -357,14 +357,10 @@ export class BuildingProductionService {
       progress *= buildingType.production.speedMultiplier;
     }
 
-    // Worker contribution (average of all workers)
+    // Worker contribution (LOD-optimized - Task 20)
     const workers = building.getWorkers().map(wId => this._getCharacter(wId)).filter(w => w);
     if (workers.length > 0) {
-      const avgContribution = workers.reduce((sum, w) => {
-        const contribution = w.calculateWorkContribution?.(recipe.skill) || 1.0;
-        return sum + contribution;
-      }, 0) / workers.length;
-      
+      const avgContribution = this._calculateLODOptimizedWorkerContribution(workers, recipe);
       progress *= avgContribution;
     }
 
@@ -389,14 +385,10 @@ export class BuildingProductionService {
   _calculateOutputQuality(building, recipe) {
     let quality = 0.7; // Base quality
 
-    // Worker skill contribution
+    // Worker skill contribution (LOD-optimized - Task 20)
     const workers = building.getWorkers().map(wId => this._getCharacter(wId)).filter(w => w);
     if (workers.length > 0 && recipe.skill) {
-      const avgSkill = workers.reduce((sum, w) => {
-        const skillLevel = w.getJobSkill?.(recipe.skill) || 0;
-        return sum + skillLevel;
-      }, 0) / workers.length;
-      
+      const avgSkill = this._calculateLODOptimizedSkillLevel(workers, recipe.skill);
       quality += avgSkill * 0.015; // +1.5% per skill level
     }
 
@@ -632,6 +624,199 @@ export class BuildingProductionService {
    */
   _getCharacter(characterId) {
     return this.world.characters?.find(c => c.id === characterId) || null;
+  }
+
+  /**
+   * Calculate LOD-optimized worker contribution for production
+   * Task 20: Optimize production calculations for different LOD tiers
+   * @param {Array<Character>} workers - Array of worker characters
+   * @param {Object} recipe - Production recipe
+   * @returns {number} Average worker contribution
+   * @private
+   */
+  _calculateLODOptimizedWorkerContribution(workers, recipe) {
+    if (workers.length === 0) return 1.0;
+
+    // Separate workers by LOD tier for optimized processing
+    const heroWorkers = [];
+    const groupWorkers = [];
+    const backgroundWorkers = [];
+
+    for (const worker of workers) {
+      const tier = worker.lodTier || 'hero';
+      if (tier === 'hero') {
+        heroWorkers.push(worker);
+      } else if (tier === 'group') {
+        groupWorkers.push(worker);
+      } else {
+        backgroundWorkers.push(worker);
+      }
+    }
+
+    let totalContribution = 0;
+
+    // Hero tier: Full calculation with all character data
+    for (const worker of heroWorkers) {
+      const contribution = worker.calculateWorkContribution?.(recipe.skill) || 1.0;
+      totalContribution += contribution;
+    }
+
+    // Group tier: Statistical calculation with sampling
+    if (groupWorkers.length > 0) {
+      // Sample one worker for detailed calculation, apply to all
+      const sampleWorker = groupWorkers[Math.floor(Math.random() * groupWorkers.length)];
+      const sampleContribution = this._calculateGroupWorkerContribution(sampleWorker, recipe);
+      
+      // Apply with slight variation for each worker
+      for (let i = 0; i < groupWorkers.length; i++) {
+        const variation = 0.9 + Math.random() * 0.2; // ±10% variation
+        totalContribution += sampleContribution * variation;
+      }
+    }
+
+    // Background tier: Pure statistical modeling
+    if (backgroundWorkers.length > 0) {
+      // Use demographic average with no individual calculations
+      const avgBackgroundContribution = 1.0; // Base contribution
+      totalContribution += avgBackgroundContribution * backgroundWorkers.length;
+    }
+
+    return totalContribution / workers.length;
+  }
+
+  /**
+   * Calculate LOD-optimized skill level for quality calculations
+   * @param {Array<Character>} workers - Array of worker characters
+   * @param {string} skillName - Required skill name
+   * @returns {number} Average skill level
+   * @private
+   */
+  _calculateLODOptimizedSkillLevel(workers, skillName) {
+    if (workers.length === 0) return 0;
+
+    const heroWorkers = [];
+    const groupWorkers = [];
+    const backgroundWorkers = [];
+
+    for (const worker of workers) {
+      const tier = worker.lodTier || 'hero';
+      if (tier === 'hero') {
+        heroWorkers.push(worker);
+      } else if (tier === 'group') {
+        groupWorkers.push(worker);
+      } else {
+        backgroundWorkers.push(worker);
+      }
+    }
+
+    let totalSkill = 0;
+
+    // Hero tier: Full skill lookup
+    for (const worker of heroWorkers) {
+      const skillLevel = worker.getJobSkill?.(skillName) || 0;
+      totalSkill += skillLevel;
+    }
+
+    // Group tier: Estimate from group statistics
+    if (groupWorkers.length > 0) {
+      for (const worker of groupWorkers) {
+        // Estimate skill from group productivity
+        const productivity = worker.groupStatistics?.productivity || 0.5;
+        const estimatedSkill = productivity * 10; // Scale to 0-10 range
+        totalSkill += estimatedSkill;
+      }
+    }
+
+    // Background tier: Use demographic baseline
+    if (backgroundWorkers.length > 0) {
+      const baselineSkill = 3; // Assume basic competency
+      totalSkill += baselineSkill * backgroundWorkers.length;
+    }
+
+    return totalSkill / workers.length;
+  }
+
+  /**
+   * Calculate group worker contribution using statistical methods
+   * @param {Character} worker - Group-tier worker
+   * @param {Object} recipe - Production recipe
+   * @returns {number} Worker contribution
+   * @private
+   */
+  _calculateGroupWorkerContribution(worker, recipe) {
+    let contribution = 1.0;
+
+    // Use group statistics if available
+    if (worker.groupStatistics) {
+      const productivity = worker.groupStatistics.productivity || 0.5;
+      contribution *= (0.6 + productivity * 0.8); // Range: 0.6x to 1.4x
+
+      const morale = worker.groupStatistics.morale || 0.5;
+      contribution *= (0.8 + morale * 0.4); // Range: 0.8x to 1.2x
+    }
+
+    // Factor in health if available (simplified)
+    if (worker.health !== undefined) {
+      const healthRatio = worker.health / 100;
+      contribution *= (0.7 + healthRatio * 0.3); // Range: 0.7x to 1.0x
+    }
+
+    // Factor in energy if available (simplified)
+    if (worker.energy !== undefined && worker.maxEnergy) {
+      const energyRatio = worker.energy / worker.maxEnergy;
+      contribution *= (0.8 + energyRatio * 0.2); // Range: 0.8x to 1.0x
+    }
+
+    return contribution;
+  }
+
+  /**
+   * Get LOD tier statistics for production workforce
+   * @param {string} buildingId - Building ID
+   * @returns {Object} LOD tier breakdown
+   */
+  getLODProductionStatistics(buildingId) {
+    const building = this._getBuildingById(buildingId);
+    
+    if (!building) {
+      return { success: false, reason: 'Building not found' };
+    }
+
+    const workers = building.getWorkers().map(wId => this._getCharacter(wId)).filter(w => w);
+    
+    const stats = {
+      total: workers.length,
+      hero: 0,
+      group: 0,
+      background: 0,
+      avgContribution: 0,
+      processingEfficiency: 0
+    };
+
+    let totalContribution = 0;
+
+    for (const worker of workers) {
+      const tier = worker.lodTier || 'hero';
+      stats[tier]++;
+      
+      // Estimate contribution
+      const contribution = worker.calculateWorkContribution?.() || 1.0;
+      totalContribution += contribution;
+    }
+
+    stats.avgContribution = workers.length > 0 ? totalContribution / workers.length : 0;
+    
+    // Calculate processing efficiency (higher % of group/background = better performance)
+    const optimizedWorkers = stats.group + stats.background;
+    stats.processingEfficiency = workers.length > 0 
+      ? (optimizedWorkers / workers.length) * 100 
+      : 0;
+
+    return {
+      success: true,
+      buildingId,
+      stats
+    };
   }
 
   /**

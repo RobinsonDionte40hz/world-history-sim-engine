@@ -254,6 +254,21 @@ class BehavioralStateService extends BaseDomainService {
                     focus: 0.9
                 }
             },
+            'work': {
+                baseModifier: 1.0,
+                personalityTraits: {
+                    'discipline': 1.3,
+                    'endurance': 1.2,
+                    'ambition': 1.2,
+                    'laziness': 0.6,
+                    'diligence': 1.3
+                },
+                consciousnessFactors: {
+                    energy: 1.2,
+                    focus: 1.3,
+                    ambition: 1.2
+                }
+            },
             'planning': {
                 baseModifier: 1.0,
                 personalityTraits: {
@@ -1047,7 +1062,176 @@ class BehavioralStateService extends BaseDomainService {
             modifier *= this.getUrgencyModifier(interactionType, context.urgency);
         }
 
+        // Work-related context modifiers (Task 19)
+        if (character.jobAssignment) {
+            modifier *= this.getWorkContextModifier(character, interactionType, context);
+        }
+
         return modifier;
+    }
+
+    /**
+     * Get work context modifier based on job assignment and performance
+     * @param {Object} character - Character with jobAssignment
+     * @param {string} interactionType - Type of interaction
+     * @param {Object} context - Context including work metadata
+     * @returns {number} Work context modifier
+     */
+    getWorkContextModifier(character, interactionType, context = {}) {
+        if (!character.jobAssignment) {
+            return 1.0;
+        }
+
+        const jobAssignment = character.jobAssignment;
+        let modifier = 1.0;
+
+        // Employment status influence
+        if (!jobAssignment.employed) {
+            // Unemployed characters prioritize job search
+            if (interactionType === 'economic' || interactionType === 'work') {
+                modifier *= 1.3;
+            }
+            return modifier;
+        }
+
+        // Work-related interaction types get boosted during work time
+        if (interactionType === 'work' || interactionType === 'labor' || interactionType === 'economic') {
+            // Check if during work shift
+            const duringWorkShift = this._isDuringWorkShift(jobAssignment, context);
+            if (duringWorkShift) {
+                modifier *= 1.4; // Strong priority for work during shift
+            } else {
+                modifier *= 0.7; // Less interested in work outside shift
+            }
+
+            // Wage satisfaction influences work motivation
+            const wageSatisfaction = this._calculateWageSatisfaction(character, jobAssignment);
+            modifier *= (0.7 + wageSatisfaction * 0.6); // Range: 0.7x to 1.3x
+
+            // Job performance influences work willingness
+            if (jobAssignment.performance) {
+                const performanceModifier = 0.8 + (jobAssignment.performance.productivity * 0.4);
+                modifier *= performanceModifier; // Range: 0.8x to 1.2x
+            }
+
+            // Work-building compatibility (if metadata available)
+            if (context.buildingId && context.buildingId === jobAssignment.buildingId) {
+                modifier *= 1.2; // Familiar workplace bonus
+            }
+        } else {
+            // Non-work interactions get penalized during work hours
+            const duringWorkShift = this._isDuringWorkShift(jobAssignment, context);
+            if (duringWorkShift) {
+                // During work hours, reduce interest in other activities
+                if (interactionType === 'social' || interactionType === 'exploration') {
+                    modifier *= 0.6; // Strong penalty
+                } else if (interactionType === 'rest') {
+                    modifier *= 0.8; // Moderate penalty
+                }
+            }
+        }
+
+        // Job stress influences behavior
+        if (jobAssignment.hoursWorked > 40) {
+            // Overworked - reduce work motivation, increase rest desire
+            if (interactionType === 'work' || interactionType === 'labor') {
+                modifier *= 0.8;
+            } else if (interactionType === 'rest') {
+                modifier *= 1.3;
+            }
+        }
+
+        return modifier;
+    }
+
+    /**
+     * Check if current time is during character's work shift
+     * @param {Object} jobAssignment - Character's job assignment
+     * @param {Object} context - Context with timeOfDay or turn info
+     * @returns {boolean} True if during work shift
+     * @private
+     */
+    _isDuringWorkShift(jobAssignment, context) {
+        if (!jobAssignment.shift) {
+            return false;
+        }
+
+        // Check context for time information
+        if (context.timeOfDay !== undefined) {
+            // Map time of day to shift
+            const timeToShift = {
+                0: 'morning',   // Turn 0 = morning
+                1: 'midday',    // Turn 1 = midday
+                2: 'night'      // Turn 2 = night
+            };
+            const currentShift = timeToShift[context.timeOfDay];
+            return currentShift === jobAssignment.shift;
+        }
+
+        // Fallback: assume always during work time if no context
+        return true;
+    }
+
+    /**
+     * Calculate wage satisfaction based on current wage vs expectations
+     * @param {Object} character - Character with jobAssignment
+     * @param {Object} jobAssignment - Job assignment data
+     * @returns {number} Satisfaction level (0 to 1)
+     * @private
+     */
+    _calculateWageSatisfaction(character, jobAssignment) {
+        if (!jobAssignment.wage) {
+            return 0.5; // Neutral if no wage data
+        }
+
+        // Compare current wage to average/expected wage
+        const currentWage = jobAssignment.wage;
+        const expectedWage = this._calculateExpectedWage(character);
+
+        const wageRatio = currentWage / expectedWage;
+
+        // Map ratio to satisfaction (0.5 = 50%, 1.0 = 100%, 1.5 = 150%)
+        if (wageRatio >= 1.2) {
+            return 1.0; // Very satisfied
+        } else if (wageRatio >= 1.0) {
+            return 0.8; // Satisfied
+        } else if (wageRatio >= 0.8) {
+            return 0.6; // Somewhat satisfied
+        } else if (wageRatio >= 0.6) {
+            return 0.4; // Dissatisfied
+        } else {
+            return 0.2; // Very dissatisfied
+        }
+    }
+
+    /**
+     * Calculate expected wage based on character attributes and skills
+     * @param {Object} character - Character with attributes
+     * @returns {number} Expected wage
+     * @private
+     */
+    _calculateExpectedWage(character) {
+        // Base wage expectation
+        let expectedWage = 10;
+
+        // Adjust based on attributes (intelligence, charisma)
+        if (character.attributes) {
+            const avgAttribute = (
+                (character.attributes.intelligence || 10) +
+                (character.attributes.charisma || 10)
+            ) / 2;
+            expectedWage += (avgAttribute - 10) * 0.5;
+        }
+
+        // Adjust based on skills (if available)
+        if (character.skills) {
+            const avgSkillLevel = Object.values(character.skills).reduce((sum, skill) => {
+                return sum + (skill.level || 0);
+            }, 0) / Math.max(Object.keys(character.skills).length, 1);
+            expectedWage += avgSkillLevel * 0.5;
+        }
+
+        return Math.max(5, expectedWage); // Minimum expected wage
     }
 
     /**

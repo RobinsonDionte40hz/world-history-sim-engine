@@ -61,7 +61,7 @@ export class Building {
     this.economics = data.economics || {
       constructionCost: 0,
       totalMaintenancePaid: 0,
-      totalProduction Value: 0,
+      totalProductionValue: 0,
       totalWorkerWages: 0,
       profitability: 0 // production value - costs
     };

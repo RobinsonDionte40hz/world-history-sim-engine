@@ -766,11 +766,30 @@ const ItemEditor = ({
         )}
 
         {/* Crafting Tab */}
-        {activeTab === 'crafting' && item.craftable && (
-          <CraftingEditor
-            recipe={item.craftingRecipe}
-            onChange={(craftingRecipe) => updateItem({ craftingRecipe })}
-          />
+        {activeTab === 'crafting' && (
+          <>
+            {!item.craftable ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <span className="text-4xl">🔨</span>
+                </div>
+                <p className="text-gray-300 mb-4">
+                  This item is not marked as craftable
+                </p>
+                <button
+                  onClick={() => updateItem({ craftable: true })}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                >
+                  Enable Crafting
+                </button>
+              </div>
+            ) : (
+              <CraftingEditor
+                recipe={item.craftingRecipe}
+                onChange={(craftingRecipe) => updateItem({ craftingRecipe })}
+              />
+            )}
+          </>
         )}
 
         {/* Advanced Tab */}

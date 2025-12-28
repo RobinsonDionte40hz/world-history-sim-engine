@@ -190,6 +190,13 @@ export class ResourceCategory {
   }
   
   /**
+   * Get all categories as ResourceCategory instances
+   */
+  static getAllCategories() {
+    return Object.values(RESOURCE_CATEGORIES).map(cat => new ResourceCategory(cat.id));
+  }
+  
+  /**
    * Get category by ID
    */
   static getById(categoryId) {
