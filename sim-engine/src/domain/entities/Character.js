@@ -84,6 +84,30 @@ class Character {
       investments: new Set(config.assignedInvestmentIds || [])
     };
 
+    // Job assignment for production system
+    this.jobAssignment = config.jobAssignment || {
+      employed: false,
+      buildingId: null,
+      settlementId: null,
+      jobTitle: null,
+      shift: null, // 'morning', 'midday', 'night'
+      wage: 0,
+      startedTurn: null,
+      totalWagesEarned: 0,
+      workHistory: [], // [{ buildingId, startTurn, endTurn, totalWages }]
+      performance: {
+        productivity: 1.0,
+        quality: 1.0,
+        attendance: 1.0
+      },
+      skills: {}, // { skillName: level } - job-related skills
+      preferences: {
+        preferredJobTypes: [], // 'production', 'service', 'defense', etc.
+        minimumWage: 0,
+        maximumCommute: Infinity
+      }
+    };
+
     // Initialize racial traits first (affects other systems)
     this.racialTraits = config.racialTraits instanceof RacialTraits
       ? config.racialTraits
@@ -2439,6 +2463,245 @@ class Character {
     
     // Ensure non-negative
     return Math.max(0, weight);
+  }
+
+  /**
+   * Assign character to a job at a building
+   */
+  assignToJob(buildingId, settlementId, jobTitle = 'Worker', wage = 10, shift = null) {
+    if (this.jobAssignment.employed) {
+      return {
+        success: false,
+        reason: 'Character already employed. Quit current job first.'
+      };
+    }
+
+    this.jobAssignment.employed = true;
+    this.jobAssignment.buildingId = buildingId;
+    this.jobAssignment.settlementId = settlementId;
+    this.jobAssignment.jobTitle = jobTitle;
+    this.jobAssignment.wage = wage;
+    this.jobAssignment.shift = shift;
+    this.jobAssignment.startedTurn = null; // Set by turn manager
+    
+    return { success: true };
+  }
+
+  /**
+   * Quit current job
+   */
+  quitJob(turn = null) {
+    if (!this.jobAssignment.employed) {
+      return {
+        success: false,
+        reason: 'Character is not employed'
+      };
+    }
+
+    // Record in work history
+    this.jobAssignment.workHistory.push({
+      buildingId: this.jobAssignment.buildingId,
+      settlementId: this.jobAssignment.settlementId,
+      jobTitle: this.jobAssignment.jobTitle,
+      startTurn: this.jobAssignment.startedTurn,
+      endTurn: turn,
+      totalWages: this.jobAssignment.totalWagesEarned,
+      performance: { ...this.jobAssignment.performance }
+    });
+
+    // Keep only last 10 jobs
+    if (this.jobAssignment.workHistory.length > 10) {
+      this.jobAssignment.workHistory = this.jobAssignment.workHistory.slice(-10);
+    }
+
+    // Reset job assignment
+    const previousJob = {
+      buildingId: this.jobAssignment.buildingId,
+      wage: this.jobAssignment.wage
+    };
+
+    this.jobAssignment.employed = false;
+    this.jobAssignment.buildingId = null;
+    this.jobAssignment.settlementId = null;
+    this.jobAssignment.jobTitle = null;
+    this.jobAssignment.shift = null;
+    this.jobAssignment.wage = 0;
+    this.jobAssignment.startedTurn = null;
+    this.jobAssignment.totalWagesEarned = 0;
+
+    return { success: true, previousJob };
+  }
+
+  /**
+   * Pay wages to character
+   */
+  receiveWages(amount) {
+    if (!this.jobAssignment.employed) {
+      return {
+        success: false,
+        reason: 'Character is not employed'
+      };
+    }
+
+    this.jobAssignment.totalWagesEarned += amount;
+    
+    // Add to economic profile if available
+    if (this.economicProfile && typeof this.economicProfile.addIncome === 'function') {
+      this.economicProfile.addIncome(amount, 'wages');
+    }
+
+    return { success: true, totalEarned: this.jobAssignment.totalWagesEarned };
+  }
+
+  /**
+   * Update job performance metrics
+   */
+  updateJobPerformance(metrics = {}) {
+    if (!this.jobAssignment.employed) {
+      return {
+        success: false,
+        reason: 'Character is not employed'
+      };
+    }
+
+    if (metrics.productivity !== undefined) {
+      this.jobAssignment.performance.productivity = Math.max(0, Math.min(2, metrics.productivity));
+    }
+    if (metrics.quality !== undefined) {
+      this.jobAssignment.performance.quality = Math.max(0, Math.min(2, metrics.quality));
+    }
+    if (metrics.attendance !== undefined) {
+      this.jobAssignment.performance.attendance = Math.max(0, Math.min(1, metrics.attendance));
+    }
+
+    return { success: true, performance: this.jobAssignment.performance };
+  }
+
+  /**
+   * Get current job details
+   */
+  getCurrentJob() {
+    if (!this.jobAssignment.employed) {
+      return null;
+    }
+
+    return {
+      buildingId: this.jobAssignment.buildingId,
+      settlementId: this.jobAssignment.settlementId,
+      jobTitle: this.jobAssignment.jobTitle,
+      wage: this.jobAssignment.wage,
+      shift: this.jobAssignment.shift,
+      startedTurn: this.jobAssignment.startedTurn,
+      totalWagesEarned: this.jobAssignment.totalWagesEarned,
+      performance: { ...this.jobAssignment.performance }
+    };
+  }
+
+  /**
+   * Check if character is employed
+   */
+  isEmployed() {
+    return this.jobAssignment.employed;
+  }
+
+  /**
+   * Get work history
+   */
+  getWorkHistory() {
+    return [...this.jobAssignment.workHistory];
+  }
+
+  /**
+   * Update job skill
+   */
+  updateJobSkill(skillName, level) {
+    this.jobAssignment.skills[skillName] = level;
+    return this.jobAssignment.skills[skillName];
+  }
+
+  /**
+   * Get job skill level
+   */
+  getJobSkill(skillName) {
+    return this.jobAssignment.skills[skillName] || 0;
+  }
+
+  /**
+   * Set job preferences
+   */
+  setJobPreferences(preferences = {}) {
+    if (preferences.preferredJobTypes) {
+      this.jobAssignment.preferences.preferredJobTypes = [...preferences.preferredJobTypes];
+    }
+    if (preferences.minimumWage !== undefined) {
+      this.jobAssignment.preferences.minimumWage = preferences.minimumWage;
+    }
+    if (preferences.maximumCommute !== undefined) {
+      this.jobAssignment.preferences.maximumCommute = preferences.maximumCommute;
+    }
+
+    return { success: true, preferences: this.jobAssignment.preferences };
+  }
+
+  /**
+   * Check if job meets character's preferences
+   */
+  meetsJobPreferences(job = {}) {
+    const prefs = this.jobAssignment.preferences;
+
+    // Check wage requirement
+    if (job.wage < prefs.minimumWage) {
+      return { meets: false, reason: 'Wage below minimum requirement' };
+    }
+
+    // Check job type preference
+    if (prefs.preferredJobTypes.length > 0 && job.type) {
+      if (!prefs.preferredJobTypes.includes(job.type)) {
+        return { meets: false, reason: 'Job type not preferred' };
+      }
+    }
+
+    // Check commute distance (if applicable)
+    if (job.distance !== undefined && job.distance > prefs.maximumCommute) {
+      return { meets: false, reason: 'Commute distance too far' };
+    }
+
+    return { meets: true };
+  }
+
+  /**
+   * Calculate work contribution based on attributes and skills
+   */
+  calculateWorkContribution(requiredSkill = null) {
+    let contribution = 1.0;
+
+    // Base contribution from physical attributes
+    const strength = this.attributes?.get('strength')?.modifier || 0;
+    const dexterity = this.attributes?.get('dexterity')?.modifier || 0;
+    const intelligence = this.attributes?.get('intelligence')?.modifier || 0;
+
+    // Average attribute modifier (normalize to 0-2 range)
+    const avgModifier = (strength + dexterity + intelligence) / 3;
+    contribution += avgModifier * 0.1; // +/- 20% from attributes
+
+    // Skill contribution
+    if (requiredSkill) {
+      const skillLevel = this.getJobSkill(requiredSkill);
+      contribution += skillLevel * 0.05; // +0% to +100% from skill level 0-20
+    }
+
+    // Performance modifiers
+    contribution *= this.jobAssignment.performance.productivity;
+
+    // Energy affects productivity
+    const energyPercent = this.energy / this.maxEnergy;
+    if (energyPercent < 0.3) {
+      contribution *= 0.7; // Tired workers are less productive
+    } else if (energyPercent > 0.8) {
+      contribution *= 1.1; // Well-rested workers are more productive
+    }
+
+    return Math.max(0.1, Math.min(2.0, contribution));
   }
 }
 

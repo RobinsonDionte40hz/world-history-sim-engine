@@ -85,8 +85,18 @@ class RoutineInteractionManager {
   _generateWorkInteractions(character, worldState, timeOfDay) {
     const interactions = [];
 
-    // Only generate work interactions during work hours and if character has work assignment
-    if (!this._isWorkTime(timeOfDay) || !character.assignments?.workNodeId) {
+    // Only generate work interactions during work hours
+    if (!this._isWorkTime(timeOfDay)) {
+      return interactions;
+    }
+
+    // Check if character has building-based job assignment (new system)
+    if (character.jobAssignment?.employed) {
+      return this._generateBuildingWorkInteractions(character, worldState, timeOfDay);
+    }
+
+    // Fall back to old node-based work assignment
+    if (!character.assignments?.workNodeId) {
       return interactions;
     }
 
@@ -181,6 +191,193 @@ class RoutineInteractionManager {
         cooldown: 12,
         repeatable: true,
         tags: ['work', 'leadership', workType]
+      }));
+    }
+
+    return interactions;
+  }
+
+  /**
+   * Generate work interactions for building-based employment
+   * @private
+   * @param {Object} character - Character object
+   * @param {Object} worldState - Current world state
+   * @param {string} timeOfDay - Current time of day
+   * @returns {Array} Work interaction objects
+   */
+  _generateBuildingWorkInteractions(character, worldState, timeOfDay) {
+    const interactions = [];
+
+    // Find the building where character works
+    const building = this._getBuildingById(worldState, character.jobAssignment.buildingId);
+    
+    if (!building) {
+      console.warn(`Character ${character.id} employed at building ${character.jobAssignment.buildingId} but building not found`);
+      return interactions;
+    }
+
+    // Check if building is operational
+    if (building.status !== 'active') {
+      return interactions; // Building not operational
+    }
+
+    // Check if it's the character's shift
+    const currentShift = character.jobAssignment.shift;
+    if (currentShift && currentShift !== timeOfDay) {
+      return interactions; // Not character's shift
+    }
+
+    // Check energy requirements
+    const energyRequired = character.lodTier === 'hero' ? 30 : character.lodTier === 'group' ? 25 : 20;
+    if (character.energy < energyRequired) {
+      return interactions; // Not enough energy for work
+    }
+
+    // Get building type for additional context
+    const buildingType = this._getBuildingType(worldState, building.buildingTypeId);
+    const buildingCategory = buildingType?.category || 'general';
+    const jobTitle = character.jobAssignment.jobTitle || 'Worker';
+
+    // Calculate productivity bonus based on building efficiency
+    const buildingEfficiency = building.workers?.efficiency || 1.0;
+    const productivityMultiplier = Math.max(0.5, Math.min(1.5, buildingEfficiency));
+
+    // Get work contribution from character
+    const workContribution = character.calculateWorkContribution?.() || 1.0;
+
+    // Base wage from job assignment
+    const baseWage = character.jobAssignment.wage || 10;
+
+    // Generate interaction based on LOD tier
+    if (character.lodTier === 'background') {
+      // Simple work interaction for background NPCs
+      interactions.push(new ContentInteraction({
+        id: `building_work_${character.id}_${Date.now()}`,
+        name: `Work at ${building.name || buildingType?.name || 'Building'}`,
+        type: 'work',
+        category: 'routine',
+        description: `Perform ${jobTitle} duties at ${building.name || 'the building'}`,
+        requirements: [{ attr: 'constitution', min: 8 }],
+        branches: [{
+          id: `building_work_success_${character.id}`,
+          name: 'Complete Work Shift',
+          effects: [
+            { type: 'resource', target: 'wealth', value: Math.ceil(baseWage * productivityMultiplier) },
+            { type: 'attribute', target: 'constitution', value: 1 },
+            { type: 'custom', target: 'job_performance', value: { productivity: 0.8, quality: 0.7, attendance: 1.0 } }
+          ]
+        }],
+        effects: [],
+        cooldown: 12,
+        repeatable: true,
+        tags: ['work', 'building', buildingCategory],
+        metadata: {
+          buildingId: building.id,
+          buildingType: buildingCategory,
+          jobTitle,
+          shift: currentShift,
+          efficiency: buildingEfficiency
+        }
+      }));
+    } else if (character.lodTier === 'group') {
+      // Specialized work interaction for group NPCs
+      interactions.push(new ContentInteraction({
+        id: `building_specialized_work_${character.id}_${Date.now()}`,
+        name: `${jobTitle} Work`,
+        type: 'work',
+        category: 'routine',
+        description: `Perform specialized ${jobTitle.toLowerCase()} work at ${building.name || 'the building'}`,
+        requirements: [{ attr: 'constitution', min: 10 }],
+        branches: [{
+          id: `building_specialized_success_${character.id}`,
+          name: 'Complete Work Shift',
+          effects: [
+            { type: 'resource', target: 'wealth', value: Math.ceil(baseWage * productivityMultiplier * 1.2) },
+            { type: 'attribute', target: 'constitution', value: 1 },
+            { type: 'resource', target: 'experience', value: 3 },
+            { type: 'custom', target: 'job_performance', value: { productivity: 0.9, quality: 0.85, attendance: 1.0 } },
+            { type: 'custom', target: 'skill_gain', value: { skill: buildingCategory, xp: 2 } }
+          ]
+        }],
+        effects: [],
+        cooldown: 12,
+        repeatable: true,
+        tags: ['work', 'specialized', buildingCategory],
+        metadata: {
+          buildingId: building.id,
+          buildingType: buildingCategory,
+          jobTitle,
+          shift: currentShift,
+          efficiency: buildingEfficiency,
+          workContribution
+        }
+      }));
+    } else if (character.lodTier === 'hero') {
+      // Complex work interaction for hero NPCs with branching based on performance
+      const hasHighSkill = character.getJobSkill?.(buildingCategory) >= 10;
+      const hasHighPerformance = character.jobAssignment.performance?.productivity >= 0.8;
+
+      interactions.push(new ContentInteraction({
+        id: `building_hero_work_${character.id}_${Date.now()}`,
+        name: `${jobTitle} at ${building.name || buildingType?.name || 'Building'}`,
+        type: 'work',
+        category: 'routine',
+        description: `Lead ${jobTitle.toLowerCase()} operations at ${building.name || 'the building'}`,
+        requirements: [
+          { attr: 'constitution', min: 10 },
+          { attr: 'intelligence', min: 12 }
+        ],
+        branches: [
+          {
+            id: `building_hero_excellent_${character.id}`,
+            name: 'Exceptional Performance',
+            condition: (char) => char.energy >= 80 && hasHighSkill && hasHighPerformance,
+            effects: [
+              { type: 'resource', target: 'wealth', value: Math.ceil(baseWage * productivityMultiplier * 1.5) },
+              { type: 'attribute', target: 'intelligence', value: 1 },
+              { type: 'attribute', target: 'charisma', value: 1 },
+              { type: 'resource', target: 'reputation', value: 3 },
+              { type: 'custom', target: 'job_performance', value: { productivity: 1.0, quality: 1.0, attendance: 1.0 } },
+              { type: 'custom', target: 'skill_gain', value: { skill: buildingCategory, xp: 5 } },
+              { type: 'custom', target: 'building_bonus', value: { buildingId: building.id, bonus: 'productivity', value: 0.05 } }
+            ]
+          },
+          {
+            id: `building_hero_good_${character.id}`,
+            name: 'Good Performance',
+            condition: (char) => char.energy >= 50,
+            effects: [
+              { type: 'resource', target: 'wealth', value: Math.ceil(baseWage * productivityMultiplier * 1.3) },
+              { type: 'attribute', target: 'intelligence', value: 1 },
+              { type: 'resource', target: 'reputation', value: 1 },
+              { type: 'custom', target: 'job_performance', value: { productivity: 0.9, quality: 0.9, attendance: 1.0 } },
+              { type: 'custom', target: 'skill_gain', value: { skill: buildingCategory, xp: 3 } }
+            ]
+          },
+          {
+            id: `building_hero_adequate_${character.id}`,
+            name: 'Adequate Performance',
+            effects: [
+              { type: 'resource', target: 'wealth', value: Math.ceil(baseWage * productivityMultiplier) },
+              { type: 'custom', target: 'job_performance', value: { productivity: 0.7, quality: 0.7, attendance: 1.0 } },
+              { type: 'custom', target: 'skill_gain', value: { skill: buildingCategory, xp: 1 } }
+            ]
+          }
+        ],
+        effects: [],
+        cooldown: 12,
+        repeatable: true,
+        tags: ['work', 'leadership', buildingCategory],
+        metadata: {
+          buildingId: building.id,
+          buildingType: buildingCategory,
+          jobTitle,
+          shift: currentShift,
+          efficiency: buildingEfficiency,
+          workContribution,
+          hasHighSkill,
+          hasHighPerformance
+        }
       }));
     }
 
@@ -526,6 +723,33 @@ class RoutineInteractionManager {
     if (nodeName.includes('admin') || nodeType.includes('admin')) return 'administration';
 
     return 'general';
+  }
+
+  /**
+   * Get building by ID from world state
+   * @private
+   * @param {Object} worldState - Current world state
+   * @param {string} buildingId - Building ID to find
+   * @returns {Object|null} Building object or null
+   */
+  _getBuildingById(worldState, buildingId) {
+    // Buildings are stored in settlements
+    for (const settlement of (worldState.settlements || [])) {
+      const building = settlement.buildings?.find(b => b.id === buildingId);
+      if (building) return building;
+    }
+    return null;
+  }
+
+  /**
+   * Get building type from world state
+   * @private
+   * @param {Object} worldState - Current world state
+   * @param {string} buildingTypeId - Building type ID
+   * @returns {Object|null} Building type object or null
+   */
+  _getBuildingType(worldState, buildingTypeId) {
+    return worldState.buildingTypes?.find(bt => bt.id === buildingTypeId) || null;
   }
 }
 

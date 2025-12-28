@@ -100,6 +100,52 @@ class Item {
       }
     */
     
+    // Production system (NEW - for building-based production chains)
+    this.production = config.production || null;
+    /*
+      {
+        isProducible: true,
+        producedBy: ['smithy', 'forge'], // Building types that can produce this
+        productionTime: 2, // Turns required to produce
+        recipe: {
+          inputs: [
+            { resourceType: 'iron-ore', quantity: 3 },
+            { resourceType: 'wood', quantity: 1 }
+          ],
+          requiredSkill: 'smithing',
+          skillLevel: 5,
+          requiredTools: ['hammer', 'anvil'],
+          workersRequired: 1,
+          baseOutputQuantity: 1
+        },
+        byproducts: [ // Optional: items produced alongside main product
+          { resourceType: 'slag', quantity: 1, chance: 0.5 }
+        ],
+        qualityFactors: { // What affects quality of output
+          workerSkill: 0.6, // 60% from worker skill
+          buildingLevel: 0.3, // 30% from building level
+          toolQuality: 0.1 // 10% from tool quality
+        }
+      }
+    */
+    
+    // Market system (NEW - for dynamic pricing)
+    this.market = config.market || null;
+    /*
+      {
+        resourceType: 'iron-sword', // Links to ResourceType system
+        category: 'weapons', // ResourceCategory
+        basePrice: 50,
+        priceVolatility: 0.2, // How much price can fluctuate (0-1)
+        demandFactors: ['military_focus', 'conflict', 'population_growth'],
+        supplyFactors: ['iron_ore_availability', 'skilled_smiths'],
+        demandElasticity: 0.8, // How demand responds to price changes
+        luxuryGood: false, // Is this a luxury item?
+        essentialGood: false, // Is this essential for survival?
+        tradeGood: true // Can be traded between settlements
+      }
+    */
+    
     // Origin and metadata
     this.origin = config.origin || null; // Template source
     this.author = config.author || null;
@@ -360,6 +406,111 @@ class Item {
   }
   
   /**
+   * Check if item can be produced in buildings
+   * @returns {boolean}
+   */
+  isProducible() {
+    return this.production !== null && this.production.isProducible === true;
+  }
+  
+  /**
+   * Check if a building type can produce this item
+   * @param {string} buildingType - The building type to check
+   * @returns {boolean}
+   */
+  canBeProducedBy(buildingType) {
+    if (!this.isProducible()) return false;
+    return this.production.producedBy.includes(buildingType);
+  }
+  
+  /**
+   * Get production recipe
+   * @returns {Object|null} Production recipe or null
+   */
+  getProductionRecipe() {
+    return this.production?.recipe || null;
+  }
+  
+  /**
+   * Calculate production cost
+   * @param {Object} resourcePrices - Map of resource types to prices
+   * @returns {number} Total production cost
+   */
+  calculateProductionCost(resourcePrices = {}) {
+    if (!this.isProducible()) return 0;
+    
+    let totalCost = 0;
+    const recipe = this.getProductionRecipe();
+    
+    if (recipe && recipe.inputs) {
+      recipe.inputs.forEach(input => {
+        const price = resourcePrices[input.resourceType] || 0;
+        totalCost += price * input.quantity;
+      });
+    }
+    
+    return totalCost;
+  }
+  
+  /**
+   * Calculate expected profit margin
+   * @param {Object} resourcePrices - Map of resource types to prices
+   * @returns {number} Profit margin (price - cost)
+   */
+  calculateProfitMargin(resourcePrices = {}) {
+    const cost = this.calculateProductionCost(resourcePrices);
+    const price = this.market?.basePrice || this.value;
+    return price - cost;
+  }
+  
+  /**
+   * Check if item is profitable to produce
+   * @param {Object} resourcePrices - Map of resource types to prices
+   * @returns {boolean}
+   */
+  isProfitableToProduce(resourcePrices = {}) {
+    return this.calculateProfitMargin(resourcePrices) > 0;
+  }
+  
+  /**
+   * Get market information
+   * @returns {Object|null} Market data or null
+   */
+  getMarketInfo() {
+    return this.market || null;
+  }
+  
+  /**
+   * Calculate current market price with modifiers
+   * @param {Object} modifiers - Price modifiers from market conditions
+   * @returns {number}
+   */
+  calculateMarketPrice(modifiers = {}) {
+    if (!this.market) return this.value;
+    
+    let price = this.market.basePrice;
+    
+    // Apply demand modifiers
+    if (modifiers.demandMultiplier) {
+      price *= modifiers.demandMultiplier;
+    }
+    
+    // Apply supply modifiers
+    if (modifiers.supplyMultiplier) {
+      price /= modifiers.supplyMultiplier;
+    }
+    
+    // Apply volatility
+    if (modifiers.applyVolatility && this.market.priceVolatility) {
+      const variance = price * this.market.priceVolatility;
+      const randomFactor = (Math.random() * 2 - 1) * variance;
+      price += randomFactor;
+    }
+    
+    return Math.max(1, Math.round(price)); // Minimum price of 1
+  }
+  
+  /**
    * Clone the item
    * @returns {Item} New item instance with same properties
    */
@@ -454,6 +605,8 @@ class Item {
       tags: [...this.tags],
       craftable: this.craftable,
       craftingRecipe: this.craftingRecipe ? { ...this.craftingRecipe } : null,
+      production: this.production ? { ...this.production } : null,
+      market: this.market ? { ...this.market } : null,
       origin: this.origin,
       author: this.author,
       version: this.version,

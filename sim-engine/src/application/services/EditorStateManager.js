@@ -36,7 +36,10 @@ class EditorStateManager extends EventEmitter {
         nodes: {},
         characters: {},
         interactions: {},
-        encounters: {}
+        encounters: {},
+        items: {},
+        abilities: {},
+        skills: {}
       }
     };
 
@@ -46,7 +49,10 @@ class EditorStateManager extends EventEmitter {
       NODES: 'nodes',
       CHARACTERS: 'characters',
       INTERACTIONS: 'interactions',
-      ENCOUNTERS: 'encounters'
+      ENCOUNTERS: 'encounters',
+      ITEMS: 'items',
+      ABILITIES: 'abilities',
+      SKILLS: 'skills'
     };
 
     // Bind methods to maintain context
@@ -400,7 +406,10 @@ class EditorStateManager extends EventEmitter {
         this.editorTypes.NODES,
         this.editorTypes.CHARACTERS,
         this.editorTypes.INTERACTIONS,
-        this.editorTypes.ENCOUNTERS
+        this.editorTypes.ENCOUNTERS,
+        this.editorTypes.ITEMS,
+        this.editorTypes.ABILITIES,
+        this.editorTypes.SKILLS
       );
     }
 

@@ -183,7 +183,8 @@ const AbilityEditorPage = () => {
       const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
       if (!confirmLeave) return;
     }
-    navigate(-1); // Go back to previous page
+    // Return to World Foundation editor instead of browser history
+    navigate('/builder');
   };
 
   const handleChange = (abilityData) => {

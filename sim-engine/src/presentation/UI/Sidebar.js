@@ -765,6 +765,42 @@ const Sidebar = ({
       hoverBorder: 'rgba(239, 68, 68, 0.4)'
     },
     {
+      id: 'item-editor',
+      label: '📦 Item Editor',
+      path: '/editors/items',
+      onClick: () => {
+        navigate('/editors/items');
+        onClose();
+      },
+      description: 'Create items & equipment',
+      hoverColor: 'rgba(59, 130, 246, 0.15)',
+      hoverBorder: 'rgba(59, 130, 246, 0.4)'
+    },
+    {
+      id: 'ability-editor',
+      label: '⚡ Ability Editor',
+      path: '/editors/abilities',
+      onClick: () => {
+        navigate('/editors/abilities');
+        onClose();
+      },
+      description: 'Define powers & abilities',
+      hoverColor: 'rgba(251, 191, 36, 0.15)',
+      hoverBorder: 'rgba(251, 191, 36, 0.4)'
+    },
+    {
+      id: 'skill-editor',
+      label: '📖 Skill Editor',
+      path: '/editors/skills',
+      onClick: () => {
+        navigate('/editors/skills');
+        onClose();
+      },
+      description: 'Create skills & proficiencies',
+      hoverColor: 'rgba(52, 211, 153, 0.15)',
+      hoverBorder: 'rgba(52, 211, 153, 0.4)'
+    },
+    {
       id: 'template-library',
       label: '📚 Template Library',
       path: '/templates',

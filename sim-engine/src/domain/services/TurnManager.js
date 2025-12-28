@@ -10,9 +10,11 @@
  */
 
 class TurnManager {
-  constructor(simulationService, lodManager = null) {
+  constructor(simulationService, lodManager = null, productionService = null, storageService = null) {
     this.simulationService = simulationService;
     this.lodManager = lodManager;
+    this.productionService = productionService;
+    this.storageService = storageService;
     this.currentTurn = 0;
     this.maxTurns = null; // null = unlimited
     this.isPaused = false;
@@ -110,6 +112,17 @@ class TurnManager {
       // Process turn through simulation service
       const turnResult = await this.simulationService.processTurn();
       
+      // Production Processing: Process building production (morning/midday only)
+      let productionResult = null;
+      if (this.productionService) {
+        try {
+          const timeOfDay = this.getTimeOfDay(this.currentTurn);
+          productionResult = this.productionService.processTurnProduction(this.currentTurn, timeOfDay);
+        } catch (error) {
+          console.warn('Production processing failed:', error.message);
+        }
+      }
+      
       // Get updated world state after processing
       const postProcessingState = this.simulationService.getCurrentWorldState();
       
@@ -123,14 +136,15 @@ class TurnManager {
         }
       }
       
-      // Generate turn summary including LOD events
+      // Generate turn summary including LOD and production events
       const turnSummary = this.generateTurnSummary(
         this.currentTurn,
         preProcessingState,
         postProcessingState,
         turnResult,
         lodPreProcessingResult,
-        lodPostProcessingResult
+        lodPostProcessingResult,
+        productionResult
       );
       
       // Store turn summary
@@ -195,9 +209,10 @@ class TurnManager {
    * @param {Object} turnResult - Result from simulation processing
    * @param {Object} lodPreResult - Result from LOD pre-processing
    * @param {Object} lodPostResult - Result from LOD post-processing
+   * @param {Object} productionResult - Result from production processing
    * @returns {Object} Turn summary
    */
-  generateTurnSummary(turnNumber, beforeState, afterState, turnResult, lodPreResult = null, lodPostResult = null) {
+  generateTurnSummary(turnNumber, beforeState, afterState, turnResult, lodPreResult = null, lodPostResult = null, productionResult = null) {
     const summary = {
       turn: turnNumber,
       timestamp: new Date(),
@@ -213,6 +228,11 @@ class TurnManager {
     }
     if (lodPostResult && lodPostResult.events) {
       summary.events.push(...lodPostResult.events);
+    }
+    
+    // Add production events to the summary
+    if (productionResult && productionResult.events) {
+      summary.events.push(...productionResult.events);
     }
 
     // Compare character states
@@ -240,7 +260,11 @@ class TurnManager {
       resourceChanges: turnResult.resourceChanges || 0,
       lodPromotions: lodPostResult?.promotions || 0,
       lodDemotions: lodPostResult?.demotions || 0,
-      lodProcessingTime: (lodPreResult?.processingTime || 0) + (lodPostResult?.processingTime || 0)
+      lodProcessingTime: (lodPreResult?.processingTime || 0) + (lodPostResult?.processingTime || 0),
+      productionStarts: productionResult?.summary?.totalProductionStarts || 0,
+      productionCompletions: productionResult?.summary?.totalProductionCompletions || 0,
+      itemsProduced: productionResult?.summary?.itemsProduced || {},
+      buildingsActive: productionResult?.summary?.buildingsActive || 0
     };
     
     // Generate text summary
@@ -560,6 +584,20 @@ class TurnManager {
       eventCount: this.eventLog.length,
       canContinue: !this.maxTurns || this.currentTurn < this.maxTurns
     };
+  }
+
+  /**
+   * Get time of day for a turn (morning/midday/night)
+   * @param {number} turn - Turn number
+   * @returns {string} Time of day
+   */
+  getTimeOfDay(turn) {
+    const ticksPerDay = 3; // 3 turns per day
+    const hourOfDay = turn % ticksPerDay;
+    
+    if (hourOfDay === 0) return 'morning';
+    if (hourOfDay === 1) return 'midday';
+    return 'night';
   }
 
   /**

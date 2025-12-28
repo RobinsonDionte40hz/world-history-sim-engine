@@ -5,6 +5,7 @@ import TemplateLibraryPanel from './TemplateLibraryPanel';
 import PlaceholderEditor from './text-templating/PlaceholderEditor';
 import EditorContextService from '../../application/services/EditorContextService';
 import { useWorldContext } from '../contexts/WorldContext';
+import { ResourceCategory } from '../../domain/value-objects/ResourceCategory';
 
 // Item categories
 const ITEM_CATEGORIES = [
@@ -118,7 +119,38 @@ const ItemEditor = ({
       flavorText: '',
       tags: [],
       craftable: false,
-      craftingRecipe: null
+      craftingRecipe: null,
+      // Production properties
+      production: {
+        isProducible: false,
+        producedBy: [],
+        productionTime: 1,
+        recipe: {
+          inputs: [],
+          requiredSkill: null,
+          requiredTools: [],
+          workersRequired: 1
+        },
+        byproducts: [],
+        qualityFactors: {
+          workerSkill: 0.6,
+          buildingLevel: 0.3,
+          toolQuality: 0.1
+        }
+      },
+      // Market properties
+      market: {
+        resourceType: null,
+        category: null,
+        basePrice: 0,
+        priceVolatility: 0.2,
+        demandFactors: [],
+        supplyFactors: [],
+        demandElasticity: 1.0,
+        luxuryGood: false,
+        essentialGood: false,
+        tradeGood: true
+      }
     };
 
     return {
@@ -126,7 +158,27 @@ const ItemEditor = ({
       effects: baseItem.effects || [],
       requirements: baseItem.requirements || {},
       properties: baseItem.properties || [],
-      tags: baseItem.tags || []
+      tags: baseItem.tags || [],
+      production: baseItem.production || {
+        isProducible: false,
+        producedBy: [],
+        productionTime: 1,
+        recipe: { inputs: [], requiredSkill: null, requiredTools: [], workersRequired: 1 },
+        byproducts: [],
+        qualityFactors: { workerSkill: 0.6, buildingLevel: 0.3, toolQuality: 0.1 }
+      },
+      market: baseItem.market || {
+        resourceType: null,
+        category: null,
+        basePrice: 0,
+        priceVolatility: 0.2,
+        demandFactors: [],
+        supplyFactors: [],
+        demandElasticity: 1.0,
+        luxuryGood: false,
+        essentialGood: false,
+        tradeGood: true
+      }
     };
   });
 
@@ -219,6 +271,8 @@ const ItemEditor = ({
     { id: 'properties', label: 'Properties', icon: '⚙️' },
     { id: 'effects', label: 'Effects', icon: '✨' },
     { id: 'requirements', label: 'Requirements', icon: '🔒' },
+    { id: 'production', label: 'Production', icon: '🏭' },
+    { id: 'market', label: 'Market', icon: '💰' },
     { id: 'crafting', label: 'Crafting', icon: '🔨' },
     { id: 'advanced', label: 'Advanced', icon: '🔧' }
   ];
@@ -695,6 +749,22 @@ const ItemEditor = ({
           />
         )}
 
+        {/* Production Tab */}
+        {activeTab === 'production' && (
+          <ProductionEditor
+            production={item.production}
+            onChange={(production) => updateItem({ production })}
+          />
+        )}
+
+        {/* Market Tab */}
+        {activeTab === 'market' && (
+          <MarketEditor
+            market={item.market}
+            onChange={(market) => updateItem({ market })}
+          />
+        )}
+
         {/* Crafting Tab */}
         {activeTab === 'crafting' && item.craftable && (
           <CraftingEditor
@@ -1018,6 +1088,741 @@ const RequirementsEditor = ({ requirements, onChange }) => {
         <p className="text-xs text-gray-400 mt-1">
           Leave empty for no race restrictions
         </p>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Production Editor Component
+ */
+const ProductionEditor = ({ production, onChange }) => {
+  const [newInput, setNewInput] = useState({ resourceType: '', quantity: 1 });
+  const [newByproduct, setNewByproduct] = useState({ resourceType: '', quantity: 1, chance: 0.5 });
+  const [newBuildingType, setNewBuildingType] = useState('');
+  const [newTool, setNewTool] = useState('');
+
+  const updateProduction = (updates) => {
+    onChange({ ...production, ...updates });
+  };
+
+  const updateRecipe = (updates) => {
+    onChange({
+      ...production,
+      recipe: { ...production.recipe, ...updates }
+    });
+  };
+
+  const updateQualityFactors = (factor, value) => {
+    onChange({
+      ...production,
+      qualityFactors: {
+        ...production.qualityFactors,
+        [factor]: parseFloat(value) || 0
+      }
+    });
+  };
+
+  const addInput = () => {
+    if (newInput.resourceType && newInput.quantity > 0) {
+      updateRecipe({
+        inputs: [...production.recipe.inputs, { ...newInput, id: Date.now() }]
+      });
+      setNewInput({ resourceType: '', quantity: 1 });
+    }
+  };
+
+  const removeInput = (id) => {
+    updateRecipe({
+      inputs: production.recipe.inputs.filter(i => i.id !== id)
+    });
+  };
+
+  const addByproduct = () => {
+    if (newByproduct.resourceType && newByproduct.quantity > 0) {
+      updateProduction({
+        byproducts: [...production.byproducts, { ...newByproduct, id: Date.now() }]
+      });
+      setNewByproduct({ resourceType: '', quantity: 1, chance: 0.5 });
+    }
+  };
+
+  const removeByproduct = (id) => {
+    updateProduction({
+      byproducts: production.byproducts.filter(b => b.id !== id)
+    });
+  };
+
+  const addBuildingType = () => {
+    if (newBuildingType && !production.producedBy.includes(newBuildingType)) {
+      updateProduction({
+        producedBy: [...production.producedBy, newBuildingType]
+      });
+      setNewBuildingType('');
+    }
+  };
+
+  const removeBuildingType = (buildingType) => {
+    updateProduction({
+      producedBy: production.producedBy.filter(b => b !== buildingType)
+    });
+  };
+
+  const addTool = () => {
+    if (newTool && !production.recipe.requiredTools.includes(newTool)) {
+      updateRecipe({
+        requiredTools: [...production.recipe.requiredTools, newTool]
+      });
+      setNewTool('');
+    }
+  };
+
+  const removeTool = (tool) => {
+    updateRecipe({
+      requiredTools: production.recipe.requiredTools.filter(t => t !== tool)
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Production Configuration</h3>
+          <p className="text-sm text-gray-400">Define how this item is produced in buildings</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={production.isProducible}
+            onChange={(e) => updateProduction({ isProducible: e.target.checked })}
+            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="font-medium">Enable Production</span>
+        </label>
+      </div>
+
+      {production.isProducible && (
+        <>
+          {/* Basic Production Settings */}
+          <div className="space-y-4">
+            <h4 className="text-md font-medium text-white">Basic Settings</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Production Time (turns)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={production.productionTime}
+                  onChange={(e) => updateProduction({ productionTime: parseInt(e.target.value) || 1 })}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+                <p className="text-xs text-gray-400 mt-1">How many turns required to produce</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Workers Required
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={production.recipe.workersRequired}
+                  onChange={(e) => updateRecipe({ workersRequired: parseInt(e.target.value) || 1 })}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+                <p className="text-xs text-gray-400 mt-1">Number of workers needed</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Building Types */}
+          <div className="space-y-3">
+            <h4 className="text-md font-medium text-white">Building Types</h4>
+            <p className="text-sm text-gray-400">Which buildings can produce this item?</p>
+            
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newBuildingType}
+                onChange={(e) => setNewBuildingType(e.target.value)}
+                placeholder="blacksmith, mill, bakery..."
+                className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <button
+                onClick={addBuildingType}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {production.producedBy.length === 0 ? (
+                <p className="text-sm text-gray-400">No building types specified</p>
+              ) : (
+                production.producedBy.map((buildingType, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-sm flex items-center gap-2"
+                  >
+                    {buildingType}
+                    <button
+                      onClick={() => removeBuildingType(buildingType)}
+                      className="hover:text-indigo-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Resource Inputs */}
+          <div className="space-y-3">
+            <h4 className="text-md font-medium text-white">Required Resources</h4>
+            <p className="text-sm text-gray-400">Materials consumed during production</p>
+            
+            <div className="grid grid-cols-12 gap-2">
+              <input
+                type="text"
+                value={newInput.resourceType}
+                onChange={(e) => setNewInput({ ...newInput, resourceType: e.target.value })}
+                placeholder="iron-ore, wheat..."
+                className="col-span-8 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <input
+                type="number"
+                min="1"
+                value={newInput.quantity}
+                onChange={(e) => setNewInput({ ...newInput, quantity: parseInt(e.target.value) || 1 })}
+                placeholder="Qty"
+                className="col-span-2 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <button
+                onClick={addInput}
+                className="col-span-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {production.recipe.inputs.length === 0 ? (
+                <div className="text-center py-4 text-gray-400 text-sm">
+                  No input resources specified
+                </div>
+              ) : (
+                production.recipe.inputs.map((input) => (
+                  <div
+                    key={input.id}
+                    className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20"
+                  >
+                    <div className="text-sm">
+                      <span className="text-white font-medium">{input.resourceType}</span>
+                      <span className="text-gray-400 ml-2">× {input.quantity}</span>
+                    </div>
+                    <button
+                      onClick={() => removeInput(input.id)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Skill & Tools */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Required Skill
+              </label>
+              <input
+                type="text"
+                value={production.recipe.requiredSkill || ''}
+                onChange={(e) => updateRecipe({ requiredSkill: e.target.value || null })}
+                placeholder="smithing, cooking..."
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <p className="text-xs text-gray-400 mt-1">Skill name (optional)</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Required Tools
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTool}
+                  onChange={(e) => setNewTool(e.target.value)}
+                  placeholder="hammer, anvil..."
+                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+                <button
+                  onClick={addTool}
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {production.recipe.requiredTools.map((tool, index) => (
+                  <span
+                    key={index}
+                    className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded text-xs flex items-center gap-1"
+                  >
+                    {tool}
+                    <button onClick={() => removeTool(tool)} className="hover:text-purple-100">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Byproducts */}
+          <div className="space-y-3">
+            <h4 className="text-md font-medium text-white">Byproducts</h4>
+            <p className="text-sm text-gray-400">Optional outputs with chance to produce</p>
+            
+            <div className="grid grid-cols-12 gap-2">
+              <input
+                type="text"
+                value={newByproduct.resourceType}
+                onChange={(e) => setNewByproduct({ ...newByproduct, resourceType: e.target.value })}
+                placeholder="slag, scraps..."
+                className="col-span-6 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <input
+                type="number"
+                min="1"
+                value={newByproduct.quantity}
+                onChange={(e) => setNewByproduct({ ...newByproduct, quantity: parseInt(e.target.value) || 1 })}
+                placeholder="Qty"
+                className="col-span-2 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                value={newByproduct.chance}
+                onChange={(e) => setNewByproduct({ ...newByproduct, chance: parseFloat(e.target.value) || 0 })}
+                placeholder="%"
+                className="col-span-2 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+              <button
+                onClick={addByproduct}
+                className="col-span-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {production.byproducts.length === 0 ? (
+                <div className="text-center py-4 text-gray-400 text-sm">
+                  No byproducts defined
+                </div>
+              ) : (
+                production.byproducts.map((byproduct) => (
+                  <div
+                    key={byproduct.id}
+                    className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/20"
+                  >
+                    <div className="text-sm">
+                      <span className="text-white font-medium">{byproduct.resourceType}</span>
+                      <span className="text-gray-400 ml-2">× {byproduct.quantity}</span>
+                      <span className="text-green-400 ml-2">({(byproduct.chance * 100).toFixed(0)}%)</span>
+                    </div>
+                    <button
+                      onClick={() => removeByproduct(byproduct.id)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Quality Factors */}
+          <div className="space-y-3">
+            <h4 className="text-md font-medium text-white">Quality Factors</h4>
+            <p className="text-sm text-gray-400">How different factors affect output quality (must sum to 1.0)</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Worker Skill Impact
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={production.qualityFactors.workerSkill}
+                  onChange={(e) => updateQualityFactors('workerSkill', e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {(production.qualityFactors.workerSkill * 100).toFixed(0)}%
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Building Level Impact
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={production.qualityFactors.buildingLevel}
+                  onChange={(e) => updateQualityFactors('buildingLevel', e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {(production.qualityFactors.buildingLevel * 100).toFixed(0)}%
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Tool Quality Impact
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={production.qualityFactors.toolQuality}
+                  onChange={(e) => updateQualityFactors('toolQuality', e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {(production.qualityFactors.toolQuality * 100).toFixed(0)}%
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-3 bg-white/10 rounded-lg">
+              <p className="text-sm text-white">
+                Total: {((production.qualityFactors.workerSkill + production.qualityFactors.buildingLevel + production.qualityFactors.toolQuality) * 100).toFixed(0)}%
+                {Math.abs(production.qualityFactors.workerSkill + production.qualityFactors.buildingLevel + production.qualityFactors.toolQuality - 1.0) > 0.01 && (
+                  <span className="text-yellow-400 ml-2">⚠ Should sum to 100%</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {!production.isProducible && (
+        <div className="text-center py-8 text-gray-400">
+          <p>Enable production to configure how this item is crafted</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Market Editor Component
+ */
+const MarketEditor = ({ market, onChange }) => {
+  const [newDemandFactor, setNewDemandFactor] = useState('');
+  const [newSupplyFactor, setNewSupplyFactor] = useState('');
+
+  const updateMarket = (updates) => {
+    onChange({ ...market, ...updates });
+  };
+
+  const resourceCategories = ResourceCategory.getAllCategories();
+
+  const addDemandFactor = () => {
+    if (newDemandFactor && !market.demandFactors.includes(newDemandFactor)) {
+      updateMarket({
+        demandFactors: [...market.demandFactors, newDemandFactor]
+      });
+      setNewDemandFactor('');
+    }
+  };
+
+  const removeDemandFactor = (factor) => {
+    updateMarket({
+      demandFactors: market.demandFactors.filter(f => f !== factor)
+    });
+  };
+
+  const addSupplyFactor = () => {
+    if (newSupplyFactor && !market.supplyFactors.includes(newSupplyFactor)) {
+      updateMarket({
+        supplyFactors: [...market.supplyFactors, newSupplyFactor]
+      });
+      setNewSupplyFactor('');
+    }
+  };
+
+  const removeSupplyFactor = (factor) => {
+    updateMarket({
+      supplyFactors: market.supplyFactors.filter(f => f !== factor)
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-white">Market Dynamics</h3>
+        <p className="text-sm text-gray-400">Configure pricing and economic behavior</p>
+      </div>
+
+      {/* Resource Classification */}
+      <div className="space-y-4">
+        <h4 className="text-md font-medium text-white">Resource Classification</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Resource Type ID
+            </label>
+            <input
+              type="text"
+              value={market.resourceType || ''}
+              onChange={(e) => updateMarket({ resourceType: e.target.value || null })}
+              placeholder="iron-ore, wheat, cloth..."
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">Unique identifier for this resource</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Resource Category
+            </label>
+            <select
+              value={market.category || ''}
+              onChange={(e) => updateMarket({ category: e.target.value || null })}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            >
+              <option value="" className="bg-gray-800">Select category</option>
+              {resourceCategories.map(cat => (
+                <option key={cat.id} value={cat.id} className="bg-gray-800">
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">Logical grouping for this resource</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing */}
+      <div className="space-y-4">
+        <h4 className="text-md font-medium text-white">Pricing</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Base Price (gold)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={market.basePrice}
+              onChange={(e) => updateMarket({ basePrice: parseFloat(e.target.value) || 0 })}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">Standard market price</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Price Volatility
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+              value={market.priceVolatility}
+              onChange={(e) => updateMarket({ priceVolatility: parseFloat(e.target.value) || 0 })}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              How much price fluctuates (0 = stable, 1 = volatile)
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Demand Elasticity
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={market.demandElasticity}
+              onChange={(e) => updateMarket({ demandElasticity: parseFloat(e.target.value) || 1.0 })}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Price sensitivity (&lt;1 = inelastic, &gt;1 = elastic)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Good Classification */}
+      <div className="space-y-3">
+        <h4 className="text-md font-medium text-white">Good Type</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={market.essentialGood}
+              onChange={(e) => updateMarket({ essentialGood: e.target.checked })}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Essential Good
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={market.luxuryGood}
+              onChange={(e) => updateMarket({ luxuryGood: e.target.checked })}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Luxury Good
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={market.tradeGood}
+              onChange={(e) => updateMarket({ tradeGood: e.target.checked })}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Trade Good
+          </label>
+        </div>
+        <div className="p-3 bg-blue-600/10 border border-blue-600/30 rounded-lg">
+          <p className="text-sm text-blue-300">
+            <strong>Essential:</strong> High demand stability, low elasticity<br />
+            <strong>Luxury:</strong> High price, demand varies with wealth<br />
+            <strong>Trade:</strong> Available in inter-settlement commerce
+          </p>
+        </div>
+      </div>
+
+      {/* Demand Factors */}
+      <div className="space-y-3">
+        <h4 className="text-md font-medium text-white">Demand Factors</h4>
+        <p className="text-sm text-gray-400">Conditions that increase demand for this item</p>
+        
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newDemandFactor}
+            onChange={(e) => setNewDemandFactor(e.target.value)}
+            placeholder="war, famine, festival..."
+            className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+          />
+          <button
+            onClick={addDemandFactor}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {market.demandFactors.length === 0 ? (
+            <p className="text-sm text-gray-400">No demand factors specified</p>
+          ) : (
+            market.demandFactors.map((factor, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm flex items-center gap-2"
+              >
+                ↑ {factor}
+                <button onClick={() => removeDemandFactor(factor)} className="hover:text-green-100">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Supply Factors */}
+      <div className="space-y-3">
+        <h4 className="text-md font-medium text-white">Supply Factors</h4>
+        <p className="text-sm text-gray-400">Conditions that increase supply of this item</p>
+        
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newSupplyFactor}
+            onChange={(e) => setNewSupplyFactor(e.target.value)}
+            placeholder="harvest, trade-route, mine..."
+            className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+          />
+          <button
+            onClick={addSupplyFactor}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {market.supplyFactors.length === 0 ? (
+            <p className="text-sm text-gray-400">No supply factors specified</p>
+          ) : (
+            market.supplyFactors.map((factor, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm flex items-center gap-2"
+              >
+                ↓ {factor}
+                <button onClick={() => removeSupplyFactor(factor)} className="hover:text-blue-100">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Market Summary */}
+      <div className="p-4 bg-white/10 rounded-lg border border-white/20">
+        <h4 className="text-md font-medium text-white mb-3">Market Summary</h4>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-gray-400">Base Price:</span>
+            <span className="text-white ml-2 font-medium">{market.basePrice} gold</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Volatility:</span>
+            <span className="text-white ml-2 font-medium">{(market.priceVolatility * 100).toFixed(0)}%</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Elasticity:</span>
+            <span className="text-white ml-2 font-medium">{market.demandElasticity.toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Category:</span>
+            <span className="text-white ml-2 font-medium">{market.category || 'None'}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

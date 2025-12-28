@@ -45,7 +45,10 @@ const useEditorNavigation = () => {
       '/editors/nodes': 'nodes',
       '/editors/characters': 'characters',
       '/editors/interactions': 'interactions',
-      '/editors/encounters': 'encounters'
+      '/editors/encounters': 'encounters',
+      '/editors/items': 'items',
+      '/editors/abilities': 'abilities',
+      '/editors/skills': 'skills'
     };
 
     const currentEditor = pathToEditorMap[location.pathname];
@@ -81,7 +84,10 @@ const useEditorNavigation = () => {
       '/editors/nodes': 'nodes',
       '/editors/characters': 'characters',
       '/editors/interactions': 'interactions',
-      '/editors/encounters': 'encounters'
+      '/editors/encounters': 'encounters',
+      '/editors/items': 'items',
+      '/editors/abilities': 'abilities',
+      '/editors/skills': 'skills'
     };
 
     return pathToEditorMap[location.pathname] || null;
@@ -134,7 +140,7 @@ const useEditorNavigation = () => {
     const currentEditor = getCurrentEditor();
     const availableEditors = getAvailableEditors();
     
-    const editorOrder = ['world', 'nodes', 'characters', 'interactions', 'encounters'];
+    const editorOrder = ['world', 'nodes', 'characters', 'interactions', 'encounters', 'items', 'abilities', 'skills'];
     const currentIndex = editorOrder.indexOf(currentEditor);
     
     // Find next available editor
@@ -146,7 +152,10 @@ const useEditorNavigation = () => {
           'nodes': '/editors/nodes',
           'characters': '/editors/characters',
           'interactions': '/editors/interactions',
-          'encounters': '/editors/encounters'
+          'encounters': '/editors/encounters',
+          'items': '/editors/items',
+          'abilities': '/editors/abilities',
+          'skills': '/editors/skills'
         };
         
         navigateToEditor(nextEditor, pathMap[nextEditor]);
@@ -167,7 +176,7 @@ const useEditorNavigation = () => {
     const currentEditor = getCurrentEditor();
     const availableEditors = getAvailableEditors();
     
-    const editorOrder = ['world', 'nodes', 'characters', 'interactions', 'encounters'];
+    const editorOrder = ['world', 'nodes', 'characters', 'interactions', 'encounters', 'items', 'abilities', 'skills'];
     const currentIndex = editorOrder.indexOf(currentEditor);
     
     // Find previous available editor
@@ -179,7 +188,10 @@ const useEditorNavigation = () => {
           'nodes': '/editors/nodes',
           'characters': '/editors/characters',
           'interactions': '/editors/interactions',
-          'encounters': '/editors/encounters'
+          'encounters': '/editors/encounters',
+          'items': '/editors/items',
+          'abilities': '/editors/abilities',
+          'skills': '/editors/skills'
         };
         
         navigateToEditor(prevEditor, pathMap[prevEditor]);
