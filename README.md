@@ -103,12 +103,41 @@ src/
 └── shared/              # Shared utilities
 ```
 
-### Key Technologies
-- **React 18.2**: Modern UI framework
-- **Redux Toolkit**: State management (prepared for future use)
-- **LocalStorage**: Persistent data storage
-- **Jest**: Testing framework
-- **Tailwind CSS**: Styling with dark mode support
+## 🔧 Technology Stack
+
+### Frontend
+- **React 18.2**: Modern UI framework with Hooks and Contexts
+- **React Router v6**: Client-side navigation and routing
+- **Redux Toolkit 2.8.2**: State management (optional usage)
+- **Tailwind CSS**: Utility-first styling with dark mode support
+- **Lucide React**: Modern icon library
+
+### Visualization
+- **D3.js**: Timeline and network visualizations
+- **Custom Charts**: Turn-based historical data visualization
+
+### Performance
+- **Rust + WebAssembly**: High-performance consciousness calculations and LOD processing
+- **Level of Detail (LOD) System**: Efficient processing of 1,000+ NPCs
+- **React.memo**: Component memoization for large lists
+- **Virtual Scrolling**: Optimized rendering for large datasets
+
+### Testing
+- **Jest**: Comprehensive test framework
+- **Integration Tests**: Multi-service workflow validation
+- **Performance Tests**: NPC scalability testing (up to 10,000+ characters)
+- **Custom Test Utilities**: Domain-specific validation tools
+
+### Persistence & Data
+- **LocalStorage**: Browser-based world state persistence
+- **Template Repository**: Reusable component storage
+- **Historical Event Storage**: Infinite history tracking with pruning strategies
+
+### Build Tools
+- **Create React App (CRACO)**: Customized build configuration
+- **Babel**: JavaScript transpilation
+- **PostCSS**: CSS processing
+- **Cargo**: Rust/WebAssembly build system
 
 ## 📚 Core Concepts
 
