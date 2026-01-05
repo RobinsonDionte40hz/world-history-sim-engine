@@ -8,9 +8,7 @@
   "files": [
     "pkg/**/*",
     "src/wrapper/ConsciousnessEngineWasm.js",
-    "README.md",
-    "LICENSE-MIT",
-    "LICENSE-APACHE"
+    "README.md"
   ],
   "scripts": {
     "build": "wasm-pack build --target nodejs --release",
@@ -44,7 +42,7 @@
     "decision-making"
   ],
   "author": "Robinson Dionte <robinson@40hz.dev>",
-  "license": "(MIT OR Apache-2.0)",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/RobinsonDionte40hz/world-history-sim-engine/issues"
   },
